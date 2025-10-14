@@ -373,3 +373,297 @@ class GraphDataPoint {
     );
   }
 }
+
+// Supplier Dashboard Models
+
+class SuppliersOverview {
+  final String period;
+  final SupplierData suppliers;
+  final PurchaseData purchases;
+
+  SuppliersOverview({
+    required this.period,
+    required this.suppliers,
+    required this.purchases,
+  });
+
+  factory SuppliersOverview.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+
+    return SuppliersOverview(
+      period: data['period'] as String? ?? '',
+      suppliers: data['suppliers'] != null
+          ? SupplierData.fromJson(data['suppliers'] as Map<String, dynamic>)
+          : SupplierData(totalSuppliers: 0, newSuppliers: 0),
+      purchases: data['purchases'] != null
+          ? PurchaseData.fromJson(data['purchases'] as Map<String, dynamic>)
+          : PurchaseData(totalPurchaseAmount: 0.0),
+    );
+  }
+}
+
+class SupplierData {
+  final int totalSuppliers;
+  final int newSuppliers;
+
+  SupplierData({
+    required this.totalSuppliers,
+    required this.newSuppliers,
+  });
+
+  factory SupplierData.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+
+    return SupplierData(
+      totalSuppliers: data['total_suppliers'] as int? ?? 0,
+      newSuppliers: data['new_suppliers'] as int? ?? 0,
+    );
+  }
+}
+
+class PurchaseData {
+  final double totalPurchaseAmount;
+
+  PurchaseData({
+    required this.totalPurchaseAmount,
+  });
+
+  factory PurchaseData.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+
+    // Handle both int and double values
+    double parseAmount(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return PurchaseData(
+      totalPurchaseAmount: parseAmount(data['total_purchase_amount']),
+    );
+  }
+}
+
+class SuppliersPurchaseGraph {
+  final String period;
+  final List<PurchaseGraphData> purchaseGraph;
+  final double totalPurchase;
+
+  SuppliersPurchaseGraph({
+    required this.period,
+    required this.purchaseGraph,
+    required this.totalPurchase,
+  });
+
+  factory SuppliersPurchaseGraph.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+    final graphData = data['purchase_graph'] as List? ?? [];
+
+    // Handle both int and double values for total_purchase
+    double parseAmount(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return SuppliersPurchaseGraph(
+      period: data['period'] as String? ?? '',
+      purchaseGraph: graphData
+          .map((item) =>
+              PurchaseGraphData.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      totalPurchase: parseAmount(data['total_purchase']),
+    );
+  }
+}
+
+class PurchaseGraphData {
+  final String supplierName;
+  final double amount;
+
+  PurchaseGraphData({
+    required this.supplierName,
+    required this.amount,
+  });
+
+  factory PurchaseGraphData.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+
+    // Handle both int and double values
+    double parseAmount(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return PurchaseGraphData(
+      supplierName: data['supplier_name'] as String? ?? '',
+      amount: parseAmount(data['amount']),
+    );
+  }
+}
+
+class SupplierTransactionsGraph {
+  final String period;
+  final List<TransactionGraphData> transactionsGraph;
+  final double totalReceived;
+  final double totalPaid;
+
+  SupplierTransactionsGraph({
+    required this.period,
+    required this.transactionsGraph,
+    required this.totalReceived,
+    required this.totalPaid,
+  });
+
+  factory SupplierTransactionsGraph.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+    final graphData = data['transactions_graph'] as List? ?? [];
+
+    // Handle both int and double values
+    double parseAmount(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return SupplierTransactionsGraph(
+      period: data['period'] as String? ?? '',
+      transactionsGraph: graphData
+          .map((item) =>
+              TransactionGraphData.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      totalReceived: parseAmount(data['total_received']),
+      totalPaid: parseAmount(data['total_paid']),
+    );
+  }
+}
+
+class TransactionGraphData {
+  final String? date;
+  final String? day;
+  final String? time;
+  final double receivedAmount;
+  final double paidAmount;
+
+  TransactionGraphData({
+    this.date,
+    this.day,
+    this.time,
+    required this.receivedAmount,
+    required this.paidAmount,
+  });
+
+  factory TransactionGraphData.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+
+    // Handle both int and double values
+    double parseAmount(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return TransactionGraphData(
+      date: data['date'] as String?,
+      day: data['day'] as String?,
+      time: data['time'] as String?,
+      receivedAmount: parseAmount(data['received_amount']),
+      paidAmount: parseAmount(data['paid_amount']),
+    );
+  }
+}
+
+class SupplierCreditBalanceGraph {
+  final String period;
+  final List<CreditBalanceGraphData> creditBalanceGraph;
+  final double totalCredit;
+  final double totalBalance;
+
+  SupplierCreditBalanceGraph({
+    required this.period,
+    required this.creditBalanceGraph,
+    required this.totalCredit,
+    required this.totalBalance,
+  });
+
+  factory SupplierCreditBalanceGraph.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+    final graphData = data['credit_balance_graph'] as List? ?? [];
+
+    // Handle both int and double values
+    double parseAmount(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return SupplierCreditBalanceGraph(
+      period: data['period'] as String? ?? '',
+      creditBalanceGraph: graphData
+          .map((item) =>
+              CreditBalanceGraphData.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      totalCredit: parseAmount(data['total_credit']),
+      totalBalance: parseAmount(data['total_balance']),
+    );
+  }
+}
+
+class CreditBalanceGraphData {
+  final String? time;
+  final String? day;
+  final String? date;
+  final double creditAmount;
+  final double balanceAmount;
+
+  CreditBalanceGraphData({
+    this.time,
+    this.day,
+    this.date,
+    required this.creditAmount,
+    required this.balanceAmount,
+  });
+
+  factory CreditBalanceGraphData.fromJson(Map<String, dynamic> json) {
+    // Add null safety checks
+    final data = json as Map<String, dynamic>? ?? {};
+
+    // Handle both int and double values
+    double parseAmount(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return CreditBalanceGraphData(
+      time: data['time'] as String?,
+      day: data['day'] as String?,
+      date: data['date'] as String?,
+      creditAmount: parseAmount(data['credit_amount']),
+      balanceAmount: parseAmount(data['balance_amount']),
+    );
+  }
+}
