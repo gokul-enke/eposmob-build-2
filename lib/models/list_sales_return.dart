@@ -183,7 +183,7 @@ class CartItem {
   final String taxAmount;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final Product product;
+  final Product? product;
 
   CartItem({
     required this.id,
@@ -198,7 +198,7 @@ class CartItem {
     required this.taxAmount,
     required this.createdAt,
     required this.updatedAt,
-    required this.product,
+    this.product,
   });
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
@@ -217,7 +217,7 @@ class CartItem {
       taxAmount: json['tax_amount'].toString(),
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
-      product: Product.fromJson(json['product']),
+      product: json['product'] != null ? Product.fromJson(json['product']) : null,
     );
   }
 }
