@@ -2,14 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/payment_gateways_provider.dart';
-import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
@@ -30,6 +25,29 @@ class SupplierTransactionReportThermalPrinter {
   static const PosTextSize textSizeSmall = PosTextSize.size1;
 
   SupplierTransactionReportThermalPrinter(this.context);
+
+  // Helper method to get label from resolved labels with fallback
+  String _getLabel(DocumentConfig? config, String field, String fallback) {
+    final resolvedLabels = config?.resolvedLabels;
+    if (resolvedLabels == null) return fallback;
+    
+    switch (field) {
+      case 'sl_number':
+        return resolvedLabels.slNumber ?? fallback;
+      case 'date':
+        return resolvedLabels.date ?? fallback;
+      case 'item':
+        return resolvedLabels.item ?? fallback;
+      case 'debit':
+        return resolvedLabels.debit ?? fallback;
+      case 'credit':
+        return resolvedLabels.credit ?? fallback;
+      case 'status':
+        return resolvedLabels.status ?? fallback;
+      default:
+        return fallback;
+    }
+  }
 
   // Load font type from SharedPreferences
   Future<PosFontType> _loadFontType() async {
@@ -86,9 +104,12 @@ class SupplierTransactionReportThermalPrinter {
         "Printer: ${selectedPrinter.deviceName} (${selectedPrinter.typePrinter})");
     debugPrint("Paper size: $selectedPaperSize");
 
-    // Use the loaded display configuration
-    final displayConfig = billDocumentConfig.displayConfiguration?.options;
-    _debugPrintTemplateSettings(displayConfig);
+    // Use the loaded display configuration with fallback
+    final apiDisplayConfig = billDocumentConfig.displayConfiguration?.options;
+    _debugPrintTemplateSettings(apiDisplayConfig);
+    
+    // Ensure complete display config by merging with fallback
+    final displayConfig = _ensureCompleteDisplayConfig(apiDisplayConfig);
 
     try {
       // Load the selected font type from preferences
@@ -194,8 +215,6 @@ class SupplierTransactionReportThermalPrinter {
       if (context.mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
         Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 67; // Back to supplier transaction report
       }
     } catch (e) {
       debugPrint("ERROR printing supplier transaction report: ${e.toString()}");
@@ -227,9 +246,7 @@ class SupplierTransactionReportThermalPrinter {
 
     // Show header if enabled
     if (displayConfig?['showHeader']?.visible == true) {
-      String headerText = (displayConfig?['showHeader']?.value as String?) ??
-          docConfig?.header ??
-          'EPosenke';
+      String headerText = docConfig?.header ?? 'EPosenke';
       bytes += generator.text(headerText,
           styles: PosStyles(
               fontType: fontType,
@@ -241,9 +258,7 @@ class SupplierTransactionReportThermalPrinter {
 
     // Show subheader if enabled
     if (displayConfig?['showSubheader']?.visible == true) {
-      String subheaderText = (displayConfig?['showSubheader']?.value as String?) ??
-          docConfig?.subheader ??
-          'Supplier Transaction Report';
+      String subheaderText = docConfig?.subheader ?? 'Supplier Transaction Report';
       bytes += generator.text(subheaderText,
           styles: PosStyles(
               fontType: fontType,
@@ -377,15 +392,15 @@ class SupplierTransactionReportThermalPrinter {
     // Determine if we're using 58mm paper for font size adjustment
     bool is58mm = selectedPaperSize == '58mm';
 
-    // Add table headers with fixed widths
+    // Add table headers with fixed widths - matching image: SL, Date, Type, Debit, Credit, Status
     List<PosColumn> headerColumns = [];
     int totalHeaderWidth = 0;
 
     debugPrint("Building header columns...");
 
-    // Add Sl.No column
+    // Add Sl.No column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'Sl.No',
+        text: _getLabel(billDocumentConfig, 'sl_number', 'SL'),
         width: 1,
         styles: PosStyles(
             fontType: fontType,
@@ -395,9 +410,9 @@ class SupplierTransactionReportThermalPrinter {
     totalHeaderWidth += 1;
     debugPrint("Added SL column with width 1, total width: $totalHeaderWidth");
 
-    // Add Date column
+    // Add Date column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'Date',
+        text: _getLabel(billDocumentConfig, 'date', 'Date'),
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -407,22 +422,9 @@ class SupplierTransactionReportThermalPrinter {
     totalHeaderWidth += 2;
     debugPrint("Added Date column with width 2, total width: $totalHeaderWidth");
 
-    // Add Reference column
+    // Add Type column (transaction type) - use resolved label (item)
     headerColumns.add(PosColumn(
-        text: 'Reference',
-        width: 1,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
-    debugPrint(
-        "Added Reference column with width 1, total width: $totalHeaderWidth");
-
-    // Add Transaction Type column
-    headerColumns.add(PosColumn(
-        text: 'Trans Type',
+        text: _getLabel(billDocumentConfig, 'item', 'Type'),
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -431,24 +433,11 @@ class SupplierTransactionReportThermalPrinter {
             height: is58mm ? textSizeSmall : textSizeSmall)));
     totalHeaderWidth += 2;
     debugPrint(
-        "Added Transaction Type column with width 2, total width: $totalHeaderWidth");
+        "Added Type column with width 2, total width: $totalHeaderWidth");
 
-    // Add Type column
+    // Add Debit column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'Type',
-        width: 1,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
-    debugPrint(
-        "Added Type column with width 1, total width: $totalHeaderWidth");
-
-    // Add Amount column
-    headerColumns.add(PosColumn(
-        text: 'Amount',
+        text: _getLabel(billDocumentConfig, 'debit', 'Debit'),
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -457,34 +446,34 @@ class SupplierTransactionReportThermalPrinter {
             height: is58mm ? textSizeSmall : textSizeSmall)));
     totalHeaderWidth += 2;
     debugPrint(
-        "Added Amount column with width 2, total width: $totalHeaderWidth");
+        "Added Debit column with width 2, total width: $totalHeaderWidth");
 
-    // Add Payment Method column
+    // Add Credit column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'Payment',
-        width: 1,
+        text: _getLabel(billDocumentConfig, 'credit', 'Credit'),
+        width: 2,
         styles: PosStyles(
             fontType: fontType,
-            align: PosAlign.left,
+            align: PosAlign.right,
             bold: true,
             height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
+    totalHeaderWidth += 2;
     debugPrint(
-        "Added Payment Method column with width 1, total width: $totalHeaderWidth");
+        "Added Credit column with width 2, total width: $totalHeaderWidth");
 
-    // Add Status column if enabled
+    // Add Status column if enabled - use resolved label
     if (displayConfig?['showStatus']?.visible == true) {
       headerColumns.add(PosColumn(
-          text: 'Status',
-          width: 2,
+          text: _getLabel(billDocumentConfig, 'status', 'Status'),
+          width: 3,
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.left,
               bold: true,
               height: is58mm ? textSizeSmall : textSizeSmall)));
-      totalHeaderWidth += 2;
+      totalHeaderWidth += 3;
       debugPrint(
-          "Added Status column with width 2, total width: $totalHeaderWidth");
+          "Added Status column with width 3, total width: $totalHeaderWidth");
     }
 
     debugPrint("Final header total width: $totalHeaderWidth");
@@ -504,15 +493,17 @@ class SupplierTransactionReportThermalPrinter {
       var item = cartItems[i];
       debugPrint("Processing cart item $i...");
 
-      String reference = item.reference;
-      String transactionType = item.transactionType;
       String type = item.type;
-      String amount = item.amount;
+      String transactionType = item.transactionType;
+      double amount = double.tryParse(item.amount) ?? 0.0;
       String status = item.status;
       String date = item.date;
-      String paymentMethod = item.paymentMethod;
 
       String slNumber = (i + 1).toString();
+      
+      // Format amounts for Debit/Credit columns
+      String debitAmount = (type.toLowerCase() == 'debit') ? amount.toStringAsFixed(2) : '-';
+      String creditAmount = (type.toLowerCase() == 'credit') ? amount.toStringAsFixed(2) : '-';
       
       // Format date to show only date (not time)
       String formattedDate = date;
@@ -524,10 +515,20 @@ class SupplierTransactionReportThermalPrinter {
         formattedDate = date;
       }
       
+      // Format status to match image
+      String displayStatus = status;
+      if (status == 'SUCC') {
+        displayStatus = 'Paid';
+      } else if (status == 'FAIL') {
+        displayStatus = 'Pending';
+      } else if (status == 'INIT') {
+        displayStatus = 'Initiated';
+      }
+      
       debugPrint(
-          "Item $i: Reference: $reference, Type: $transactionType, Amount: $amount, Status: $status, Date: $formattedDate");
+          "Item $i: Date: $formattedDate, Type: $transactionType, Debit: $debitAmount, Credit: $creditAmount, Status: $displayStatus");
 
-      // Create row with all transaction details
+      // Create row with 6 columns: SL, Date, Type, Debit, Credit, Status
       List<PosColumn> itemRow = [
         PosColumn(
             text: slNumber,
@@ -546,14 +547,6 @@ class SupplierTransactionReportThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
-            text: reference,
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
             text: transactionType,
             width: 2,
             styles: PosStyles(
@@ -562,15 +555,7 @@ class SupplierTransactionReportThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
-            text: type,
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: amount,
+            text: debitAmount,
             width: 2,
             styles: PosStyles(
                 fontType: fontType,
@@ -578,11 +563,11 @@ class SupplierTransactionReportThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
-            text: paymentMethod,
-            width: 1,
+            text: creditAmount,
+            width: 2,
             styles: PosStyles(
                 fontType: fontType,
-                align: PosAlign.left,
+                align: PosAlign.right,
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
       ];
@@ -590,8 +575,8 @@ class SupplierTransactionReportThermalPrinter {
       // Add status column if enabled
       if (displayConfig?['showStatus']?.visible == true) {
         itemRow.add(PosColumn(
-            text: status,
-            width: 2,
+            text: displayStatus,
+            width: 3,
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -599,7 +584,7 @@ class SupplierTransactionReportThermalPrinter {
                 height: is58mm ? textSizeSmall : textSizeSmall)));
       }
 
-      int itemRowWidth = 1 + 2 + 1 + 2 + 1 + 2 + 1 + (displayConfig?['showStatus']?.visible == true ? 2 : 0);
+      int itemRowWidth = 1 + 2 + 2 + 2 + 2 + (displayConfig?['showStatus']?.visible == true ? 3 : 0);
       debugPrint("Item row total width: $itemRowWidth");
       if (itemRowWidth != 12) {
         debugPrint(
@@ -698,8 +683,7 @@ class SupplierTransactionReportThermalPrinter {
     List<int> bytes = [];
 
     if (displayConfig?['showFooter']?.visible == true) {
-      final footerText = (displayConfig?['showFooter']?.value as String?) ??
-          billDocumentConfig?.footer ??
+      final footerText = billDocumentConfig?.footer ??
           'This is a computer-generated document. No signature is required.';
       
       bytes += generator.hr();
@@ -800,5 +784,54 @@ class SupplierTransactionReportThermalPrinter {
       debugPrint("Display config is null");
     }
     debugPrint("===== END TEMPLATE SETTINGS DEBUG =====");
+  }
+
+  // Create fallback display configuration when API doesn't provide column settings
+  Map<String, DisplayOption> _createFallbackDisplayConfig() {
+    debugPrint("⚠️ Creating fallback display configuration for Supplier Statement (Thermal)");
+    return {
+      // Header/Footer settings
+      'showHeader': DisplayOption(visible: true, value: null),
+      'showSubheader': DisplayOption(visible: true, value: null),
+      'showFooter': DisplayOption(visible: true, value: null),
+      'showDates': DisplayOption(visible: true, value: null),
+      
+      // Supplier details
+      'showSupplierName': DisplayOption(visible: true, value: null),
+      'showSupplierEmail': DisplayOption(visible: true, value: null),
+      'showSupplierPhone': DisplayOption(visible: true, value: null),
+      'showSupplierAddress': DisplayOption(visible: true, value: null),
+      
+      // Table column visibility - matching image (SL, Date, Debit, Credit, Status)
+      'showSlNumber': DisplayOption(visible: true, value: null),
+      'showDate': DisplayOption(visible: true, value: null),
+      'showDebit': DisplayOption(visible: true, value: null),
+      'showCredit': DisplayOption(visible: true, value: null),
+      
+      // Summary totals (shown at bottom, not in table)
+      'showTotalCredit': DisplayOption(visible: true, value: null),
+      'showTotalDebit': DisplayOption(visible: true, value: null),
+      'showBalance': DisplayOption(visible: true, value: null),
+      'showStatus': DisplayOption(visible: true, value: null),
+    };
+  }
+
+  // Merge API config with fallback to ensure all required keys exist
+  Map<String, DisplayOption> _ensureCompleteDisplayConfig(Map<String, DisplayOption>? apiConfig) {
+    final fallback = _createFallbackDisplayConfig();
+    
+    if (apiConfig == null || apiConfig.isEmpty) {
+      debugPrint("⚠️ API config is null/empty, using complete fallback");
+      return fallback;
+    }
+    
+    // Merge: API config takes precedence, but fallback fills in missing keys
+    final merged = Map<String, DisplayOption>.from(fallback);
+    apiConfig.forEach((key, value) {
+      merged[key] = value;
+    });
+    
+    debugPrint("✅ Merged display config with ${merged.length} total options");
+    return merged;
   }
 }

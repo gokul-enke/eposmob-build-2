@@ -239,11 +239,20 @@ class BillingPageState extends State<BillingPage>
     // Listen to the barcode stream
     final barcodeProvider =
         Provider.of<BarcodeProvider>(context, listen: false);
+    debugPrint("🟡 [BillingPage] Setting up barcode stream listener...");
     _barcodeSubscription = barcodeProvider.barcodeStream.listen((barcode) {
+      debugPrint("🟡 [BillingPage] ========== BARCODE STREAM RECEIVED ==========");
+      debugPrint("🟡 [BillingPage] Barcode from stream: '$barcode'");
+      debugPrint("🟡 [BillingPage] Widget mounted: $mounted");
       if (mounted) {
+        debugPrint("🟡 [BillingPage] Calling processBarcode()...");
         processBarcode(barcode);
+      } else {
+        debugPrint("⚠️ [BillingPage] Widget not mounted - skipping processBarcode");
       }
+      debugPrint("🟡 [BillingPage] =============================================\n");
     });
+    debugPrint("🟡 [BillingPage] Barcode stream listener setup complete");
 
     // Listen for sales executive changes to update default customer
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -765,28 +774,41 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> processBarcode(String barcode) async {
+    debugPrint("🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE START ==========");
+    debugPrint("🔴 [BillingPage.processBarcode] Input barcode: '$barcode'");
+    debugPrint("🔴 [BillingPage.processBarcode] Barcode length: ${barcode.length}");
+    debugPrint("🔴 [BillingPage.processBarcode] _isProcessingBarcode: $_isProcessingBarcode");
+    debugPrint("🔴 [BillingPage.processBarcode] barcode.isEmpty: ${barcode.isEmpty}");
+    
     // If a barcode is already being processed, or if the input is empty, do nothing.
     if (_isProcessingBarcode || barcode.isEmpty) {
+      debugPrint("⚠️ [BillingPage.processBarcode] SKIPPING - Already processing or empty barcode");
+      debugPrint("🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END (SKIPPED) ==========\n");
       return;
     }
 
+    debugPrint("✅ [BillingPage.processBarcode] Starting barcode processing...");
     // Set the flag to true to prevent duplicate processing.
     setState(() {
       _isProcessingBarcode = true;
     });
+    debugPrint("🔴 [BillingPage.processBarcode] _isProcessingBarcode set to true");
     String query = barcode;
 
     List<GetProduct> filteredProducts = [];
     try {
+      debugPrint("🔴 [BillingPage.processBarcode] Parsing barcode...");
       String? prefix;
       String? productCode;
       String? lastFive;
 
       if (query.length > 2) {
         prefix = query.substring(0, 3); // First 3 digits;
+        debugPrint("🔴 [BillingPage.processBarcode] Prefix: $prefix");
       }
 
       if (prefix != '000' || query.length != 14) {
+        debugPrint("🔴 [BillingPage.processBarcode] Standard barcode - searching by: '$query'");
         filteredProducts =
             Provider.of<LocalProductProvider>(context, listen: false)
                 .filterProductByBarcode(
@@ -795,6 +817,7 @@ class BillingPageState extends State<BillingPage>
       } else {
         productCode = query.substring(3, 9); // Next 6 digits
         lastFive = query.substring(9, 14); // Last 5 digits
+        debugPrint("🔴 [BillingPage.processBarcode] Weight/Count barcode - productCode: $productCode, lastFive: $lastFive");
         filteredProducts =
             Provider.of<LocalProductProvider>(context, listen: false)
                 .filterProductByBarcode(
@@ -802,7 +825,9 @@ class BillingPageState extends State<BillingPage>
         );
       }
 
+      debugPrint("🔴 [BillingPage.processBarcode] Products found: ${filteredProducts.length}");
       if (filteredProducts.isNotEmpty) {
+        debugPrint("🔴 [BillingPage.processBarcode] First product: ${filteredProducts.first.productName}");
         // Get the first product
         GetProduct product = filteredProducts.first;
 
@@ -824,11 +849,11 @@ class BillingPageState extends State<BillingPage>
         }
 
         // Use centralized helper for stock handling
-        debugPrint("🛒 BARCODE SCAN - Calling ProductCartHelper with:");
-        debugPrint("  - Product: ${product.productName}");
-        debugPrint("  - Quantity: $quantity");
-        debugPrint("  - Customer ID: $selectedCustomerID");
-        debugPrint("  - Customer Name: ${selectedCustomer?.name}");
+        debugPrint("🔴 [BillingPage.processBarcode] 🛒 Calling ProductCartHelper with:");
+        debugPrint("🔴 [BillingPage.processBarcode]   - Product: ${product.productName}");
+        debugPrint("🔴 [BillingPage.processBarcode]   - Quantity: $quantity");
+        debugPrint("🔴 [BillingPage.processBarcode]   - Customer ID: $selectedCustomerID");
+        debugPrint("🔴 [BillingPage.processBarcode]   - Customer Name: ${selectedCustomer?.name}");
 
         await ProductCartHelper.handleProductSelection(
           context: context,
@@ -839,7 +864,10 @@ class BillingPageState extends State<BillingPage>
           customerName: selectedCustomer?.name,
         );
 
+        debugPrint("✅ [BillingPage.processBarcode] Product added to cart successfully");
+        
         // Clear input fields
+        debugPrint("🔴 [BillingPage.processBarcode] Clearing input fields...");
         setState(() {
           _autocompleteProductKey = GlobalKey();
           quantityController.clear();
@@ -847,36 +875,52 @@ class BillingPageState extends State<BillingPage>
           selectedProductIdController.clear();
           unitPriceController.clear();
         });
+        debugPrint("🔴 [BillingPage.processBarcode] Input fields cleared");
         _focusTextField();
+        debugPrint("🔴 [BillingPage.processBarcode] Focus reset");
       } else {
+        debugPrint("⚠️ [BillingPage.processBarcode] No products found for barcode: '$query'");
         // Set dialog state to open
         await showDialog(
           context: context,
           builder: (context) =>
               AddProductWithBarcodeModal(barcode: query, isAddToCart: true),
         );
-        // Reset dialog state
-
-        barcodeController.clear();
+        // Reset dialog state - wrap in setState to trigger UI rebuild
+        setState(() {
+          barcodeController.clear();
+        });
         _focusTextField();
 
-        debugPrint("No products found for barcode: $query");
+        debugPrint("🔴 [BillingPage.processBarcode] No products found for barcode: '$query'");
       }
     } catch (e) {
-      debugPrint("Error adding item: $e");
+      debugPrint("❌ [BillingPage.processBarcode] ERROR: $e");
+      debugPrint("❌ [BillingPage.processBarcode] Stack trace: ${StackTrace.current}");
       showScaffoldError(
         context: context,
         message: "Invalid Barcode. Please try again.",
       );
+      // Clear barcode on error too
+      setState(() {
+        barcodeController.clear();
+      });
+      debugPrint("🔴 [BillingPage.processBarcode] Barcode cleared after error");
     } finally {
-      // Reset the flag after a short delay to allow the UI to settle.
+      debugPrint("🔴 [BillingPage.processBarcode] Finally block - resetting processing flag...");
+      // Reset the flag and ensure barcode is always cleared
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
+          debugPrint("🔴 [BillingPage.processBarcode] Resetting _isProcessingBarcode to false");
           setState(() {
             _isProcessingBarcode = false;
+            // Ensure barcode is always cleared
+            barcodeController.clear();
           });
+          debugPrint("🔴 [BillingPage.processBarcode] Processing complete - ready for next scan");
         }
       });
+      debugPrint("🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END ==========\n");
     }
   }
 

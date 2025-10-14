@@ -3,10 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
-import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
@@ -513,9 +511,6 @@ class _SupplierTransactionReportPrintState
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
-            SideBarController sideBarController = Get.put(SideBarController());
-            sideBarController.index.value =
-                67; // Navigate back to Supplier Transaction Report
           },
         ),
         elevation: 0,

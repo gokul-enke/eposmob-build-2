@@ -12,6 +12,7 @@ import 'package:pos_machine/screens/customers/add_customers.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
 import 'package:pos_machine/screens/dashboard/company_admin.dart';
+import 'package:pos_machine/screens/dashboard/dashboard.dart';
 import 'package:pos_machine/screens/dashboard/dashboard_ui_only.dart';
 import 'package:pos_machine/screens/dashboard/sales_exicutive_dahsboard.dart';
 import 'package:pos_machine/screens/edit_order/edit_order.dart';

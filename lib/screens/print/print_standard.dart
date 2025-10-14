@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +22,8 @@ class StandardPrinter {
   final BuildContext context;
 
   StandardPrinter(this.context);
+
+  // Removed _maskPhone - now using StringHelper.maskStringShowLast4
 
   // Helper method to get or create the epos directory
   Future<Directory> _getEposDirectory() async {
@@ -1106,12 +1109,12 @@ class StandardPrinter {
           // Show Name and Phone on a single line without labels when both are present
           if ((customerName != null && customerName.isNotEmpty) &&
               (customerPhone != null && customerPhone.isNotEmpty))
-            pw.Text('$customerName - $customerPhone', style: customerDetailStyle)
+            pw.Text('$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}', style: customerDetailStyle)
           else ...[
             if (customerName != null && customerName.isNotEmpty)
               pw.Text(customerName, style: customerDetailStyle),
             if (customerPhone != null && customerPhone.isNotEmpty)
-              pw.Text(customerPhone, style: customerDetailStyle),
+              pw.Text(StringHelper.maskStringShowLast4(customerPhone), style: customerDetailStyle),
           ],
           // if (customerEmail != null && customerEmail.isNotEmpty)
           //   pw.Text('Email: $customerEmail', style: customerDetailStyle),

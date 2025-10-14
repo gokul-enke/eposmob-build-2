@@ -7,6 +7,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
@@ -44,6 +45,8 @@ class ThermalPrinter {
         // Remove any remaining non-printable characters except basic punctuation
         .replaceAll(RegExp(r'[^\x20-\x7E]'), '');
   }
+
+  // Removed _maskPhone - now using StringHelper.maskStringShowLast4
 
   // Load font type from SharedPreferences
   Future<PosFontType> _loadFontType() async {
@@ -1467,7 +1470,7 @@ class ThermalPrinter {
     // Customer Name + Phone on a single line without labels when both are present
     if ((customerName != null && customerName.isNotEmpty) &&
         (customerPhone != null && customerPhone.isNotEmpty)) {
-      final combined = _sanitizeTextForThermalPrinter('$customerName - $customerPhone');
+      final combined = _sanitizeTextForThermalPrinter('$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}');
       bytes += generator.text(
         combined,
         styles: PosStyles(
@@ -1490,7 +1493,7 @@ class ThermalPrinter {
       }
       if (customerPhone != null && customerPhone.isNotEmpty) {
         bytes += generator.text(
-          _sanitizeTextForThermalPrinter(customerPhone),
+          _sanitizeTextForThermalPrinter(StringHelper.maskStringShowLast4(customerPhone)),
           styles: PosStyles(
             fontType: fontType,
             height: textSizeSmall,

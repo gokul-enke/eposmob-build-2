@@ -2,9 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -64,7 +62,46 @@ class TransactionReportThermalPrinter {
     debugPrint("  Phone: $customerPhone");
     debugPrint("  Email: $customerEmail");
     debugPrint("  Address: $customerAddress");
+    debugPrint("  fromDate: $fromDate");
+    debugPrint("  toDate: $toDate");
     debugPrint("===== END THERMAL PRINTER DEBUG INFO =====");
+
+    // Calculate date range from cart items if not provided
+    if ((fromDate == null || fromDate.isEmpty) &&
+        (toDate == null || toDate.isEmpty) &&
+        cartItems.isNotEmpty) {
+      debugPrint("Thermal: Calculating date range from cart items...");
+
+      List<String> dates = [];
+      for (var item in cartItems) {
+        String? itemDate;
+
+        if (isFromLocalStorage) {
+          itemDate = item['date']?.toString();
+        } else if (item is Map<String, dynamic>) {
+          itemDate = item['date']?.toString();
+        } else {
+          try {
+            itemDate = item.date?.toString();
+          } catch (e) {
+            debugPrint('Error accessing date: $e');
+          }
+        }
+
+        if (itemDate != null && itemDate.isNotEmpty && itemDate != 'N/A') {
+          dates.add(itemDate);
+        }
+      }
+
+      if (dates.isNotEmpty) {
+        // Sort dates to get first and last
+        dates.sort();
+        fromDate = DateHelper.formatISODate(dates.first);
+        toDate = DateHelper.formatISODate(dates.last);
+        debugPrint("Thermal: Calculated fromDate: $fromDate");
+        debugPrint("Thermal: Calculated toDate: $toDate");
+      }
+    }
 
     debugPrint("===== TRANSACTION REPORT THERMAL PRINTING DEBUG =====");
 
@@ -136,8 +173,16 @@ class TransactionReportThermalPrinter {
           fromDate != null ||
           toDate != null) {
         debugPrint("Building customer details...");
-        bytes += _buildCustomerDetails(generator, customerName, customerPhone,
-            customerEmail, customerAddress, fromDate, toDate, selectedFontType);
+        bytes += _buildCustomerDetails(
+            generator,
+            customerName,
+            customerPhone,
+            customerEmail,
+            customerAddress,
+            fromDate,
+            toDate,
+            selectedFontType,
+            displayConfig);
         debugPrint("Customer details built successfully");
       }
 
@@ -178,19 +223,22 @@ class TransactionReportThermalPrinter {
       // debugPrint("Order barcode built successfully");
 
       // Terms & Conditions - use document config terms if available
-      if (billDocumentConfig?.terms != null && billDocumentConfig!.terms!.isNotEmpty) {
+      if (billDocumentConfig?.terms != null &&
+          billDocumentConfig!.terms!.isNotEmpty) {
         debugPrint("Building terms & conditions from document config...");
         bytes += _buildTermsConditions(generator, displayConfig,
             billDocumentConfig, selectedPaperSize, selectedFontType);
         debugPrint("Terms & conditions built successfully");
       } else {
-        debugPrint("Skipping Terms & Conditions, no terms available in document config");
+        debugPrint(
+            "Skipping Terms & Conditions, no terms available in document config");
       }
 
       // Footer message - use document config footer if available
       if (displayConfig?['showFooter']?.visible == true) {
         debugPrint("Building footer message...");
-        bytes += _buildFooterMessage(generator, displayConfig, billDocumentConfig, selectedFontType);
+        bytes += _buildFooterMessage(
+            generator, displayConfig, billDocumentConfig, selectedFontType);
         debugPrint("Footer message built successfully");
       }
 
@@ -205,9 +253,7 @@ class TransactionReportThermalPrinter {
 
       if (context.mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 65; // Back to transaction report
+        // Navigation is handled by the parent TransactionReportPrintPage
       }
     } catch (e) {
       debugPrint("ERROR printing transaction report: ${e.toString()}");
@@ -237,11 +283,9 @@ class TransactionReportThermalPrinter {
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
 
-    // Show header if enabled - use display config or document config values
+    // Show header if enabled - use document config header field
     if (displayConfig?['showHeader']?.visible == true) {
-      String headerText = (displayConfig?['showHeader']?.value as String?) ??
-          docConfig?.header ??
-          'EPosenke';
+      String headerText = docConfig?.header ?? 'EPosenke';
       bytes += generator.text(headerText,
           styles: PosStyles(
               fontType: fontType,
@@ -251,11 +295,9 @@ class TransactionReportThermalPrinter {
               height: textSizeMedium));
     }
 
-    // Show subheader if enabled - use display config or document config values
+    // Show subheader if enabled - use document config subheader field
     if (displayConfig?['showSubheader']?.visible == true) {
-      String subheaderText = (displayConfig?['showSubheader']?.value as String?) ??
-          docConfig?.subheader ??
-          'Customer Transaction Report';
+      String subheaderText = docConfig?.subheader ?? 'Customer Statement';
       bytes += generator.text(subheaderText,
           styles: PosStyles(
               fontType: fontType,
@@ -287,6 +329,28 @@ class TransactionReportThermalPrinter {
     // Determine if we're using 58mm paper for font size adjustment
     bool is58mm = selectedPaperSize == '58mm';
 
+    // Get resolved labels from document config with fallbacks
+    final resolvedLabels = billDocumentConfig?.resolvedLabels;
+    final String slNumberLabel = resolvedLabels?.slNumber ?? 'Sl.No';
+    final String dateLabel = resolvedLabels?.date ?? 'Date';
+    final String referenceLabel = resolvedLabels?.orderNumber ??
+        'Reference'; // Combined Order Number + Transaction Type
+    final String debitLabel = resolvedLabels?.debit ?? 'Debit';
+    final String creditLabel = resolvedLabels?.credit ?? 'Credit';
+    final String taxLabel = resolvedLabels?.tax ?? 'Tax';
+    final String balanceLabel = resolvedLabels?.balance ?? 'Balance';
+    final String statusLabel = resolvedLabels?.status ?? 'Status';
+
+    debugPrint("Using resolved labels from document config:");
+    debugPrint("  Sl.No: '$slNumberLabel'");
+    debugPrint("  Date: '$dateLabel'");
+    debugPrint("  Reference: '$referenceLabel' (Combined Order Number + Type)");
+    debugPrint("  Debit: '$debitLabel'");
+    debugPrint("  Credit: '$creditLabel'");
+    debugPrint("  Tax: '$taxLabel'");
+    debugPrint("  Balance: '$balanceLabel'");
+    debugPrint("  Status: '$statusLabel'");
+
     // Add table headers with fixed widths
     List<PosColumn> headerColumns = [];
     int totalHeaderWidth = 0;
@@ -295,45 +359,7 @@ class TransactionReportThermalPrinter {
 
     // Add Sl.No column
     headerColumns.add(PosColumn(
-        text: 'Sl.No',
-        width: 1,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
-    debugPrint("Added SL column with width 1, total width: $totalHeaderWidth");
-
-    // Add Order Number column
-    headerColumns.add(PosColumn(
-        text: 'Order Number',
-        width: 2,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 2;
-    debugPrint(
-        "Added Order Number column with width 2, total width: $totalHeaderWidth");
-
-    // Add Transaction Type column
-    headerColumns.add(PosColumn(
-        text: 'Transaction Type',
-        width: 2,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 2;
-    debugPrint(
-        "Added Transaction Type column with width 2, total width: $totalHeaderWidth");
-
-    // Add Type column
-    headerColumns.add(PosColumn(
-        text: 'Type',
+        text: slNumberLabel,
         width: 1,
         styles: PosStyles(
             fontType: fontType,
@@ -342,49 +368,11 @@ class TransactionReportThermalPrinter {
             height: is58mm ? textSizeSmall : textSizeSmall)));
     totalHeaderWidth += 1;
     debugPrint(
-        "Added Type column with width 1, total width: $totalHeaderWidth");
-
-    // Add Amount column
-    headerColumns.add(PosColumn(
-        text: 'Amount',
-        width: 1,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.right,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
-    debugPrint(
-        "Added Amount column with width 1, total width: $totalHeaderWidth");
-
-    // Add Tax column
-    headerColumns.add(PosColumn(
-        text: 'Tax',
-        width: 1,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.right,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
-    debugPrint("Added Tax column with width 1, total width: $totalHeaderWidth");
-
-    // Add Status column
-    headerColumns.add(PosColumn(
-        text: 'Status',
-        width: 2,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 2;
-    debugPrint(
-        "Added Status column with width 2, total width: $totalHeaderWidth");
+        "Added $slNumberLabel column with width 1, total width: $totalHeaderWidth");
 
     // Add Date column
     headerColumns.add(PosColumn(
-        text: 'Date',
+        text: dateLabel,
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -393,7 +381,85 @@ class TransactionReportThermalPrinter {
             height: is58mm ? textSizeSmall : textSizeSmall)));
     totalHeaderWidth += 2;
     debugPrint(
-        "Added Date column with width 2, total width: $totalHeaderWidth");
+        "Added $dateLabel column with width 2, total width: $totalHeaderWidth");
+
+    // Add Reference column (combined Order Number + Transaction Type)
+    headerColumns.add(PosColumn(
+        text: referenceLabel,
+        width: 6, // Increased from 4 to 6 (added Tax+Status widths)
+        styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            bold: true,
+            height: is58mm ? textSizeSmall : textSizeSmall)));
+    totalHeaderWidth += 6;
+    debugPrint(
+        "Added $referenceLabel column with width 6, total width: $totalHeaderWidth");
+
+    // Add Debit column
+    headerColumns.add(PosColumn(
+        text: debitLabel,
+        width: 1,
+        styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            bold: true,
+            height: is58mm ? textSizeSmall : textSizeSmall)));
+    totalHeaderWidth += 1;
+    debugPrint(
+        "Added $debitLabel column with width 1, total width: $totalHeaderWidth");
+
+    // Add Credit column
+    headerColumns.add(PosColumn(
+        text: creditLabel,
+        width: 1,
+        styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            bold: true,
+            height: is58mm ? textSizeSmall : textSizeSmall)));
+    totalHeaderWidth += 1;
+    debugPrint(
+        "Added $creditLabel column with width 1, total width: $totalHeaderWidth");
+
+    // Add Tax column - COMMENTED OUT TO SAVE SPACE
+    // headerColumns.add(PosColumn(
+    //     text: taxLabel,
+    //     width: 1,
+    //     styles: PosStyles(
+    //         fontType: fontType,
+    //         align: PosAlign.right,
+    //         bold: true,
+    //         height: is58mm ? textSizeSmall : textSizeSmall)));
+    // totalHeaderWidth += 1;
+    // debugPrint(
+    //     "Added $taxLabel column with width 1, total width: $totalHeaderWidth");
+
+    // Add Balance column
+    headerColumns.add(PosColumn(
+        text: balanceLabel,
+        width: 1,
+        styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            bold: true,
+            height: is58mm ? textSizeSmall : textSizeSmall)));
+    totalHeaderWidth += 1;
+    debugPrint(
+        "Added $balanceLabel column with width 1, total width: $totalHeaderWidth");
+
+    // Add Status column - COMMENTED OUT TO SAVE SPACE
+    // headerColumns.add(PosColumn(
+    //     text: statusLabel,
+    //     width: 1,
+    //     styles: PosStyles(
+    //         fontType: fontType,
+    //         align: PosAlign.left,
+    //         bold: true,
+    //         height: is58mm ? textSizeSmall : textSizeSmall)));
+    // totalHeaderWidth += 1;
+    // debugPrint(
+    //     "Added $statusLabel column with width 1, total width: $totalHeaderWidth");
 
     debugPrint("Final header total width: $totalHeaderWidth");
     if (totalHeaderWidth != 12) {
@@ -407,6 +473,9 @@ class TransactionReportThermalPrinter {
       bytes += generator.hr();
     }
 
+    // Calculate running balance
+    double runningBalance = 0.0;
+
     // Process each cart item
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
@@ -415,9 +484,9 @@ class TransactionReportThermalPrinter {
       String orderNumber = '';
       String transactionType = '';
       String type = '';
-      String amount = '';
-      String tax = '10'; // Default tax value as shown in example
-      String status = '';
+      double amount = 0.0;
+      // String tax = '10'; // Default tax value - COMMENTED OUT (Tax column hidden)
+      // String status = ''; // COMMENTED OUT (Status column hidden)
       String date = '';
 
       if (isFromLocalStorage) {
@@ -425,35 +494,56 @@ class TransactionReportThermalPrinter {
         orderNumber = item['orderNumber'] ?? 'N/A';
         transactionType = item['transactionType'] ?? 'N/A';
         type = item['type'] ?? 'N/A';
-        amount = item['amount'] ?? '0.00';
-        status = item['status'] ?? 'N/A';
+        amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+        // status = item['status'] ?? 'N/A'; // COMMENTED OUT (Status column hidden)
         date = item['date'] ?? 'N/A';
       } else {
         // Handle different object types - check if it's a Map or an object
         if (item is Map<String, dynamic>) {
           // Handle Map case (from API responses or converted data)
-          orderNumber = item['order_id']?.toString() ??
-              item['orderId']?.toString() ??
+          orderNumber = item['order_number']?.toString() ??
               item['orderNumber']?.toString() ??
+              item['order_id']?.toString() ??
+              item['orderId']?.toString() ??
               'N/A';
           transactionType = item['transaction_type']?.toString() ??
               item['transactionType']?.toString() ??
               'N/A';
           type = item['type']?.toString() ?? 'N/A';
-          amount = item['amount']?.toString() ?? '0.00';
-          status = item['status']?.toString() ?? 'N/A';
+          amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+          // status = item['status']?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
           date = item['date']?.toString() ?? 'N/A';
         } else {
           // Handle object case (ListTransaction or similar)
           try {
-            orderNumber = item.orderNumber?.toString() ??
-                item.orderId?.toString() ??
-                'N/A';
+            // Debug: Log all available properties
+            debugPrint('=== OBJECT CASE DEBUG ===');
+            debugPrint('Item type: ${item.runtimeType}');
+            debugPrint('Item.orderNumber: ${item.orderNumber}');
+            debugPrint('Item.orderId: ${item.orderId}');
+            debugPrint('Item.reference: ${item.reference}');
+            debugPrint('Item.referenceId: ${item.referenceId}');
+
+            // Try to access orderNumber property - ensure it's not null or empty
+            String? tempOrderNumber = item.orderNumber?.toString();
+            if (tempOrderNumber == null ||
+                tempOrderNumber.isEmpty ||
+                tempOrderNumber == 'null') {
+              // Fallback to orderId if orderNumber is not available
+              tempOrderNumber = item.orderId?.toString();
+              debugPrint(
+                  'WARN: orderNumber was null/empty, using orderId: $tempOrderNumber');
+            }
+            orderNumber = tempOrderNumber ?? 'N/A';
+
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
-            amount = item.amount?.toString() ?? '0.00';
-            status = item.status?.toString() ?? 'N/A';
+            amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
+            // status = item.status?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
             date = item.date?.toString() ?? 'N/A';
+
+            debugPrint('Final orderNumber value: $orderNumber');
+            debugPrint('=== END OBJECT CASE DEBUG ===');
           } catch (e) {
             debugPrint('Error accessing cart item properties: $e');
             debugPrint('Item type: ${item.runtimeType}');
@@ -462,12 +552,45 @@ class TransactionReportThermalPrinter {
             orderNumber = 'N/A';
             transactionType = 'N/A';
             type = 'N/A';
-            amount = '0.00';
-            
-            status = 'N/A';
+            amount = 0.0;
+            // status = 'N/A'; // COMMENTED OUT (Status column hidden)
             date = 'N/A';
           }
         }
+      }
+
+      // Update transaction type display to match PHP template
+      String displayTransactionType = transactionType;
+      if (transactionType == 'Invoice') {
+        displayTransactionType = 'Invoice';
+      } else if (transactionType == 'Receipt') {
+        displayTransactionType = 'Receipt';
+      } else if (transactionType == 'Voucher') {
+        displayTransactionType = 'Voucher';
+      }
+
+      // Format status to match PHP template - COMMENTED OUT (Status column hidden)
+      // String displayStatus = status;
+      // if (status == 'SUCC') {
+      //   displayStatus = 'Paid';
+      // } else if (status == 'FAIL') {
+      //   displayStatus = 'Pending';
+      // } else if (status == 'INIT') {
+      //   displayStatus = 'Initiated';
+      // }
+
+      // Calculate debit and credit amounts
+      String formattedAmount = amount.toStringAsFixed(2);
+      String debitAmount =
+          (type.toLowerCase() == 'debit') ? formattedAmount : '-';
+      String creditAmount =
+          (type.toLowerCase() == 'credit') ? formattedAmount : '-';
+
+      // Update running balance
+      if (type.toLowerCase() == 'debit') {
+        runningBalance -= amount;
+      } else if (type.toLowerCase() == 'credit') {
+        runningBalance += amount;
       }
 
       // Format date to show only date (no time)
@@ -481,62 +604,18 @@ class TransactionReportThermalPrinter {
       }
 
       String slNumber = (i + 1).toString();
+
+      // Combine transaction type and order number into reference
+      String reference = '$displayTransactionType - $orderNumber';
+
       debugPrint(
-          "Item $i: Order: $orderNumber, Type: $transactionType, Amount: $amount, Status: $status, Date: $formattedDate");
+          "Item $i: Reference: $reference, Debit: $debitAmount, Credit: $creditAmount, Balance: ${runningBalance.toStringAsFixed(2)}, Date: $formattedDate");
 
       // Create row with all transaction details
       List<PosColumn> itemRow = [
         PosColumn(
             text: slNumber,
             width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: orderNumber,
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: transactionType,
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: type,
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: amount,
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: tax,
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: status,
-            width: 2,
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -550,9 +629,64 @@ class TransactionReportThermalPrinter {
                 align: PosAlign.left,
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
+        PosColumn(
+            text: reference,
+            width: 6, // Increased from 4 to 6 (added Tax+Status widths)
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall)),
+        PosColumn(
+            text: debitAmount,
+            width: 1,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall)),
+        PosColumn(
+            text: creditAmount,
+            width: 1,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall)),
+        // Tax column - COMMENTED OUT TO SAVE SPACE
+        // PosColumn(
+        //     text: tax,
+        //     width: 1,
+        //     styles: PosStyles(
+        //         fontType: fontType,
+        //         align: PosAlign.right,
+        //         bold: false,
+        //         height: is58mm ? textSizeSmall : textSizeSmall)),
+        PosColumn(
+            text: runningBalance.toStringAsFixed(2),
+            width: 1,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall)),
+        // Status column - COMMENTED OUT TO SAVE SPACE
+        // PosColumn(
+        //     text: displayStatus,
+        //     width: 1,
+        //     styles: PosStyles(
+        //         fontType: fontType,
+        //         align: PosAlign.left,
+        //         bold: false,
+        //         height: is58mm ? textSizeSmall : textSizeSmall)),
       ];
 
-      int itemRowWidth = 1 + 2 + 2 + 1 + 1 + 1 + 2 + 2;
+      int itemRowWidth = 1 +
+          2 +
+          6 +
+          1 +
+          1 +
+          1; // Reference=6 (redistributed Tax+Status widths)
       debugPrint("Item row total width: $itemRowWidth");
       if (itemRowWidth != 12) {
         debugPrint(
@@ -815,7 +949,8 @@ class TransactionReportThermalPrinter {
     String? terms = billDocumentConfig?.terms;
 
     if (terms == null || terms.trim().isEmpty) {
-      debugPrint("No Terms & Conditions data available from document config, skipping");
+      debugPrint(
+          "No Terms & Conditions data available from document config, skipping");
       return [];
     }
 
@@ -901,15 +1036,15 @@ class TransactionReportThermalPrinter {
     return bytes;
   }
 
-  List<int> _buildFooterMessage(Generator generator,
-      Map<String, DisplayOption>? displayConfig, DocumentConfig? billDocumentConfig, PosFontType fontType) {
+  List<int> _buildFooterMessage(
+      Generator generator,
+      Map<String, DisplayOption>? displayConfig,
+      DocumentConfig? billDocumentConfig,
+      PosFontType fontType) {
     List<int> bytes = [];
 
-    // Get footer from displayConfig value first, then fallback to billDocumentConfig
-    String? footer = displayConfig?['showFooter']?.value as String?;
-    if (footer == null || footer.trim().isEmpty) {
-      footer = billDocumentConfig?.footer;
-    }
+    // Get footer from billDocumentConfig
+    String? footer = billDocumentConfig?.footer;
 
     if (footer != null && footer.trim().isNotEmpty) {
       bytes += generator.hr();
@@ -978,7 +1113,8 @@ class TransactionReportThermalPrinter {
       String? customerAddress,
       String? fromDate,
       String? toDate,
-      PosFontType fontType) {
+      PosFontType fontType,
+      Map<String, DisplayOption>? displayConfig) {
     debugPrint("===== THERMAL CUSTOMER DETAILS DEBUG =====");
     debugPrint("Building customer details section for thermal printer:");
     debugPrint("  customerName: '$customerName'");
@@ -987,74 +1123,97 @@ class TransactionReportThermalPrinter {
     debugPrint("  customerAddress: '$customerAddress'");
     debugPrint("  fromDate: '$fromDate'");
     debugPrint("  toDate: '$toDate'");
-    debugPrint("  Are any customer fields non-null and non-empty?");
-    debugPrint("    Name: ${customerName != null && customerName.isNotEmpty}");
+    debugPrint("  Display Config visibility:");
     debugPrint(
-        "    Phone: ${customerPhone != null && customerPhone.isNotEmpty}");
+        "    showCustomerName: ${displayConfig?['showCustomerName']?.visible}");
     debugPrint(
-        "    Email: ${customerEmail != null && customerEmail.isNotEmpty}");
+        "    showCustomerPhone: ${displayConfig?['showCustomerPhone']?.visible}");
     debugPrint(
-        "    Address: ${customerAddress != null && customerAddress.isNotEmpty}");
+        "    showCustomerEmail: ${displayConfig?['showCustomerEmail']?.visible}");
+    debugPrint(
+        "    showCustomerAddress: ${displayConfig?['showCustomerAddress']?.visible}");
+    debugPrint("    showDates: ${displayConfig?['showDates']?.visible}");
     debugPrint("===== END THERMAL CUSTOMER DETAILS DEBUG =====");
 
     List<int> bytes = [];
 
-    // Add a header for customer details
-    bytes += generator.text('Customer Information',
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.center,
-            bold: true,
-            height: textSizeSmall,
-            width: textSizeSmall));
+    // Check if any customer field should be shown
+    bool showName = (displayConfig?['showCustomerName']?.visible ?? true) &&
+        customerName != null &&
+        customerName.isNotEmpty;
+    bool showEmail = (displayConfig?['showCustomerEmail']?.visible ?? true) &&
+        customerEmail != null &&
+        customerEmail.isNotEmpty;
+    bool showPhone = (displayConfig?['showCustomerPhone']?.visible ?? true) &&
+        customerPhone != null &&
+        customerPhone.isNotEmpty;
+    bool showAddress =
+        (displayConfig?['showCustomerAddress']?.visible ?? true) &&
+            customerAddress != null &&
+            customerAddress.isNotEmpty;
+    bool showDates = (displayConfig?['showDates']?.visible ?? true) &&
+        ((fromDate != null && fromDate.isNotEmpty) ||
+            (toDate != null && toDate.isNotEmpty));
 
-    bytes += generator.hr();
-
-    // Add customer details
-    if (customerName != null && customerName.isNotEmpty) {
-      bytes += generator.text('Name: $customerName',
+    // Only add customer information section if at least one field should be shown
+    if (showName || showEmail || showPhone || showAddress || showDates) {
+      // Add a header for customer details
+      bytes += generator.text('Customer Information',
           styles: PosStyles(
               fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-    }
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeSmall,
+              width: textSizeSmall));
 
-    if (customerEmail != null && customerEmail.isNotEmpty) {
-      bytes += generator.text('Email: $customerEmail',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-    }
+      bytes += generator.hr();
 
-    if (customerPhone != null && customerPhone.isNotEmpty) {
-      bytes += generator.text('Phone: $customerPhone',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-    }
+      // Add customer details based on visibility settings
+      if (showName) {
+        bytes += generator.text('Name: $customerName',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeSmall));
+      }
 
-    if (customerAddress != null && customerAddress.isNotEmpty) {
-      bytes += generator.text('Address: $customerAddress',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-    }
+      if (showEmail) {
+        bytes += generator.text('Email: $customerEmail',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeSmall));
+      }
 
-    // Add date range information in the same format as date/time row
-    if ((fromDate != null && fromDate.isNotEmpty) ||
-        (toDate != null && toDate.isNotEmpty)) {
+      if (showPhone) {
+        bytes += generator.text('Phone: $customerPhone',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeSmall));
+      }
+
+      if (showAddress) {
+        bytes += generator.text('Address: $customerAddress',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeSmall));
+      }
+
+      // Add date range information if enabled
+      if (showDates) {
+        bytes += generator.emptyLines(1);
+        bytes += _buildDateRangeRow(generator, fromDate, toDate, fontType);
+      }
+
       bytes += generator.emptyLines(1);
-      bytes += _buildDateRangeRow(generator, fromDate, toDate, fontType);
     }
 
-    bytes += generator.emptyLines(1);
     return bytes;
   }
 }

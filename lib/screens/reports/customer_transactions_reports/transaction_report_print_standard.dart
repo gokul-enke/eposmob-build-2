@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
@@ -64,7 +62,46 @@ class TransactionReportStandardPrinter {
     debugPrint("  Phone: $customerPhone");
     debugPrint("  Email: $customerEmail");
     debugPrint("  Address: $customerAddress");
+    debugPrint("  fromDate: $fromDate");
+    debugPrint("  toDate: $toDate");
     debugPrint("===== END PDF GENERATION DEBUG INFO =====");
+
+    // Calculate date range from cart items if not provided
+    if ((fromDate == null || fromDate.isEmpty) &&
+        (toDate == null || toDate.isEmpty) &&
+        cartItems.isNotEmpty) {
+      debugPrint("Calculating date range from cart items...");
+
+      List<String> dates = [];
+      for (var item in cartItems) {
+        String? itemDate;
+
+        if (isFromLocalStorage) {
+          itemDate = item['date']?.toString();
+        } else if (item is Map<String, dynamic>) {
+          itemDate = item['date']?.toString();
+        } else {
+          try {
+            itemDate = item.date?.toString();
+          } catch (e) {
+            debugPrint('Error accessing date: $e');
+          }
+        }
+
+        if (itemDate != null && itemDate.isNotEmpty && itemDate != 'N/A') {
+          dates.add(itemDate);
+        }
+      }
+
+      if (dates.isNotEmpty) {
+        // Sort dates to get first and last
+        dates.sort();
+        fromDate = DateHelper.formatISODate(dates.first);
+        toDate = DateHelper.formatISODate(dates.last);
+        debugPrint("Calculated fromDate: $fromDate");
+        debugPrint("Calculated toDate: $toDate");
+      }
+    }
 
     try {
       // Ensure billDocumentConfig is loaded before printing
@@ -115,20 +152,33 @@ class TransactionReportStandardPrinter {
 
       // Verify we're using Customer Statement config
       if (billDocumentConfig.type != "Customer Statement") {
-        debugPrint("⚠️ WARNING: Expected 'Customer Statement' but got '${billDocumentConfig.type}'");
+        debugPrint(
+            "⚠️ WARNING: Expected 'Customer Statement' but got '${billDocumentConfig.type}'");
       }
 
       // Validate Customer Statement display configuration fields
       debugPrint("===== CUSTOMER STATEMENT FIELD VALIDATION =====");
       final expectedFields = [
-        'showHeader', 'showSubheader', 'showFooter', 'showDates',
-        'showCustomerName', 'showCustomerEmail', 'showCustomerPhone', 'showCustomerAddress',
-        'showTotalCredit', 'showTotalDebit', 'showBalance', 'showOrderNumber', 'showStatus', 'showTax'
+        'showHeader',
+        'showSubheader',
+        'showFooter',
+        'showDates',
+        'showCustomerName',
+        'showCustomerEmail',
+        'showCustomerPhone',
+        'showCustomerAddress',
+        'showTotalCredit',
+        'showTotalDebit',
+        'showBalance',
+        'showOrderNumber',
+        'showStatus',
+        'showTax'
       ];
-      
+
       for (String field in expectedFields) {
         if (displayConfig?.containsKey(field) == true) {
-          debugPrint("✅ $field: visible=${displayConfig![field]!.visible}, value=${displayConfig[field]!.value}");
+          debugPrint(
+              "✅ $field: visible=${displayConfig![field]!.visible}, value=${displayConfig[field]!.value}");
         } else {
           debugPrint("❌ $field: NOT FOUND in display configuration");
         }
@@ -267,7 +317,7 @@ class TransactionReportStandardPrinter {
                 // Show footer if enabled
                 if (updatedSettings?['showFooter']?.visible == true)
                   pw.Text(
-                    (updatedSettings?['showFooter']?.value as String?) ??
+                    billDocumentConfig.footer ??
                         'This is a computer-generated document. No signature is required.',
                     style: const pw.TextStyle(
                       fontSize: 8,
@@ -290,8 +340,7 @@ class TransactionReportStandardPrinter {
                       // Show header if enabled
                       if (updatedSettings?['showHeader']?.visible == true)
                         pw.Text(
-                          (updatedSettings?['showHeader']?.value as String?) ??
-                              'EPosenke',
+                          billDocumentConfig.header ?? 'EPosenke',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
                             fontWeight: pw.FontWeight.bold,
@@ -302,9 +351,8 @@ class TransactionReportStandardPrinter {
                       // Show subheader if enabled
                       if (updatedSettings?['showSubheader']?.visible == true)
                         pw.Text(
-                          (updatedSettings?['showSubheader']?.value
-                                  as String?) ??
-                              'Customer Transaction Report',
+                          billDocumentConfig.subheader ??
+                              'Customer Statement',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
                             fontWeight: pw.FontWeight.bold,
@@ -337,38 +385,44 @@ class TransactionReportStandardPrinter {
                     bodyStyle,
                     fromDate,
                     toDate,
+                    updatedSettings,
                   ),
 
                 // Add date range information outside customer card and align to right
-                if ((fromDate != null && fromDate.isNotEmpty) ||
-                    (toDate != null && toDate.isNotEmpty))
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.end,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: [
-                          pw.Text(
-                            'From: ${fromDate ?? 'N/A'}',
-                            style: pw.TextStyle(
-                                fontSize:
-                                    selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                                color: PdfColor.fromHex('#2d3748'),
-                                fontWeight: pw.FontWeight.bold),
-                          ),
-                          pw.SizedBox(
-                              height: 6), // Add spacing between date lines
-                          pw.Text(
-                            'To: ${toDate ?? 'N/A'}',
-                            style: pw.TextStyle(
-                                fontSize:
-                                    selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                                color: PdfColor.fromHex('#2d3748'),
-                                fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ],
+                // Only show if showDates is enabled
+                if ((updatedSettings?['showDates']?.visible ?? true) &&
+                    ((fromDate != null && fromDate.isNotEmpty) ||
+                        (toDate != null && toDate.isNotEmpty)))
+                  pw.Container(
+                    margin: const pw.EdgeInsets.only(bottom: 10),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          children: [
+                            pw.Text(
+                              'From: ${fromDate ?? 'N/A'},',
+                              style: pw.TextStyle(
+                                  fontSize:
+                                      selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                                  color: PdfColors.black,
+                                  fontWeight: pw.FontWeight.bold),
+                            ),
+                            pw.SizedBox(
+                                height: 4), // Add spacing between date lines
+                            pw.Text(
+                              'To : ${toDate ?? 'N/A'},',
+                              style: pw.TextStyle(
+                                  fontSize:
+                                      selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                                  color: PdfColors.black,
+                                  fontWeight: pw.FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
 
                 pw.SizedBox(height: 15),
@@ -428,21 +482,14 @@ class TransactionReportStandardPrinter {
               if (context.mounted) {
                 showScaffold(
                     context: context, message: "PDF created successfully");
-                Navigator.pop(context);
-                SideBarController sideBarController =
-                    Get.put(SideBarController());
-                sideBarController.index.value =
-                    65; // Back to transaction report
+                // Navigation is handled by the parent TransactionReportPrintPage
               }
             }
           } else {
             if (context.mounted) {
               showScaffold(
                   context: context, message: "PDF opened for printing");
-              Navigator.pop(context);
-              SideBarController sideBarController =
-                  Get.put(SideBarController());
-              sideBarController.index.value = 65; // Back to transaction report
+              // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
         } catch (e) {
@@ -453,10 +500,7 @@ class TransactionReportStandardPrinter {
             if (context.mounted) {
               showScaffold(
                   context: context, message: "PDF created successfully");
-              Navigator.pop(context);
-              SideBarController sideBarController =
-                  Get.put(SideBarController());
-              sideBarController.index.value = 65; // Back to transaction report
+              // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
         }
@@ -478,21 +522,17 @@ class TransactionReportStandardPrinter {
       // First try to open with the default Windows PDF viewer
       final result = await OpenFile.open(file.path);
 
-      // Always close the page on Windows, regardless of result
+      // Always show success message on Windows, regardless of result
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 65; // Back to transaction report
+        // Navigation is handled by the parent TransactionReportPrintPage
       }
     } catch (e) {
       debugPrint("Windows PDF handling error: $e");
-      // Still close the page on error
+      // Still show success message on error
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 65; // Back to transaction report
+        // Navigation is handled by the parent TransactionReportPrintPage
       }
     }
   }
@@ -500,10 +540,8 @@ class TransactionReportStandardPrinter {
   // Show information about file location (for Windows) - Now unused but kept for reference
   void _showFileLocationInfo(File file) {
     if (context.mounted) {
-      // Just close the page instead of showing dialog
-      Navigator.pop(context);
-      SideBarController sideBarController = Get.put(SideBarController());
-      sideBarController.index.value = 65; // Back to transaction report
+      // Navigation is handled by the parent TransactionReportPrintPage
+      showScaffold(context: context, message: "PDF created successfully");
     }
   }
 
@@ -523,9 +561,7 @@ class TransactionReportStandardPrinter {
         if (context.mounted) {
           showScaffold(
               context: context, message: "PDF shared. Please open it to print");
-          Navigator.pop(context);
-          SideBarController sideBarController = Get.put(SideBarController());
-          sideBarController.index.value = 65; // Back to transaction report
+          // Navigation is handled by the parent TransactionReportPrintPage
         }
       } else {
         // For Windows, show the file location
@@ -598,14 +634,24 @@ class TransactionReportStandardPrinter {
         } else {
           // Handle object case (ListTransaction or similar)
           try {
-            orderNumber = item.orderNumber?.toString() ??
-                item.orderId?.toString() ??
-                'N/A';
+            // Try to access orderNumber property - ensure it's not null or empty
+            String? tempOrderNumber = item.orderNumber?.toString();
+            if (tempOrderNumber == null ||
+                tempOrderNumber.isEmpty ||
+                tempOrderNumber == 'null') {
+              // Fallback to orderId if orderNumber is not available
+              tempOrderNumber = item.orderId?.toString();
+            }
+            orderNumber = tempOrderNumber ?? 'N/A';
+
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
             amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
             status = item.status?.toString() ?? 'N/A';
             date = item.date?.toString() ?? 'N/A';
+
+            debugPrint(
+                'PDF Object case - Order Number: $orderNumber, Order ID: ${item.orderId}');
           } catch (e) {
             debugPrint('Error accessing cart item properties: $e');
             debugPrint('Item type: ${item.runtimeType}');
@@ -624,9 +670,9 @@ class TransactionReportStandardPrinter {
       // Update transaction type display to match PHP template
       String displayTransactionType = transactionType;
       if (transactionType == 'Invoice') {
-        displayTransactionType = 'Order';
+        displayTransactionType = 'Invoice';
       } else if (transactionType == 'Receipt') {
-        displayTransactionType = 'Payment';
+        displayTransactionType = 'Receipt';
       } else if (transactionType == 'Voucher') {
         displayTransactionType = 'Voucher';
       }
@@ -663,11 +709,9 @@ class TransactionReportStandardPrinter {
       // Add Date
       rowData.add(pw.Text(formattedDate, style: contentStyle));
 
-      // Add Order Number
-      rowData.add(pw.Text(orderNumber, style: contentStyle));
-
-      // Add Transaction Type
-      rowData.add(pw.Text(displayTransactionType, style: contentStyle));
+      // Add Reference (combined Transaction Type + Order Number)
+      String reference = '$displayTransactionType - $orderNumber';
+      rowData.add(pw.Text(reference, style: contentStyle));
 
       // Add Debit column with red color for debit amounts
       rowData.add(pw.Text(debitAmount,
@@ -735,35 +779,54 @@ class TransactionReportStandardPrinter {
     // Create headers for the table based on visibility and resolved labels
     final List<pw.Widget> tableHeaders = [];
 
+    // Get resolved labels from document config with fallbacks
+    final resolvedLabels = billDocumentConfig?.resolvedLabels;
+    final String slNumberLabel = resolvedLabels?.slNumber ?? 'Sl No';
+    final String dateLabel = resolvedLabels?.date ?? 'Date';
+    final String referenceLabel =
+        resolvedLabels?.orderNumber ?? 'Reference'; // Combined Order Number + Transaction Type
+    final String debitLabel = resolvedLabels?.debit ?? 'Debit';
+    final String creditLabel = resolvedLabels?.credit ?? 'Credit';
+    final String taxLabel = resolvedLabels?.tax ?? 'Tax';
+    final String balanceLabel = resolvedLabels?.balance ?? 'Balance';
+    final String statusLabel = resolvedLabels?.status ?? 'Status';
+
+    debugPrint("PDF: Using resolved labels from document config:");
+    debugPrint("  Sl.No: '$slNumberLabel'");
+    debugPrint("  Date: '$dateLabel'");
+    debugPrint("  Reference: '$referenceLabel' (Combined Order Number + Type)");
+    debugPrint("  Debit: '$debitLabel'");
+    debugPrint("  Credit: '$creditLabel'");
+    debugPrint("  Tax: '$taxLabel'");
+    debugPrint("  Balance: '$balanceLabel'");
+    debugPrint("  Status: '$statusLabel'");
+
     // Add Sl.No column
-    tableHeaders.add(pw.Text('Sl No', style: headerStyle));
+    tableHeaders.add(pw.Text(slNumberLabel, style: headerStyle));
 
     // Add Date column
-    tableHeaders.add(pw.Text('Date', style: headerStyle));
+    tableHeaders.add(pw.Text(dateLabel, style: headerStyle));
 
-    // Add Order Number column (newly added)
-    tableHeaders.add(pw.Text('Order Number', style: headerStyle));
-
-    // Add Transaction Type column
-    tableHeaders.add(pw.Text('Transaction Type', style: headerStyle));
+    // Add Reference column (combined Order Number + Transaction Type)
+    tableHeaders.add(pw.Text(referenceLabel, style: headerStyle));
 
     // Add Debit column
-    tableHeaders.add(pw.Text('Debit', style: headerStyle));
+    tableHeaders.add(pw.Text(debitLabel, style: headerStyle));
 
     // Add Credit column
-    tableHeaders.add(pw.Text('Credit', style: headerStyle));
+    tableHeaders.add(pw.Text(creditLabel, style: headerStyle));
 
     // Add Tax column (if enabled)
     if (displayConfig?['showTax']?.visible == true) {
-      tableHeaders.add(pw.Text('Tax', style: headerStyle));
+      tableHeaders.add(pw.Text(taxLabel, style: headerStyle));
     }
 
     // Add Balance column
-    tableHeaders.add(pw.Text('Balance', style: headerStyle));
+    tableHeaders.add(pw.Text(balanceLabel, style: headerStyle));
 
     // Add Status column (if enabled)
     if (displayConfig?['showStatus']?.visible == true) {
-      tableHeaders.add(pw.Text('Status', style: headerStyle));
+      tableHeaders.add(pw.Text(statusLabel, style: headerStyle));
     }
 
     // Define column widths - adjust based on paper size
@@ -773,40 +836,38 @@ class TransactionReportStandardPrinter {
       0: pw.FixedColumnWidth(isA5 ? 30 : 60),
       // Date column - medium
       1: pw.FixedColumnWidth(isA5 ? 60 : 100),
-      // Order Number column - wide
-      2: pw.FixedColumnWidth(isA5 ? 65 : 100),
-      // Transaction Type column - medium
-      3: pw.FixedColumnWidth(isA5 ? 70 : 110),
+      // Reference column (combined Order Number + Type) - wider
+      2: pw.FixedColumnWidth(isA5 ? 135 : 210),
       // Debit column - narrow
-      4: pw.FixedColumnWidth(isA5 ? 45 : 70),
+      3: pw.FixedColumnWidth(isA5 ? 45 : 70),
       // Credit column - narrow
-      5: pw.FixedColumnWidth(isA5 ? 45 : 70),
+      4: pw.FixedColumnWidth(isA5 ? 45 : 70),
       // Tax column (if enabled) - narrow
-      6: pw.FixedColumnWidth(isA5 ? 30 : 50),
+      5: pw.FixedColumnWidth(isA5 ? 30 : 50),
       // Balance column - medium
-      7: pw.FixedColumnWidth(isA5 ? 50 : 80),
+      6: pw.FixedColumnWidth(isA5 ? 50 : 80),
       // Status column (if enabled) - medium
-      8: pw.FixedColumnWidth(isA5 ? 45 : 70),
+      7: pw.FixedColumnWidth(isA5 ? 45 : 70),
     };
 
     // Adjust column indices if Tax or Status columns are not visible
-    int taxColumnIndex = displayConfig?['showTax']?.visible == true ? 6 : -1;
+    int taxColumnIndex = displayConfig?['showTax']?.visible == true ? 5 : -1;
     int statusColumnIndex = displayConfig?['showStatus']?.visible == true
-        ? (displayConfig?['showTax']?.visible == true ? 8 : 7)
+        ? (displayConfig?['showTax']?.visible == true ? 7 : 6)
         : -1;
 
     // Remove Tax column width if not visible
     if (taxColumnIndex == -1) {
-      columnWidths.remove(6);
+      columnWidths.remove(5);
       // Adjust Status column index if needed
       if (statusColumnIndex != -1) {
-        columnWidths.remove(8);
-        columnWidths[7] =
-            const pw.FixedColumnWidth(80); // Move Status to index 7
+        columnWidths.remove(7);
+        columnWidths[6] =
+            const pw.FixedColumnWidth(80); // Move Status to index 6
       }
     } else if (statusColumnIndex == -1) {
       // Remove Status column width if not visible
-      columnWidths.remove(8);
+      columnWidths.remove(7);
     }
 
     return pw.Table(
@@ -1130,6 +1191,7 @@ class TransactionReportStandardPrinter {
     pw.TextStyle bodyStyle,
     String? fromDate,
     String? toDate,
+    Map<String, DisplayOption>? displayConfig,
   ) {
     // Create styles to match screenshot
     final customerDetailStyle = pw.TextStyle(
@@ -1152,15 +1214,80 @@ class TransactionReportStandardPrinter {
     debugPrint("  customerAddress: '$customerAddress'");
     debugPrint("  fromDate: '$fromDate'");
     debugPrint("  toDate: '$toDate'");
-    debugPrint("  Are any customer fields non-null and non-empty?");
-    debugPrint("    Name: ${customerName != null && customerName.isNotEmpty}");
+    debugPrint("  Display Config visibility:");
     debugPrint(
-        "    Phone: ${customerPhone != null && customerPhone.isNotEmpty}");
+        "    showCustomerName: ${displayConfig?['showCustomerName']?.visible}");
     debugPrint(
-        "    Email: ${customerEmail != null && customerEmail.isNotEmpty}");
+        "    showCustomerPhone: ${displayConfig?['showCustomerPhone']?.visible}");
     debugPrint(
-        "    Address: ${customerAddress != null && customerAddress.isNotEmpty}");
+        "    showCustomerEmail: ${displayConfig?['showCustomerEmail']?.visible}");
+    debugPrint(
+        "    showCustomerAddress: ${displayConfig?['showCustomerAddress']?.visible}");
     debugPrint("===== END PDF CUSTOMER DETAILS DEBUG =====");
+
+    // Check if any customer field should be shown based on visibility settings
+    bool showName = (displayConfig?['showCustomerName']?.visible ?? true) &&
+        customerName != null &&
+        customerName.isNotEmpty;
+    bool showEmail = (displayConfig?['showCustomerEmail']?.visible ?? true) &&
+        customerEmail != null &&
+        customerEmail.isNotEmpty;
+    bool showPhone = (displayConfig?['showCustomerPhone']?.visible ?? true) &&
+        customerPhone != null &&
+        customerPhone.isNotEmpty;
+    bool showAddress =
+        (displayConfig?['showCustomerAddress']?.visible ?? true) &&
+            customerAddress != null &&
+            customerAddress.isNotEmpty;
+
+    // Build list of visible customer detail widgets
+    List<pw.Widget> customerDetailWidgets = [];
+
+    if (showName) {
+      customerDetailWidgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 8),
+          child: pw.Text(customerName, style: customerDetailStyle),
+        ),
+      );
+    }
+
+    if (showPhone) {
+      customerDetailWidgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 8),
+          child: pw.Text(customerPhone, style: customerDetailStyle),
+        ),
+      );
+    }
+
+    if (showEmail) {
+      customerDetailWidgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 8),
+          child: pw.Text(customerEmail, style: customerDetailStyle),
+        ),
+      );
+    }
+
+    if (showAddress) {
+      customerDetailWidgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 8),
+          child: pw.Text(customerAddress, style: customerDetailStyle),
+        ),
+      );
+    }
+
+    // If no details to show, add N/A
+    if (customerDetailWidgets.isEmpty) {
+      customerDetailWidgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 8),
+          child: pw.Text('N/A', style: customerDetailStyle),
+        ),
+      );
+    }
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(15),
@@ -1191,54 +1318,7 @@ class TransactionReportStandardPrinter {
               pw.Expanded(
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    // Display customer information with better spacing
-                    if (customerName != null && customerName.isNotEmpty)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(
-                            bottom: 8), // Increased spacing
-                        child: pw.Text(
-                          customerName,
-                          style: customerDetailStyle,
-                        ),
-                      ),
-                    if (customerPhone != null && customerPhone.isNotEmpty)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(
-                            bottom: 8), // Increased spacing
-                        child: pw.Text(
-                          customerPhone,
-                          style: customerDetailStyle,
-                        ),
-                      ),
-                    if (customerEmail != null && customerEmail.isNotEmpty)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(
-                            bottom: 8), // Increased spacing
-                        child: pw.Text(
-                          customerEmail,
-                          style: customerDetailStyle,
-                        ),
-                      ),
-                    if (customerAddress != null && customerAddress.isNotEmpty)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(
-                            bottom: 8), // Increased spacing
-                        child: pw.Text(
-                          customerAddress,
-                          style: customerDetailStyle,
-                        ),
-                      )
-                    else if (customerName == null || customerName.isEmpty)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(
-                            bottom: 8), // Increased spacing
-                        child: pw.Text(
-                          'N/A',
-                          style: customerDetailStyle,
-                        ),
-                      ),
-                  ],
+                  children: customerDetailWidgets,
                 ),
               ),
             ],
@@ -1437,6 +1517,43 @@ class TransactionReportStandardPrinter {
     String? fromDate,
     String? toDate,
   }) async {
+    // Calculate date range from cart items if not provided
+    if ((fromDate == null || fromDate.isEmpty) &&
+        (toDate == null || toDate.isEmpty) &&
+        cartItems.isNotEmpty) {
+      debugPrint("Sharing: Calculating date range from cart items...");
+
+      List<String> dates = [];
+      for (var item in cartItems) {
+        String? itemDate;
+
+        if (isFromLocalStorage) {
+          itemDate = item['date']?.toString();
+        } else if (item is Map<String, dynamic>) {
+          itemDate = item['date']?.toString();
+        } else {
+          try {
+            itemDate = item.date?.toString();
+          } catch (e) {
+            debugPrint('Error accessing date: $e');
+          }
+        }
+
+        if (itemDate != null && itemDate.isNotEmpty && itemDate != 'N/A') {
+          dates.add(itemDate);
+        }
+      }
+
+      if (dates.isNotEmpty) {
+        // Sort dates to get first and last
+        dates.sort();
+        fromDate = DateHelper.formatISODate(dates.first);
+        toDate = DateHelper.formatISODate(dates.last);
+        debugPrint("Sharing: Calculated fromDate: $fromDate");
+        debugPrint("Sharing: Calculated toDate: $toDate");
+      }
+    }
+
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
       if (billDocumentConfig == null) {
@@ -1563,8 +1680,7 @@ class TransactionReportStandardPrinter {
                       // Show header if enabled
                       if (updatedSettings?['showHeader']?.visible == true)
                         pw.Text(
-                          (updatedSettings?['showHeader']?.value as String?) ??
-                              'EPosenke',
+                          billDocumentConfig.header ?? 'EPosenke',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
                             fontWeight: pw.FontWeight.bold,
@@ -1575,9 +1691,8 @@ class TransactionReportStandardPrinter {
                       // Show subheader if enabled
                       if (updatedSettings?['showSubheader']?.visible == true)
                         pw.Text(
-                          (updatedSettings?['showSubheader']?.value
-                                  as String?) ??
-                              'Customer Transaction Report',
+                          billDocumentConfig.subheader ??
+                              'Customer Statement',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
                             fontWeight: pw.FontWeight.bold,
@@ -1610,38 +1725,46 @@ class TransactionReportStandardPrinter {
                     bodyStyle,
                     fromDate,
                     toDate,
+                    updatedSettings,
                   ),
 
                 // Add date range information outside customer card and align to right
-                if ((fromDate != null && fromDate.isNotEmpty) ||
-                    (toDate != null && toDate.isNotEmpty))
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.end,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: [
-                          pw.Text(
-                            'From: ${fromDate ?? 'N/A'}',
-                            style: pw.TextStyle(
-                              fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
-                              color: PdfColor.fromHex('#2d3748'),
-                              fontWeight: pw.FontWeight.bold,
+                // Only show if showDates is enabled
+                if ((updatedSettings?['showDates']?.visible ?? true) &&
+                    ((fromDate != null && fromDate.isNotEmpty) ||
+                        (toDate != null && toDate.isNotEmpty)))
+                  pw.Container(
+                    margin: const pw.EdgeInsets.only(bottom: 10),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          children: [
+                            pw.Text(
+                              'From: ${fromDate ?? 'N/A'},',
+                              style: pw.TextStyle(
+                                fontSize:
+                                    selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                                color: PdfColors.black,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          pw.SizedBox(
-                              height: 6), // Add spacing between date lines
-                          pw.Text(
-                            'To: ${toDate ?? 'N/A'}',
-                            style: pw.TextStyle(
-                              fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
-                              color: PdfColor.fromHex('#2d3748'),
-                              fontWeight: pw.FontWeight.bold,
+                            pw.SizedBox(
+                                height: 4), // Add spacing between date lines
+                            pw.Text(
+                              'To : ${toDate ?? 'N/A'},',
+                              style: pw.TextStyle(
+                                fontSize:
+                                    selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                                color: PdfColors.black,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
 
                 pw.SizedBox(height: 15),
@@ -1714,8 +1837,12 @@ class TransactionReportStandardPrinter {
   Map<String, DisplayOption> _createFallbackDisplayConfig() {
     return {
       'showHeader': DisplayOption(visible: true, value: 'EPosenke'),
-      'showSubheader': DisplayOption(visible: true, value: 'Customer Transaction Report'),
-      'showFooter': DisplayOption(visible: true, value: 'This is a computer-generated document. No signature is required.'),
+      'showSubheader':
+          DisplayOption(visible: true, value: 'Customer Transaction Report'),
+      'showFooter': DisplayOption(
+          visible: true,
+          value:
+              'This is a computer-generated document. No signature is required.'),
       'showDates': DisplayOption(visible: true, value: null),
       'showCustomerName': DisplayOption(visible: true, value: null),
       'showCustomerEmail': DisplayOption(visible: true, value: null),

@@ -247,6 +247,18 @@ class ResolvedLabels {
   final String? priceName;
   final String? taxName;
   final String? amountName;
+  // Customer Statement specific fields
+  final String? slNumber;
+  final String? date;
+  final String? orderNumber;
+  final String? transactionType;
+  final String? debit;
+  final String? credit;
+  final String? balance;
+  final String? status;
+  final String? tax;
+  // Supplier Statement specific fields (aliased from 'item' in API)
+  final String? item;
 
   ResolvedLabels({
     this.itemName,
@@ -254,6 +266,16 @@ class ResolvedLabels {
     this.priceName,
     this.taxName,
     this.amountName,
+    this.slNumber,
+    this.date,
+    this.orderNumber,
+    this.transactionType,
+    this.debit,
+    this.credit,
+    this.balance,
+    this.status,
+    this.tax,
+    this.item,
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
@@ -262,6 +284,16 @@ class ResolvedLabels {
         priceName: json["price_name"],
         taxName: json["tax_name"],
         amountName: json["amount_name"],
+        slNumber: json["sl_number"],
+        date: json["date"],
+        orderNumber: json["order_number"],
+        transactionType: json["transaction_type"],
+        debit: json["debit"],
+        credit: json["credit"],
+        balance: json["balance"],
+        status: json["status"],
+        tax: json["tax"],
+        item: json["item"], // Supplier Statement uses 'item' instead of 'item_name'
       );
 
   Map<String, dynamic> toJson() => {
@@ -270,6 +302,16 @@ class ResolvedLabels {
         "price_name": priceName,
         "tax_name": taxName,
         "amount_name": amountName,
+        "sl_number": slNumber,
+        "date": date,
+        "order_number": orderNumber,
+        "transaction_type": transactionType,
+        "debit": debit,
+        "credit": credit,
+        "balance": balance,
+        "status": status,
+        "tax": tax,
+        "item": item,
       };
 }
 
