@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../providers/shared_preferences.dart';
 
 // Import the different dashboard widgets
+import 'admin_dashboard.dart';
 import 'company_admin.dart';
 import 'sales_exicutive_dahsboard.dart';
 
@@ -39,8 +40,8 @@ class _DashboardUiScreenState extends State<DashboardUIScreen> {
     } else if (userRole == 'company_admin') {
       return const CompanyAdminDashboard();
     } else if (userRole == 'admin') {
-      // For admin role, show company admin dashboard as default
-      return const CompanyAdminDashboard();
+      // For admin role, show admin dashboard
+      return const AdminDashboard();
     }
 
     // Default to company admin dashboard if no role is matched
