@@ -5,8 +5,8 @@ class APPUrl {
   // static String baseURL = "https://kmstoys.enke.in";
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
-  // static String baseURL = "https://eposdemo.hypersouq.in";
-  static String baseURL = "https://epos.hypersouq.in";
+  static String baseURL = "https://eposdemo.hypersouq.in";
+  // static String baseURL = "https://epos.hypersouq.in";
   // static String baseURL = "https://epos.yougoit.in";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
@@ -170,17 +170,20 @@ class APPUrl {
   static String getCompanyaccounts =
       '$baseURL/api/v1/accounts/company-accounts';
 
-
-
-  static String companyOverview =
-      '$baseURL/api/v1/dashboard/company-overview';   
-  static String ordersGraph =
-      '$baseURL/api/v1/dashboard/orders-graph'; 
-  static String customersGraph =
-      '$baseURL/api/v1/dashboard/customers-graph';      
+  static String companyOverview = '$baseURL/api/v1/dashboard/company-overview';
+  static String ordersGraph = '$baseURL/api/v1/dashboard/orders-graph';
+  static String customersGraph = '$baseURL/api/v1/dashboard/customers-graph';
   static String executivesOverview =
       '$baseURL/api/v1/dashboard/executives-overview';
-  static String salesGraph =
-      '$baseURL/api/v1/dashboard/executive-sales-graph';    
+  static String salesGraph = '$baseURL/api/v1/dashboard/executive-sales-graph';
 
+  // Supplier Dashboard Endpoints
+  static String suppliersOverview =
+      '$baseURL/api/v1/dashboard/suppliers-overview';
+  static String suppliersPurchaseGraph =
+      '$baseURL/api/v1/dashboard/suppliers-purchase-graph';
+  static String supplierTransactionsGraph =
+      '$baseURL/api/v1/dashboard/supplier-transactions-graph';
+  static String supplierCreditBalance =
+      '$baseURL/api/v1/dashboard/supplier-credit-balance';
 }
