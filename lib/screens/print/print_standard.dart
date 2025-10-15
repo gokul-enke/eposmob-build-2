@@ -17,6 +17,7 @@ import 'package:open_file/open_file.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:flutter/foundation.dart';
+import 'package:pos_machine/models/order_details.dart';
 
 class StandardPrinter {
   final BuildContext context;
@@ -58,6 +59,7 @@ class StandardPrinter {
     String? customerPhone,
     String? customerEmail,
     String? customerAddress,
+    OrderReturns? orderReturns, // Add this parameter
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before printing
@@ -380,54 +382,88 @@ class StandardPrinter {
             pw.SizedBox(height: 5), // Reduced from 8
 
             // Summary - minimal design without borders
-            if ((updatedSettings?['showItemsCount']?.visible == true) ||
-                (updatedSettings?['showMRPTotal']?.visible == true) ||
-                (updatedSettings?['showSaved']?.visible == true) ||
-                (updatedSettings?['showDiscount']?.visible == true) ||
-                (updatedSettings?['showNetAmount']?.visible == true))
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                    vertical: 5, horizontal: 8), // Reduced padding
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('ORDER SUMMARY', style: subheaderStyle),
-                    pw.SizedBox(height: 5), // Reduced from 10
-                    _buildPdfSummary(
-                        summaryStyle,
-                        netTotalStyle,
-                        updatedSettings,
-                        formattedTotal,
-                        savedTotal,
-                        discountAmount,
-                        cartItems.length,
-                        billDocumentConfig),
-                  ],
-                ),
-              ),
-
-            // Amount in words - consistent with summary layout
-            if (updatedSettings?['showAmountInWords']?.visible == true)
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                    vertical: 0, horizontal: 8), // Same padding as summary
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'Amount in words:',
-                      style: summaryStyle, // Same style as other summary items
-                    ),
-                    pw.Text(
-                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
-                      style: summaryStyle, // Same style as other summary items
-                      textAlign: pw.TextAlign.right,
-                    ),
-                  ],
-                ),
-              ),
-
+    if ((updatedSettings?['showItemsCount']?.visible == true) ||
+        (updatedSettings?['showMRPTotal']?.visible == true) ||
+        (updatedSettings?['showSaved']?.visible == true) ||
+        (updatedSettings?['showDiscount']?.visible == true) ||
+        (updatedSettings?['showNetAmount']?.visible == true))
+      pw.Container(
+        padding: const pw.EdgeInsets.symmetric(
+            vertical: 5, horizontal: 8), // Reduced padding
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('ORDER SUMMARY', style: subheaderStyle),
             pw.SizedBox(height: 5), // Reduced from 10
+            _buildPdfSummary(
+                summaryStyle,
+                netTotalStyle,
+                updatedSettings,
+                formattedTotal,
+                savedTotal,
+                discountAmount,
+                cartItems.length,
+                billDocumentConfig),
+            
+            // Add Amount in words under order summary when there are no returns
+            if (updatedSettings?['showAmountInWords']?.visible == true && 
+                (orderReturns == null || orderReturns.returnItems?.isEmpty == true))
+              pw.Column(
+                children: [
+                  pw.SizedBox(height: 5),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Amount in words:', style: summaryStyle),
+                      pw.Expanded(
+                        child: pw.Text(
+                          '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                          style: summaryStyle,
+                          textAlign: pw.TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+
+            // Add Order Returns section if orderReturns is not null and has items
+            if (orderReturns != null &&
+                (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
+              pw.SizedBox(height: 5), // Add spacing before return section
+              _buildOrderReturnsSection(
+                selectedPaperSize,
+                orderReturns,
+                subheaderStyle,
+                bodyStyle,
+                tableHeaderStyle,
+                summaryStyle,
+                netTotalStyle,
+                cartItems, // Pass cartItems to match return items with original prices
+                isFromLocalStorage, // Pass isFromLocalStorage parameter
+              ),
+            ],
+
+    // Add Total Summary section ONLY when there are returns
+    if (orderReturns != null && 
+        orderReturns.returnItems != null && 
+        orderReturns.returnItems!.isNotEmpty) ...[
+      pw.SizedBox(height: 10),
+      _buildTotalSummarySection(
+        selectedPaperSize,
+        formattedTotal,
+        orderReturns,
+        cartItems,
+        isFromLocalStorage,
+        subheaderStyle,
+        summaryStyle,
+        netTotalStyle,
+      ),
+      pw.SizedBox(height: 10),
+    ],
 
             // Footer section - compact design
             pw.Column(
@@ -785,10 +821,18 @@ class StandardPrinter {
       if (displayConfig?['showParticulars']?.visible == true) {
         rowData.add(displayProductName);
       }
-      if (displayConfig?['showMRP']?.visible == true) rowData.add(mrp);
-      if (displayConfig?['showQty']?.visible == true) rowData.add(quantity);
-      if (displayConfig?['showRate']?.visible == true) rowData.add(unitPrice);
-      if (displayConfig?['showTotal']?.visible == true) rowData.add(totalPrice);
+      if (displayConfig?['showMRP']?.visible == true) {
+        rowData.add(mrp);
+      }
+      if (displayConfig?['showQty']?.visible == true) {
+        rowData.add(quantity);
+      }
+      if (displayConfig?['showRate']?.visible == true) {
+        rowData.add(unitPrice);
+      }
+      if (displayConfig?['showTotal']?.visible == true) {
+        rowData.add(totalPrice);
+      }
 
       tableData.add(rowData);
     }
@@ -865,8 +909,8 @@ class StandardPrinter {
       summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
     }
 
-    // Display You Saved
-    if (displayConfig?['showSaved']?.visible == true) {
+    // Display You Saved - only show if value is greater than 0
+    if (displayConfig?['showSaved']?.visible == true && savedTotalValue > 0) {
       summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -1101,6 +1145,402 @@ class StandardPrinter {
           //   pw.Text('Email: $customerEmail', style: customerDetailStyle),
           if (customerAddress != null && customerAddress.isNotEmpty)
             pw.Text(customerAddress, style: customerDetailStyle),
+        ],
+      ),
+    );
+  }
+
+  // Add this new method to build the order returns section
+  pw.Widget _buildOrderReturnsSection(
+    String selectedPaperSize,
+    OrderReturns orderReturns,
+    pw.TextStyle subheaderStyle,
+    pw.TextStyle bodyStyle,
+    pw.TextStyle tableHeaderStyle,
+    pw.TextStyle summaryStyle,
+    pw.TextStyle netTotalStyle,
+    List<dynamic>
+        cartItems, // Add cartItems parameter to match return items with original prices
+    bool isFromLocalStorage, // Add isFromLocalStorage parameter
+  ) {
+    // Create headers for the return table with same structure as order items table
+    final List<String> tableHeaders = [
+      'Sl#',
+      'DESCRIPTION',
+      'QTY',
+      'RATE',
+      'AMOUNT'
+    ];
+
+    // Create table data for return items
+    List<List<String>> tableData = [];
+
+    // Calculate individual item rates and amounts by matching with original cart items
+    double calculatedReturnTotal =
+        0.0; // Track the actual calculated return total
+
+    for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+      final returnItem = orderReturns.returnItems![i];
+      final itemQuantity = returnItem.quantity ?? 0;
+
+      // Try to find matching original cart item by product name
+      String itemRate = '0.00';
+      String itemAmount = '0.00';
+
+      // Look for matching item in cartItems
+      for (var cartItem in cartItems) {
+        String cartItemProductName = '';
+        String cartItemUnitPrice = '0.00';
+
+        if (isFromLocalStorage) {
+          cartItemProductName = cartItem['productName'] ?? '';
+          cartItemUnitPrice =
+              (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+        } else {
+          // Handle different object types - check if it's a Map or an object
+          if (cartItem is Map<String, dynamic>) {
+            // Handle Map case (from API responses or converted data)
+            cartItemProductName = cartItem['product_name']?.toString() ??
+                cartItem['productName']?.toString() ??
+                '';
+            cartItemUnitPrice = (double.tryParse(
+                        cartItem['unit_price']?.toString() ??
+                            cartItem['unitPrice']?.toString() ??
+                            '0') ??
+                    0.0)
+                .toStringAsFixed(2);
+          } else {
+            // Handle object case (OrderDetailsModelDataCartItem or similar)
+            try {
+              cartItemProductName = cartItem.productName?.toString() ?? '';
+              cartItemUnitPrice =
+                  (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ??
+                          0.0)
+                      .toStringAsFixed(2);
+            } catch (e) {
+              // Fallback to safe defaults
+              cartItemProductName = '';
+              cartItemUnitPrice = '0.00';
+            }
+          }
+        }
+
+        // If product names match, use the original unit price
+        if (cartItemProductName == returnItem.productName) {
+          itemRate = cartItemUnitPrice;
+          final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
+          itemAmount = amount.toStringAsFixed(2);
+          calculatedReturnTotal += amount; // Add to total
+          break; // Found match, exit loop
+        }
+      }
+
+      // If no match found, fall back to average rate calculation
+      if (itemRate == '0.00' && itemAmount == '0.00') {
+        // Parse the total return amount
+        final totalReturnAmount =
+            double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+
+        // Calculate total quantity of all return items
+        int totalQuantity = 0;
+        for (var item in orderReturns.returnItems!) {
+          totalQuantity += item.quantity ?? 0;
+        }
+
+        // Calculate average rate across all items
+        final averageRate =
+            totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+
+        // Calculate amount based on average rate * quantity
+        final amount = itemQuantity * averageRate;
+
+        itemRate = averageRate.toStringAsFixed(2);
+        itemAmount = amount.toStringAsFixed(2);
+        calculatedReturnTotal += amount; // Add to total
+      }
+
+      tableData.add([
+        (i + 1).toString(),
+        returnItem.productName ?? '',
+        returnItem.quantity?.toString() ?? '',
+        itemRate,
+        itemAmount,
+      ]);
+    }
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          // Add more spacing at the top of return table
+          pw.SizedBox(height: 20), // Increased from 15 to 20 for more space
+          // Add Returns heading above the return table (in uppercase)
+          pw.Text('RETURNS', style: subheaderStyle),
+          pw.SizedBox(
+              height:
+                  10), // Increased from 5 to 10 for more space under heading
+          // Return Items Table with same style as order items table
+          pw.Table.fromTextArray(
+            headers: tableHeaders,
+            data: tableData,
+            headerStyle: tableHeaderStyle,
+            headerDecoration: const pw.BoxDecoration(
+              color: PdfColors.grey200,
+            ),
+            headerHeight: 20, // Same as order items table
+            cellStyle: bodyStyle,
+            cellHeight: 18, // Same as order items table
+            cellAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.centerLeft,
+              2: pw.Alignment.center,
+              3: pw.Alignment.centerRight,
+              4: pw.Alignment.centerRight,
+            },
+            border: const pw.TableBorder(
+              top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+              bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+              left: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+              right: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+              horizontalInside:
+                  pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+              verticalInside:
+                  pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+            ),
+          ),
+          pw.SizedBox(
+              height: 15), // Increased from 10 to 15 for more space under table
+          // Return Summary heading
+          pw.Text('RETURN SUMMARY', style: subheaderStyle),
+          pw.SizedBox(height: 3), // Reduced from 5 for tighter spacing
+          // Return Summary details with same style as order summary
+          // Removed the extra container padding to match order summary styling
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Display Item Count
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total Items:', style: summaryStyle),
+                  pw.Text(orderReturns.returnItems!.length.toString(),
+                      style: summaryStyle),
+                ],
+              ),
+              pw.SizedBox(height: 2), // Reduced from 3 for tighter spacing
+              // Display Total MRP (using calculated return total)
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total MRP:', style: summaryStyle),
+                  pw.Text(calculatedReturnTotal.toStringAsFixed(2),
+                      style: summaryStyle),
+                ],
+              ),
+              // Display Net Total (Amount) - using calculated return total
+              pw.Divider(color: PdfColors.black),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Net Total:', style: netTotalStyle),
+                  pw.Text(
+                    calculatedReturnTotal.toStringAsFixed(
+                        2), // Use calculated return total instead of orderReturns.returnTotalAmount
+                    style: netTotalStyle,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Add spacing after return summary section
+          pw.SizedBox(height: 15), // Add spacing after return summary
+        ],
+      ),
+    );
+  }
+
+  // Add this new method to build the total summary section
+  pw.Widget _buildTotalSummarySection(
+    String selectedPaperSize,
+    String formattedTotal,
+    OrderReturns? orderReturns,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    pw.TextStyle subheaderStyle,
+    pw.TextStyle summaryStyle,
+    pw.TextStyle netTotalStyle,
+  ) {
+    // Parse the order total
+    double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
+
+    // Calculate return total
+    double returnTotal = 0.0;
+    if (orderReturns != null &&
+        orderReturns.returnItems != null &&
+        orderReturns.returnItems!.isNotEmpty) {
+      // Calculate individual item rates and amounts by matching with original cart items
+      for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+        final returnItem = orderReturns.returnItems![i];
+        final itemQuantity = returnItem.quantity ?? 0;
+
+        // Try to find matching original cart item by product name
+        String itemRate = '0.00';
+        String itemAmount = '0.00';
+
+        // Look for matching item in cartItems
+        for (var cartItem in cartItems) {
+          String cartItemProductName = '';
+          String cartItemUnitPrice = '0.00';
+
+          if (isFromLocalStorage) {
+            cartItemProductName = cartItem['productName'] ?? '';
+            cartItemUnitPrice =
+                (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ??
+                        0.0)
+                    .toStringAsFixed(2);
+          } else {
+            // Handle different object types - check if it's a Map or an object
+            if (cartItem is Map<String, dynamic>) {
+              // Handle Map case (from API responses or converted data)
+              cartItemProductName = cartItem['product_name']?.toString() ??
+                  cartItem['productName']?.toString() ??
+                  '';
+              cartItemUnitPrice = (double.tryParse(
+                          cartItem['unit_price']?.toString() ??
+                              cartItem['unitPrice']?.toString() ??
+                              '0') ??
+                      0.0)
+                  .toStringAsFixed(2);
+            } else {
+              // Handle object case (OrderDetailsModelDataCartItem or similar)
+              try {
+                cartItemProductName = cartItem.productName?.toString() ?? '';
+                cartItemUnitPrice =
+                    (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ??
+                            0.0)
+                        .toStringAsFixed(2);
+              } catch (e) {
+                // Fallback to safe defaults
+                cartItemProductName = '';
+                cartItemUnitPrice = '0.00';
+              }
+            }
+          }
+
+          // If product names match, use the original unit price
+          if (cartItemProductName == returnItem.productName) {
+            itemRate = cartItemUnitPrice;
+            final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
+            itemAmount = amount.toStringAsFixed(2);
+            returnTotal += amount; // Add to total
+            break; // Found match, exit loop
+          }
+        }
+
+        // If no match found, fall back to average rate calculation
+        if (itemRate == '0.00' &&
+            itemAmount == '0.00' &&
+            orderReturns.returnTotalAmount != null) {
+          // Parse the total return amount
+          final totalReturnAmount =
+              double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+
+          // Calculate total quantity of all return items
+          int totalQuantity = 0;
+          if (orderReturns.returnItems != null) {
+            for (var item in orderReturns.returnItems!) {
+              totalQuantity += item.quantity ?? 0;
+            }
+          }
+
+          // Calculate average rate across all items
+          final averageRate =
+              totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+
+          // Calculate amount based on average rate * quantity
+          final amount = itemQuantity * averageRate;
+
+          itemRate = averageRate.toStringAsFixed(2);
+          itemAmount = amount.toStringAsFixed(2);
+          returnTotal += amount; // Add to total
+        }
+      }
+    }
+
+    // Calculate final total (order total - return total)
+    double finalTotal = orderTotal - returnTotal;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('FINAL SUMMARY', style: subheaderStyle),
+          pw.SizedBox(height: 5),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Display Order Total
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Order Total:', style: summaryStyle),
+                  pw.Text(orderTotal.toStringAsFixed(2), style: summaryStyle),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              // Display Return Total (if returns exist)
+              if (orderReturns != null &&
+                  orderReturns.returnItems != null &&
+                  orderReturns.returnItems!.isNotEmpty) ...[
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Return Total:', style: summaryStyle),
+                    pw.Text(returnTotal.toStringAsFixed(2),
+                        style: summaryStyle),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Divider(color: PdfColors.black),
+                // Display Final Total
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Final Total:', style: netTotalStyle),
+                    pw.Text(finalTotal.toStringAsFixed(2),
+                        style: netTotalStyle),
+                  ],
+                ),
+              ] else ...[
+                pw.Divider(color: PdfColors.black),
+                // Display Final Total (same as order total when no returns)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Final Total:', style: netTotalStyle),
+                    pw.Text(orderTotal.toStringAsFixed(2),
+                        style: netTotalStyle),
+                  ],
+                ),
+              ],
+              pw.SizedBox(height: 5),
+              // Amount in words
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Amount in words:', style: summaryStyle),
+                  pw.Text(
+                    '${AmountHelper().convertNumberToWords(finalTotal)} Only.',
+                    style: summaryStyle,
+                    textAlign: pw.TextAlign.right,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );

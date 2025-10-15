@@ -17,6 +17,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/print_thermal.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/models/order_details.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -31,6 +32,7 @@ class PrintPage extends StatefulWidget {
   final String? customerPhone;
   final String? customerEmail;
   final String? customerAddress;
+  final OrderReturns? orderReturns; // Add this line
 
   const PrintPage({
     super.key,
@@ -46,6 +48,7 @@ class PrintPage extends StatefulWidget {
     this.customerPhone,
     this.customerEmail,
     this.customerAddress,
+    this.orderReturns, // Add this line
   });
 
   @override
@@ -94,7 +97,8 @@ class _PrintPageState extends State<PrintPage> {
 
   @override
   void dispose() {
-    debugPrint('[PrintPage] dispose(): canceling discovery subscription if any');
+    debugPrint(
+        '[PrintPage] dispose(): canceling discovery subscription if any');
     _subscription?.cancel();
     super.dispose();
   }
@@ -111,7 +115,8 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   Future<bool> _requestPermissions() async {
-    debugPrint('[PrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
+    debugPrint(
+        '[PrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
     if (Theme.of(context).platform == TargetPlatform.android) {
       Map<Permission, PermissionStatus> statuses = await [
         Permission.bluetooth,
@@ -121,14 +126,16 @@ class _PrintPageState extends State<PrintPage> {
       ].request();
 
       statuses.forEach((perm, status) {
-        debugPrint('[PrintPage] Permission ${perm.toString()} => ${status.toString()}');
+        debugPrint(
+            '[PrintPage] Permission ${perm.toString()} => ${status.toString()}');
       });
 
       final granted = statuses.values.every((status) => status.isGranted);
       debugPrint('[PrintPage] All permissions granted: $granted');
       return granted;
     }
-    debugPrint('[PrintPage] Non-Android platform; skipping runtime permission request.');
+    debugPrint(
+        '[PrintPage] Non-Android platform; skipping runtime permission request.');
     return true;
   }
 
@@ -154,10 +161,12 @@ class _PrintPageState extends State<PrintPage> {
 
   void _scan() async {
     if (_isScanning) {
-      debugPrint('[PrintPage] _scan() requested but a scan is already in progress. Ignoring.');
+      debugPrint(
+          '[PrintPage] _scan() requested but a scan is already in progress. Ignoring.');
       return;
     }
-    debugPrint('[PrintPage] Starting scan... platform=${Platform.operatingSystem}');
+    debugPrint(
+        '[PrintPage] Starting scan... platform=${Platform.operatingSystem}');
     await _subscription?.cancel();
     setState(() {
       _isScanning = true;
@@ -171,7 +180,8 @@ class _PrintPageState extends State<PrintPage> {
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
-          debugPrint('[PrintPage] BT device found: name=${device.name}, address=${device.address}');
+          debugPrint(
+              '[PrintPage] BT device found: name=${device.name}, address=${device.address}');
           final printer = BluetoothPrinter(
             deviceName: device.name,
             address: device.address,
@@ -183,16 +193,21 @@ class _PrintPageState extends State<PrintPage> {
         }, onError: (err) {
           debugPrint('[PrintPage] Bluetooth discovery error: $err');
         }, onDone: () {
-          final btCount = devices.where((p) => p.typePrinter == PrinterType.bluetooth).length;
-          debugPrint('[PrintPage] Bluetooth discovery done. Total BT devices: $btCount');
+          final btCount = devices
+              .where((p) => p.typePrinter == PrinterType.bluetooth)
+              .length;
+          debugPrint(
+              '[PrintPage] Bluetooth discovery done. Total BT devices: $btCount');
         }, cancelOnError: false);
       } else {
-        debugPrint('[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
+        debugPrint(
+            '[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
       debugPrint('[PrintPage] Beginning USB discovery');
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint('[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+        debugPrint(
+            '[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -203,7 +218,8 @@ class _PrintPageState extends State<PrintPage> {
           devices.add(printer);
         });
       });
-      debugPrint('[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
+      debugPrint(
+          '[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {
       debugPrint('[PrintPage] Error during scanning: $e');
       debugPrint('[PrintPage] Stacktrace: $st');
@@ -216,7 +232,8 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   Future<void> _loadDefaultPrinter() async {
-    debugPrint('[PrintPage] _loadDefaultPrinter() reading from SharedPreferences');
+    debugPrint(
+        '[PrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
     final defaultPrinterJson = prefs.getString('default_printer');
 
@@ -235,16 +252,17 @@ class _PrintPageState extends State<PrintPage> {
         );
         _isLoading = false;
       });
-      debugPrint('[PrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
+      debugPrint(
+          '[PrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
 
       if (selectedPrinter != null && _billDocumentConfig != null) {
-          final appSettingsProvider =
-              Provider.of<AppSettingsProvider>(context, listen: false);
-          final appSettings = appSettingsProvider.appSettings;
-          if (appSettings != null) {
-            _handlePrinting(
-                appSettings.customerCarePhone, appSettings.customerCareEmail);
-          }
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        final appSettings = appSettingsProvider.appSettings;
+        if (appSettings != null) {
+          _handlePrinting(
+              appSettings.customerCarePhone, appSettings.customerCareEmail);
+        }
       }
     } else {
       setState(() {
@@ -267,7 +285,8 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   void selectPrinter(BluetoothPrinter printer) {
-    debugPrint('[PrintPage] selectPrinter(): name=${printer.deviceName}, address=${printer.address}, type=${printer.typePrinter}');
+    debugPrint(
+        '[PrintPage] selectPrinter(): name=${printer.deviceName}, address=${printer.address}, type=${printer.typePrinter}');
     setState(() {
       selectedPrinter = printer;
     });
@@ -286,14 +305,16 @@ class _PrintPageState extends State<PrintPage> {
     try {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
-      
+
       debugPrint("Loading document configurations from provider...");
       _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      
+
       if (_billDocumentConfig == null) {
-        debugPrint("WARNING: Bill document configuration not found in provider, may need to load manually");
+        debugPrint(
+            "WARNING: Bill document configuration not found in provider, may need to load manually");
         // Fallback: try to load if not available
-        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
         if (accessToken != null) {
           debugPrint("Fetching document configurations from API...");
           await _loadDocumentConfigurations(accessToken);
@@ -323,11 +344,12 @@ class _PrintPageState extends State<PrintPage> {
           accessToken: accessToken);
 
       _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      
+
       if (_billDocumentConfig != null) {
         debugPrint("SUCCESS: Bill document configuration loaded from API");
       } else {
-        debugPrint("ERROR: Bill document configuration still null after API fetch");
+        debugPrint(
+            "ERROR: Bill document configuration still null after API fetch");
       }
 
       setState(() {
@@ -362,7 +384,7 @@ class _PrintPageState extends State<PrintPage> {
 
     if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
       await _printThermalReceipt(customerCareNumber, customerCareEmail);
-      } else {
+    } else {
       await _generateAndPrintPDF(customerCareNumber, customerCareEmail);
     }
   }
@@ -388,6 +410,7 @@ class _PrintPageState extends State<PrintPage> {
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
+      orderReturns: widget.orderReturns, // Add this line
     );
   }
 
@@ -412,6 +435,7 @@ class _PrintPageState extends State<PrintPage> {
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
+      orderReturns: widget.orderReturns, // Add this line
     );
   }
 
@@ -425,11 +449,11 @@ class _PrintPageState extends State<PrintPage> {
           if (defaultPaperSize == 'Thermal') {
             selectedPaperSize = '80mm';
             _saveDefaultPaperSize('80mm');
-      } else {
+          } else {
             selectedPaperSize = defaultPaperSize;
           }
         });
-        } else {
+      } else {
         _saveDefaultPaperSize(selectedPaperSize);
       }
     } catch (e) {
@@ -702,7 +726,9 @@ class _PrintPageState extends State<PrintPage> {
                     ),
                     TextButton(
                       onPressed: () async {
-                        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                        String? accessToken =
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
                         if (accessToken != null) {
                           await _loadDocumentConfigurations(accessToken);
                         }
@@ -730,7 +756,8 @@ class _PrintPageState extends State<PrintPage> {
                 if (_billDocumentConfig == null) {
                   showScaffoldError(
                     context: context,
-                    message: "Document configuration not loaded. Please wait or try again.",
+                    message:
+                        "Document configuration not loaded. Please wait or try again.",
                   );
                   return;
                 }
