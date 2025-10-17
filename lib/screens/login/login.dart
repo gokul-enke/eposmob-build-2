@@ -1147,26 +1147,35 @@ class _SignInScreenState extends State<SignInScreen> {
                                           await Future.delayed(const Duration(seconds: 1));
 
                                           // Check if stores are available and navigate accordingly
-                                          if (executiveModelData?.stores != null && 
-                                              executiveModelData!.stores!.isNotEmpty) {
-                                            // Navigate to store selection screen
-                                            Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => StoreSelectionScreen(
-                                                  stores: executiveModelData.stores!,
-                                                ),
-                                              ),
-                                            );
-                                          } else {
-                                            // No stores available, go directly to main screen
-                                            Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => const MainScreen(),
-                                              ),
-                                            );
-                                          }
+                                          // TEMPORARILY COMMENTED: Skip store selection and go directly to main screen
+                                          // if (executiveModelData?.stores != null && 
+                                          //     executiveModelData!.stores!.isNotEmpty) {
+                                          //   // Navigate to store selection screen
+                                          //   Navigator.pushReplacement(
+                                          //     context,
+                                          //     MaterialPageRoute(
+                                          //       builder: (context) => StoreSelectionScreen(
+                                          //         stores: executiveModelData.stores!,
+                                          //       ),
+                                          //     ),
+                                          //   );
+                                          // } else {
+                                          //   // No stores available, go directly to main screen
+                                          //   Navigator.pushReplacement(
+                                          //     context,
+                                          //     MaterialPageRoute(
+                                          //       builder: (context) => const MainScreen(),
+                                          //     ),
+                                          //   );
+                                          // }
+                                          
+                                          // Temporarily skip store selection - go directly to main screen
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const MainScreen(),
+                                            ),
+                                          );
                                         } else {
                                           _updateLoadingState(false, "");
                                           showScaffoldError(

@@ -368,6 +368,12 @@ class ThermalPrinter {
             ? 'DESCRIPTION' 
             : 'DESCRIPTION');
     
+    String mrpLabel = (displayConfig?['showReturnMRP']?.value as String?)?.isNotEmpty == true
+        ? displayConfig!['showReturnMRP']!.value as String
+        : (displayConfig?['showReturnMRP']?.visible == true 
+            ? 'MRP' 
+            : 'MRP');
+    
     String qtyLabel = (displayConfig?['showReturnQty']?.value as String?)?.isNotEmpty == true
         ? displayConfig!['showReturnQty']!.value as String
         : (displayConfig?['showReturnQty']?.visible == true 
@@ -383,7 +389,7 @@ class ThermalPrinter {
     List<PosColumn> headerColumns = [
       PosColumn(
         text: slNumberLabel,
-        width: 2,
+        width: 1,
         styles: PosStyles(
           fontType: fontType,
           align: PosAlign.left,
@@ -393,10 +399,20 @@ class ThermalPrinter {
       ),
       PosColumn(
         text: particularsLabel,
-        width: 5,
+        width: 4,
         styles: PosStyles(
           fontType: fontType,
           align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: mrpLabel,
+        width: 2,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
           bold: true,
           height: textSizeSmall,
         ),
@@ -434,6 +450,7 @@ class ThermalPrinter {
       final itemQuantity = returnItem.quantity ?? 0;
 
       // Try to find matching original cart item by product name
+      double itemMrp = 0.0;
       double itemRate = 0.0;
       double itemAmount = 0.0;
 
@@ -469,9 +486,25 @@ class ThermalPrinter {
           }
         }
 
-        // If product names match, use the original unit price
+        // If product names match, use the original unit price and MRP
         if (cartItemProductName == returnItem.productName) {
           itemRate = cartItemUnitPrice;
+          
+          // Fetch MRP from cartItem
+          if (isFromLocalStorage) {
+            itemMrp = double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
+          } else {
+            if (cartItem is Map<String, dynamic>) {
+              itemMrp = double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
+            } else {
+              try {
+                itemMrp = double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0;
+              } catch (e) {
+                itemMrp = 0.0;
+              }
+            }
+          }
+          
           itemAmount = itemQuantity * itemRate;
           calculatedReturnTotal += itemAmount;
           break;
@@ -499,7 +532,7 @@ class ThermalPrinter {
       List<PosColumn> returnItemColumns = [
         PosColumn(
           text: (i + 1).toString(),
-          width: 2,
+          width: 1,
           styles: PosStyles(
             fontType: fontType,
             align: PosAlign.left,
@@ -509,10 +542,20 @@ class ThermalPrinter {
         ),
         PosColumn(
           text: _sanitizeTextForThermalPrinter(returnItem.productName ?? ''),
-          width: 5,
+          width: 4,
           styles: PosStyles(
             fontType: fontType,
             align: PosAlign.left,
+            bold: false,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: itemMrp.toStringAsFixed(2),
+          width: 2,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
             bold: false,
             height: textSizeSmall,
           ),

@@ -1264,6 +1264,13 @@ class StandardPrinter {
             ? billDocumentConfig!.resolvedLabels!.returnTotal!
             : 'AMOUNT');
 
+    final mrpLabel =
+        (displayConfig?['showReturnMRP']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showReturnMRP']!.value as String
+            : (billDocumentConfig?.resolvedLabels?.returnMrp?.isNotEmpty == true
+                ? billDocumentConfig!.resolvedLabels!.returnMrp!
+                : 'MRP');
+
     if (displayConfig?['showReturnSLNumber']?.visible == true) {
       tableHeaders.add(slLabel);
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
@@ -1273,6 +1280,11 @@ class StandardPrinter {
       tableHeaders.add(particularsLabel.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
       columnWidths.add(5);
+    }
+    if (displayConfig?['showReturnMRP']?.visible == true) {
+      tableHeaders.add(mrpLabel.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5);
     }
     if (displayConfig?['showReturnQty']?.visible == true) {
       tableHeaders.add(qtyLabel.toUpperCase());
@@ -1298,6 +1310,7 @@ class StandardPrinter {
       final returnItem = orderReturns.returnItems![i];
       final itemQuantity = returnItem.quantity ?? 0;
 
+      String itemMrp = '0.00';
       String itemRate = '0.00';
       String itemAmount = '0.00';
 
@@ -1338,6 +1351,25 @@ class StandardPrinter {
 
         if (cartItemProductName == returnItem.productName) {
           itemRate = cartItemUnitPrice;
+          
+          // Fetch MRP from cartItem
+          if (isFromLocalStorage) {
+            itemMrp = (double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0)
+                .toStringAsFixed(2);
+          } else {
+            if (cartItem is Map<String, dynamic>) {
+              itemMrp = (double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+            } else {
+              try {
+                itemMrp = (double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0)
+                    .toStringAsFixed(2);
+              } catch (e) {
+                itemMrp = '0.00';
+              }
+            }
+          }
+          
           final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
           itemAmount = amount.toStringAsFixed(2);
           calculatedReturnTotal += amount;
@@ -1367,6 +1399,9 @@ class StandardPrinter {
       }
       if (displayConfig?['showReturnParticulars']?.visible == true) {
         rowData.add(returnItem.productName ?? '');
+      }
+      if (displayConfig?['showReturnMRP']?.visible == true) {
+        rowData.add(itemMrp);
       }
       if (displayConfig?['showReturnQty']?.visible == true) {
         rowData.add(returnItem.quantity?.toString() ?? '');
