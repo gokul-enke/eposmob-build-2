@@ -185,6 +185,7 @@ class ThermalPrinter {
           isFromLocalStorage,
           selectedPaperSize,
           selectedFontType,
+          displayConfig,
         );
         debugPrint("Order returns section built successfully");
       }
@@ -201,10 +202,12 @@ class ThermalPrinter {
           cartItems,
           isFromLocalStorage,
           selectedFontType,
+          displayConfig,
         );
         debugPrint("Total summary section built successfully");
       } else {
         // Add Amount in words under order summary when there are no returns
+        // Use 'showAmountInWords' for regular bills (no returns)
         if (displayConfig?['showAmountInWords']?.visible == true) {
           debugPrint("Building amount in words (no returns scenario)...");
           bytes += _buildAmountInWords(
@@ -327,6 +330,7 @@ class ThermalPrinter {
     bool isFromLocalStorage,
     String selectedPaperSize,
     PosFontType fontType,
+    Map<String, DisplayOption>? displayConfig,
   ) {
     List<int> bytes = [];
 
@@ -350,10 +354,16 @@ class ThermalPrinter {
 
     bytes += generator.emptyLines(1);
 
-    // Create headers for the return table
+    // Create headers for the return table using Sales Return Bill configuration
+    // Use showReturnSLNumber, showReturnParticulars, showReturnQty, showReturnTotal values if available
+    String slNumberLabel = (displayConfig?['showReturnSLNumber']?.value as String?) ?? 'Sl#';
+    String particularsLabel = (displayConfig?['showReturnParticulars']?.value as String?) ?? 'DESCRIPTION';
+    String qtyLabel = (displayConfig?['showReturnQty']?.value as String?) ?? 'QTY';
+    String amountLabel = (displayConfig?['showReturnTotal']?.value as String?) ?? 'AMOUNT';
+
     List<PosColumn> headerColumns = [
       PosColumn(
-        text: 'Sl#',
+        text: slNumberLabel,
         width: 2,
         styles: PosStyles(
           fontType: fontType,
@@ -363,7 +373,7 @@ class ThermalPrinter {
         ),
       ),
       PosColumn(
-        text: 'DESCRIPTION',
+        text: particularsLabel,
         width: 5,
         styles: PosStyles(
           fontType: fontType,
@@ -373,7 +383,7 @@ class ThermalPrinter {
         ),
       ),
       PosColumn(
-        text: 'QTY',
+        text: qtyLabel,
         width: 2,
         styles: PosStyles(
           fontType: fontType,
@@ -383,7 +393,7 @@ class ThermalPrinter {
         ),
       ),
       PosColumn(
-        text: 'AMOUNT',
+        text: amountLabel,
         width: 3,
         styles: PosStyles(
           fontType: fontType,
@@ -607,6 +617,7 @@ class ThermalPrinter {
     List<dynamic> cartItems,
     bool isFromLocalStorage,
     PosFontType fontType,
+    Map<String, DisplayOption>? displayConfig,
   ) {
     List<int> bytes = [];
 
@@ -700,10 +711,15 @@ class ThermalPrinter {
 
     bytes += generator.emptyLines(1);
 
-    // Order Total
+    // Use Sales Return Bill configuration labels
+    String purchaseLabel = (displayConfig?['showFinalPurchase']?.value as String?) ?? 'Order Total:';
+    String returnLabel = (displayConfig?['showFinalReturn']?.value as String?) ?? 'Return Total:';
+    String finalTotalLabel = (displayConfig?['showFinalNetAmount']?.value as String?) ?? 'Final Total:';
+
+    // Order Total (Purchase)
     List<PosColumn> orderTotalColumns = [
       PosColumn(
-        text: 'Order Total:',
+        text: purchaseLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -729,7 +745,7 @@ class ThermalPrinter {
     // Return Total
     List<PosColumn> returnTotalColumns = [
       PosColumn(
-        text: 'Return Total:',
+        text: returnLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -756,7 +772,7 @@ class ThermalPrinter {
     // Final Total
     List<PosColumn> finalTotalColumns = [
       PosColumn(
-        text: 'Final Total:',
+        text: finalTotalLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -780,7 +796,11 @@ class ThermalPrinter {
     bytes += generator.row(finalTotalColumns);
 
     // Amount in words for final total (when there are returns)
-    bytes += _buildAmountInWords(generator, finalTotal, fontType);
+    // Use 'showFinalAmountInWords' for Sales Return Bill configuration
+    if (displayConfig?['showFinalAmountInWords']?.visible == true) {
+      debugPrint("Building final amount in words (returns scenario)...");
+      bytes += _buildAmountInWords(generator, finalTotal, fontType);
+    }
 
     bytes += generator.emptyLines(1);
 
