@@ -1604,6 +1604,7 @@ pw.Widget _buildTotalSummarySection(
     String? customerPhone,
     String? customerEmail,
     String? customerAddress,
+    OrderReturns? orderReturns,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -1943,8 +1944,47 @@ pw.Widget _buildTotalSummarySection(
                     ),
                   ),
 
+                // Order Returns section - added when returns exist
+                if (orderReturns != null &&
+                    (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
+                  pw.SizedBox(height: 5), // Add spacing before return section
+                  _buildOrderReturnsSection(
+                    selectedPaperSize,
+                    orderReturns,
+                    subheaderStyle,
+                    bodyStyle,
+                    tableHeaderStyle,
+                    summaryStyle,
+                    netTotalStyle,
+                    cartItems,
+                    isFromLocalStorage,
+                    updatedSettings,
+                  ),
+                ],
+
+                // Total Summary section - ONLY when there are returns
+                if (orderReturns != null &&
+                    (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
+                  pw.SizedBox(height: 5),
+                  _buildTotalSummarySection(
+                    selectedPaperSize,
+                    formattedTotal,
+                    orderReturns,
+                    cartItems,
+                    isFromLocalStorage,
+                    subheaderStyle,
+                    summaryStyle,
+                    netTotalStyle,
+                    updatedSettings,
+                  ),
+                ],
+
                 // Amount in words - consistent with summary layout
-                if (updatedSettings?['showAmountInWords']?.visible == true)
+                // Only show when there are NO returns (when returns exist, it's shown in Total Summary)
+                if (updatedSettings?['showAmountInWords']?.visible == true &&
+                    (orderReturns == null ||
+                        orderReturns.returnItems == null ||
+                        orderReturns.returnItems!.isEmpty))
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 0, horizontal: 8), // Same padding as summary
