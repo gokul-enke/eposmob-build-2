@@ -307,7 +307,7 @@ class _PrintPageState extends State<PrintPage> {
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
       debugPrint("Loading document configurations from provider...");
-      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales Return Bill") ?? docConfigProvider.getDocumentConfig("Bill");
 
       if (_billDocumentConfig == null) {
         debugPrint(
@@ -316,6 +316,7 @@ class _PrintPageState extends State<PrintPage> {
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
         if (accessToken != null) {
+          
           debugPrint("Fetching document configurations from API...");
           await _loadDocumentConfigurations(accessToken);
           return;

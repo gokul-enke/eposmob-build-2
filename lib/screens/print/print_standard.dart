@@ -156,6 +156,21 @@ class StandardPrinter {
       debugPrint(
           "showTermsConditions: ${updatedSettings?['showTermsConditions']?.visible}");
 
+
+//display returns
+      debugPrint("showReturnSLNumber: ${updatedSettings?['showReturnSLNumber']?.visible}");
+      debugPrint("showReturnParticulars: ${updatedSettings?['showReturnParticulars']?.visible}");
+      debugPrint("showReturnQty: ${updatedSettings?['showReturnQty']?.visible}");
+      debugPrint("showReturnRate: ${updatedSettings?['showReturnRate']?.visible}");
+      debugPrint("showReturnTotal: ${updatedSettings?['showReturnTotal']?.visible}");
+      debugPrint("showReturnNetAmount: ${updatedSettings?['showReturnNetAmount']?.visible}");
+      debugPrint("showReturnTotalAmount: ${updatedSettings?['showReturnTotalAmount']?.visible}");
+      debugPrint("showReturnItemsCount: ${updatedSettings?['showReturnItemsCount']?.visible}");
+      debugPrint("showFinalNetAmount: ${updatedSettings?['showFinalNetAmount']?.visible}");
+      debugPrint("showFinalPurchase: ${updatedSettings?['showFinalPurchase']?.visible}");
+      debugPrint("showFinalReturn: ${updatedSettings?['showFinalReturn']?.visible}");
+      debugPrint("showFinalAmountInWords: ${updatedSettings?['showFinalAmountInWords']?.visible}");    
+
       // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
           Provider.of<PaymentGatewaysProvider>(context, listen: false);
@@ -443,7 +458,8 @@ class StandardPrinter {
                 summaryStyle,
                 netTotalStyle,
                 cartItems, // Pass cartItems to match return items with original prices
-                isFromLocalStorage, // Pass isFromLocalStorage parameter
+                isFromLocalStorage,
+                updatedSettings, // Pass isFromLocalStorage parameter
               ),
             ],
 
@@ -461,6 +477,7 @@ class StandardPrinter {
         subheaderStyle,
         summaryStyle,
         netTotalStyle,
+        updatedSettings,
       ),
       pw.SizedBox(height: 10),
     ],
@@ -1151,137 +1168,144 @@ class StandardPrinter {
   }
 
   // Add this new method to build the order returns section
-  pw.Widget _buildOrderReturnsSection(
-    String selectedPaperSize,
-    OrderReturns orderReturns,
-    pw.TextStyle subheaderStyle,
-    pw.TextStyle bodyStyle,
-    pw.TextStyle tableHeaderStyle,
-    pw.TextStyle summaryStyle,
-    pw.TextStyle netTotalStyle,
-    List<dynamic>
-        cartItems, // Add cartItems parameter to match return items with original prices
-    bool isFromLocalStorage, // Add isFromLocalStorage parameter
-  ) {
-    // Create headers for the return table with same structure as order items table
-    final List<String> tableHeaders = [
-      'Sl#',
-      'DESCRIPTION',
-      'QTY',
-      'RATE',
-      'AMOUNT'
-    ];
+pw.Widget _buildOrderReturnsSection(
+  String selectedPaperSize,
+  OrderReturns orderReturns,
+  pw.TextStyle subheaderStyle,
+  pw.TextStyle bodyStyle,
+  pw.TextStyle tableHeaderStyle,
+  pw.TextStyle summaryStyle,
+  pw.TextStyle netTotalStyle,
+  List<dynamic> cartItems,
+  bool isFromLocalStorage,
+  Map<String, DisplayOption>? displayConfig, // Add this parameter
+) {
+  // Create headers for the return table using configuration
+  final List<String> tableHeaders = [];
+  final Map<int, pw.Alignment> cellAlignmentsMap = {};
+  final List<double> columnWidths = [];
+  int visibleColIndex = 0;
 
-    // Create table data for return items
-    List<List<String>> tableData = [];
+  // Use configured labels or defaults
+  final slLabel = displayConfig?['showReturnSLNumber']?.value as String? ?? 'Sl#';
+  final particularsLabel = displayConfig?['showReturnParticulars']?.value as String? ?? 'DESCRIPTION';
+  final qtyLabel = displayConfig?['showReturnQty']?.value as String? ?? 'QTY';
+  final rateLabel = displayConfig?['showReturnRate']?.value as String? ?? 'RATE';
+  final totalLabel = displayConfig?['showReturnTotal']?.value as String? ?? 'AMOUNT';
 
-    // Calculate individual item rates and amounts by matching with original cart items
-    double calculatedReturnTotal =
-        0.0; // Track the actual calculated return total
+  if (displayConfig?['showReturnSLNumber']?.visible == true) {
+    tableHeaders.add(slLabel);
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(1);
+  }
+  if (displayConfig?['showReturnParticulars']?.visible == true) {
+    tableHeaders.add(particularsLabel.toUpperCase());
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(5);
+  }
+  if (displayConfig?['showReturnQty']?.visible == true) {
+    tableHeaders.add(qtyLabel.toUpperCase());
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+    columnWidths.add(1.5);
+  }
+  if (displayConfig?['showReturnRate']?.visible == true) {
+    tableHeaders.add(rateLabel.toUpperCase());
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+    columnWidths.add(1.5);
+  }
+  if (displayConfig?['showReturnTotal']?.visible == true) {
+    tableHeaders.add(totalLabel.toUpperCase());
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+    columnWidths.add(1.5);
+  }
 
-    for (var i = 0; i < orderReturns.returnItems!.length; i++) {
-      final returnItem = orderReturns.returnItems![i];
-      final itemQuantity = returnItem.quantity ?? 0;
+  // Create table data for return items
+  List<List<String>> tableData = [];
+  double calculatedReturnTotal = 0.0;
 
-      // Try to find matching original cart item by product name
-      String itemRate = '0.00';
-      String itemAmount = '0.00';
+  for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+    final returnItem = orderReturns.returnItems![i];
+    final itemQuantity = returnItem.quantity ?? 0;
 
-      // Look for matching item in cartItems
-      for (var cartItem in cartItems) {
-        String cartItemProductName = '';
-        String cartItemUnitPrice = '0.00';
+    String itemRate = '0.00';
+    String itemAmount = '0.00';
 
-        if (isFromLocalStorage) {
-          cartItemProductName = cartItem['productName'] ?? '';
-          cartItemUnitPrice =
-              (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0)
-                  .toStringAsFixed(2);
+    // Look for matching item in cartItems
+    for (var cartItem in cartItems) {
+      String cartItemProductName = '';
+      String cartItemUnitPrice = '0.00';
+
+      if (isFromLocalStorage) {
+        cartItemProductName = cartItem['productName'] ?? '';
+        cartItemUnitPrice = (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+      } else {
+        if (cartItem is Map<String, dynamic>) {
+          cartItemProductName = cartItem['product_name']?.toString() ?? cartItem['productName']?.toString() ?? '';
+          cartItemUnitPrice = (double.tryParse(cartItem['unit_price']?.toString() ?? cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
         } else {
-          // Handle different object types - check if it's a Map or an object
-          if (cartItem is Map<String, dynamic>) {
-            // Handle Map case (from API responses or converted data)
-            cartItemProductName = cartItem['product_name']?.toString() ??
-                cartItem['productName']?.toString() ??
-                '';
-            cartItemUnitPrice = (double.tryParse(
-                        cartItem['unit_price']?.toString() ??
-                            cartItem['unitPrice']?.toString() ??
-                            '0') ??
-                    0.0)
-                .toStringAsFixed(2);
-          } else {
-            // Handle object case (OrderDetailsModelDataCartItem or similar)
-            try {
-              cartItemProductName = cartItem.productName?.toString() ?? '';
-              cartItemUnitPrice =
-                  (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ??
-                          0.0)
-                      .toStringAsFixed(2);
-            } catch (e) {
-              // Fallback to safe defaults
-              cartItemProductName = '';
-              cartItemUnitPrice = '0.00';
-            }
+          try {
+            cartItemProductName = cartItem.productName?.toString() ?? '';
+            cartItemUnitPrice = (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+          } catch (e) {
+            cartItemProductName = '';
+            cartItemUnitPrice = '0.00';
           }
         }
-
-        // If product names match, use the original unit price
-        if (cartItemProductName == returnItem.productName) {
-          itemRate = cartItemUnitPrice;
-          final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
-          itemAmount = amount.toStringAsFixed(2);
-          calculatedReturnTotal += amount; // Add to total
-          break; // Found match, exit loop
-        }
       }
 
-      // If no match found, fall back to average rate calculation
-      if (itemRate == '0.00' && itemAmount == '0.00') {
-        // Parse the total return amount
-        final totalReturnAmount =
-            double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
-
-        // Calculate total quantity of all return items
-        int totalQuantity = 0;
-        for (var item in orderReturns.returnItems!) {
-          totalQuantity += item.quantity ?? 0;
-        }
-
-        // Calculate average rate across all items
-        final averageRate =
-            totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
-
-        // Calculate amount based on average rate * quantity
-        final amount = itemQuantity * averageRate;
-
-        itemRate = averageRate.toStringAsFixed(2);
+      if (cartItemProductName == returnItem.productName) {
+        itemRate = cartItemUnitPrice;
+        final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
         itemAmount = amount.toStringAsFixed(2);
-        calculatedReturnTotal += amount; // Add to total
+        calculatedReturnTotal += amount;
+        break;
       }
-
-      tableData.add([
-        (i + 1).toString(),
-        returnItem.productName ?? '',
-        returnItem.quantity?.toString() ?? '',
-        itemRate,
-        itemAmount,
-      ]);
     }
 
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          // Add more spacing at the top of return table
-          pw.SizedBox(height: 20), // Increased from 15 to 20 for more space
-          // Add Returns heading above the return table (in uppercase)
-          pw.Text('RETURNS', style: subheaderStyle),
-          pw.SizedBox(
-              height:
-                  10), // Increased from 5 to 10 for more space under heading
-          // Return Items Table with same style as order items table
+    // If no match found, fall back to average rate calculation
+    if (itemRate == '0.00' && itemAmount == '0.00') {
+      final totalReturnAmount = double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+      int totalQuantity = 0;
+      for (var item in orderReturns.returnItems!) {
+        totalQuantity += item.quantity ?? 0;
+      }
+      final averageRate = totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+      final amount = itemQuantity * averageRate;
+      itemRate = averageRate.toStringAsFixed(2);
+      itemAmount = amount.toStringAsFixed(2);
+      calculatedReturnTotal += amount;
+    }
+
+    List<String> rowData = [];
+    if (displayConfig?['showReturnSLNumber']?.visible == true) {
+      rowData.add((i + 1).toString());
+    }
+    if (displayConfig?['showReturnParticulars']?.visible == true) {
+      rowData.add(returnItem.productName ?? '');
+    }
+    if (displayConfig?['showReturnQty']?.visible == true) {
+      rowData.add(returnItem.quantity?.toString() ?? '');
+    }
+    if (displayConfig?['showReturnRate']?.visible == true) {
+      rowData.add(itemRate);
+    }
+    if (displayConfig?['showReturnTotal']?.visible == true) {
+      rowData.add(itemAmount);
+    }
+
+    tableData.add(rowData);
+  }
+
+  return pw.Container(
+    padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(height: 20),
+        pw.Text('RETURNS', style: subheaderStyle),
+        pw.SizedBox(height: 10),
+        // Return Items Table
+        if (tableHeaders.isNotEmpty && tableData.isNotEmpty)
           pw.Table.fromTextArray(
             headers: tableHeaders,
             data: tableData,
@@ -1289,245 +1313,193 @@ class StandardPrinter {
             headerDecoration: const pw.BoxDecoration(
               color: PdfColors.grey200,
             ),
-            headerHeight: 20, // Same as order items table
+            headerHeight: 20,
             cellStyle: bodyStyle,
-            cellHeight: 18, // Same as order items table
-            cellAlignments: {
-              0: pw.Alignment.center,
-              1: pw.Alignment.centerLeft,
-              2: pw.Alignment.center,
-              3: pw.Alignment.centerRight,
-              4: pw.Alignment.centerRight,
-            },
+            cellHeight: 18,
+            cellAlignments: cellAlignmentsMap,
+            cellPadding: const pw.EdgeInsets.all(3),
             border: const pw.TableBorder(
               top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
               bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
               left: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
               right: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-              horizontalInside:
-                  pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-              verticalInside:
-                  pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+              horizontalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+              verticalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
             ),
-          ),
-          pw.SizedBox(
-              height: 15), // Increased from 10 to 15 for more space under table
-          // Return Summary heading
-          pw.Text('RETURN SUMMARY', style: subheaderStyle),
-          pw.SizedBox(height: 3), // Reduced from 5 for tighter spacing
-          // Return Summary details with same style as order summary
-          // Removed the extra container padding to match order summary styling
+            columnWidths: {
+              for (var i in columnWidths.asMap().keys)
+                i: pw.FlexColumnWidth(columnWidths[i])
+            },
+          )
+        else
+          pw.Text('No return items to display', style: bodyStyle),
+        pw.SizedBox(height: 15),
+        // Return Summary
+        if (displayConfig?['showReturnNetAmount']?.visible == true ||
+            displayConfig?['showReturnTotalAmount']?.visible == true ||
+            displayConfig?['showReturnItemsCount']?.visible == true)
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
+              pw.Text('RETURN SUMMARY', style: subheaderStyle),
+              pw.SizedBox(height: 3),
               // Display Item Count
+              if (displayConfig?['showReturnItemsCount']?.visible == true)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Total Items:', style: summaryStyle),
+                    pw.Text(orderReturns.returnItems!.length.toString(), style: summaryStyle),
+                  ],
+                ),
+              if (displayConfig?['showReturnItemsCount']?.visible == true) pw.SizedBox(height: 2),
+              // Display Total MRP
+              if (displayConfig?['showReturnTotalAmount']?.visible == true)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Total MRP:', style: summaryStyle),
+                    pw.Text(calculatedReturnTotal.toStringAsFixed(2), style: summaryStyle),
+                  ],
+                ),
+              if (displayConfig?['showReturnTotalAmount']?.visible == true) pw.SizedBox(height: 2),
+              // Display Net Total
+              if (displayConfig?['showReturnNetAmount']?.visible == true) ...[
+                pw.Divider(color: PdfColors.black),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Net Total:', style: netTotalStyle),
+                    pw.Text(calculatedReturnTotal.toStringAsFixed(2), style: netTotalStyle),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        pw.SizedBox(height: 15),
+      ],
+    ),
+  );
+}
+
+  // Add this new method to build the total summary section
+pw.Widget _buildTotalSummarySection(
+  String selectedPaperSize,
+  String formattedTotal,
+  OrderReturns? orderReturns,
+  List<dynamic> cartItems,
+  bool isFromLocalStorage,
+  pw.TextStyle subheaderStyle,
+  pw.TextStyle summaryStyle,
+  pw.TextStyle netTotalStyle,
+  Map<String, DisplayOption>? displayConfig, // Add this parameter
+) {
+  double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
+  double returnTotal = 0.0;
+
+  // Calculate return total (same logic as before)
+  if (orderReturns != null && orderReturns.returnItems != null && orderReturns.returnItems!.isNotEmpty) {
+    for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+      final returnItem = orderReturns.returnItems![i];
+      final itemQuantity = returnItem.quantity ?? 0;
+      String itemRate = '0.00';
+
+      for (var cartItem in cartItems) {
+        String cartItemProductName = '';
+        String cartItemUnitPrice = '0.00';
+
+        if (isFromLocalStorage) {
+          cartItemProductName = cartItem['productName'] ?? '';
+          cartItemUnitPrice = (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+        } else {
+          if (cartItem is Map<String, dynamic>) {
+            cartItemProductName = cartItem['product_name']?.toString() ?? cartItem['productName']?.toString() ?? '';
+            cartItemUnitPrice = (double.tryParse(cartItem['unit_price']?.toString() ?? cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+          } else {
+            try {
+              cartItemProductName = cartItem.productName?.toString() ?? '';
+              cartItemUnitPrice = (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+            } catch (e) {
+              cartItemProductName = '';
+              cartItemUnitPrice = '0.00';
+            }
+          }
+        }
+
+        if (cartItemProductName == returnItem.productName) {
+          itemRate = cartItemUnitPrice;
+          final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
+          returnTotal += amount;
+          break;
+        }
+      }
+
+      if (itemRate == '0.00' && orderReturns.returnTotalAmount != null) {
+        final totalReturnAmount = double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+        int totalQuantity = 0;
+        for (var item in orderReturns.returnItems!) {
+          totalQuantity += item.quantity ?? 0;
+        }
+        final averageRate = totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+        final amount = itemQuantity * averageRate;
+        returnTotal += amount;
+      }
+    }
+  }
+
+  double finalTotal = orderTotal - returnTotal;
+
+  return pw.Container(
+    padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text('FINAL SUMMARY', style: subheaderStyle),
+        pw.SizedBox(height: 5),
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Display Order Total
+            if (displayConfig?['showFinalPurchase']?.visible == true)
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Total Items:', style: summaryStyle),
-                  pw.Text(orderReturns.returnItems!.length.toString(),
-                      style: summaryStyle),
+                  pw.Text('Total Purchase:', style: summaryStyle),
+                  pw.Text(orderTotal.toStringAsFixed(2), style: summaryStyle),
                 ],
               ),
-              pw.SizedBox(height: 2), // Reduced from 3 for tighter spacing
-              // Display Total MRP (using calculated return total)
+            if (displayConfig?['showFinalPurchase']?.visible == true) pw.SizedBox(height: 2),
+            // Display Return Total
+            if (displayConfig?['showFinalReturn']?.visible == true && 
+                orderReturns != null && 
+                orderReturns.returnItems != null && 
+                orderReturns.returnItems!.isNotEmpty)
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Total MRP:', style: summaryStyle),
-                  pw.Text(calculatedReturnTotal.toStringAsFixed(2),
-                      style: summaryStyle),
+                  pw.Text('Total Return:', style: summaryStyle),
+                  pw.Text(returnTotal.toStringAsFixed(2), style: summaryStyle),
                 ],
               ),
-              // Display Net Total (Amount) - using calculated return total
+            if (displayConfig?['showFinalReturn']?.visible == true && 
+                orderReturns != null && 
+                orderReturns.returnItems != null && 
+                orderReturns.returnItems!.isNotEmpty) 
+              pw.SizedBox(height: 2),
+            // Display Final Total
+            if (displayConfig?['showFinalNetAmount']?.visible == true) ...[
               pw.Divider(color: PdfColors.black),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Net Total:', style: netTotalStyle),
-                  pw.Text(
-                    calculatedReturnTotal.toStringAsFixed(
-                        2), // Use calculated return total instead of orderReturns.returnTotalAmount
-                    style: netTotalStyle,
-                  ),
+                  pw.Text(finalTotal.toStringAsFixed(2), style: netTotalStyle),
                 ],
               ),
             ],
-          ),
-          // Add spacing after return summary section
-          pw.SizedBox(height: 15), // Add spacing after return summary
-        ],
-      ),
-    );
-  }
-
-  // Add this new method to build the total summary section
-  pw.Widget _buildTotalSummarySection(
-    String selectedPaperSize,
-    String formattedTotal,
-    OrderReturns? orderReturns,
-    List<dynamic> cartItems,
-    bool isFromLocalStorage,
-    pw.TextStyle subheaderStyle,
-    pw.TextStyle summaryStyle,
-    pw.TextStyle netTotalStyle,
-  ) {
-    // Parse the order total
-    double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
-
-    // Calculate return total
-    double returnTotal = 0.0;
-    if (orderReturns != null &&
-        orderReturns.returnItems != null &&
-        orderReturns.returnItems!.isNotEmpty) {
-      // Calculate individual item rates and amounts by matching with original cart items
-      for (var i = 0; i < orderReturns.returnItems!.length; i++) {
-        final returnItem = orderReturns.returnItems![i];
-        final itemQuantity = returnItem.quantity ?? 0;
-
-        // Try to find matching original cart item by product name
-        String itemRate = '0.00';
-        String itemAmount = '0.00';
-
-        // Look for matching item in cartItems
-        for (var cartItem in cartItems) {
-          String cartItemProductName = '';
-          String cartItemUnitPrice = '0.00';
-
-          if (isFromLocalStorage) {
-            cartItemProductName = cartItem['productName'] ?? '';
-            cartItemUnitPrice =
-                (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ??
-                        0.0)
-                    .toStringAsFixed(2);
-          } else {
-            // Handle different object types - check if it's a Map or an object
-            if (cartItem is Map<String, dynamic>) {
-              // Handle Map case (from API responses or converted data)
-              cartItemProductName = cartItem['product_name']?.toString() ??
-                  cartItem['productName']?.toString() ??
-                  '';
-              cartItemUnitPrice = (double.tryParse(
-                          cartItem['unit_price']?.toString() ??
-                              cartItem['unitPrice']?.toString() ??
-                              '0') ??
-                      0.0)
-                  .toStringAsFixed(2);
-            } else {
-              // Handle object case (OrderDetailsModelDataCartItem or similar)
-              try {
-                cartItemProductName = cartItem.productName?.toString() ?? '';
-                cartItemUnitPrice =
-                    (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ??
-                            0.0)
-                        .toStringAsFixed(2);
-              } catch (e) {
-                // Fallback to safe defaults
-                cartItemProductName = '';
-                cartItemUnitPrice = '0.00';
-              }
-            }
-          }
-
-          // If product names match, use the original unit price
-          if (cartItemProductName == returnItem.productName) {
-            itemRate = cartItemUnitPrice;
-            final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
-            itemAmount = amount.toStringAsFixed(2);
-            returnTotal += amount; // Add to total
-            break; // Found match, exit loop
-          }
-        }
-
-        // If no match found, fall back to average rate calculation
-        if (itemRate == '0.00' &&
-            itemAmount == '0.00' &&
-            orderReturns.returnTotalAmount != null) {
-          // Parse the total return amount
-          final totalReturnAmount =
-              double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
-
-          // Calculate total quantity of all return items
-          int totalQuantity = 0;
-          if (orderReturns.returnItems != null) {
-            for (var item in orderReturns.returnItems!) {
-              totalQuantity += item.quantity ?? 0;
-            }
-          }
-
-          // Calculate average rate across all items
-          final averageRate =
-              totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
-
-          // Calculate amount based on average rate * quantity
-          final amount = itemQuantity * averageRate;
-
-          itemRate = averageRate.toStringAsFixed(2);
-          itemAmount = amount.toStringAsFixed(2);
-          returnTotal += amount; // Add to total
-        }
-      }
-    }
-
-    // Calculate final total (order total - return total)
-    double finalTotal = orderTotal - returnTotal;
-
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text('FINAL SUMMARY', style: subheaderStyle),
-          pw.SizedBox(height: 5),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // Display Order Total
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Order Total:', style: summaryStyle),
-                  pw.Text(orderTotal.toStringAsFixed(2), style: summaryStyle),
-                ],
-              ),
-              pw.SizedBox(height: 2),
-              // Display Return Total (if returns exist)
-              if (orderReturns != null &&
-                  orderReturns.returnItems != null &&
-                  orderReturns.returnItems!.isNotEmpty) ...[
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Return Total:', style: summaryStyle),
-                    pw.Text(returnTotal.toStringAsFixed(2),
-                        style: summaryStyle),
-                  ],
-                ),
-                pw.SizedBox(height: 2),
-                pw.Divider(color: PdfColors.black),
-                // Display Final Total
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Final Total:', style: netTotalStyle),
-                    pw.Text(finalTotal.toStringAsFixed(2),
-                        style: netTotalStyle),
-                  ],
-                ),
-              ] else ...[
-                pw.Divider(color: PdfColors.black),
-                // Display Final Total (same as order total when no returns)
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Final Total:', style: netTotalStyle),
-                    pw.Text(orderTotal.toStringAsFixed(2),
-                        style: netTotalStyle),
-                  ],
-                ),
-              ],
+            // Amount in words
+            if (displayConfig?['showFinalAmountInWords']?.visible == true) ...[
               pw.SizedBox(height: 5),
-              // Amount in words
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -1540,11 +1512,12 @@ class StandardPrinter {
                 ],
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   // Helper method to calculate cart total from items
   double _calculateCartTotal(List<dynamic> cartItems, bool isFromLocalStorage) {
