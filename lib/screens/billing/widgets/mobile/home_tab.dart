@@ -34,8 +34,6 @@ class MobileHomeTab extends StatefulWidget {
 }
 
 class _MobileHomeTabState extends State<MobileHomeTab> {
-  bool _isCartExpanded = true;
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -133,7 +131,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 // Product Entry Fields
                 ProductEntryHeader(
                   size: size,
@@ -159,14 +157,17 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                 // Cart Section - Takes most of the space
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                     child: BuildBoxShadowContainer(
                       circleRadius: 12,
                       child: Column(
                         children: [
                           // Cart Header
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: const BorderRadius.only(
@@ -200,7 +201,6 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                                 // Cart Summary
                                 Consumer<LocalProductProvider>(
                                   builder: (context, provider, child) {
-                                    // Use cartTotal getter to recalculate and update summary live
                                     final total = provider.cartTotal;
                                     return Column(
                                       crossAxisAlignment:
@@ -225,84 +225,51 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                                     );
                                   },
                                 ),
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _isCartExpanded = !_isCartExpanded;
-                                    });
+                                const SizedBox(width: 12),
+                                Consumer<BillingProvider>(
+                                  builder: (context, provider, child) {
+                                    final isLoading =
+                                        provider.isLoadingClearCart;
+                                    return SizedBox(
+                                      height: 32,
+                                      child: OutlinedButton(
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          foregroundColor:
+                                              Colors.red.shade700,
+                                          side: BorderSide(
+                                            color: Colors.red.shade300,
+                                          ),
+                                        ),
+                                        onPressed: isLoading
+                                            ? null
+                                            : widget.onClearCart,
+                                        child: Text(
+                                          isLoading
+                                              ? 'Clearing...'
+                                              : 'Clear Cart',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    );
                                   },
-                                  child: AnimatedRotation(
-                                    turns: _isCartExpanded ? 0.5 : 0,
-                                    duration: const Duration(milliseconds: 200),
-                                    child: Icon(
-                                      Icons.keyboard_arrow_down,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
                                 ),
                               ],
                             ),
                           ),
 
                           // Cart Items - Takes remaining space
-                          if (_isCartExpanded)
-                            const Expanded(
-                              child: CartItemsTable(),
-                            ),
+                          const Expanded(
+                            child: CartItemsTable(),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-
-                // Quick Actions - Fixed at bottom
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: Row(
-                    children: [
-                      // Clear Cart Button
-                      Expanded(
-                        child: Consumer<BillingProvider>(
-                          builder: (context, provider, child) {
-                            return CustomRoundButton(
-                              title: provider.isLoadingClearCart
-                                  ? "Clearing..."
-                                  : "Clear Cart",
-                              fct: provider.isLoadingClearCart
-                                  ? () {}
-                                  : widget.onClearCart,
-                              fontSize: 14,
-                              height: 48,
-                              width: double.infinity,
-                              boxColor: Colors.red.shade50,
-                              borderColor: Colors.red.shade300,
-                              textColor: Colors.red.shade700,
-                              radius: 12,
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Add Custom Product Button (commented out)
-                      // const SizedBox(width: 12),
-                      // Expanded(
-                      //   child: CustomRoundButton(
-                      //     title: "Add Custom",
-                      //     fct: () {
-                      //       // Show add custom product modal
-                      //       _showAddCustomProductModal(context);
-                      //     },
-                      //     fontSize: 14,
-                      //     height: 48,
-                      //     width: double.infinity,
-                      //     boxColor: ColorManager.kPrimaryColor.withOpacity(0.1),
-                      //     borderColor: ColorManager.kPrimaryColor,
-                      //     textColor: ColorManager.kPrimaryColor,
-                      //     radius: 12,
-                      //   ),
-                      // ),
-                    ],
                   ),
                 ),
               ],
