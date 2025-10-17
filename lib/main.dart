@@ -42,8 +42,8 @@ import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
 import 'providers/purchase_provider.dart';
 import 'screens/login/login.dart';
-import 'screens/base_url_wrapper.dart';
-import 'screens/api_key_screen.dart';
+import 'screens/login/base_url_wrapper.dart';
+import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
 
 void main() async {

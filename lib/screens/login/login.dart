@@ -560,6 +560,8 @@
 // }
 
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -575,6 +577,7 @@ import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
+import 'package:pos_machine/screens/login/store_selection_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -959,6 +962,15 @@ class _SignInScreenState extends State<SignInScreen> {
                                                   "",
                                               executiveModelData?.userId ??
                                                   0);
+                                          
+                                          // Convert stores list to JSON string
+                                          String? storesJson;
+                                          if (executiveModelData?.stores != null) {
+                                            storesJson = json.encode(
+                                              executiveModelData!.stores!.map((store) => store.toJson()).toList()
+                                            );
+                                          }
+                                          
                                           SharedPreferenceProvider()
                                               .saveAccessTokenandCustomerId(
                                                   executiveModelData
@@ -972,9 +984,13 @@ class _SignInScreenState extends State<SignInScreen> {
                                                       "",
                                                   executiveModelData
                                                           ?.userRole ??
-                                                      "");
-
-
+                                                      "",
+                                                  tokenType: executiveModelData?.tokenType,
+                                                  companyId: executiveModelData?.companyId,
+                                                  companyName: executiveModelData?.companyName,
+                                                  storesJson: storesJson,
+                                              );
+                                          
                                           SalesProvider salesProvider =
                                               Provider.of<SalesProvider>(
                                                   context,
@@ -1128,13 +1144,29 @@ class _SignInScreenState extends State<SignInScreen> {
                                               break;
                                           }
 
-                                          await Future.delayed(
-                                              const Duration(seconds: 1))
-                                              .then((value) => Navigator.push(
+                                          await Future.delayed(const Duration(seconds: 1));
+
+                                          // Check if stores are available and navigate accordingly
+                                          if (executiveModelData?.stores != null && 
+                                              executiveModelData!.stores!.isNotEmpty) {
+                                            // Navigate to store selection screen
+                                            Navigator.pushReplacement(
                                               context,
                                               MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const MainScreen())));
+                                                builder: (context) => StoreSelectionScreen(
+                                                  stores: executiveModelData.stores!,
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            // No stores available, go directly to main screen
+                                            Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => const MainScreen(),
+                                              ),
+                                            );
+                                          }
                                         } else {
                                           _updateLoadingState(false, "");
                                           showScaffoldError(

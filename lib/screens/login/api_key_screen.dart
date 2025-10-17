@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../resources/app_url.dart';
-import '../components/build_round_button.dart';
-import '../components/build_title.dart';
-import '../resources/color_manager.dart';
-import '../resources/font_manager.dart';
-import '../resources/style_manager.dart';
+import '../../resources/app_url.dart';
+import '../../components/build_round_button.dart';
+import '../../components/build_title.dart';
+import '../../resources/color_manager.dart';
+import '../../resources/font_manager.dart';
+import '../../resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 
