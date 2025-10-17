@@ -259,6 +259,19 @@ class ResolvedLabels {
   final String? tax;
   // Supplier Statement specific fields (aliased from 'item' in API)
   final String? item;
+  // Bill specific fields
+  final String? particulars;
+  final String? mrp;
+  final String? qty;
+  final String? rate;
+  final String? total;
+  // Sales Return Bill specific fields
+  final String? returnSlNumber;
+  final String? returnParticulars;
+  final String? returnMrp;
+  final String? returnQty;
+  final String? returnRate;
+  final String? returnTotal;
 
   ResolvedLabels({
     this.itemName,
@@ -276,6 +289,17 @@ class ResolvedLabels {
     this.status,
     this.tax,
     this.item,
+    this.particulars,
+    this.mrp,
+    this.qty,
+    this.rate,
+    this.total,
+    this.returnSlNumber,
+    this.returnParticulars,
+    this.returnMrp,
+    this.returnQty,
+    this.returnRate,
+    this.returnTotal,
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
@@ -294,6 +318,17 @@ class ResolvedLabels {
         status: json["status"],
         tax: json["tax"],
         item: json["item"], // Supplier Statement uses 'item' instead of 'item_name'
+        particulars: json["particulars"],
+        mrp: json["mrp"],
+        qty: json["qty"],
+        rate: json["rate"],
+        total: json["total"],
+        returnSlNumber: json["return_sl_number"],
+        returnParticulars: json["return_particulars"],
+        returnMrp: json["return_mrp"],
+        returnQty: json["return_qty"],
+        returnRate: json["return_rate"],
+        returnTotal: json["return_total"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -312,6 +347,17 @@ class ResolvedLabels {
         "status": status,
         "tax": tax,
         "item": item,
+        "particulars": particulars,
+        "mrp": mrp,
+        "qty": qty,
+        "rate": rate,
+        "total": total,
+        "return_sl_number": returnSlNumber,
+        "return_particulars": returnParticulars,
+        "return_mrp": returnMrp,
+        "return_qty": returnQty,
+        "return_rate": returnRate,
+        "return_total": returnTotal,
       };
 }
 

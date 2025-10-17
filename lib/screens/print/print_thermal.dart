@@ -355,11 +355,30 @@ class ThermalPrinter {
     bytes += generator.emptyLines(1);
 
     // Create headers for the return table using Sales Return Bill configuration
-    // Use showReturnSLNumber, showReturnParticulars, showReturnQty, showReturnTotal values if available
-    String slNumberLabel = (displayConfig?['showReturnSLNumber']?.value as String?) ?? 'Sl#';
-    String particularsLabel = (displayConfig?['showReturnParticulars']?.value as String?) ?? 'DESCRIPTION';
-    String qtyLabel = (displayConfig?['showReturnQty']?.value as String?) ?? 'QTY';
-    String amountLabel = (displayConfig?['showReturnTotal']?.value as String?) ?? 'AMOUNT';
+    // Priority: displayConfig value > resolved_labels > default
+    String slNumberLabel = (displayConfig?['showReturnSLNumber']?.value as String?)?.isNotEmpty == true
+        ? displayConfig!['showReturnSLNumber']!.value as String
+        : (displayConfig?['showReturnSLNumber']?.visible == true 
+            ? 'Sl#' 
+            : 'Sl#');
+    
+    String particularsLabel = (displayConfig?['showReturnParticulars']?.value as String?)?.isNotEmpty == true
+        ? displayConfig!['showReturnParticulars']!.value as String
+        : (displayConfig?['showReturnParticulars']?.visible == true 
+            ? 'DESCRIPTION' 
+            : 'DESCRIPTION');
+    
+    String qtyLabel = (displayConfig?['showReturnQty']?.value as String?)?.isNotEmpty == true
+        ? displayConfig!['showReturnQty']!.value as String
+        : (displayConfig?['showReturnQty']?.visible == true 
+            ? 'QTY' 
+            : 'QTY');
+    
+    String amountLabel = (displayConfig?['showReturnTotal']?.value as String?)?.isNotEmpty == true
+        ? displayConfig!['showReturnTotal']!.value as String
+        : (displayConfig?['showReturnTotal']?.visible == true 
+            ? 'AMOUNT' 
+            : 'AMOUNT');
 
     List<PosColumn> headerColumns = [
       PosColumn(
@@ -1064,10 +1083,13 @@ class ThermalPrinter {
     debugPrint("Building header columns...");
 
     if (displayConfig?['showSLNumber']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final slLabel =
           (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showSLNumber']!.value as String
-              : 'SL#';
+              : (billDocumentConfig?.resolvedLabels?.slNumber?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.slNumber!
+                  : 'SL#');
       headerColumns.add(PosColumn(
           text: slLabel,
           width: 1,
@@ -1082,11 +1104,14 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showParticulars']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showParticulars']?.value as String?)?.isNotEmpty ==
                   true
               ? displayConfig!['showParticulars']!.value as String
-              : 'PARTICULARS';
+              : (billDocumentConfig?.resolvedLabels?.particulars?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.particulars!
+                  : 'PARTICULARS');
       // Fixed width for header title
       int particularsWidth = 3;
       if (displayConfig?['showSLNumber']?.visible != true) {
@@ -1107,10 +1132,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showMRP']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final mrpLabel =
           (displayConfig?['showMRP']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showMRP']!.value as String
-              : 'MRP';
+              : (billDocumentConfig?.resolvedLabels?.mrp?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.mrp!
+                  : 'MRP');
       headerColumns.add(PosColumn(
           text: mrpLabel.toUpperCase(),
           width: 2,
@@ -1125,10 +1153,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showQty']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showQty']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showQty']!.value as String
-              : 'QTY';
+              : (billDocumentConfig?.resolvedLabels?.qty?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.qty!
+                  : 'QTY');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
@@ -1143,10 +1174,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showRate']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showRate']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showRate']!.value as String
-              : 'RATE';
+              : (billDocumentConfig?.resolvedLabels?.rate?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.rate!
+                  : 'RATE');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
@@ -1161,10 +1195,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showTotal']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showTotal']!.value as String
-              : 'TOTAL';
+              : (billDocumentConfig?.resolvedLabels?.total?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.total!
+                  : 'TOTAL');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
