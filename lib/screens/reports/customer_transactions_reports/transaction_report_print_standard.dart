@@ -270,7 +270,7 @@ class TransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.5 : 9.0,
         color: PdfColors.black,
         height: 2, // Add line height for better spacing between lines
       );
@@ -280,13 +280,13 @@ class TransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 7.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 8.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
         height: 1.5, // Reduced line height for A5
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 6.5 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 4.5 : 7.5,
         color: PdfColors.black,
         height: 1.5, // Reduced line height for A5
       );
@@ -396,7 +396,7 @@ class TransactionReportStandardPrinter {
                         pw.Text(
                           'From: ${fromDate ?? 'N/A'},',
                           style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
                             color: PdfColors.black,
                             fontWeight: pw.FontWeight.bold,
                           ),
@@ -405,7 +405,7 @@ class TransactionReportStandardPrinter {
                         pw.Text(
                           'To : ${toDate ?? 'N/A'},',
                           style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
                             color: PdfColors.black,
                             fontWeight: pw.FontWeight.bold,
                           ),
@@ -1184,13 +1184,13 @@ class TransactionReportStandardPrinter {
   ) {
     // Create styles to match screenshot
     final customerDetailStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
       color: PdfColors.black,
     );
 
     // Create a style for customer information header
     final customerInfoHeaderStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 9.0 : 14.0,
+      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
       fontWeight: pw.FontWeight.bold,
       color: PdfColors.grey700,
     );
@@ -1422,14 +1422,14 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Total Credit: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
                   pw.Text(
                     '${totalCredit.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
@@ -1443,14 +1443,14 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Total Debit: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
                   pw.Text(
                     '${totalDebit.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
@@ -1464,7 +1464,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Balance: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 9.0 : 13.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 11.0,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.black,
                     ),
@@ -1472,7 +1472,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     '${balance.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 9.0 : 13.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 11.0,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.black,
                     ),
@@ -1604,7 +1604,7 @@ class TransactionReportStandardPrinter {
         color: PdfColors.grey700,
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.5 : 9.0,
         color: PdfColors.black,
       );
       final smallStyle = pw.TextStyle(
@@ -1612,12 +1612,12 @@ class TransactionReportStandardPrinter {
         color: PdfColors.grey600,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 7.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 8.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 6.5 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 4.5 : 7.5,
         color: PdfColors.black,
       );
       final summaryStyle = pw.TextStyle(
@@ -1725,7 +1725,7 @@ class TransactionReportStandardPrinter {
                         pw.Text(
                           'From: ${fromDate ?? 'N/A'},',
                           style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
                             color: PdfColors.black,
                             fontWeight: pw.FontWeight.bold,
                           ),
@@ -1734,7 +1734,7 @@ class TransactionReportStandardPrinter {
                         pw.Text(
                           'To : ${toDate ?? 'N/A'},',
                           style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 9.0 : 12.0,
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
                             color: PdfColors.black,
                             fontWeight: pw.FontWeight.bold,
                           ),

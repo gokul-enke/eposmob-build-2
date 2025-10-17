@@ -29,4 +29,25 @@ class DateHelper {
     final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm a');
     return formatter.format(istDate);
   }
+
+  // To Print Local to Local Date and Time
+  static String formatToISODateToIST(String isoDateString) {
+    final DateTime local = DateTime.parse(isoDateString).toLocal();
+    final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm a');
+    return formatter.format(local);
+  }
+
+  // To Print Local to Local Date Only
+  static String formatToISODateOnlyFromISO(String isoDateString) {
+    final DateTime local = DateTime.parse(isoDateString).toLocal();
+    final DateFormat formatter = DateFormat('dd-MM-yyyy');
+    return formatter.format(local);
+  }
+
+  // To Print Local to Local Time Only
+  static String formatToISOTimeOnlyFromISO(String isoDateString) {
+    final DateTime local = DateTime.parse(isoDateString).toLocal();
+    final DateFormat formatter = DateFormat('hh:mm a');
+    return formatter.format(local);
+  }
 }

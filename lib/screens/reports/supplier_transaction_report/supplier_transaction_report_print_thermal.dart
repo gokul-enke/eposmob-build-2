@@ -710,7 +710,7 @@ class SupplierTransactionReportThermalPrinter {
     debugPrint("Creating date/time row with 6+6 column layout");
     List<PosColumn> dateTimeColumns = [
       PosColumn(
-          text: DateHelper.formatISODate(orderDate),
+          text: DateHelper.formatToISODateOnlyFromISO(orderDate),
           width: 6,
           styles: PosStyles(
               fontType: fontType,
@@ -719,7 +719,7 @@ class SupplierTransactionReportThermalPrinter {
               height: textSizeSmall,
               width: textSizeSmall)),
       PosColumn(
-          text: DateHelper.formatISODateToIST(orderDate),
+          text: DateHelper.formatToISOTimeOnlyFromISO(orderDate),
           width: 6,
           styles: PosStyles(
               fontType: fontType,
