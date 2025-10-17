@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/models/order_details.dart';
 
 class ThermalPrinter {
   final BuildContext context;
@@ -73,6 +74,7 @@ class ThermalPrinter {
     String? customerPhone,
     String? customerEmail,
     String? customerAddress,
+    OrderReturns? orderReturns,
   }) async {
     debugPrint("===== THERMAL PRINTING DEBUG =====");
 
@@ -170,6 +172,49 @@ class ThermalPrinter {
           isFromLocalStorage,
           selectedFontType);
       debugPrint("Total amount built successfully");
+
+      // Add Order Returns section if orderReturns is not null and has items
+      if (orderReturns != null &&
+          orderReturns.returnItems != null &&
+          orderReturns.returnItems!.isNotEmpty) {
+        debugPrint("Building order returns section...");
+        bytes += _buildOrderReturnsSection(
+          generator,
+          orderReturns,
+          cartItems,
+          isFromLocalStorage,
+          selectedPaperSize,
+          selectedFontType,
+        );
+        debugPrint("Order returns section built successfully");
+      }
+
+      // Add Total Summary section ONLY when there are returns
+      if (orderReturns != null &&
+          orderReturns.returnItems != null &&
+          orderReturns.returnItems!.isNotEmpty) {
+        debugPrint("Building total summary section...");
+        bytes += _buildTotalSummarySection(
+          generator,
+          formattedTotal,
+          orderReturns,
+          cartItems,
+          isFromLocalStorage,
+          selectedFontType,
+        );
+        debugPrint("Total summary section built successfully");
+      } else {
+        // Add Amount in words under order summary when there are no returns
+        if (displayConfig?['showAmountInWords']?.visible == true) {
+          debugPrint("Building amount in words (no returns scenario)...");
+          bytes += _buildAmountInWords(
+            generator,
+            double.parse(formattedTotal),
+            selectedFontType,
+          );
+          debugPrint("Amount in words built successfully");
+        }
+      }
 
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
@@ -272,6 +317,544 @@ class ThermalPrinter {
       await _disconnectPrinter(selectedPrinter);
       debugPrint("==========================");
     }
+  }
+
+  // Add this new method to build the order returns section
+  List<int> _buildOrderReturnsSection(
+    Generator generator,
+    OrderReturns orderReturns,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    String selectedPaperSize,
+    PosFontType fontType,
+  ) {
+    List<int> bytes = [];
+
+    debugPrint("===== BUILD ORDER RETURNS SECTION =====");
+    debugPrint("Return items count: ${orderReturns.returnItems!.length}");
+
+    // Add spacing before return section
+    bytes += generator.emptyLines(2);
+
+    // Returns heading
+    bytes += generator.text(
+      'RETURNS',
+      styles: PosStyles(
+        fontType: fontType,
+        align: PosAlign.center,
+        bold: true,
+        height: textSizeSmall,
+        width: textSizeSmall,
+      ),
+    );
+
+    bytes += generator.emptyLines(1);
+
+    // Create headers for the return table
+    List<PosColumn> headerColumns = [
+      PosColumn(
+        text: 'Sl#',
+        width: 2,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: 'DESCRIPTION',
+        width: 5,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: 'QTY',
+        width: 2,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: 'AMOUNT',
+        width: 3,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+    ];
+
+    bytes += generator.row(headerColumns);
+    bytes += generator.hr();
+
+    // Calculate individual item rates and amounts by matching with original cart items
+    double calculatedReturnTotal = 0.0;
+
+    for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+      final returnItem = orderReturns.returnItems![i];
+      final itemQuantity = returnItem.quantity ?? 0;
+
+      // Try to find matching original cart item by product name
+      double itemRate = 0.0;
+      double itemAmount = 0.0;
+
+      // Look for matching item in cartItems
+      for (var cartItem in cartItems) {
+        String cartItemProductName = '';
+        double cartItemUnitPrice = 0.0;
+
+        if (isFromLocalStorage) {
+          cartItemProductName = cartItem['productName'] ?? '';
+          cartItemUnitPrice =
+              double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0;
+        } else {
+          // Handle different object types
+          if (cartItem is Map<String, dynamic>) {
+            cartItemProductName = cartItem['product_name']?.toString() ??
+                cartItem['productName']?.toString() ??
+                '';
+            cartItemUnitPrice = double.tryParse(
+                    cartItem['unit_price']?.toString() ??
+                        cartItem['unitPrice']?.toString() ??
+                        '0') ??
+                0.0;
+          } else {
+            try {
+              cartItemProductName = cartItem.productName?.toString() ?? '';
+              cartItemUnitPrice =
+                  double.tryParse(cartItem.unitPrice?.toString() ?? '0') ?? 0.0;
+            } catch (e) {
+              cartItemProductName = '';
+              cartItemUnitPrice = 0.0;
+            }
+          }
+        }
+
+        // If product names match, use the original unit price
+        if (cartItemProductName == returnItem.productName) {
+          itemRate = cartItemUnitPrice;
+          itemAmount = itemQuantity * itemRate;
+          calculatedReturnTotal += itemAmount;
+          break;
+        }
+      }
+
+      // If no match found, fall back to average rate calculation
+      if (itemRate == 0.0 && itemAmount == 0.0) {
+        final totalReturnAmount =
+            double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+
+        int totalQuantity = 0;
+        for (var item in orderReturns.returnItems!) {
+          totalQuantity += item.quantity ?? 0;
+        }
+
+        final averageRate =
+            totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+        itemAmount = itemQuantity * averageRate;
+        calculatedReturnTotal += itemAmount;
+        itemRate = averageRate;
+      }
+
+      // Build return item row
+      List<PosColumn> returnItemColumns = [
+        PosColumn(
+          text: (i + 1).toString(),
+          width: 2,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            bold: false,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: _sanitizeTextForThermalPrinter(returnItem.productName ?? ''),
+          width: 5,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            bold: false,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: itemQuantity.toString(),
+          width: 2,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            bold: false,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: itemAmount.toStringAsFixed(2),
+          width: 3,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            bold: false,
+            height: textSizeSmall,
+          ),
+        ),
+      ];
+
+      bytes += generator.row(returnItemColumns);
+    }
+
+    bytes += generator.hr();
+    bytes += generator.emptyLines(1);
+
+    // Return Summary heading removed per request
+
+    // Return summary details
+    List<PosColumn> returnSummaryColumns1 = [
+      PosColumn(
+        text: 'Total Items:',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: orderReturns.returnItems!.length.toString(),
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+    ];
+
+    List<PosColumn> returnSummaryColumns2 = [
+      PosColumn(
+        text: 'Total MRP:',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: calculatedReturnTotal.toStringAsFixed(2),
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+    ];
+
+    bytes += generator.row(returnSummaryColumns1);
+    bytes += generator.row(returnSummaryColumns2);
+    bytes += generator.hr();
+
+    List<PosColumn> returnNetTotalColumns = [
+      PosColumn(
+        text: 'Net Total:',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: calculatedReturnTotal.toStringAsFixed(2),
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+    ];
+
+    bytes += generator.row(returnNetTotalColumns);
+    bytes += generator.emptyLines(2);
+
+    debugPrint("===== END BUILD ORDER RETURNS SECTION =====");
+    return bytes;
+  }
+
+  // Add this new method to build the total summary section
+  List<int> _buildTotalSummarySection(
+    Generator generator,
+    String formattedTotal,
+    OrderReturns orderReturns,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    PosFontType fontType,
+  ) {
+    List<int> bytes = [];
+
+    debugPrint("===== BUILD TOTAL SUMMARY SECTION =====");
+
+    // Parse the order total
+    double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
+
+    // Calculate return total
+    double returnTotal = 0.0;
+    if (orderReturns.returnItems != null &&
+        orderReturns.returnItems!.isNotEmpty) {
+      for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+        final returnItem = orderReturns.returnItems![i];
+        final itemQuantity = returnItem.quantity ?? 0;
+
+        // Try to find matching original cart item by product name
+        double itemRate = 0.0;
+
+        for (var cartItem in cartItems) {
+          String cartItemProductName = '';
+          double cartItemUnitPrice = 0.0;
+
+          if (isFromLocalStorage) {
+            cartItemProductName = cartItem['productName'] ?? '';
+            cartItemUnitPrice =
+                double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ??
+                    0.0;
+          } else {
+            if (cartItem is Map<String, dynamic>) {
+              cartItemProductName = cartItem['product_name']?.toString() ??
+                  cartItem['productName']?.toString() ??
+                  '';
+              cartItemUnitPrice = double.tryParse(
+                      cartItem['unit_price']?.toString() ??
+                          cartItem['unitPrice']?.toString() ??
+                          '0') ??
+                  0.0;
+            } else {
+              try {
+                cartItemProductName = cartItem.productName?.toString() ?? '';
+                cartItemUnitPrice =
+                    double.tryParse(cartItem.unitPrice?.toString() ?? '0') ??
+                        0.0;
+              } catch (e) {
+                cartItemProductName = '';
+                cartItemUnitPrice = 0.0;
+              }
+            }
+          }
+
+          if (cartItemProductName == returnItem.productName) {
+            itemRate = cartItemUnitPrice;
+            returnTotal += itemQuantity * itemRate;
+            break;
+          }
+        }
+
+        // If no match found, use average rate calculation
+        if (itemRate == 0.0 && orderReturns.returnTotalAmount != null) {
+          final totalReturnAmount =
+              double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+
+          int totalQuantity = 0;
+          for (var item in orderReturns.returnItems!) {
+            totalQuantity += item.quantity ?? 0;
+          }
+
+          final averageRate =
+              totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+          returnTotal += itemQuantity * averageRate;
+        }
+      }
+    }
+
+    // Calculate final total (order total - return total)
+    double finalTotal = orderTotal - returnTotal;
+
+    bytes += generator.emptyLines(1);
+    // TOTAL SUMMARY heading removed per request
+    // bytes += generator.text(
+    //   'TOTAL SUMMARY',
+    //   styles: PosStyles(
+    //     fontType: fontType,
+    //     align: PosAlign.center,
+    //     bold: true,
+    //     height: textSizeMedium,
+    //     width: textSizeMedium,
+    //   ),
+    // );
+
+    bytes += generator.emptyLines(1);
+
+    // Order Total
+    List<PosColumn> orderTotalColumns = [
+      PosColumn(
+        text: 'Order Total:',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: orderTotal.toStringAsFixed(2),
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+    ];
+
+    bytes += generator.row(orderTotalColumns);
+
+    // Return Total
+    List<PosColumn> returnTotalColumns = [
+      PosColumn(
+        text: 'Return Total:',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: returnTotal.toStringAsFixed(2),
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+    ];
+
+    bytes += generator.row(returnTotalColumns);
+    bytes += generator.hr();
+
+    // Final Total
+    List<PosColumn> finalTotalColumns = [
+      PosColumn(
+        text: 'Final Total:',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: finalTotal.toStringAsFixed(2),
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+    ];
+
+    bytes += generator.row(finalTotalColumns);
+
+    // Amount in words for final total (when there are returns)
+    bytes += _buildAmountInWords(generator, finalTotal, fontType);
+
+    bytes += generator.emptyLines(1);
+
+    debugPrint("===== END BUILD TOTAL SUMMARY SECTION =====");
+    return bytes;
+  }
+
+  // Helper method for amount in words
+  List<int> _buildAmountInWords(
+    Generator generator,
+    double amount,
+    PosFontType fontType,
+  ) {
+    List<int> bytes = [];
+
+    bytes += generator.emptyLines(1);
+    bytes += generator.text(
+      'Amount in words:',
+      styles: PosStyles(
+        fontType: fontType,
+        align: PosAlign.left,
+        bold: true,
+        height: textSizeSmall,
+      ),
+    );
+
+    String amountInWords =
+        '${AmountHelper().convertNumberToWords(amount)} Only.';
+
+    // Wrap long amount in words text
+    int maxCharsPerLine = 48;
+    if (amountInWords.length <= maxCharsPerLine) {
+      bytes += generator.text(
+        amountInWords,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: false,
+          height: textSizeSmall,
+        ),
+      );
+    } else {
+      String remainingText = amountInWords;
+      while (remainingText.isNotEmpty) {
+        String currentLine;
+        if (remainingText.length <= maxCharsPerLine) {
+          currentLine = remainingText;
+          remainingText = '';
+        } else {
+          int breakPoint = maxCharsPerLine;
+          for (int i = maxCharsPerLine - 1;
+              i >= maxCharsPerLine - 10 && i >= 0;
+              i--) {
+            if (i < remainingText.length && remainingText[i] == ' ') {
+              breakPoint = i;
+              break;
+            }
+          }
+          currentLine = remainingText.substring(0, breakPoint).trim();
+          remainingText = remainingText.substring(breakPoint).trim();
+        }
+        bytes += generator.text(
+          currentLine,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            bold: false,
+            height: textSizeSmall,
+          ),
+        );
+      }
+    }
+
+    return bytes;
   }
 
   List<int> _buildHeader(
@@ -836,7 +1419,8 @@ class ThermalPrinter {
 
     double saved = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
     double total = double.tryParse(formattedTotal) ?? 0.0;
-    double discountAmountValue = double.tryParse(discountAmount ?? '0.0') ?? 0.0;
+    double discountAmountValue =
+        double.tryParse(discountAmount ?? '0.0') ?? 0.0;
     double totalMrp = saved + total;
 
     // Calculate total quantity from all cart items
@@ -1068,9 +1652,9 @@ class ThermalPrinter {
 
     bytes += generator.emptyLines(1);
 
-    // Amount in Words
-    if (displayConfig?['showSaved']?.visible == true) {
-      bytes += generator.text('You Saved ${saved.toStringAsFixed(2)}',
+    //Amount in Words
+    if (displayConfig?['showSaved']?.visible == true && saved > 0) {
+      bytes += generator.text('You Saved: ${saved.toStringAsFixed(2)}',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
@@ -1082,22 +1666,22 @@ class ThermalPrinter {
     // Add a separator line if any totals were shown
     if ((displayConfig?['showItemsCount']?.visible == true) ||
         (displayConfig?['showMRPTotal']?.visible == true) ||
-        (displayConfig?['showSaved']?.visible == true) ||
+        (displayConfig?['showSaved']?.visible == true && saved > 0) ||
         (displayConfig?['showDiscount']?.visible == true) ||
         (displayConfig?['showNetAmount']?.visible == true)) {
       bytes += generator.hr();
     }
 
     // Amount in Words
-    if (displayConfig?['showAmountInWords']?.visible == true) {
-      bytes += generator.text(
-          '${AmountHelper().convertNumberToWords(total)} Only.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-    }
+    // if (displayConfig?['showAmountInWords']?.visible == true) {
+    //   bytes += generator.text(
+    //       '${AmountHelper().convertNumberToWords(total)} Only.',
+    //       styles: PosStyles(
+    //           fontType: fontType,
+    //           align: PosAlign.center,
+    //           bold: true,
+    //           height: textSizeSmall));
+    // }
 
     debugPrint("===== END BUILD TOTAL AMOUNT DEBUG =====");
     return bytes;
@@ -1199,6 +1783,74 @@ class ThermalPrinter {
     return bytes;
   }
 
+  double _calculateCartTotal(List<dynamic> cartItems, bool isFromLocalStorage) {
+    double total = 0.0;
+
+    for (var item in cartItems) {
+      double itemTotal = 0.0;
+
+      if (isFromLocalStorage) {
+        itemTotal =
+            double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0;
+      } else {
+        if (item is Map<String, dynamic>) {
+          itemTotal = double.tryParse(item['total_price']?.toString() ??
+                  item['totalPrice']?.toString() ??
+                  '0') ??
+              0.0;
+        } else {
+          try {
+            itemTotal =
+                double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0;
+          } catch (e) {
+            debugPrint('Error accessing item totalPrice: $e');
+            itemTotal = 0.0;
+          }
+        }
+      }
+
+      total += itemTotal;
+    }
+
+    return total;
+  }
+
+  // Helper method to build cart total row after items table
+  List<int> _buildCartTotalRow(
+    Generator generator,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    PosFontType fontType,
+  ) {
+    List<int> bytes = [];
+    final cartTotal = _calculateCartTotal(cartItems, isFromLocalStorage);
+
+    bytes += generator.row([
+      PosColumn(
+        text: 'TOTAL:',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeMedium,
+        ),
+      ),
+      PosColumn(
+        text: 'Rs. ${cartTotal.toStringAsFixed(2)}',
+        width: 6,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeMedium,
+        ),
+      ),
+    ]);
+
+    return bytes;
+  }
+
   List<int> _buildDateTimeRow(
       Generator generator, String orderDate, PosFontType fontType) {
     List<int> bytes = [];
@@ -1257,7 +1909,8 @@ class ThermalPrinter {
 
     // Adjust barcode size based on paper width
     bool is58mm = selectedPaperSize == '58mm';
-    int barcodeHeight = is58mm ? 40 : 30; // Bigger height for 58mm (increased from 20 to 40)
+    int barcodeHeight =
+        is58mm ? 40 : 30; // Bigger height for 58mm (increased from 20 to 40)
 
     try {
       // Use CODE39 which supports: '0'–'9', A–Z, SP, $, %, *, +, -, ., /
@@ -1470,7 +2123,8 @@ class ThermalPrinter {
     // Customer Name + Phone on a single line without labels when both are present
     if ((customerName != null && customerName.isNotEmpty) &&
         (customerPhone != null && customerPhone.isNotEmpty)) {
-      final combined = _sanitizeTextForThermalPrinter('$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}');
+      final combined = _sanitizeTextForThermalPrinter(
+          '$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}');
       bytes += generator.text(
         combined,
         styles: PosStyles(
@@ -1493,7 +2147,8 @@ class ThermalPrinter {
       }
       if (customerPhone != null && customerPhone.isNotEmpty) {
         bytes += generator.text(
-          _sanitizeTextForThermalPrinter(StringHelper.maskStringShowLast4(customerPhone)),
+          _sanitizeTextForThermalPrinter(
+              StringHelper.maskStringShowLast4(customerPhone)),
           styles: PosStyles(
             fontType: fontType,
             height: textSizeSmall,

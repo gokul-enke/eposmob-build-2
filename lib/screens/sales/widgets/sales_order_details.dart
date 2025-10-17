@@ -55,7 +55,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final response = await SalesProvider()
           .listOrderDetails(context, ordersId, accessToken ?? "");
-      
+
       if (response["status"] == "success") {
         setState(() {
           OrderDetailsModel? orderDetails;
@@ -68,7 +68,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               customerDetails = orderDetailsModelData?.customerDetails;
               cartItems = cart?.cartItems ?? [];
               orderNumber = orderDetailsModelData?.orderNumber ?? "N/A";
-              
+
               // Debug: Check payments data
               if (orderDetailsModelData?.payments != null) {
                 debugPrint("Payments data: ${orderDetailsModelData?.payments}");
@@ -121,110 +121,116 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           ),
           child: SingleChildScrollView(
             child: Container(
-          margin: const EdgeInsets.all(10.0),
-          padding: const EdgeInsets.all(8.0),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
-            child: isInitLoading
-                ? SizedBox(
-                    height: size.height,
-                    child: const Center(
-                        child: CircularProgressIndicator.adaptive()))
-                : Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start, // Align items to start
-                    children: [
-                      _buildHeader(),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Order Details - # $orderNumber',
-                        style: ResponsiveWidget.isMobile(context)
-                            ? buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s12, 0.30, ColorManager.textColor)
-                            : buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s20, 0.30, ColorManager.textColor),
-                        overflow: TextOverflow.ellipsis, // Handle overflow
-                      ),
-                      // Delivery Date/Time if present
-                      if (orderDetailsModelData?.orderProps != null) ...[
-                        Builder(
-                          builder: (context) {
-                            final dateProp =
-                                orderDetailsModelData?.orderProps?.firstWhere(
-                              (prop) =>
-                                  prop.propsCode?.toUpperCase() ==
-                                  'DELIVERY_DATE',
-                              orElse: () => OrderDetailsModelDataOrderProp(
-                                  propsId: null,
-                                  propsCode: null,
-                                  propsValue: null),
-                            );
-                            final timeProp =
-                                orderDetailsModelData?.orderProps?.firstWhere(
-                              (prop) =>
-                                  prop.propsCode?.toUpperCase() ==
-                                  'DELIVERY_TIME',
-                              orElse: () => OrderDetailsModelDataOrderProp(
-                                  propsId: null,
-                                  propsCode: null,
-                                  propsValue: null),
-                            );
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (dateProp?.propsCode != null &&
-                                    dateProp?.propsValue != null &&
-                                    (dateProp?.propsValue?.isNotEmpty ?? false))
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4.0),
-                                    child: Text(
-                                      'Delivery Date: 	${DateHelper.formatISODate(dateProp?.propsValue ?? '')}',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s14,
-                                          0.21,
-                                          ColorManager.textColor),
-                                    ),
-                                  ),
-                                if (timeProp?.propsCode != null &&
-                                    timeProp?.propsValue != null &&
-                                    (timeProp?.propsValue?.isNotEmpty ?? false))
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 2.0),
-                                    child: Text(
-                                      'Delivery Time: 	${timeProp?.propsValue ?? ''}',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s14,
-                                          0.21,
-                                          ColorManager.textColor),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      _buildOrderDetails(),
-                      const SizedBox(height: 10),
-                      _buildOrderReturns(),
-                      const SizedBox(height: 10),
-                      _buildPrintButton(size),
-                    ],
+              margin: const EdgeInsets.all(10.0),
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: const [
+                  BoxShadow(
+                    color: ColorManager.boxShadowColor,
+                    blurRadius: 6,
+                    offset: Offset(1, 1),
                   ),
+                ],
+                color: Colors.white,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 20.0, horizontal: 10.0),
+                child: isInitLoading
+                    ? SizedBox(
+                        height: size.height,
+                        child: const Center(
+                            child: CircularProgressIndicator.adaptive()))
+                    : Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start, // Align items to start
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Order Details - # $orderNumber',
+                            style: ResponsiveWidget.isMobile(context)
+                                ? buildCustomStyle(FontWeightManager.semiBold,
+                                    FontSize.s12, 0.30, ColorManager.textColor)
+                                : buildCustomStyle(FontWeightManager.semiBold,
+                                    FontSize.s20, 0.30, ColorManager.textColor),
+                            overflow: TextOverflow.ellipsis, // Handle overflow
+                          ),
+                          // Delivery Date/Time if present
+                          if (orderDetailsModelData?.orderProps != null) ...[
+                            Builder(
+                              builder: (context) {
+                                final dateProp = orderDetailsModelData
+                                    ?.orderProps
+                                    ?.firstWhere(
+                                  (prop) =>
+                                      prop.propsCode?.toUpperCase() ==
+                                      'DELIVERY_DATE',
+                                  orElse: () => OrderDetailsModelDataOrderProp(
+                                      propsId: null,
+                                      propsCode: null,
+                                      propsValue: null),
+                                );
+                                final timeProp = orderDetailsModelData
+                                    ?.orderProps
+                                    ?.firstWhere(
+                                  (prop) =>
+                                      prop.propsCode?.toUpperCase() ==
+                                      'DELIVERY_TIME',
+                                  orElse: () => OrderDetailsModelDataOrderProp(
+                                      propsId: null,
+                                      propsCode: null,
+                                      propsValue: null),
+                                );
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (dateProp?.propsCode != null &&
+                                        dateProp?.propsValue != null &&
+                                        (dateProp?.propsValue?.isNotEmpty ??
+                                            false))
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 4.0),
+                                        child: Text(
+                                          'Delivery Date: 	${DateHelper.formatISODate(dateProp?.propsValue ?? '')}',
+                                          style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s14,
+                                              0.21,
+                                              ColorManager.textColor),
+                                        ),
+                                      ),
+                                    if (timeProp?.propsCode != null &&
+                                        timeProp?.propsValue != null &&
+                                        (timeProp?.propsValue?.isNotEmpty ??
+                                            false))
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 2.0),
+                                        child: Text(
+                                          'Delivery Time: 	${timeProp?.propsValue ?? ''}',
+                                          style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s14,
+                                              0.21,
+                                              ColorManager.textColor),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          _buildOrderDetails(),
+                          const SizedBox(height: 10),
+                          _buildOrderReturns(),
+                          const SizedBox(height: 10),
+                          _buildPrintButton(size),
+                        ],
+                      ),
               ),
             ),
           ),
@@ -295,7 +301,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         textColor: ColorManager.kPrimaryColor,
         fct: () async {
           // Check if we have the required data
-          if (orderDetailsModelData?.cart == null || cartItems == null || cartItems!.isEmpty) {
+          if (orderDetailsModelData?.cart == null ||
+              cartItems == null ||
+              cartItems!.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('No order data available for printing'),
@@ -305,13 +313,21 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             return;
           }
 
-          String? formattedTotal = orderDetailsModelData?.cart?.priceSummary?.netPayable?.toString() ?? 
-                                   orderDetailsModelData?.cart?.priceSummary?.netTotal?.toString() ?? "0.00";
-          String? savedTotal = orderDetailsModelData?.cart?.priceSummary?.savedTotal?.toString() ?? "0.00";
-          String? discountAmount = orderDetailsModelData?.cart?.priceSummary?.discount?.toString() ?? "0.00";
+          String? formattedTotal = orderDetailsModelData
+                  ?.cart?.priceSummary?.netPayable
+                  ?.toString() ??
+              orderDetailsModelData?.cart?.priceSummary?.netTotal?.toString() ??
+              "0.00";
+          String? savedTotal = orderDetailsModelData
+                  ?.cart?.priceSummary?.savedTotal
+                  ?.toString() ??
+              "0.00";
+          String? discountAmount =
+              orderDetailsModelData?.cart?.priceSummary?.discount?.toString() ??
+                  "0.00";
           String storeName = orderDetailsModelData?.cart?.storeName ?? "Store";
           String orderDate = orderDetailsModelData?.orderDate ?? "";
-          
+
           // Extract customer details
           String? customerName = customerDetails?.name;
           String? customerPhone = customerDetails?.phone;
@@ -333,6 +349,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 customerPhone: customerPhone,
                 customerEmail: customerEmail,
                 customerAddress: customerAddress,
+                orderReturns:
+                    orderDetailsModelData?.orderReturns, // Add this line
               ),
             ),
           );
