@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,8 +15,12 @@ class SharedPreferenceProvider extends ChangeNotifier {
     String accessToken,
     int customerId,
     String customerName,
-    String userRole,
-  ) async {
+    String userRole, {
+    String? tokenType,
+    int? companyId,
+    String? companyName,
+    String? storesJson,
+  }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
 
@@ -23,6 +28,20 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.setInt('customerId', customerId);
     prefs.setString('customerName', customerName);
     prefs.setString('userRole', userRole);
+    
+    // Save new fields
+    if (tokenType != null) {
+      prefs.setString('token_type', tokenType);
+    }
+    if (companyId != null) {
+      prefs.setInt('company_id', companyId);
+    }
+    if (companyName != null) {
+      prefs.setString('company_name', companyName);
+    }
+    if (storesJson != null) {
+      prefs.setString('stores', storesJson);
+    }
     // debugPrint('inside shared ,$customerName');
   }
 
@@ -41,6 +60,13 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('customerId');
     prefs.remove('customerName');
     prefs.remove('userRole');
+    
+    // Remove new fields
+    prefs.remove('token_type');
+    prefs.remove('company_id');
+    prefs.remove('company_name');
+    prefs.remove('stores');
+    prefs.remove('active_store_id');
   }
 
   Future<String?> getToken() async {
@@ -93,5 +119,56 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<void> removeApiKey() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('api_key');
+  }
+
+  // Getter methods for new fields
+  Future<String?> getTokenType() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token_type');
+  }
+
+  Future<int?> getCompanyId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('company_id');
+  }
+
+  Future<String?> getCompanyName() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('company_name');
+  }
+
+  Future<String?> getStoresJson() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('stores');
+  }
+
+  Future<List<dynamic>?> getStores() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storesJson = prefs.getString('stores');
+    if (storesJson != null && storesJson.isNotEmpty) {
+      try {
+        return json.decode(storesJson) as List<dynamic>;
+      } catch (e) {
+        debugPrint('Error decoding stores: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // Active store management
+  Future<void> saveActiveStoreId(int storeId) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('active_store_id', storeId);
+  }
+
+  Future<int?> getActiveStoreId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('active_store_id');
+  }
+
+  Future<void> removeActiveStoreId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('active_store_id');
   }
 }

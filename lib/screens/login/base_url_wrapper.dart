@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/screens/api_key_screen.dart';
-import 'login/login.dart';
+import 'package:pos_machine/screens/login/api_key_screen.dart';
+import 'login.dart';
 
 class BaseUrlWrapper extends StatefulWidget {
   const BaseUrlWrapper({super.key});
