@@ -319,7 +319,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
+        height: MediaQuery.of(context).size.height * 0.95,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
@@ -341,7 +341,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
             ),
             // Header
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
                   const Icon(
@@ -379,6 +379,8 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                   categoryHeight: 80,
                   dividerHeight: 1,
                   showSectionTitles: false,
+                  visibleRows: 3,
+                  crossAxisCount: 4,
                   onProductSelected: (product) async {
                     // Add selected product to cart, then close the modal
                     await ProductCartHelper.handleProductSelection(
