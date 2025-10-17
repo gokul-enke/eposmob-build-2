@@ -380,6 +380,12 @@ class ThermalPrinter {
             ? 'QTY' 
             : 'QTY');
     
+    String rateLabel = (displayConfig?['showReturnRate']?.value as String?)?.isNotEmpty == true
+        ? displayConfig!['showReturnRate']!.value as String
+        : (displayConfig?['showReturnRate']?.visible == true 
+            ? 'RATE' 
+            : 'RATE');
+    
     String amountLabel = (displayConfig?['showReturnTotal']?.value as String?)?.isNotEmpty == true
         ? displayConfig!['showReturnTotal']!.value as String
         : (displayConfig?['showReturnTotal']?.visible == true 
@@ -419,6 +425,16 @@ class ThermalPrinter {
       ),
       PosColumn(
         text: qtyLabel,
+        width: 1,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.right,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      ),
+      PosColumn(
+        text: rateLabel,
         width: 2,
         styles: PosStyles(
           fontType: fontType,
@@ -429,7 +445,7 @@ class ThermalPrinter {
       ),
       PosColumn(
         text: amountLabel,
-        width: 3,
+        width: 2,
         styles: PosStyles(
           fontType: fontType,
           align: PosAlign.right,
@@ -562,6 +578,16 @@ class ThermalPrinter {
         ),
         PosColumn(
           text: itemQuantity.toString(),
+          width: 1,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            bold: false,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: itemRate.toStringAsFixed(2),
           width: 2,
           styles: PosStyles(
             fontType: fontType,
@@ -572,7 +598,7 @@ class ThermalPrinter {
         ),
         PosColumn(
           text: itemAmount.toStringAsFixed(2),
-          width: 3,
+          width: 2,
           styles: PosStyles(
             fontType: fontType,
             align: PosAlign.right,
