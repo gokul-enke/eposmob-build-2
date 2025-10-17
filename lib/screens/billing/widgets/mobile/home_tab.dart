@@ -378,6 +378,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                 child: SideBarProductList(
                   categoryHeight: 80,
                   dividerHeight: 1,
+                  showSectionTitles: false,
                   onProductSelected: (product) async {
                     // Add selected product to cart, then close the modal
                     await ProductCartHelper.handleProductSelection(

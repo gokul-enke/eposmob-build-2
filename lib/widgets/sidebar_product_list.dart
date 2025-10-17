@@ -29,6 +29,7 @@ class SideBarProductList extends StatefulWidget {
   /// Optional divider height and color
   final double dividerHeight;
   final Color dividerColor;
+  final bool showSectionTitles;
 
   const SideBarProductList({
     Key? key,
@@ -37,6 +38,7 @@ class SideBarProductList extends StatefulWidget {
     this.categoryHeight = 100,
     this.dividerHeight = 1,
     this.dividerColor = const Color(0xFFF5F5F5),
+    this.showSectionTitles = true,
   }) : super(key: key);
 
   @override
@@ -73,10 +75,10 @@ class _SideBarProductListState extends State<SideBarProductList> {
       // Ensure categories are loaded for the sidebar
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      
+
       debugPrint("📥 [SidebarProductList] Ensuring categories are loaded...");
       categoryProvider.ensureCategoriesLoaded();
-      
+
       Provider.of<LocalProductProvider>(context, listen: false)
           .refreshProducts();
     });
@@ -129,22 +131,26 @@ class _SideBarProductListState extends State<SideBarProductList> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Category search section
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            'Categories',
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
-                0.30, ColorManager.textColor),
-          ),
+        // Divider
+        Container(
+          height: widget.dividerHeight,
+          color: widget.dividerColor,
         ),
 
         // Category search field using reusable widget
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              if (widget.showSectionTitles) ...[
+                Text(
+                  'Categories',
+                  style: buildCustomStyle(FontWeightManager.semiBold,
+                      FontSize.s18, 0.30, ColorManager.textColor),
+                ),
+                const SizedBox(height: 6),
+              ],
               Expanded(
                 child: buildColumnWidgetForTextFields(
                   controller: _searchCategoryController,
@@ -156,7 +162,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                   margin: const EdgeInsets.symmetric(
                       horizontal: 8), // Minimal margin
                   onchanged: (query) {
-                    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+                    final categoryProvider =
+                        Provider.of<CategoryProvider>(context, listen: false);
                     if (query!.isEmpty) {
                       // Reset to show all categories without API call
                       categoryProvider.resetCategoryFilter();
@@ -198,13 +205,17 @@ class _SideBarProductListState extends State<SideBarProductList> {
           child: Consumer<CategoryProvider>(
             builder: (context, categoryProvider, child) {
               // Use the main category list loaded during login, fallback to searchCategory
-              final rawCategories =
-                  categoryProvider.category ?? categoryProvider.searchCategory ?? [];
-              
-              debugPrint("🏷️ [Sidebar] Categories available: ${rawCategories.length}");
-              debugPrint("🏷️ [Sidebar] categoryProvider.category: ${categoryProvider.category?.length}");
-              debugPrint("🏷️ [Sidebar] categoryProvider.searchCategory: ${categoryProvider.searchCategory?.length}");
-              
+              final rawCategories = categoryProvider.category ??
+                  categoryProvider.searchCategory ??
+                  [];
+
+              debugPrint(
+                  "🏷️ [Sidebar] Categories available: ${rawCategories.length}");
+              debugPrint(
+                  "🏷️ [Sidebar] categoryProvider.category: ${categoryProvider.category?.length}");
+              debugPrint(
+                  "🏷️ [Sidebar] categoryProvider.searchCategory: ${categoryProvider.searchCategory?.length}");
+
               // Inject a local 'ALL' entry only for this sidebar view
               final allCategory = Category(
                 categoryId: 0,
@@ -239,7 +250,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           itemBuilder: (context, index) {
                             final category = categories[index];
                             // Use local UI selection to allow selecting 'ALL' visually
-                            final isSelected = index == _selectedUiCategoryIndex;
+                            final isSelected =
+                                index == _selectedUiCategoryIndex;
 
                             return GestureDetector(
                               behavior: HitTestBehavior.opaque,
@@ -250,7 +262,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                           listen: false)
                                       .refreshProducts();
                                   setState(() {
-                                    _selectedUiCategoryIndex = index; // highlight ALL
+                                    _selectedUiCategoryIndex =
+                                        index; // highlight ALL
                                   });
                                   return;
                                 }
@@ -270,7 +283,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                         categoryId: category.categoryId);
 
                                 setState(() {
-                                  _selectedUiCategoryIndex = index; // highlight selected
+                                  _selectedUiCategoryIndex =
+                                      index; // highlight selected
                                 });
                               },
                               child: Container(
@@ -338,7 +352,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                       color: isSelected
                                                           ? ColorManager
                                                               .kPrimaryColor
-                                                          : Colors.grey.shade400),
+                                                          : Colors
+                                                              .grey.shade400),
                                             ),
                                           ),
 
@@ -350,8 +365,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                 width: 12,
                                                 height: 3,
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      ColorManager.kPrimaryColor,
+                                                  color: ColorManager
+                                                      .kPrimaryColor,
                                                   borderRadius:
                                                       BorderRadius.circular(2),
                                                 ),
@@ -404,12 +419,14 @@ class _SideBarProductListState extends State<SideBarProductList> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Products',
-                      style: buildCustomStyle(FontWeightManager.semiBold,
-                          FontSize.s18, 0.30, ColorManager.textColor),
-                    ),
-                    const SizedBox(height: 6),
+                    if (widget.showSectionTitles) ...[
+                      Text(
+                        'Products',
+                        style: buildCustomStyle(FontWeightManager.semiBold,
+                            FontSize.s18, 0.30, ColorManager.textColor),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     Row(
                       children: [
                         Expanded(
