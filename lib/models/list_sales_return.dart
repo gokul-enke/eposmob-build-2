@@ -307,6 +307,7 @@ class Order {
   final String sourceType;
   final int deliveryMethodId;
   final int companyId;
+  final OrderCustomer? customer;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -329,6 +330,7 @@ class Order {
     required this.sourceType,
     required this.deliveryMethodId,
     required this.companyId,
+    this.customer,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -355,8 +357,50 @@ class Order {
       sourceType: json['source_type'],
       deliveryMethodId: json['delivery_method_id'],
       companyId: json['company_id'],
+      customer:
+          json['customer'] != null ? OrderCustomer.fromJson(json['customer']) : null,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+    );
+  }
+}
+
+class OrderCustomer {
+  final int id;
+  final int userId;
+  final int? laravelThroughKey;
+  final OrderCustomerUser? user;
+
+  OrderCustomer({
+    required this.id,
+    required this.userId,
+    this.laravelThroughKey,
+    this.user,
+  });
+
+  factory OrderCustomer.fromJson(Map<String, dynamic> json) {
+    return OrderCustomer(
+      id: json['id'],
+      userId: json['user_id'],
+      laravelThroughKey: json['laravel_through_key'],
+      user: json['user'] != null ? OrderCustomerUser.fromJson(json['user']) : null,
+    );
+  }
+}
+
+class OrderCustomerUser {
+  final int id;
+  final String name;
+
+  OrderCustomerUser({
+    required this.id,
+    required this.name,
+  });
+
+  factory OrderCustomerUser.fromJson(Map<String, dynamic> json) {
+    return OrderCustomerUser(
+      id: json['id'],
+      name: json['name']?.toString() ?? '',
     );
   }
 }

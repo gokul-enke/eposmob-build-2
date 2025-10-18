@@ -69,6 +69,8 @@ class SalesReturnDetailModal extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildInfoRow("Order Number", order.order?.orderNumber ?? "#${order.orderId}"),
                     const SizedBox(height: 8),
+                    _buildInfoRow("Customer", order.order?.customer?.user?.name ?? "N/A"),
+                    const SizedBox(height: 8),
                     _buildInfoRow("Grand Total", order.order?.grandTotal ?? "N/A"),
                     const SizedBox(height: 8),
                     _buildInfoRow("Payment Method", order.order?.paymentMethod?.join(", ") ?? "N/A"),
