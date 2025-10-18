@@ -33,10 +33,7 @@ jobs:
 
       - name: Install Inno Setup
         run: |
-          $url = "https://files.jrsoftware.org/is/6/innosetup-6.2.2.exe"
-          $output = "innosetup.exe"
-          Invoke-WebRequest -Uri $url -OutFile $output
-          Start-Process -FilePath $output -ArgumentList "/SILENT" -Wait
+          choco install innosetup --yes --no-progress
 
       - name: Build Installer
         run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
