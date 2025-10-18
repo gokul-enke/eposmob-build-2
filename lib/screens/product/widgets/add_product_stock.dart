@@ -1816,7 +1816,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildSupplierField() {
     return Consumer<SupplierProvider>(
       builder: (context, supplierProvider, child) {
-        List<Supplier> supplierList = supplierProvider.supplierList ?? [];
+        // Use allSuppliers to avoid pagination issues - shows all suppliers in dropdown
+        List<Supplier> supplierList = supplierProvider.allSuppliers ?? [];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1870,23 +1871,31 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     listen: false)
                                 .fetchSuppliers(accessToken: accessToken);
 
-                            // Find the newly created supplier in the updated list
+                            // Find the newly created supplier in the updated list (use allSuppliers to avoid pagination)
                             final updatedSupplierList =
                                 Provider.of<SupplierProvider>(context,
                                             listen: false)
-                                        .supplierList ??
+                                        .allSuppliers ??
                                     [];
-                            final newSupplier = updatedSupplierList.firstWhere(
-                              (supplier) => supplier.phone == createdPhone,
-                              orElse: () => updatedSupplierList.first,
-                            );
-
-                            setState(() {
-                              selectedSupplier = newSupplier;
-                            });
-
-                            debugPrint(
-                                "✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
+                            
+                            if (updatedSupplierList.isNotEmpty) {
+                              try {
+                                final newSupplier = updatedSupplierList.firstWhere(
+                                  (supplier) => supplier.phone == createdPhone,
+                                );
+                                
+                                setState(() {
+                                  selectedSupplier = newSupplier;
+                                });
+                                
+                                debugPrint(
+                                    "✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
+                              } catch (e) {
+                                // Supplier with matching phone not found, don't auto-select
+                                debugPrint(
+                                    "⚠️ Newly created supplier not found by phone: $createdPhone");
+                              }
+                            }
                           }
                         } catch (e) {
                           debugPrint("❌ ERROR AUTO-SELECTING NEW SUPPLIER: $e");
