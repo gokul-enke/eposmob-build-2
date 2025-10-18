@@ -6,6 +6,15 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/main_screen.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
+import 'package:pos_machine/providers/invoice_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:provider/provider.dart';
 
 class StoreSelectionScreen extends StatefulWidget {
   final List<Store> stores;
@@ -22,6 +31,7 @@ class StoreSelectionScreen extends StatefulWidget {
 class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   int? _selectedStoreId;
   bool _isSubmitting = false;
+  String? _loadingMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -138,10 +148,22 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             Container(
               padding: EdgeInsets.all(isMobile ? 16 : 24),
               child: _isSubmitting
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: ColorManager.kPrimaryColor,
-                      ),
+                  ? Column(
+                      children: [
+                        const CircularProgressIndicator(
+                          color: ColorManager.kPrimaryColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _loadingMessage ?? 'Preparing your workspace...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: FontConstants.fontFamily,
+                            fontSize: FontSize.s12,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
                     )
                   : CustomRoundButton(
                       width: isMobile ? double.infinity : 400,
@@ -306,13 +328,12 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   Future<void> _handleSubmit() async {
     if (_selectedStoreId == null) return;
 
-    final selectedStore = widget.stores.firstWhere(
-      (store) => store.storeId == _selectedStoreId,
-      orElse: () => widget.stores.first,
-    );
+    final selectedStore = widget.stores
+        .firstWhere((store) => store.storeId == _selectedStoreId);
 
     setState(() {
       _isSubmitting = true;
+      _loadingMessage = 'Saving your selection...';
     });
 
     try {
@@ -320,12 +341,17 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       await SharedPreferenceProvider().saveActiveStoreId(_selectedStoreId!);
 
       if (mounted) {
+        final authModel = Provider.of<AuthModel>(context, listen: false);
+        final token = authModel.token ?? "";
+
+        await _loadDataForSelectedStore(token);
+
         showScaffold(
           context: context,
           message:
-              '${selectedStore.storeName ?? "Store"} selected successfully.',
+              '${selectedStore.storeName ?? "Store"} ready. Loading dashboard...',
         );
-        await Future.delayed(const Duration(milliseconds: 1200));
+
         // Navigate to main screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -346,8 +372,98 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
+          _loadingMessage = null;
         });
       }
     }
+  }
+
+  Future<void> _updateLoadingStatus(String message) async {
+    if (!mounted) return;
+    setState(() {
+      _loadingMessage = message;
+    });
+    await Future.delayed(const Duration(milliseconds: 250));
+  }
+
+  Future<void> _loadDataForSelectedStore(String accessToken) async {
+    final generalSettingsProvider =
+        Provider.of<GeneralSettingsProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final invoiceProvider =
+        Provider.of<InvoiceProvider>(context, listen: false);
+    final purchaseProvider =
+        Provider.of<PurchaseProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
+    final docConfigProvider =
+        Provider.of<DocumentConfigProvider>(context, listen: false);
+
+    await _updateLoadingStatus('Loading general settings...');
+    await generalSettingsProvider.fetchGeneralSettings();
+
+    await _updateLoadingStatus('Applying app preferences...');
+    await appSettingsProvider.fetchAppSettings();
+
+    await _updateLoadingStatus('Preparing invoices...');
+    invoiceProvider.listAllInvoiceAccountTypes(accessToken);
+
+    await _updateLoadingStatus('Syncing payment methods...');
+    invoiceProvider.listAllPaymentList(accessToken);
+
+    await _updateLoadingStatus('Fetching voucher types...');
+    invoiceProvider.listVoucherAccountType(accessToken);
+
+    await _updateLoadingStatus('Updating user directory...');
+    invoiceProvider.listUsersList(accessToken);
+
+    await _updateLoadingStatus('Retrieving store details...');
+    await purchaseProvider.listAllStores(accessToken, null);
+
+    await _updateLoadingStatus('Loading supplier catalog...');
+    await purchaseProvider.listAllSuppliers(accessToken, null);
+    final supplierLength = purchaseProvider.getSupplierList?.length ?? 0;
+    await _updateLoadingStatus('Suppliers synced: $supplierLength available.');
+
+    await _updateLoadingStatus('Syncing measurement units...');
+    await purchaseProvider.listAllUnits(accessToken);
+
+    await _updateLoadingStatus('Fetching rack metadata...');
+    await purchaseProvider.listMasterDataValues(accessToken, 'RACKS');
+
+    await _updateLoadingStatus('Downloading document configurations...');
+    try {
+      await docConfigProvider.fetchDocumentConfigurations(
+        accessToken: accessToken,
+      );
+    } catch (e) {
+      debugPrint(
+          'Warning: Failed to load document configurations after store selection: $e');
+    }
+
+    await _updateLoadingStatus('Refreshing product categories...');
+    try {
+      await categoryProvider.listAllCategory();
+      final categoryCount = categoryProvider.categoryList?.length ?? 0;
+      await _updateLoadingStatus('Categories ready: $categoryCount found.');
+    } catch (e) {
+      debugPrint(
+          'Warning: Failed to load categories after store selection: $e');
+    }
+
+    await _updateLoadingStatus('Fetching product catalog (this may take a moment)...');
+    await localProductProvider.fetchProductsFromAPI(
+      onProgress: (loaded, batch) async {
+        await _updateLoadingStatus(
+            'Loading products... $loaded loaded (latest batch: $batch)');
+      },
+    );
+    final productCount = localProductProvider.products.length;
+    await _updateLoadingStatus('Products ready: $productCount loaded.');
+
+    await _updateLoadingStatus('Finishing touches...');
   }
 }

@@ -612,8 +612,11 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   /// Fetches products from the API with batched concurrent requests (10 pages at a time).
-  Future<void> fetchProductsFromAPI(
-      {int? categoryId, String? filterName}) async {
+  Future<void> fetchProductsFromAPI({
+    int? categoryId,
+    String? filterName,
+    Future<void> Function(int totalLoaded, int batchLoaded)? onProgress,
+  }) async {
     List<GetProduct> allProducts = [];
     int currentPage = 1;
     const int batchSize = 10; // Fetch 10 pages concurrently
@@ -682,6 +685,9 @@ class LocalProductProvider extends ChangeNotifier {
 
             GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
 
+            final productsFetched =
+                getProductModel.product?.length ?? 0;
+
             if (getProductModel.product == null ||
                 getProductModel.product!.isEmpty) {
               emptyPageCount++;
@@ -691,7 +697,11 @@ class LocalProductProvider extends ChangeNotifier {
 
             allProducts.addAll(getProductModel.product!);
             debugPrint(
-                '✅ [API] Page $pageNum: ${getProductModel.product!.length} products (Total: ${allProducts.length})');
+                '✅ [API] Page $pageNum: $productsFetched products (Total: ${allProducts.length})');
+
+            if (onProgress != null && productsFetched > 0) {
+              await onProgress(allProducts.length, productsFetched);
+            }
           } else {
             debugPrint('❌ [API] Page $pageNum failed: Status ${response.statusCode}');
             emptyPageCount++;

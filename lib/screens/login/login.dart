@@ -568,11 +568,8 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/providers/document_config_provider.dart';
-import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:pos_machine/screens/login/store_selection_screen.dart';
 import 'package:provider/provider.dart';
@@ -581,13 +578,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_title.dart';
 import '../../providers/auth_model.dart';
-import '../../providers/invoice_provider.dart';
-import '../../providers/purchase_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
-import 'package:pos_machine/providers/general_settings_provider.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
@@ -1026,167 +1019,11 @@ class _SignInScreenState extends State<SignInScreen> {
                                                     " authmodel token ${authModel.token}");
                                                 debugPrint(
                                                     " authmodel token ${authModel.token}");
-                                                InvoiceProvider
-                                                    invoiceProvider = Provider
-                                                        .of<InvoiceProvider>(
-                                                            context,
-                                                            listen: false);
-                                                PurchaseProvider
-                                                    purchaseProvider = Provider
-                                                        .of<PurchaseProvider>(
-                                                            context,
-                                                            listen: false);
-                                                // Load general settings after login
-                                                _updateLoadingState(true,
-                                                    "Loading general settings...");
-                                                await Provider.of<
-                                                            GeneralSettingsProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .fetchGeneralSettings();
-
-                                                // Load app settings after login
-                                                _updateLoadingState(true,
-                                                    "Loading app settings...");
-                                                await Provider.of<
-                                                            AppSettingsProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .fetchAppSettings();
-
-                                                // Show loading indicator for data fetching
-                                                _updateLoadingState(true,
-                                                    "Loading invoice data...");
-                                                invoiceProvider
-                                                    .listAllInvoiceAccountTypes(
-                                                        authModel.token ?? '');
-
-                                                _updateLoadingState(true,
-                                                    "Loading payment methods...");
-                                                invoiceProvider
-                                                    .listAllPaymentList(
-                                                        authModel.token ?? '');
-
-                                                _updateLoadingState(true,
-                                                    "Loading voucher data...");
-                                                invoiceProvider
-                                                    .listVoucherAccountType(
-                                                        authModel.token ?? '');
-
-                                                _updateLoadingState(
-                                                    true, "Loading users...");
-                                                invoiceProvider.listUsersList(
-                                                    authModel.token ?? '');
-
-                                                _updateLoadingState(
-                                                    true, "Loading stores...");
-                                                purchaseProvider.listAllStores(
-                                                    authModel.token ?? '',
-                                                    null);
-
-                                                _updateLoadingState(true,
-                                                    "Loading suppliers...");
-                                                purchaseProvider
-                                                    .listAllSuppliers(
-                                                        authModel.token ?? '',
-                                                        null);
-
-                                                _updateLoadingState(
-                                                    true, "Loading units...");
-                                                purchaseProvider.listAllUnits(
-                                                    authModel.token ?? '');
-
-                                                purchaseProvider
-                                                    .listMasterDataValues(
-                                                        authModel.token ?? '',
-                                                        'RACKS');
-
                                                 showScaffold(
                                                   context: context,
                                                   message:
                                                       '${value["message"]}',
                                                 );
-
-                                                _updateLoadingState(true,
-                                                    "Loading products...");
-                                                debugPrint(
-                                                    "🔄 [Login] Starting product fetch via LocalProductProvider.fetchProductsFromAPI()");
-                                                await Provider.of<
-                                                            LocalProductProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .fetchProductsFromAPI();
-                                                final lpp = Provider.of<
-                                                        LocalProductProvider>(
-                                                    context,
-                                                    listen: false);
-                                                debugPrint(
-                                                    "📊 [Login] Product fetch complete. provider.products=${lpp.products.length}, filtered=${lpp.filteredProducts.length}");
-                                                if (lpp.products.isEmpty) {
-                                                  debugPrint(
-                                                      "⚠️ [Login] No products loaded. Check API/Hive logs above for errors.");
-                                                }
-
-                                                // Load document configurations during login
-                                                try {
-                                                  _updateLoadingState(true,
-                                                      "Loading document configurations...");
-                                                  final docConfigProvider = Provider
-                                                      .of<DocumentConfigProvider>(
-                                                          context,
-                                                          listen: false);
-                                                  await docConfigProvider
-                                                      .fetchDocumentConfigurations(
-                                                          accessToken:
-                                                              authModel.token ??
-                                                                  "");
-                                                  debugPrint(
-                                                      "Document configurations loaded successfully during login");
-                                                } catch (e) {
-                                                  debugPrint(
-                                                      "Warning: Failed to load document configurations during login: $e");
-                                                  // Don't block login if document config fails
-                                                }
-
-                                                // Load categories during login with caching optimization
-                                                try {
-                                                  _updateLoadingState(true,
-                                                      "Loading categories...");
-                                                  final categoryProvider =
-                                                      Provider.of<
-                                                              CategoryProvider>(
-                                                          context,
-                                                          listen: false);
-
-                                                  // Always load categories during login to ensure they're available
-                                                  debugPrint(
-                                                      "📥 Loading categories from API during login");
-                                                  await categoryProvider
-                                                      .listAllCategory();
-
-                                                  // Verify categories were loaded successfully
-                                                  if (categoryProvider
-                                                              .categoryList !=
-                                                          null &&
-                                                      categoryProvider
-                                                          .categoryList!
-                                                          .isNotEmpty) {
-                                                    debugPrint(
-                                                        "✅ Categories loaded successfully: ${categoryProvider.categoryList!.length} categories");
-                                                    debugPrint(
-                                                        "✅ First few categories: ${categoryProvider.categoryList!.take(3).map((c) => c.categoryName).toList()}");
-                                                  } else {
-                                                    debugPrint(
-                                                        "⚠️ Categories list is empty after API call");
-                                                  }
-
-                                                  debugPrint(
-                                                      "Categories loaded successfully during login");
-                                                } catch (e) {
-                                                  debugPrint(
-                                                      "Warning: Failed to load categories during login: $e");
-                                                  // Don't block login if categories fail
-                                                }
 
                                                 _updateLoadingState(false, "");
 
