@@ -144,6 +144,9 @@ class CartProvider with ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    int? activeStoreId = prefs.getInt('active_store_id');
+
+    debugPrint("🏬 Active Store ID: $activeStoreId");
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -806,14 +809,20 @@ class CartProvider with ChangeNotifier {
       };
     }
 
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    debugPrint("🏬 Active Store ID: $activeStoreId");
+
+    if (activeStoreId != null) {
+      apiBodyData["store_id"] = activeStoreId;
+    }
+
     debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
 
     final url = Uri.parse(APPUrl.addToOrderUrl);
     debugPrint("🌐 API URL: ${url.toString()}");
-
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
 
     debugPrint("apiKey is xxx $apiKey");
 
