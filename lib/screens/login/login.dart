@@ -1,8 +1,7 @@
 // import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 // import 'package:pos_machine/components/build_dialog_box.dart';
-// import 'package:pos_machine/components/main_screen.dart';
-// import 'package:pos_machine/models/executive.dart';
+// // import 'package:pos_machine/models/executive.dart';
 // import 'package:pos_machine/providers/authentication_providers.dart';
 // import 'package:pos_machine/providers/keyboard_provider.dart';
 // import 'package:pos_machine/providers/local_product_provider.dart';
@@ -83,7 +82,7 @@
 //     try {
 //       SharedPreferences prefs = await SharedPreferences.getInstance();
 //       await prefs.remove('api_key');
-      
+
 //       if (mounted) {
 //         Navigator.pushReplacementNamed(context, '/api-key');
 //       }
@@ -559,14 +558,12 @@
 //   }
 // }
 
-
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/main_screen.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
@@ -619,7 +616,8 @@ class _SignInScreenState extends State<SignInScreen> {
     // Ensure on-screen keyboard feature is OFF by default when opening login
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+        final keyboardProvider =
+            Provider.of<KeyboardProvider>(context, listen: false);
         keyboardProvider.featureOff();
         keyboardProvider.clear();
       } catch (_) {}
@@ -663,7 +661,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove('api_key');
-      
+
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/api-key');
       }
@@ -702,7 +700,8 @@ class _SignInScreenState extends State<SignInScreen> {
     // Responsive helpers
     final bool isMobile = width < 600;
     final double formWidth = isMobile ? (width - 40) : (width / 2);
-    final EdgeInsets fieldPadding = EdgeInsets.symmetric(horizontal: isMobile ? 16 : 25);
+    final EdgeInsets fieldPadding =
+        EdgeInsets.symmetric(horizontal: isMobile ? 16 : 25);
     final double titleTopSpace = isMobile ? height * .06 : height * .1;
     final double betweenTitleAndForm = isMobile ? 24.0 : height * .08;
     final authModel = Provider.of<AuthModel>(context);
@@ -741,14 +740,14 @@ class _SignInScreenState extends State<SignInScreen> {
                                   padding: fieldPadding,
                                   child: TextFormField(
                                     autovalidateMode:
-                                    AutovalidateMode.onUserInteraction,
+                                        AutovalidateMode.onUserInteraction,
                                     validator: validateEmail,
                                     key: const Key("Phone_Number_Sign_in"),
                                     cursorColor: ColorManager.kPrimaryColor,
                                     controller: _emailController,
                                     onTap: () {
                                       Provider.of<KeyboardProvider>(context,
-                                          listen: false)
+                                              listen: false)
                                           .show('email', _emailController);
                                     },
                                     inputFormatters: <TextInputFormatter>[
@@ -770,7 +769,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                           width: 2.0,
                                         ),
                                       ),
-                                      focusedErrorBorder: const OutlineInputBorder(
+                                      focusedErrorBorder:
+                                          const OutlineInputBorder(
                                         borderSide: BorderSide(
                                           color: Colors.red,
                                           width: 2.0,
@@ -794,15 +794,16 @@ class _SignInScreenState extends State<SignInScreen> {
                                     controller: _passwordTextController,
                                     onTap: () {
                                       Provider.of<KeyboardProvider>(context,
-                                          listen: false)
-                                          .show(
-                                          'password', _passwordTextController);
+                                              listen: false)
+                                          .show('password',
+                                              _passwordTextController);
                                     },
                                     // validator:
                                     //     validatePassword, // Add validator here
                                     decoration: decoration.copyWith(
                                       hintText: '*******',
-                                      iconColor: ColorManager.kPrimaryWithOpacity10,
+                                      iconColor:
+                                          ColorManager.kPrimaryWithOpacity10,
                                       prefixIcon: Icon(
                                         Icons.lock_clock_rounded,
                                         color: ColorManager.kPrimaryColor
@@ -829,7 +830,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                           width: 2.0,
                                         ),
                                       ),
-                                      focusedErrorBorder: const OutlineInputBorder(
+                                      focusedErrorBorder:
+                                          const OutlineInputBorder(
                                         borderSide: BorderSide(
                                           color: Colors.red,
                                           width: 2.0,
@@ -842,10 +844,11 @@ class _SignInScreenState extends State<SignInScreen> {
                               SizedBox(
                                 width: formWidth,
                                 child: Padding(
-                                  padding: EdgeInsets.all(isMobile ? 16.0 : 30.0),
+                                  padding:
+                                      EdgeInsets.all(isMobile ? 16.0 : 30.0),
                                   child: Row(
                                     mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       InkWell(
                                         borderRadius: BorderRadius.circular(8),
@@ -866,7 +869,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 border: _rememberMe
                                                     ? null
                                                     : Border.all(
-                                                        color: ColorManager.grey,
+                                                        color:
+                                                            ColorManager.grey,
                                                         width: 2.0,
                                                       ),
                                                 color: _rememberMe
@@ -886,8 +890,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                             const Text(
                                               'Remember Me',
                                               style: TextStyle(
-                                                fontWeight: FontWeightManager.regular,
-                                                fontFamily: FontConstants.fontFamily,
+                                                fontWeight:
+                                                    FontWeightManager.regular,
+                                                fontFamily:
+                                                    FontConstants.fontFamily,
                                                 fontSize: FontSize.s10,
                                                 letterSpacing: 0.2,
                                                 color: Colors.black,
@@ -902,13 +908,15 @@ class _SignInScreenState extends State<SignInScreen> {
                                               context,
                                               MaterialPageRoute(
                                                   builder: (context) =>
-                                                  const ForgotPasswordScreen()));
+                                                      const ForgotPasswordScreen()));
                                         },
                                         child: const Text(
                                           'Forgot Password?',
                                           style: TextStyle(
-                                            fontWeight: FontWeightManager.medium,
-                                            fontFamily: FontConstants.fontFamily,
+                                            fontWeight:
+                                                FontWeightManager.medium,
+                                            fontFamily:
+                                                FontConstants.fontFamily,
                                             fontSize: FontSize.s10,
                                             letterSpacing: 0.16,
                                             color: ColorManager.kPrimaryColor,
@@ -921,63 +929,74 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                               isLoading
                                   ? const Center(
-                                child: CircularProgressIndicator(
-                                  color: ColorManager.kPrimaryColor,
-                                ),
-                              )
+                                      child: CircularProgressIndicator(
+                                        color: ColorManager.kPrimaryColor,
+                                      ),
+                                    )
                                   : Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 25, vertical: 5),
-                                child: CustomRoundButton(
-                                  width: formWidth,
-                                  fontSize: FontSize.s12,
-                                  height: size.height * .07,
-                                  key: const Key("Button_Sign_in"),
-                                  title: 'Continue',
-                                  fct: () async {
-                                    if (_formKey.currentState!.validate()) {
-                                      // Show our new loading overlay instead of the dialog
-                                      _updateLoadingState(true, "Logging in...");
-                                      
-                                      // Save remember me state when login button is pressed
-                                      _handleRememberMe(_rememberMe);
-                                      
-                                      try {
-                                        final value = await AuthenticationProvider()
-                                            .login(
-                                                _emailController.text,
-                                                _passwordTextController.text,
-                                                context);
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 25, vertical: 5),
+                                      child: CustomRoundButton(
+                                        width: formWidth,
+                                        fontSize: FontSize.s12,
+                                        height: size.height * .07,
+                                        key: const Key("Button_Sign_in"),
+                                        title: 'Continue',
+                                        fct: () async {
+                                          if (_formKey.currentState!
+                                              .validate()) {
+                                            // Show our new loading overlay instead of the dialog
+                                            _updateLoadingState(
+                                                true, "Logging in...");
 
-                                        if (value["status"] == "success") {
-                                          ExecutiveModel executiveModel =
-                                              ExecutiveModel.fromJson(value);
-                                          ExecutiveModelData?
-                                              executiveModelData =
-                                              executiveModel.data;
+                                            // Save remember me state when login button is pressed
+                                            _handleRememberMe(_rememberMe);
 
-                                          authModel.login(
-                                              executiveModelData
-                                                      ?.accessToken ??
-                                                  "",
-                                              executiveModelData?.userId ??
-                                                  0);
-                                          
-                                          // Convert stores list to JSON string
-                                          String? storesJson;
-                                          if (executiveModelData?.stores != null) {
-                                            storesJson = json.encode(
-                                              executiveModelData!.stores!.map((store) => store.toJson()).toList()
-                                            );
-                                          }
-                                          
-                                          SharedPreferenceProvider()
-                                              .saveAccessTokenandCustomerId(
+                                            try {
+                                              final value =
+                                                  await AuthenticationProvider()
+                                                      .login(
+                                                          _emailController.text,
+                                                          _passwordTextController
+                                                              .text,
+                                                          context);
+
+                                              if (value["status"] ==
+                                                  "success") {
+                                                ExecutiveModel executiveModel =
+                                                    ExecutiveModel.fromJson(
+                                                        value);
+                                                ExecutiveModelData?
+                                                    executiveModelData =
+                                                    executiveModel.data;
+
+                                                authModel.login(
+                                                    executiveModelData
+                                                            ?.accessToken ??
+                                                        "",
+                                                    executiveModelData
+                                                            ?.userId ??
+                                                        0);
+
+                                                // Convert stores list to JSON string
+                                                String? storesJson;
+                                                if (executiveModelData
+                                                        ?.stores !=
+                                                    null) {
+                                                  storesJson = json.encode(
+                                                      executiveModelData!
+                                                          .stores!
+                                                          .map((store) =>
+                                                              store.toJson())
+                                                          .toList());
+                                                }
+
+                                                SharedPreferenceProvider()
+                                                    .saveAccessTokenandCustomerId(
                                                   executiveModelData
                                                           ?.accessToken ??
                                                       "",
-                                                  executiveModelData
-                                                          ?.userId ??
+                                                  executiveModelData?.userId ??
                                                       0,
                                                   executiveModelData
                                                           ?.userName ??
@@ -985,219 +1004,272 @@ class _SignInScreenState extends State<SignInScreen> {
                                                   executiveModelData
                                                           ?.userRole ??
                                                       "",
-                                                  tokenType: executiveModelData?.tokenType,
-                                                  companyId: executiveModelData?.companyId,
-                                                  companyName: executiveModelData?.companyName,
+                                                  tokenType: executiveModelData
+                                                      ?.tokenType,
+                                                  companyId: executiveModelData
+                                                      ?.companyId,
+                                                  companyName:
+                                                      executiveModelData
+                                                          ?.companyName,
                                                   storesJson: storesJson,
+                                                );
+
+                                                SalesProvider salesProvider =
+                                                    Provider.of<SalesProvider>(
+                                                        context,
+                                                        listen: false);
+                                                salesProvider.setUserId(
+                                                  executiveModelData?.userId ??
+                                                      0,
+                                                );
+                                                debugPrint(
+                                                    " authmodel token ${authModel.token}");
+                                                debugPrint(
+                                                    " authmodel token ${authModel.token}");
+                                                InvoiceProvider
+                                                    invoiceProvider = Provider
+                                                        .of<InvoiceProvider>(
+                                                            context,
+                                                            listen: false);
+                                                PurchaseProvider
+                                                    purchaseProvider = Provider
+                                                        .of<PurchaseProvider>(
+                                                            context,
+                                                            listen: false);
+                                                // Load general settings after login
+                                                _updateLoadingState(true,
+                                                    "Loading general settings...");
+                                                await Provider.of<
+                                                            GeneralSettingsProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .fetchGeneralSettings();
+
+                                                // Load app settings after login
+                                                _updateLoadingState(true,
+                                                    "Loading app settings...");
+                                                await Provider.of<
+                                                            AppSettingsProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .fetchAppSettings();
+
+                                                // Show loading indicator for data fetching
+                                                _updateLoadingState(true,
+                                                    "Loading invoice data...");
+                                                invoiceProvider
+                                                    .listAllInvoiceAccountTypes(
+                                                        authModel.token ?? '');
+
+                                                _updateLoadingState(true,
+                                                    "Loading payment methods...");
+                                                invoiceProvider
+                                                    .listAllPaymentList(
+                                                        authModel.token ?? '');
+
+                                                _updateLoadingState(true,
+                                                    "Loading voucher data...");
+                                                invoiceProvider
+                                                    .listVoucherAccountType(
+                                                        authModel.token ?? '');
+
+                                                _updateLoadingState(
+                                                    true, "Loading users...");
+                                                invoiceProvider.listUsersList(
+                                                    authModel.token ?? '');
+
+                                                _updateLoadingState(
+                                                    true, "Loading stores...");
+                                                purchaseProvider.listAllStores(
+                                                    authModel.token ?? '',
+                                                    null);
+
+                                                _updateLoadingState(true,
+                                                    "Loading suppliers...");
+                                                purchaseProvider
+                                                    .listAllSuppliers(
+                                                        authModel.token ?? '',
+                                                        null);
+
+                                                _updateLoadingState(
+                                                    true, "Loading units...");
+                                                purchaseProvider.listAllUnits(
+                                                    authModel.token ?? '');
+
+                                                purchaseProvider
+                                                    .listMasterDataValues(
+                                                        authModel.token ?? '',
+                                                        'RACKS');
+
+                                                showScaffold(
+                                                  context: context,
+                                                  message:
+                                                      '${value["message"]}',
+                                                );
+
+                                                _updateLoadingState(true,
+                                                    "Loading products...");
+                                                debugPrint(
+                                                    "🔄 [Login] Starting product fetch via LocalProductProvider.fetchProductsFromAPI()");
+                                                await Provider.of<
+                                                            LocalProductProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .fetchProductsFromAPI();
+                                                final lpp = Provider.of<
+                                                        LocalProductProvider>(
+                                                    context,
+                                                    listen: false);
+                                                debugPrint(
+                                                    "📊 [Login] Product fetch complete. provider.products=${lpp.products.length}, filtered=${lpp.filteredProducts.length}");
+                                                if (lpp.products.isEmpty) {
+                                                  debugPrint(
+                                                      "⚠️ [Login] No products loaded. Check API/Hive logs above for errors.");
+                                                }
+
+                                                // Load document configurations during login
+                                                try {
+                                                  _updateLoadingState(true,
+                                                      "Loading document configurations...");
+                                                  final docConfigProvider = Provider
+                                                      .of<DocumentConfigProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  await docConfigProvider
+                                                      .fetchDocumentConfigurations(
+                                                          accessToken:
+                                                              authModel.token ??
+                                                                  "");
+                                                  debugPrint(
+                                                      "Document configurations loaded successfully during login");
+                                                } catch (e) {
+                                                  debugPrint(
+                                                      "Warning: Failed to load document configurations during login: $e");
+                                                  // Don't block login if document config fails
+                                                }
+
+                                                // Load categories during login with caching optimization
+                                                try {
+                                                  _updateLoadingState(true,
+                                                      "Loading categories...");
+                                                  final categoryProvider =
+                                                      Provider.of<
+                                                              CategoryProvider>(
+                                                          context,
+                                                          listen: false);
+
+                                                  // Always load categories during login to ensure they're available
+                                                  debugPrint(
+                                                      "📥 Loading categories from API during login");
+                                                  await categoryProvider
+                                                      .listAllCategory();
+
+                                                  // Verify categories were loaded successfully
+                                                  if (categoryProvider
+                                                              .categoryList !=
+                                                          null &&
+                                                      categoryProvider
+                                                          .categoryList!
+                                                          .isNotEmpty) {
+                                                    debugPrint(
+                                                        "✅ Categories loaded successfully: ${categoryProvider.categoryList!.length} categories");
+                                                    debugPrint(
+                                                        "✅ First few categories: ${categoryProvider.categoryList!.take(3).map((c) => c.categoryName).toList()}");
+                                                  } else {
+                                                    debugPrint(
+                                                        "⚠️ Categories list is empty after API call");
+                                                  }
+
+                                                  debugPrint(
+                                                      "Categories loaded successfully during login");
+                                                } catch (e) {
+                                                  debugPrint(
+                                                      "Warning: Failed to load categories during login: $e");
+                                                  // Don't block login if categories fail
+                                                }
+
+                                                _updateLoadingState(false, "");
+
+                                                // Set appropriate home page based on user role
+                                                final sideBarController = Get
+                                                    .find<SideBarController>();
+                                                String userRole =
+                                                    executiveModelData
+                                                            ?.userRole ??
+                                                        "";
+
+                                                switch (userRole) {
+                                                  case 'attender':
+                                                    sideBarController
+                                                            .index.value =
+                                                        55; // Restaurant Page
+                                                    break;
+                                                  case 'kitchen_master':
+                                                    sideBarController
+                                                            .index.value =
+                                                        56; // Kitchen Master Page
+                                                    break;
+                                                  case 'sales_executive':
+                                                  default:
+                                                    sideBarController
+                                                            .index.value =
+                                                        46; // Billing Page (Home for sales executive)
+                                                    break;
+                                                }
+
+                                                await Future.delayed(
+                                                    const Duration(seconds: 1));
+
+                                                if (executiveModelData
+                                                            ?.stores !=
+                                                        null &&
+                                                    executiveModelData!
+                                                        .stores!.isNotEmpty) {
+                                                  // Navigate to store selection screen
+                                                  Navigator.pushReplacement(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          StoreSelectionScreen(
+                                                        stores:
+                                                            executiveModelData
+                                                                .stores!,
+                                                      ),
+                                                    ),
+                                                  );
+                                                } else {
+                                                  _updateLoadingState(false, "");
+                                                  showScaffoldError(
+                                                    context: context,
+                                                    message:
+                                                        "You have no permission to any store. Please contact your administrator.",
+                                                  );
+                                                }
+                                              } else {
+                                                _updateLoadingState(false, "");
+                                                showScaffoldError(
+                                                  context: context,
+                                                  message:
+                                                      '${value["message"]}',
+                                                );
+                                              }
+                                            } catch (e) {
+                                              _updateLoadingState(false, "");
+                                              showScaffoldError(
+                                                context: context,
+                                                message:
+                                                    'Login failed: ${e.toString()}',
                                               );
-                                          
-                                          SalesProvider salesProvider =
-                                              Provider.of<SalesProvider>(
-                                                  context,
-                                                  listen: false);
-                                          salesProvider.setUserId(
-                                            executiveModelData?.userId ?? 0,
-                                          );
-                                          debugPrint(
-                                              " authmodel token ${authModel.token}");
-                                          debugPrint(
-                                              " authmodel token ${authModel.token}");
-                                          InvoiceProvider invoiceProvider =
-                                              Provider.of<InvoiceProvider>(
-                                                  context,
-                                                  listen: false);
-                                          PurchaseProvider purchaseProvider =
-                                              Provider.of<PurchaseProvider>(
-                                                  context,
-                                                  listen: false);
-                                          // Load general settings after login
-                                          _updateLoadingState(true, "Loading general settings...");
-                                          await Provider.of<GeneralSettingsProvider>(
-                                                  context,
-                                                  listen: false)
-                                              .fetchGeneralSettings();
-
-                                          // Load app settings after login
-                                          _updateLoadingState(true, "Loading app settings...");
-                                          await Provider.of<AppSettingsProvider>(
-                                                  context,
-                                                  listen: false)
-                                              .fetchAppSettings();
-                                          
-                                          // Show loading indicator for data fetching
-                                          _updateLoadingState(true, "Loading invoice data...");
-                                          invoiceProvider
-                                              .listAllInvoiceAccountTypes(
-                                              authModel.token ?? '');
-                                          
-                                          _updateLoadingState(true, "Loading payment methods...");
-                                          invoiceProvider.listAllPaymentList(
-                                              authModel.token ?? '');
-                                          
-                                          _updateLoadingState(true, "Loading voucher data...");
-                                          invoiceProvider
-                                              .listVoucherAccountType(
-                                              authModel.token ?? '');
-                                          
-                                          _updateLoadingState(true, "Loading users...");
-                                          invoiceProvider.listUsersList(
-                                              authModel.token ?? '');
-                                          
-                                          _updateLoadingState(true, "Loading stores...");
-                                          purchaseProvider.listAllStores(
-                                              authModel.token ?? '', null);
-                                          
-                                          _updateLoadingState(true, "Loading suppliers...");
-                                          purchaseProvider.listAllSuppliers(
-                                              authModel.token ?? '', null);
-                                          
-                                          _updateLoadingState(true, "Loading units...");
-                                          purchaseProvider.listAllUnits(
-                                              authModel.token ?? '');
-                                          
-                                          purchaseProvider.listMasterDataValues(
-                                              authModel.token ?? '', 'RACKS');
-
-                                          showScaffold(
-                                            context: context,
-                                            message: '${value["message"]}',
-                                          );
-
-                                          _updateLoadingState(true, "Loading products...");
-                                          debugPrint("🔄 [Login] Starting product fetch via LocalProductProvider.fetchProductsFromAPI()");
-                                          await Provider.of<
-                                              LocalProductProvider>(
-                                              context,
-                                              listen: false)
-                                              .fetchProductsFromAPI();
-                                          final lpp = Provider.of<LocalProductProvider>(context, listen: false);
-                                          debugPrint("📊 [Login] Product fetch complete. provider.products=${lpp.products.length}, filtered=${lpp.filteredProducts.length}");
-                                          if (lpp.products.isEmpty) {
-                                            debugPrint("⚠️ [Login] No products loaded. Check API/Hive logs above for errors.");
-                                          }
-
-                                          // Load document configurations during login
-                                          try {
-                                            _updateLoadingState(true, "Loading document configurations...");
-                                            final docConfigProvider = Provider
-                                                .of<DocumentConfigProvider>(
-                                                context,
-                                                listen: false);
-                                            await docConfigProvider
-                                                .fetchDocumentConfigurations(
-                                                accessToken:
-                                                authModel.token ??
-                                                    "");
-                                            debugPrint(
-                                                "Document configurations loaded successfully during login");
-                                          } catch (e) {
-                                            debugPrint(
-                                                "Warning: Failed to load document configurations during login: $e");
-                                            // Don't block login if document config fails
-                                          }
-
-                                          // Load categories during login with caching optimization
-                                          try {
-                                            _updateLoadingState(true, "Loading categories...");
-                                            final categoryProvider = Provider
-                                                .of<CategoryProvider>(
-                                                context,
-                                                listen: false);
-                                            
-                                            // Always load categories during login to ensure they're available
-                                            debugPrint("📥 Loading categories from API during login");
-                                            await categoryProvider.listAllCategory();
-                                            
-                                            // Verify categories were loaded successfully
-                                            if (categoryProvider.categoryList != null && 
-                                                categoryProvider.categoryList!.isNotEmpty) {
-                                              debugPrint("✅ Categories loaded successfully: ${categoryProvider.categoryList!.length} categories");
-                                              debugPrint("✅ First few categories: ${categoryProvider.categoryList!.take(3).map((c) => c.categoryName).toList()}");
-                                            } else {
-                                              debugPrint("⚠️ Categories list is empty after API call");
                                             }
-                                            
-                                            debugPrint(
-                                                "Categories loaded successfully during login");
-                                          } catch (e) {
-                                            debugPrint(
-                                                "Warning: Failed to load categories during login: $e");
-                                            // Don't block login if categories fail
+                                          } else {
+                                            showScaffoldError(
+                                                context: context,
+                                                message:
+                                                    'Please Fill Details!');
                                           }
-
-                                          _updateLoadingState(false, "");
-
-                                          // Set appropriate home page based on user role
-                                          final sideBarController = Get.find<SideBarController>();
-                                          String userRole = executiveModelData?.userRole ?? "";
-                                          
-                                          switch (userRole) {
-                                            case 'attender':
-                                              sideBarController.index.value = 55; // Restaurant Page
-                                              break;
-                                            case 'kitchen_master':
-                                              sideBarController.index.value = 56; // Kitchen Master Page
-                                              break;
-                                            case 'sales_executive':
-                                            default:
-                                              sideBarController.index.value = 46; // Billing Page (Home for sales executive)
-                                              break;
-                                          }
-
-                                          await Future.delayed(const Duration(seconds: 1));
-
-                                          // Check if stores are available and navigate accordingly
-                                          // TEMPORARILY COMMENTED: Skip store selection and go directly to main screen
-                                          // if (executiveModelData?.stores != null && 
-                                          //     executiveModelData!.stores!.isNotEmpty) {
-                                          //   // Navigate to store selection screen
-                                          //   Navigator.pushReplacement(
-                                          //     context,
-                                          //     MaterialPageRoute(
-                                          //       builder: (context) => StoreSelectionScreen(
-                                          //         stores: executiveModelData.stores!,
-                                          //       ),
-                                          //     ),
-                                          //   );
-                                          // } else {
-                                          //   // No stores available, go directly to main screen
-                                          //   Navigator.pushReplacement(
-                                          //     context,
-                                          //     MaterialPageRoute(
-                                          //       builder: (context) => const MainScreen(),
-                                          //     ),
-                                          //   );
-                                          // }
-                                          
-                                          // Temporarily skip store selection - go directly to main screen
-                                          Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => const MainScreen(),
-                                            ),
-                                          );
-                                        } else {
-                                          _updateLoadingState(false, "");
-                                          showScaffoldError(
-                                            context: context,
-                                            message: '${value["message"]}',
-                                          );
-                                        }
-                                      } catch (e) {
-                                        _updateLoadingState(false, "");
-                                        showScaffoldError(
-                                          context: context,
-                                          message: 'Login failed: ${e.toString()}',
-                                        );
-                                      }
-                                    } else {
-                                      showScaffoldError(
-                                          context: context,
-                                          message: 'Please Fill Details!');
-                                    }
-                                  },
-                                ),
-                              ),
+                                        },
+                                      ),
+                                    ),
                               // Reset API Key Button
                               const SizedBox(height: 20),
                               SizedBox(
@@ -1225,8 +1297,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                             ]),
-                  ),
-                ]),
+                      ),
+                    ]),
               ),
             ),
           ),
@@ -1240,15 +1312,18 @@ class _SignInScreenState extends State<SignInScreen> {
                     Provider.of<KeyboardProvider>(context).showKeyboardFeature
                         ? Icons.keyboard_hide
                         : Icons.keyboard,
-                    color: Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                    color: Provider.of<KeyboardProvider>(context)
+                            .showKeyboardFeature
                         ? ColorManager.kPrimaryColor
                         : Colors.grey.shade600,
                   ),
-                  tooltip: Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                      ? 'Hide Keyboard'
-                      : 'Show Keyboard',
+                  tooltip:
+                      Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                          ? 'Hide Keyboard'
+                          : 'Show Keyboard',
                   onPressed: () {
-                    final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+                    final keyboardProvider =
+                        Provider.of<KeyboardProvider>(context, listen: false);
                     if (keyboardProvider.showKeyboardFeature) {
                       keyboardProvider.featureOff();
                       keyboardProvider.clear();
@@ -1325,7 +1400,7 @@ class _SignInScreenState extends State<SignInScreen> {
       return 'Password is required';
     }
     RegExp regex =
-    RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
+        RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
     if (!regex.hasMatch(value)) {
       return 'Enter a valid password';
     }

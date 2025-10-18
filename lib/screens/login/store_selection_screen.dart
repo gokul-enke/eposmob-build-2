@@ -3,6 +3,7 @@ import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/main_screen.dart';
 
@@ -10,9 +11,9 @@ class StoreSelectionScreen extends StatefulWidget {
   final List<Store> stores;
 
   const StoreSelectionScreen({
-    Key? key,
+    super.key,
     required this.stores,
-  }) : super(key: key);
+  });
 
   @override
   State<StoreSelectionScreen> createState() => _StoreSelectionScreenState();
@@ -305,6 +306,11 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   Future<void> _handleSubmit() async {
     if (_selectedStoreId == null) return;
 
+    final selectedStore = widget.stores.firstWhere(
+      (store) => store.storeId == _selectedStoreId,
+      orElse: () => widget.stores.first,
+    );
+
     setState(() {
       _isSubmitting = true;
     });
@@ -314,6 +320,12 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       await SharedPreferenceProvider().saveActiveStoreId(_selectedStoreId!);
 
       if (mounted) {
+        showScaffold(
+          context: context,
+          message:
+              '${selectedStore.storeName ?? "Store"} selected successfully.',
+        );
+        await Future.delayed(const Duration(milliseconds: 1200));
         // Navigate to main screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
