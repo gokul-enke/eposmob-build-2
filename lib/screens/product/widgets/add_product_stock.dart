@@ -31,6 +31,7 @@ import 'dart:convert';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/components/build_restricted_payment_selector.dart';
 import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StockItem {
   String barcode;
@@ -63,7 +64,7 @@ class StockItem {
   String wholesalePriceTax; // Add this for wholesale price with tax
   Map<String, dynamic>? calculatedTaxData; // Store calculated tax data
   bool isHidden; // Add this field to track if item is hidden (soft delete)
-  
+
   StockItem({
     this.barcode = '',
     this.category = '',
@@ -168,57 +169,83 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _disposeRowResources(int index) {
     // Text controllers
     if (categorySearchControllers.containsKey(index)) {
-      try { categorySearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        categorySearchControllers[index]!.dispose();
+      } catch (_) {}
       categorySearchControllers.remove(index);
     }
     if (productSearchControllers.containsKey(index)) {
-      try { productSearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        productSearchControllers[index]!.dispose();
+      } catch (_) {}
       productSearchControllers.remove(index);
     }
     if (barcodeControllers.containsKey(index)) {
-      try { barcodeControllers[index]!.dispose(); } catch (_) {}
+      try {
+        barcodeControllers[index]!.dispose();
+      } catch (_) {}
       barcodeControllers.remove(index);
     }
     if (quantityControllers.containsKey(index)) {
-      try { quantityControllers[index]!.dispose(); } catch (_) {}
+      try {
+        quantityControllers[index]!.dispose();
+      } catch (_) {}
       quantityControllers.remove(index);
     }
     if (purchaseRateControllers.containsKey(index)) {
-      try { purchaseRateControllers[index]!.dispose(); } catch (_) {}
+      try {
+        purchaseRateControllers[index]!.dispose();
+      } catch (_) {}
       purchaseRateControllers.remove(index);
     }
     if (retailPriceControllers.containsKey(index)) {
-      try { retailPriceControllers[index]!.dispose(); } catch (_) {}
+      try {
+        retailPriceControllers[index]!.dispose();
+      } catch (_) {}
       retailPriceControllers.remove(index);
     }
     if (mrpControllers.containsKey(index)) {
-      try { mrpControllers[index]!.dispose(); } catch (_) {}
+      try {
+        mrpControllers[index]!.dispose();
+      } catch (_) {}
       mrpControllers.remove(index);
     }
     if (wholesaleControllers.containsKey(index)) {
-      try { wholesaleControllers[index]!.dispose(); } catch (_) {}
+      try {
+        wholesaleControllers[index]!.dispose();
+      } catch (_) {}
       wholesaleControllers.remove(index);
     }
     if (batchNumberControllers.containsKey(index)) {
-      try { batchNumberControllers[index]!.dispose(); } catch (_) {}
+      try {
+        batchNumberControllers[index]!.dispose();
+      } catch (_) {}
       batchNumberControllers.remove(index);
     }
     if (unitSearchControllers.containsKey(index)) {
-      try { unitSearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        unitSearchControllers[index]!.dispose();
+      } catch (_) {}
       unitSearchControllers.remove(index);
     }
     if (rackSearchControllers.containsKey(index)) {
-      try { rackSearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        rackSearchControllers[index]!.dispose();
+      } catch (_) {}
       rackSearchControllers.remove(index);
     }
 
     // Focus nodes
     if (barcodeFocusNodes.containsKey(index)) {
-      try { barcodeFocusNodes[index]!.dispose(); } catch (_) {}
+      try {
+        barcodeFocusNodes[index]!.dispose();
+      } catch (_) {}
       barcodeFocusNodes.remove(index);
     }
     if (quantityFocusNodes.containsKey(index)) {
-      try { quantityFocusNodes[index]!.dispose(); } catch (_) {}
+      try {
+        quantityFocusNodes[index]!.dispose();
+      } catch (_) {}
       quantityFocusNodes.remove(index);
     }
   }
@@ -227,7 +254,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _rebuildIndexCache() {
     _cachedVisibleItems.clear();
     _visibleToOriginalIndexMap.clear();
-    
+
     int visibleIndex = 0;
     for (int i = 0; i < stockItems.length; i++) {
       if (!stockItems[i].isHidden) {
@@ -292,7 +319,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   @override
   void dispose() {
     // Dispose timers
-    
+
     _quantityDebounceTimer?.cancel();
 
     // Dispose all search controllers safely
@@ -500,6 +527,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     await _loadSuppliers();
     await _loadUnits(); // Load units
     await _loadRacks(); // Load racks
+    await _loadActiveStore(); // Load active store from session
   }
 
   Future<void> _loadCategories() async {
@@ -556,6 +584,37 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       }
     } catch (e) {
       debugPrint('Error loading racks: $e');
+    }
+  }
+
+  Future<void> _loadActiveStore() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+
+      if (activeStoreId != null) {
+        final purchaseProvider =
+            Provider.of<PurchaseProvider>(context, listen: false);
+
+        if (purchaseProvider.getStoreList != null) {
+          final store = purchaseProvider.getStoreList!.firstWhere(
+            (s) => s.id == activeStoreId,
+            orElse: () => purchaseProvider.getStoreList!.first,
+          );
+
+          if (mounted) {
+            setState(() {
+              selectedStore = store;
+            });
+          }
+          debugPrint(
+              '✅ Active store loaded: ${store.name} (ID: $activeStoreId)');
+        }
+      } else {
+        debugPrint('⚠️ No active store ID found in preferences');
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading active store: $e');
     }
   }
 
@@ -985,8 +1044,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     setState(() {
       debugPrint('🔄 UPDATING STATE VARIABLES...');
-      // Reset header fields
-      selectedStore = null;
+      // Reset header fields (keep selectedStore as it's loaded from active session)
+      // selectedStore remains unchanged - it's loaded from session
       selectedSupplier = null;
       selectedDate = DateTime.now();
       selectedPurchaseDate = DateTime.now();
@@ -1105,7 +1164,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           backgroundColor: Colors.white,
           title: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.warning,
                 color: Colors.red,
                 size: 28,
@@ -1697,27 +1756,60 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildStoreDropdown(Size size) {
-    return Consumer<PurchaseProvider>(
-      builder: (context, purchaseProvider, child) {
-        List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
-
-        return BuildDropDownWithSearch<GetStoreModelData>(
-          title: "Store",
-          hintText: "Select Store",
-          value: selectedStore,
-          items: storeList ?? [],
-          onChanged: (value) {
-            setState(() {
-              selectedStore = value;
-            });
-          },
-          displayText: (store) => store.name ?? 'Unknown Store',
-          searchController:
-              TextEditingController(), // A new controller for this dropdown
-          isRequired: true,
-          searchHintText: "Search store...",
-        );
-      },
+    // Display active store as read-only field since it's set from session
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        BuildTextTile(
+          isStarRed: true,
+          isTextField: true,
+          title: 'Store',
+          textStyle: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          height: MediaQuery.of(context).size.height * .07,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.store,
+                  size: 20,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    selectedStore?.name ?? 'Loading active store...',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.27,
+                      selectedStore != null
+                          ? Colors.black.withOpacity(0.8)
+                          : Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+                if (selectedStore != null)
+                  const Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: Colors.green,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1907,7 +1999,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       itemBuilder: (context, visibleIndex) {
         int originalIndex = getOriginalIndex(visibleIndex);
         // Add key for better performance - prevents unnecessary rebuilds
-        return _buildStockRow(originalIndex, visibleIndex, key: ValueKey('stock_row_$originalIndex'));
+        return _buildStockRow(originalIndex, visibleIndex,
+            key: ValueKey('stock_row_$originalIndex'));
       },
     );
   }
@@ -2919,7 +3012,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             String? matchingUnitKey = unitList.entries
                 .firstWhere(
                   (entry) => entry.value == localProduct.unit,
-                  orElse: () => MapEntry('', ''),
+                  orElse: () => const MapEntry('', ''),
                 )
                 .key;
             if (matchingUnitKey.isNotEmpty) {
@@ -3526,7 +3619,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     String? matchingUnitKey = unitList.entries
                         .firstWhere(
                           (entry) => entry.value == product.unit,
-                          orElse: () => MapEntry('', ''),
+                          orElse: () => const MapEntry('', ''),
                         )
                         .key;
                     if (matchingUnitKey.isNotEmpty) {
