@@ -1071,6 +1071,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                                         stores:
                                                             executiveModelData
                                                                 .stores!,
+                                                        isFromLogin: true,
                                                       ),
                                                     ),
                                                   );

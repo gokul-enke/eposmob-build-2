@@ -1,27 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/executive.dart';
-import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/main_screen.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/document_config_provider.dart';
-import 'package:pos_machine/providers/general_settings_provider.dart';
-import 'package:pos_machine/providers/invoice_provider.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:provider/provider.dart';
 
 class StoreSelectionScreen extends StatefulWidget {
   final List<Store> stores;
+  final bool isFromLogin;
 
   const StoreSelectionScreen({
     super.key,
     required this.stores,
+    this.isFromLogin = false,
   });
 
   @override
@@ -30,8 +24,19 @@ class StoreSelectionScreen extends StatefulWidget {
 
 class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   int? _selectedStoreId;
-  bool _isSubmitting = false;
-  String? _loadingMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+    storeSession.initializeStores(
+      widget.stores,
+      activeStoreId: storeSession.activeStore?.storeId,
+    );
+    _selectedStoreId = storeSession.activeStore?.storeId ??
+        (widget.stores.isNotEmpty ? widget.stores.first.storeId : null);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +49,16 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       appBar: AppBar(
         backgroundColor: ColorManager.kPrimaryColor,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            if (widget.isFromLogin) {
+              Navigator.of(context).pushReplacementNamed('/login');
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           'Select Store',
           style: TextStyle(
@@ -54,7 +69,6 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
           ),
         ),
         centerTitle: true,
-        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
@@ -131,13 +145,24 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       final store = widget.stores[index];
                       final isSelected = _selectedStoreId == store.storeId;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildStoreCard(
-                          store: store,
-                          isSelected: isSelected,
-                          isMobile: isMobile,
-                        ),
+                      return Consumer<StoreSessionProvider>(
+                        builder: (context, storeSession, _) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Opacity(
+                              opacity:
+                                  storeSession.isBootstrapping ? 0.5 : 1.0,
+                              child: IgnorePointer(
+                                ignoring: storeSession.isBootstrapping,
+                                child: _buildStoreCard(
+                                  store: store,
+                                  isSelected: isSelected,
+                                  isMobile: isMobile,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -147,15 +172,18 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
           if (_selectedStoreId != null)
             Container(
               padding: EdgeInsets.all(isMobile ? 16 : 24),
-              child: _isSubmitting
-                  ? Column(
+              child: Consumer<StoreSessionProvider>(
+                builder: (context, storeSession, _) {
+                  if (storeSession.isBootstrapping) {
+                    return Column(
                       children: [
                         const CircularProgressIndicator(
                           color: ColorManager.kPrimaryColor,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _loadingMessage ?? 'Preparing your workspace...',
+                          storeSession.statusMessage ??
+                              'Preparing your workspace...',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: FontConstants.fontFamily,
@@ -164,15 +192,19 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                           ),
                         ),
                       ],
-                    )
-                  : CustomRoundButton(
-                      width: isMobile ? double.infinity : 400,
-                      height: isMobile ? 50 : 60,
-                      fontSize: FontSize.s14,
-                      radius: 25, // Increased border radius for more rounded corners
-                      title: 'Continue',
-                      fct: _handleSubmit,
-                    ),
+                    );
+                  }
+
+                  return CustomRoundButton(
+                    width: isMobile ? double.infinity : 400,
+                    height: isMobile ? 50 : 60,
+                    fontSize: FontSize.s14,
+                    radius: 25,
+                    title: 'Continue',
+                    fct: _handleSubmit,
+                  );
+                },
+              ),
             ),
         ],
       ),
@@ -331,34 +363,28 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
     final selectedStore = widget.stores
         .firstWhere((store) => store.storeId == _selectedStoreId);
 
-    setState(() {
-      _isSubmitting = true;
-      _loadingMessage = 'Saving your selection...';
-    });
-
     try {
-      // Save the selected store ID
-      await SharedPreferenceProvider().saveActiveStoreId(_selectedStoreId!);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
 
-      if (mounted) {
-        final authModel = Provider.of<AuthModel>(context, listen: false);
-        final token = authModel.token ?? "";
+      await storeSession.bootstrapStore(
+        context: context,
+        store: selectedStore,
+      );
 
-        await _loadDataForSelectedStore(token);
+      if (!mounted) return;
 
-        showScaffold(
-          context: context,
-          message:
-              '${selectedStore.storeName ?? "Store"} ready. Loading dashboard...',
-        );
+      showScaffold(
+        context: context,
+        message:
+            '${selectedStore.storeName ?? "Store"} ready. Loading dashboard...',
+      );
 
-        // Navigate to main screen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const MainScreen(),
-          ),
-        );
-      }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const MainScreen(),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -368,102 +394,6 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _loadingMessage = null;
-        });
-      }
     }
-  }
-
-  Future<void> _updateLoadingStatus(String message) async {
-    if (!mounted) return;
-    setState(() {
-      _loadingMessage = message;
-    });
-    await Future.delayed(const Duration(milliseconds: 250));
-  }
-
-  Future<void> _loadDataForSelectedStore(String accessToken) async {
-    final generalSettingsProvider =
-        Provider.of<GeneralSettingsProvider>(context, listen: false);
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final invoiceProvider =
-        Provider.of<InvoiceProvider>(context, listen: false);
-    final purchaseProvider =
-        Provider.of<PurchaseProvider>(context, listen: false);
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    final categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
-    final docConfigProvider =
-        Provider.of<DocumentConfigProvider>(context, listen: false);
-
-    await _updateLoadingStatus('Loading general settings...');
-    await generalSettingsProvider.fetchGeneralSettings();
-
-    await _updateLoadingStatus('Applying app preferences...');
-    await appSettingsProvider.fetchAppSettings();
-
-    await _updateLoadingStatus('Preparing invoices...');
-    invoiceProvider.listAllInvoiceAccountTypes(accessToken);
-
-    await _updateLoadingStatus('Syncing payment methods...');
-    invoiceProvider.listAllPaymentList(accessToken);
-
-    await _updateLoadingStatus('Fetching voucher types...');
-    invoiceProvider.listVoucherAccountType(accessToken);
-
-    await _updateLoadingStatus('Updating user directory...');
-    invoiceProvider.listUsersList(accessToken);
-
-    await _updateLoadingStatus('Retrieving store details...');
-    await purchaseProvider.listAllStores(accessToken, null);
-
-    await _updateLoadingStatus('Loading supplier catalog...');
-    await purchaseProvider.listAllSuppliers(accessToken, null);
-    final supplierLength = purchaseProvider.getSupplierList?.length ?? 0;
-    await _updateLoadingStatus('Suppliers synced: $supplierLength available.');
-
-    await _updateLoadingStatus('Syncing measurement units...');
-    await purchaseProvider.listAllUnits(accessToken);
-
-    await _updateLoadingStatus('Fetching rack metadata...');
-    await purchaseProvider.listMasterDataValues(accessToken, 'RACKS');
-
-    await _updateLoadingStatus('Downloading document configurations...');
-    try {
-      await docConfigProvider.fetchDocumentConfigurations(
-        accessToken: accessToken,
-      );
-    } catch (e) {
-      debugPrint(
-          'Warning: Failed to load document configurations after store selection: $e');
-    }
-
-    await _updateLoadingStatus('Refreshing product categories...');
-    try {
-      await categoryProvider.listAllCategory();
-      final categoryCount = categoryProvider.categoryList?.length ?? 0;
-      await _updateLoadingStatus('Categories ready: $categoryCount found.');
-    } catch (e) {
-      debugPrint(
-          'Warning: Failed to load categories after store selection: $e');
-    }
-
-    await _updateLoadingStatus('Fetching product catalog (this may take a moment)...');
-    await localProductProvider.fetchProductsFromAPI(
-      onProgress: (loaded, batch) async {
-        await _updateLoadingStatus(
-            'Loading products... $loaded loaded (latest batch: $batch)');
-      },
-    );
-    final productCount = localProductProvider.products.length;
-    await _updateLoadingStatus('Products ready: $productCount loaded.');
-
-    await _updateLoadingStatus('Finishing touches...');
   }
 }

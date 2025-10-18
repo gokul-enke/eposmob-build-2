@@ -20,6 +20,7 @@ import '../resources/style_manager.dart';
 import '../screens/login/login.dart';
 import 'drawer_list_tile_expandable.dart';
 import '../widgets/user_switcher.dart';
+import '../widgets/store_switcher.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -542,58 +543,59 @@ class _SideMenuState extends State<SideMenu> {
             height: 10,
           ),
           Container(
-            height: 100,
             width: 180,
             margin: ResponsiveWidget.isTablet(context)
                 ? const EdgeInsets.only(
                     left: 20, top: 20, bottom: 10, right: 10)
                 : const EdgeInsets.only(left: 30, top: 20, bottom: 10),
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(17),
-                boxShadow: const [
-                  BoxShadow(
-                    color: ColorManager.boxShadowColor,
-                    blurRadius: 6,
-                    offset: Offset(1, 1),
-                  ),
-                ],
-                color: Colors.white),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    height: 5,
-                  ),
-                  const CircleAvatar(
-                    backgroundImage: AssetImage(ImageAssets.profilePhotoIcon),
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  FutureBuilder<String>(
-                    future: SharedPreferenceProvider().getCustomerName(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        return Text(
-                          snapshot.data ?? 'Default Name',
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s14, 0.21, ColorManager.textColor),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        );
-                      } else {
-                        return const CircularProgressIndicator();
-                      }
-                    },
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                ],
-              ),
+              borderRadius: BorderRadius.circular(17),
+              boxShadow: const [
+                BoxShadow(
+                  color: ColorManager.boxShadowColor,
+                  blurRadius: 6,
+                  offset: Offset(1, 1),
+                ),
+              ],
+              color: Colors.white,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundImage:
+                      AssetImage(ImageAssets.profilePhotoIcon),
+                ),
+                const SizedBox(height: 10),
+                FutureBuilder<String>(
+                  future: SharedPreferenceProvider().getCustomerName(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState ==
+                        ConnectionState.done) {
+                      return Text(
+                        snapshot.data ?? 'Default Name',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.21,
+                          ColorManager.textColor,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    } else {
+                      return const CircularProgressIndicator();
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+                const StoreSwitcher(),
+              ],
             ),
           ),
           const SizedBox(
