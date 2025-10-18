@@ -125,7 +125,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         : _buildSalesReturnTable(salesProvider),
                   ),
                 ),
-                // _buildPaginationControls(salesProvider),
+                const SizedBox(height: 20),
+                _buildPaginationControls(salesProvider),
               ],
             ),
           ),
@@ -255,10 +256,16 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
   }
 
   TableRow _buildTableRow(SalesReturnOrder order, int index) {
+    // Calculate total quantity by summing all item quantities
+    int totalQuantity = order.items.fold<int>(
+      0,
+      (sum, item) => sum + (item.quantity is int ? item.quantity as int : (item.quantity as double).toInt()),
+    );
+    
     return TableRow(
       children: [
-        _buildTableCell(order.orderId.toString()),
-        _buildTableCell(order.items.length.toString()),
+        _buildTableCell(order.order?.orderNumber ?? order.orderId.toString()),
+        _buildTableCell(totalQuantity.toString()),
         _buildTableCell(order.totalAmount),
         _buildTableCell(order.status.toString(), isStatusCell: true),
         _buildTableCell(DateHelper.formatISODate(order.createdAt.toString())),
@@ -299,17 +306,17 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       Color iconColor;
 
       if (text == '1') {
-        // Approved or success status
+        // Approved status
         iconData = Icons.check_circle;
         iconColor = Colors.green;
       } else if (text == '0') {
-        // Pending or failed status
+        // Pending status
+        iconData = Icons.pending;
+        iconColor = Colors.amber;
+      } else {
+        // Default case (rejected or unknown)
         iconData = Icons.cancel;
         iconColor = Colors.red;
-      } else {
-        // Default case
-        iconData = Icons.help_outline;
-        iconColor = Colors.grey;
       }
 
       return TableCell(
@@ -349,8 +356,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
 
   Widget _buildPaginationControls(SalesProvider salesProvider) {
     return PaginationControl(
-      currentPage: salesProvider.currentPage,
-      totalPages: salesProvider.totalPages,
+      currentPage: salesProvider.salesReturnCurrentPage,
+      totalPages: salesProvider.salesReturnTotalPages,
       onPageChanged: (int page) {
         _searchSalesReturns(page);
       },

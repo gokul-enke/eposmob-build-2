@@ -266,7 +266,7 @@ class ThermalPrinter {
 
       // Date and Time (moved to bottom, just above barcode)
       debugPrint("Building date/time row...");
-      bytes += _buildDateTimeRow(generator, orderDate, selectedFontType);
+      bytes += _buildDateTimeRow(generator, orderDate, selectedFontType, isFromLocalStorage);
       debugPrint("Date/time row built successfully");
 
       // Order ID Barcode (just before Terms & Conditions)
@@ -2054,20 +2054,31 @@ class ThermalPrinter {
   }
 
   List<int> _buildDateTimeRow(
-      Generator generator, String orderDate, PosFontType fontType) {
+      Generator generator, String orderDate, PosFontType fontType, bool isFromLocalStorage) {
     List<int> bytes = [];
 
     debugPrint("===== BUILD DATE TIME ROW DEBUG =====");
     debugPrint("Order date: $orderDate");
+    debugPrint("Is from local storage: $isFromLocalStorage");
 
     // Add top divider line
     // bytes += generator.hr();
 
     // Add date and time row with smaller text size
     debugPrint("Creating date/time row with 6+6 column layout");
+    
+    // Use appropriate date formatting based on source
+    String formattedDate = isFromLocalStorage 
+        ? DateHelper.formatToISODateOnlyFromISO(orderDate)
+        : DateHelper.formatISODate(orderDate);
+    
+    String formattedTime = isFromLocalStorage 
+        ? DateHelper.formatToISODateFromIST(orderDate)
+        : DateHelper.formatISODateToIST(orderDate);
+    
     List<PosColumn> dateTimeColumns = [
       PosColumn(
-          text: DateHelper.formatISODate(orderDate),
+          text: formattedDate,
           width: 6,
           styles: PosStyles(
               fontType: fontType,
@@ -2076,7 +2087,7 @@ class ThermalPrinter {
               height: textSizeSmall,
               width: textSizeSmall)),
       PosColumn(
-          text: DateHelper.formatISODateToIST(orderDate),
+          text: formattedTime,
           width: 6,
           styles: PosStyles(
               fontType: fontType,

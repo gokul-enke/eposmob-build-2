@@ -364,7 +364,7 @@ class StandardPrinter {
               ),
 
             // Date and Time Row - minimal design
-            _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+            _buildDateTimeRowPDF(selectedPaperSize, orderDate, isFromLocalStorage),
 
             // Customer Information Section - if available
             if (customerName != null ||
@@ -1008,7 +1008,16 @@ class StandardPrinter {
   }
 
   // Date and Time Row for PDF - minimal design
-  pw.Widget _buildDateTimeRowPDF(String selectedPaperSize, String orderDate) {
+  pw.Widget _buildDateTimeRowPDF(String selectedPaperSize, String orderDate, bool isFromLocalStorage) {
+    // Use appropriate date formatting based on source
+    String formattedDate = isFromLocalStorage 
+        ? DateHelper.formatToISODateOnlyFromISO(orderDate)
+        : DateHelper.formatISODate(orderDate);
+    
+    String formattedTime = isFromLocalStorage 
+        ? DateHelper.formatToISODateFromIST(orderDate)
+        : DateHelper.formatISODateToIST(orderDate);
+    
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(
           vertical: 0, horizontal: 8), // Reduced padding
@@ -1016,7 +1025,7 @@ class StandardPrinter {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'Date: ${DateHelper.formatISODate(orderDate)}',
+            'Date: $formattedDate',
             style: pw.TextStyle(
               fontSize:
                   selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
@@ -1024,7 +1033,7 @@ class StandardPrinter {
             ),
           ),
           pw.Text(
-            'Time: ${DateHelper.formatISODateToIST(orderDate)}',
+            'Time: $formattedTime',
             style: pw.TextStyle(
               fontSize:
                   selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
@@ -2018,7 +2027,7 @@ class StandardPrinter {
                   ),
 
                 // Date and Time Row - minimal design
-                _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+                _buildDateTimeRowPDF(selectedPaperSize, orderDate, isFromLocalStorage),
 
                 // Customer Information Section - if available
                 if (customerName != null ||

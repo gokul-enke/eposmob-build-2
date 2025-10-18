@@ -16,6 +16,8 @@ class SalesProvider with ChangeNotifier {
   List<SalesReturnCart> _salesReturnItems = [];
   int currentPage = 1;
   int totalPages = 1;
+  int salesReturnCurrentPage = 1;
+  int salesReturnTotalPages = 1;
   List<ListOrderModelData> get orders => _orders;
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
@@ -285,7 +287,7 @@ class SalesProvider with ChangeNotifier {
     int? page,
   }) async {
     final queryParameters = <String, String>{
-      'customer_id': "1",
+      'customer_id': customerId.toString(),
     };
     if (page != null) queryParameters['page'] = page.toString();
 
@@ -324,6 +326,12 @@ class SalesProvider with ChangeNotifier {
           debugPrint(
               'fetch Sales Return list response data: ${salesReturnResponse.data.data}');
           _salesReturnOrders = salesReturnResponse.data.data; // Store fetched data from nested structure
+          
+          // Update pagination for sales return
+          salesReturnCurrentPage = salesReturnResponse.data.currentPage;
+          salesReturnTotalPages = salesReturnResponse.data.lastPage;
+          debugPrint('Sales Return Pagination - Current: $salesReturnCurrentPage, Total: $salesReturnTotalPages');
+          
           notifyListeners(); // Notify listeners to update UI
         } catch (e, stackTrace) {
           debugPrint('=== JSON PARSING ERROR ===');

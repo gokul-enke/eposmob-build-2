@@ -249,7 +249,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
                                       "Delivery Date",
-                                      DateHelper.formatISODate(
+                                      DateHelper.formatToISODateOnlyFromISO(
                                           order.deliveryDate!)),
                                 ],
                                 if (order.deliveryTime != null &&
@@ -435,11 +435,11 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
   }
 
   static String _formatDateTime(String isoDateString) {
-    return DateHelper.formatISODate(isoDateString);
+    return DateHelper.formatToISODateOnlyFromISO(isoDateString);
   }
 
   static String _formatTime(String isoDateString) {
-    return DateHelper.formatISODateToIST(isoDateString);
+    return DateHelper.formatToISODateFromIST(isoDateString);
   }
 
   void _printOrder(BuildContext context) {
