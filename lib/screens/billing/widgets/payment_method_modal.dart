@@ -486,10 +486,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         circleRadius: 12,
         color: Colors.white,
         padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -863,6 +864,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ),
           ],
         ),
+          ),
       ),
     );
   }
