@@ -1,7 +1,7 @@
-git tag v0.1.0-dev.224
-git push build v0.1.0-dev.224
+git tag v0.1.0-dev.226
+git push build v0.1.0-dev.226
 git push build1 v0.1.0-dev.179
-git push origin v0.1.0-dev.184
+git push origin v0.1.0-dev.226
 
 # eposenke demo
 https://eposdemo.hypersouq.in
