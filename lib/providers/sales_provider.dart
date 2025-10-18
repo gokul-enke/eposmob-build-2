@@ -283,12 +283,9 @@ class SalesProvider with ChangeNotifier {
 
   Future<void> fetchSalesReturn({
     required String accessToken,
-    required int customerId,
     int? page,
   }) async {
-    final queryParameters = <String, String>{
-      'customer_id': customerId.toString(),
-    };
+    final queryParameters = <String, String>{};
     if (page != null) queryParameters['page'] = page.toString();
 
     final uri = Uri.parse(APPUrl.listSalesReturn)

@@ -43,10 +43,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
           Provider.of<SalesProvider>(context, listen: false);
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
       await salesProvider.fetchSalesReturn(
           accessToken: accessToken ?? "",
-          customerId: customerId!,
           page: currentPage);
       if (mounted) {
         setState(() {
@@ -64,9 +62,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
           Provider.of<SalesProvider>(context, listen: false);
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
       await salesProvider.fetchSalesReturn(
-          accessToken: accessToken ?? "", customerId: customerId!, page: page);
+          accessToken: accessToken ?? "", page: page);
 
       setState(() {
         currentPage = page;
@@ -310,9 +307,9 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         iconData = Icons.check_circle;
         iconColor = Colors.green;
       } else if (text == '0') {
-        // Pending status
-        iconData = Icons.pending;
-        iconColor = Colors.amber;
+        // Pending status - show red X
+        iconData = Icons.cancel;
+        iconColor = Colors.red;
       } else {
         // Default case (rejected or unknown)
         iconData = Icons.cancel;
