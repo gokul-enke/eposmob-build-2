@@ -1,4 +1,4 @@
-package com.example.pos_machine
+package com.enke.cloudpos
 
 import android.content.ComponentName
 import android.content.Context
@@ -91,7 +91,7 @@ class MainActivity : FlutterActivity() {
             val intent = Intent("com.pinelabs.masterapp.HYBRID_REQUEST").apply {
                 setPackage(PLUTUS_SMART_PACKAGE)
                 putExtra("REQUEST_DATA", transactionData)
-                putExtra("packageName", "com.example.pos_machine") // Your app package name
+                putExtra("packageName", "com.enke.cloudpos") // Your app package name
             }
             startActivityForResult(intent, 1001)
         } catch (e: Exception) {
@@ -108,7 +108,7 @@ class MainActivity : FlutterActivity() {
             val intent = Intent("com.pinelabs.masterapp.HYBRID_REQUEST").apply {
                 setPackage(PLUTUS_SMART_PACKAGE)
                 putExtra("REQUEST_DATA", printData)
-                putExtra("packageName", "com.example.pos_machine") // Your app package name
+                putExtra("packageName", "com.enke.cloudpos") // Your app package name
             }
             startActivityForResult(intent, 1002)
         } catch (e: Exception) {

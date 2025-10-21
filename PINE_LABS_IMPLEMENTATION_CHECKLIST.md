@@ -60,7 +60,7 @@
 ## 🎯 Next Steps
 
 1. **Copy and adapt MainActivity.kt from demo to your app**
-   - Change package name from `com.pl.plutusapp_new` to `com.example.pos_machine`
+   - Change package name from `com.pl.plutusapp_new` to `com.enke.cloudpos`
    - Keep all the logic for service binding and transaction handling
    - Update the packageName in Intent extras
 
@@ -81,7 +81,7 @@
 
 ### MainActivity.kt Template
 ```kotlin
-package com.example.pos_machine
+package com.enke.cloudpos
 
 import android.content.ComponentName
 import android.content.Context
@@ -104,7 +104,7 @@ class MainActivity : FlutterActivity() {
     private var pendingResult: Result? = null
 
     // Add complete implementation from demo here
-    // Remember to change package name to com.example.pos_machine
+    // Remember to change package name to com.enke.cloudpos
 }
 ```
 
