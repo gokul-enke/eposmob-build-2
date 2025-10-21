@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/customer_input.dart';
 import 'package:pos_machine/screens/billing/widgets/payment_summary.dart';
@@ -328,8 +329,111 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              _buildPineLabsSection(context),
             ]
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPineLabsSection(BuildContext context) {
+    return Consumer2<PineLabsTerminalProvider, BillingProvider>(
+      builder: (context, terminalProvider, billingProvider, child) {
+        final totalAmount = billingProvider.totalOrderAmount;
+        final billingRefNo = billingProvider.transactionNumberController.text;
+        final latestStatus =
+            terminalProvider.statusMessages.isNotEmpty
+                ? terminalProvider.statusMessages.last
+                : 'Ready';
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.point_of_sale,
+                    color: ColorManager.kPrimaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pine Labs Terminal',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          terminalProvider.bindingStatus,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: terminalProvider.isBound
+                                ? Colors.green
+                                : Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          latestStatus,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              CustomRoundButton(
+                title: terminalProvider.isProcessing
+                    ? 'Processing...'
+                    : 'Pay with Pine Labs',
+                fct: () async {
+                  if (totalAmount <= 0) {
+                    showScaffoldError(
+                      context: context,
+                      message: 'Invalid amount for Pine Labs payment',
+                    );
+                    return;
+                  }
+
+                  await terminalProvider.processSale(
+                    amount: totalAmount,
+                    billingRefNo: billingRefNo.isEmpty
+                        ? 'REF-${DateTime.now().millisecondsSinceEpoch}'
+                        : billingRefNo,
+                  );
+                },
+                fontSize: 14,
+                height: 48,
+                width: double.infinity,
+                radius: 12,
+                boxColor: ColorManager.kPrimaryColor,
+                borderColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+                isLoading: terminalProvider.isProcessing,
+              ),
+            ],
+          ),
         );
       },
     );
