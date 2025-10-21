@@ -7,8 +7,8 @@ class APPUrl {
   // static String baseURL = "https://tenant.hypersouq.in";
   // static String baseURL = "https://eposdemo.hypersouq.in";
   // static String baseURL = "https://actdemo.yougoit.in";
-  static String baseURL = "https://epos.hypersouq.in";
-  //  static String baseURL = "https://epos.yougoit.in";
+  // static String baseURL = "https://epos.hypersouq.in";
+ static String baseURL = "https://epos.yougoit.in";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
   // static String baseURL = "https://icy-goats-brake.loca.lt";
