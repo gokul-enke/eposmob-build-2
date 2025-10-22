@@ -469,7 +469,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(
                     height: 20,
                   ),
-                  // Order details displayed as simple text instead of cards
+                  // Enhanced Order Details Card
                   Consumer<SalesProvider>(
                     builder: (context, orderProvider, child) {
                       List<ListOrderModelData> orders = orderProvider.orders;
@@ -492,94 +492,193 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             ),
                           );
 
-                          return Container(
-                            padding: const EdgeInsets.all(16),
+                          return BuildBoxShadowContainer(
+                            circleRadius: 12,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.all(20),
+                            color: Colors.white,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Order Number: ${order.orderNumber}',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.25,
-                                    ColorManager.textColor,
-                                  ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        'ORDER DETAILS',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          FontSize.s12,
+                                          0.25,
+                                          ColorManager.kPrimaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle,
+                                            size: 14,
+                                            color: Colors.green.shade600,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Selected',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s10,
+                                              0.25,
+                                              Colors.green.shade600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Date: ${DateHelper.formatDate(order.orderDate ?? DateTime.now())}',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.25,
-                                    Colors.grey.shade600,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Customer: ${order.customerName ?? "N/A"}',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.25,
-                                    Colors.grey.shade600,
-                                  ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildOrderDetailItem(
+                                        'Order Number',
+                                        '${order.orderNumber}',
+                                        Icons.receipt_long,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _buildOrderDetailItem(
+                                        'Date',
+                                        DateHelper.formatDate(order.orderDate ?? DateTime.now()),
+                                        Icons.calendar_today,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _buildOrderDetailItem(
+                                        'Customer',
+                                        order.customerName ?? "N/A",
+                                        Icons.person,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           );
                         } catch (e) {
                           debugPrint('Error displaying selected order: $e');
-                          return Container(
-                            padding: const EdgeInsets.all(16),
+                          return BuildBoxShadowContainer(
+                            circleRadius: 12,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.all(20),
+                            color: Colors.white,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Order Number: $selectedOrderNumber',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s16,
-                                    0.27,
-                                    ColorManager.textColor,
-                                  ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        'ORDER DETAILS',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          FontSize.s12,
+                                          0.25,
+                                          ColorManager.kPrimaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Date: ${DateHelper.formatDate(DateTime.now())}',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s16,
-                                    0.27,
-                                    ColorManager.textColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Customer: Order #$selectedOrderNumber',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s16,
-                                    0.27,
-                                    ColorManager.textColor,
-                                  ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildOrderDetailItem(
+                                        'Order Number',
+                                        '$selectedOrderNumber',
+                                        Icons.receipt_long,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _buildOrderDetailItem(
+                                        'Date',
+                                        DateHelper.formatDate(DateTime.now()),
+                                        Icons.calendar_today,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _buildOrderDetailItem(
+                                        'Customer',
+                                        'Order #$selectedOrderNumber',
+                                        Icons.person,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           );
                         }
                       } else {
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'No order selected',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s16,
-                              0.27,
-                              Colors.grey,
-                            ),
+                        return BuildBoxShadowContainer(
+                          circleRadius: 12,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.all(20),
+                          color: Colors.grey.shade50,
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 48,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No Order Selected',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s16,
+                                  0.27,
+                                  Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Please select an order to view details and process returns',
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s12,
+                                  0.25,
+                                  Colors.grey.shade500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
                         );
                       }
@@ -617,6 +716,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     height: 300, // Set a fixed height for the table
                     child: _buildOrderDetails(),
                   ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  // Summary sections
+                  _buildSummarySection(),
                   const SizedBox(
                     height: 20,
                   ),
@@ -1500,6 +1604,209 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       height: 40,
       width: size.width,
       fontSize: FontSize.s13,
+    );
+  }
+
+  Widget _buildOrderDetailItem(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: ColorManager.kPrimaryColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.25,
+                  Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s14,
+              0.25,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummarySection() {
+    return Consumer<SalesProvider>(builder: (context, salesProvider, child) {
+      final salesReturnItems = salesProvider.salesReturnItems;
+      
+      if (salesReturnItems.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      // Calculate totals
+      double orderTotal = 0.0;
+      double returnedTotal = 0.0;
+      int totalItems = salesReturnItems.length; // Count of distinct items
+      int totalQuantity = 0; // Total quantity of all items
+      int returnedItems = 0;
+      int returnedQuantity = 0; // Total returned quantity
+
+      for (var item in salesReturnItems) {
+        final itemTotal = double.tryParse(item.totalPrice.toString()) ?? 0.0;
+        final itemReturned = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+        final itemQuantity = int.tryParse(item.quantity) ?? 0; // item.quantity is already a String
+        
+        debugPrint('Item: ${item.productName}, Quantity: ${item.quantity}, Parsed: $itemQuantity');
+        
+        orderTotal += itemTotal;
+        returnedTotal += itemReturned;
+        totalQuantity += itemQuantity;
+        returnedQuantity += item.returnedQuantity;
+        
+        if (item.returnedQuantity > 0) {
+          returnedItems += 1; // Count items that have been returned
+        }
+      }
+
+      return Row(
+        children: [
+          // Order Summary
+          Expanded(
+            child: BuildBoxShadowContainer(
+              circleRadius: 12,
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.shopping_cart,
+                          color: Colors.blue.shade700,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Order Summary',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.25,
+                          Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSummaryRow('Total Items', '$totalItems'),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Total Quantity', '$totalQuantity'),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Order Total', '₹${orderTotal.toStringAsFixed(2)}'),
+                ],
+              ),
+            ),
+          ),
+          // Return Summary
+          Expanded(
+            child: BuildBoxShadowContainer(
+              circleRadius: 12,
+              margin: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.assignment_return,
+                          color: Colors.orange.shade700,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Return Summary',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.25,
+                          Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSummaryRow('Returned Items', '$returnedItems'),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Returned Quantity', '$returnedQuantity'),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Return Total', '₹${returnedTotal.toStringAsFixed(2)}'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.25,
+            Colors.grey.shade600,
+          ),
+        ),
+        Text(
+          value,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.25,
+            ColorManager.textColor,
+          ),
+        ),
+      ],
     );
   }
 }

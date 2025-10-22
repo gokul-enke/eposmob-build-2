@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -13,6 +14,8 @@ import 'package:provider/provider.dart';
 import '../../../providers/auth_model.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../components/build_dialog_box.dart';
+
+enum PaymentType { none, toPay, toReceive }
 
 class CustomerInformationEditWidget extends StatefulWidget {
   final Size size;
@@ -36,8 +39,10 @@ class _CustomerInformationEditWidgetState
   late TextEditingController emailController;
   late TextEditingController phoneController;
   late TextEditingController altPhoneController;
+  late TextEditingController balanceController;
   String? selectedGender;
   DateTime? selectedDate;
+  PaymentType selectedPaymentType = PaymentType.none;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -50,10 +55,33 @@ class _CustomerInformationEditWidgetState
     emailController = TextEditingController(text: widget.customer?.email ?? '');
     phoneController = TextEditingController(text: widget.customer?.phone ?? '');
     altPhoneController = TextEditingController(text: widget.customer?.altPhone ?? '');
+    balanceController = TextEditingController(text: widget.customer?.balance?.toString() ?? '0.00');
     
     // Initialize gender and date
     selectedGender = widget.customer?.gender;
     selectedDate = widget.customer?.dob != null ? DateTime.tryParse(widget.customer!.dob!) : null;
+    
+    // Initialize payment type based on customer data
+    debugPrint("Customer balance: ${widget.customer?.balance}");
+    debugPrint("Customer payment type: ${widget.customer?.paymentType}");
+    
+    if (widget.customer?.paymentType != null) {
+      switch (widget.customer!.paymentType!.toLowerCase()) {
+        case 'to_pay':
+          selectedPaymentType = PaymentType.toPay;
+          debugPrint("Set payment type to: To Pay");
+          break;
+        case 'to_receive':
+          selectedPaymentType = PaymentType.toReceive;
+          debugPrint("Set payment type to: To Receive");
+          break;
+        default:
+          selectedPaymentType = PaymentType.none;
+          debugPrint("Set payment type to: None (default)");
+      }
+    } else {
+      debugPrint("Payment type is null, setting to None");
+    }
   }
 
   @override
@@ -63,6 +91,7 @@ class _CustomerInformationEditWidgetState
     emailController.dispose();
     phoneController.dispose();
     altPhoneController.dispose();
+    balanceController.dispose();
     super.dispose();
   }
 
@@ -126,6 +155,8 @@ class _CustomerInformationEditWidgetState
                       _buildGenderField(),
                       const SizedBox(height: 20),
                       _buildDateOfBirthField(),
+                      const SizedBox(height: 20),
+                      _buildBalanceAndPaymentTypeFields(),
                       const SizedBox(height: 30),
                       _buildActionButtons(),
                     ],
@@ -257,6 +288,14 @@ class _CustomerInformationEditWidgetState
       final customerId = widget.customer?.id;
       if (customerId == null) throw Exception("Invalid customer ID");
 
+      // Prepare payment status string
+      String paymentStatus = '';
+      if (selectedPaymentType == PaymentType.toPay) {
+        paymentStatus = 'to_pay';
+      } else if (selectedPaymentType == PaymentType.toReceive) {
+        paymentStatus = 'to_receive';
+      }
+
       final response = await customerProvider.updateCustomer(
         accessToken,
         phoneController.text,
@@ -270,6 +309,8 @@ class _CustomerInformationEditWidgetState
         gender: selectedGender,
         dob: selectedDate?.toIso8601String().split('T')[0], // Format as YYYY-MM-DD
         storeId: widget.customer?.storeId ?? 1,
+        balance: balanceController.text.trim(),
+        paymentType: paymentStatus.isNotEmpty ? paymentStatus : null,
       );
 
       Navigator.pop(context); // Close loading dialog
@@ -306,7 +347,14 @@ class _CustomerInformationEditWidgetState
             membershipCode: widget.customer!.membershipCode,
             minRedeemablePoints: widget.customer!.minRedeemablePoints,
             pricePerPoint: widget.customer!.pricePerPoint,
-            balance: widget.customer!.balance,
+            balance: double.tryParse(balanceController.text.trim()) ?? widget.customer!.balance,
+            paymentType: paymentStatus.isNotEmpty ? paymentStatus : widget.customer!.paymentType,
+            address: widget.customer!.address,
+            pincode: widget.customer!.pincode,
+            city: widget.customer!.city,
+            state: widget.customer!.state,
+            country: widget.customer!.country,
+            district: widget.customer!.district,
             transactions: widget.customer!.transactions,
             orders: widget.customer!.orders,
           );
@@ -416,6 +464,106 @@ class _CustomerInformationEditWidgetState
             selectedDate = picked;
           });
         }
+      },
+    );
+  }
+
+  Widget _buildBalanceAndPaymentTypeFields() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 1,
+          child: buildColumnWidgetForTextFields(
+            controller: balanceController,
+            hintText: 'Balance',
+            title: 'Balance',
+            size: widget.size,
+            width: double.infinity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+            ],
+            validator: (value) {
+              if (value != null && value.isNotEmpty) {
+                final balance = double.tryParse(value);
+                if (balance == null) {
+                  return 'Please enter a valid balance';
+                }
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          flex: 1,
+          child: _buildPaymentTypeField(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentTypeField() {
+    String displayText = '';
+    switch (selectedPaymentType) {
+      case PaymentType.toPay:
+        displayText = 'To Pay';
+        break;
+      case PaymentType.toReceive:
+        displayText = 'To Receive';
+        break;
+      case PaymentType.none:
+        displayText = '';
+        break;
+    }
+
+    return buildColumnWidgetForTextFields(
+      controller: TextEditingController(text: displayText),
+      hintText: 'Select Payment Type',
+      title: 'Payment Type',
+      size: widget.size,
+      width: double.infinity,
+      readOnly: true,
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Select Payment Type'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: const Text('To Pay'),
+                  onTap: () {
+                    setState(() {
+                      selectedPaymentType = PaymentType.toPay;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('To Receive'),
+                  onTap: () {
+                    setState(() {
+                      selectedPaymentType = PaymentType.toReceive;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('None'),
+                  onTap: () {
+                    setState(() {
+                      selectedPaymentType = PaymentType.none;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }

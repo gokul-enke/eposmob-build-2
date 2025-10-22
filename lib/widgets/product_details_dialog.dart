@@ -117,6 +117,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog> {
                 0.20,
                 ColorManager.textColor,
               ),
+              softWrap: true, // Enable text wrapping
+              overflow: TextOverflow.visible, // Allow text to wrap instead of truncating
             ),
           ),
         ],
@@ -225,8 +227,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog> {
       backgroundColor: Colors.white,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.8,
+          maxWidth: MediaQuery.of(context).size.width * 0.9, // Increased from 0.8 to 0.9
           maxHeight: MediaQuery.of(context).size.height * 0.8,
+          minWidth: 600, // Add minimum width to ensure adequate space
         ),
         padding: const EdgeInsets.all(24),
         child: Column(

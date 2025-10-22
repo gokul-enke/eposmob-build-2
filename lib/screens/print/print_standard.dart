@@ -482,7 +482,6 @@ class StandardPrinter {
             if (orderReturns != null &&
                 orderReturns.returnItems != null &&
                 orderReturns.returnItems!.isNotEmpty) ...[
-              pw.SizedBox(height: 10),
               _buildTotalSummarySection(
                 selectedPaperSize,
                 formattedTotal,
@@ -1430,7 +1429,6 @@ class StandardPrinter {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.SizedBox(height: 20),
           pw.Text('RETURNS', style: subheaderStyle),
           pw.SizedBox(height: 10),
           // Return Items Table
@@ -1603,7 +1601,7 @@ class StandardPrinter {
     double finalTotal = orderTotal - returnTotal;
 
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+      padding: const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -2123,7 +2121,6 @@ class StandardPrinter {
                 // Total Summary section - ONLY when there are returns
                 if (orderReturns != null &&
                     (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
-                  pw.SizedBox(height: 5),
                   _buildTotalSummarySection(
                     selectedPaperSize,
                     formattedTotal,
