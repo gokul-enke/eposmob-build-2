@@ -100,15 +100,14 @@ class InvoiceProvider extends ChangeNotifier {
     applyFiltersLocally(filterName: _filterName, page: page);
   }
 
-  //          *********************** ZATCA PHASE 2 INVOICE PRINT ***************************************************
-  Future<dynamic> zatcaPhase2InvoicePrint({
+  //          *********************** ZATCA PHASE 2 INVOICE RESYNC ***************************************************
+  Future<dynamic> zatcaPhase2InvoiceResync({
     required int id,
     required String accessToken,
   }) async {
-    final uri = Uri.parse(APPUrl.zatcaPhase2InvoicePrint)
-        .replace(queryParameters: {'id': id.toString()});
+    final uri = Uri.parse(APPUrl.zatcaPhase2InvoiceResync);
 
-    debugPrint('[ZATCA][Provider] Phase2 Print URL: '+uri.toString());
+    debugPrint('[ZATCA][Provider] Phase2 Resync URL: $uri');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -118,20 +117,21 @@ class InvoiceProvider extends ChangeNotifier {
     }
 
     try {
-      final headers = {
-        'Authorization': 'Bearer '+(accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'),
+      final maskedHeaders = {
+        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
         'X-Tenant': apiKey,
       };
-      debugPrint('[ZATCA][Provider] Headers: '+headers.toString());
-      debugPrint('[ZATCA][Provider] Body: {} (GET with query params)');
+      debugPrint('[ZATCA][Provider] Headers: $maskedHeaders');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
       final response = await http
-          .get(
+          .post(
             uri,
             headers: {
-              'Authorization': 'Bearer '+accessToken,
+              'Authorization': 'Bearer $accessToken',
               'X-Tenant': apiKey,
             },
+            body: {'id': id.toString()},
           )
           .timeout(const Duration(seconds: 20));
 
@@ -142,7 +142,7 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP '+response.statusCode.toString()+': '+response.body);
+        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -152,7 +152,64 @@ class InvoiceProvider extends ChangeNotifier {
       debugPrint('[ZATCA][Provider] ERROR: Request timed out');
       return {'status': 'error', 'message': 'Request timed out'};
     } catch (e) {
-      debugPrint('[ZATCA][Provider] EXCEPTION: '+e.toString());
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
+  //          *********************** ZATCA PHASE 2 INVOICE PRINT ***************************************************
+  Future<dynamic> zatcaPhase2InvoicePrint({
+    required int id,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(APPUrl.zatcaPhase2InvoicePrint);
+
+    debugPrint('[ZATCA][Provider] Phase2 Print URL: $uri');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final headers = {
+        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'X-Tenant': apiKey,
+      };
+      debugPrint('[ZATCA][Provider] Headers: $headers');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
+
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+            },
+            body: {'id': id.toString()},
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return response.body;
+        }
+      } else {
+        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        return {
+          'status': 'error',
+          'message': 'Failed with status ${response.statusCode}'
+        };
+      }
+    } on TimeoutException catch (_) {
+      debugPrint('[ZATCA][Provider] ERROR: Request timed out');
+      return {'status': 'error', 'message': 'Request timed out'};
+    } catch (e) {
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
       return {'status': 'error', 'message': e.toString()};
     }
   }
@@ -619,10 +676,9 @@ class InvoiceProvider extends ChangeNotifier {
     required int id,
     required String accessToken,
   }) async {
-    final uri = Uri.parse(APPUrl.zatcaPhase1InvoicePrint)
-        .replace(queryParameters: {'id': id.toString()});
+    final uri = Uri.parse(APPUrl.zatcaPhase1InvoicePrint);
 
-    debugPrint('[ZATCA][Provider] Phase1 Print URL: '+uri.toString());
+    debugPrint('[ZATCA][Provider] Phase1 Print URL: $uri');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -633,19 +689,20 @@ class InvoiceProvider extends ChangeNotifier {
 
     try {
       final headers = {
-        'Authorization': 'Bearer '+(accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'),
+        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
         'X-Tenant': apiKey,
       };
-      debugPrint('[ZATCA][Provider] Headers: '+headers.toString());
-      debugPrint('[ZATCA][Provider] Body: {} (GET with query params)');
+      debugPrint('[ZATCA][Provider] Headers: $headers');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
       final response = await http
-          .get(
+          .post(
             uri,
             headers: {
-              'Authorization': 'Bearer '+accessToken,
+              'Authorization': 'Bearer $accessToken',
               'X-Tenant': apiKey,
             },
+            body: {'id': id.toString()},
           )
           .timeout(const Duration(seconds: 20));
 
@@ -656,7 +713,7 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP '+response.statusCode.toString()+': '+response.body);
+        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -666,7 +723,7 @@ class InvoiceProvider extends ChangeNotifier {
       debugPrint('[ZATCA][Provider] ERROR: Request timed out');
       return {'status': 'error', 'message': 'Request timed out'};
     } catch (e) {
-      debugPrint('[ZATCA][Provider] EXCEPTION: '+e.toString());
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
       return {'status': 'error', 'message': e.toString()};
     }
   }
