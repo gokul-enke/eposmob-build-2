@@ -57,12 +57,13 @@ class SalesExecutiveReportData {
       SalesExecutiveReportData(
         name: json["name"] ?? "No Name",
         phone: json["phone"] ?? "No Phone",
-        orderCount: json["orderCount"] is String
-            ? int.tryParse(json["orderCount"]) ?? 0
-            : json["orderCount"] ?? 0,
-        totalSales: json["totalSales"]?.toString() ?? "0.000",
-        upiSales: json["upiSales"]?.toString() ?? "0.000",
-        cashSales: json["cashSales"]?.toString() ?? "0.000",
+        // Prefer snake_case keys from API, fallback to camelCase for compatibility
+        orderCount: (json["order_count"] ?? json["orderCount"]) is String
+            ? int.tryParse((json["order_count"] ?? json["orderCount"]).toString()) ?? 0
+            : (json["order_count"] ?? json["orderCount"] ?? 0),
+        totalSales: (json["total_sales"] ?? json["totalSales"])?.toString() ?? "0.000",
+        upiSales: (json["upi_sales"] ?? json["upiSales"])?.toString() ?? "0.000",
+        cashSales: (json["cash_sales"] ?? json["cashSales"])?.toString() ?? "0.000",
       );
 
   Map<String, dynamic> toJson() => {

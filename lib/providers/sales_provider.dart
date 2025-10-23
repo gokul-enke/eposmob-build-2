@@ -462,6 +462,9 @@ class SalesProvider with ChangeNotifier {
   Future<void> completeSalesReturn({
     required String accessToken,
     required int returnOrderId,
+    String? paymentMethod,
+    double? paidAmount,
+    bool? hasPayment,
   }) async {
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
@@ -482,11 +485,21 @@ class SalesProvider with ChangeNotifier {
       },
       body: jsonEncode({
         'return_order_id': returnOrderId,
+        if (hasPayment == true) ...{
+          'payment_method': paymentMethod,
+          'paid_amount': paidAmount,
+          'has_payment': hasPayment,
+        } else ...{
+          'has_payment': false,
+        }
       }),
     );
 
     debugPrint("accessToken $accessToken");
     debugPrint("returnOrderId $returnOrderId");
+    debugPrint("hasPayment $hasPayment");
+    debugPrint("paymentMethod $paymentMethod");
+    debugPrint("paidAmount $paidAmount");
 
     if (response.statusCode == 200) {
       debugPrint('Sales return submitted successfully: ${response.body}');

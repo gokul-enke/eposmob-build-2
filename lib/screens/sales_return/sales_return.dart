@@ -69,6 +69,13 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   bool initLoading = false;
   List<SalesReturnCart> _salesReturnItems = [];
 
+  // Payment related variables
+  String selectedPaymentMethod = 'CASH';
+  TextEditingController paidAmountController = TextEditingController();
+  bool hasPayment = true;
+  final List<String> paymentMethods = ['CASH', 'CARD', 'UPI'];
+  bool isCompletingReturn = false;
+
   @override
   void initState() {
     // Check if there's an order number passed from sales screen
@@ -281,6 +288,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   }
 
   @override
+  void dispose() {
+    paidAmountController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final productProvider =
@@ -306,6 +319,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             child: Padding(
               padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
               child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -721,6 +735,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   ),
                   // Summary sections
                   _buildSummarySection(),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  // Payment Details Section
+                  _buildPaymentDetailsSection(),
                   const SizedBox(
                     height: 20,
                   ),
@@ -1580,10 +1599,59 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           String? accessToken =
               Provider.of<AuthModel>(context, listen: false).token;
 
+          // Validate payment details if payment is enabled
+          if (hasPayment) {
+            if (paidAmountController.text.isEmpty) {
+              showScaffoldError(
+                context: context,
+                message: 'Please enter the return amount',
+              );
+              return;
+            }
+
+            double paidAmount = double.tryParse(paidAmountController.text) ?? 0.0;
+
+            // Calculate maximum returnable amount
+            double maxReturnAmount = 0.0;
+            for (var item in _salesReturnItems) {
+              final itemReturned = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+              maxReturnAmount += itemReturned;
+            }
+
+            if (paidAmount <= 0) {
+              showScaffoldError(
+                context: context,
+                message: 'Return amount must be greater than 0',
+              );
+              return;
+            }
+
+            if (paidAmount > maxReturnAmount) {
+              showScaffoldError(
+                context: context,
+                message: 'Return amount cannot exceed ₹${maxReturnAmount.toStringAsFixed(2)}',
+              );
+              return;
+            }
+          }
+
+          // Parse paid amount
+          double paidAmount = 0.0;
+          if (hasPayment && paidAmountController.text.isNotEmpty) {
+            paidAmount = double.tryParse(paidAmountController.text) ?? 0.0;
+          }
+
+          setState(() {
+            isCompletingReturn = true;
+          });
+
           await Provider.of<SalesProvider>(context, listen: false)
               .completeSalesReturn(
             accessToken: accessToken ?? '',
             returnOrderId: validReturnItem.returnOrderId,
+            paymentMethod: hasPayment ? selectedPaymentMethod : null,
+            paidAmount: hasPayment ? paidAmount : null,
+            hasPayment: hasPayment,
           );
 
           showScaffold(
@@ -1599,11 +1667,18 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             context: context,
             message: 'Failed to create sales return',
           );
+        } finally {
+          if (mounted) {
+            setState(() {
+              isCompletingReturn = false;
+            });
+          }
         }
       },
       height: 40,
       width: size.width,
       fontSize: FontSize.s13,
+      isLoading: isCompletingReturn,
     );
   }
 
@@ -1808,5 +1883,286 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildPaymentDetailsSection() {
+    return Consumer<SalesProvider>(builder: (context, salesProvider, child) {
+      final salesReturnItems = salesProvider.salesReturnItems;
+      
+      if (salesReturnItems.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      // Calculate return total
+      double returnedTotal = 0.0;
+      for (var item in salesReturnItems) {
+        final itemReturned = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+        returnedTotal += itemReturned;
+      }
+
+      return BuildBoxShadowContainer(
+        circleRadius: 12,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(20),
+        color: Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.payment,
+                    color: Colors.green.shade700,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Payment Details',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.25,
+                    Colors.green.shade700,
+                  ),
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    Text(
+                      'Has Payment:',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.25,
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Switch(
+                      value: hasPayment,
+                      onChanged: (value) {
+                        setState(() {
+                          hasPayment = value;
+                          if (!hasPayment) {
+                            paidAmountController.clear();
+                          }
+                        });
+                      },
+                      activeColor: ColorManager.kPrimaryColor,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (!hasPayment)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.grey.shade600,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No Payment Mode: Items will be returned without any payment transaction. No voucher or payment records will be created.',
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s12,
+                          0.25,
+                          Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (hasPayment) ...[
+              Row(
+                children: [
+                  // Payment Method Selection
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payment Method',
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s12,
+                            0.25,
+                            Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 48,
+                          child: DropdownButtonFormField<String>(
+                            value: selectedPaymentMethod,
+                            isExpanded: true,
+                            dropdownColor: Colors.white,
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s14,
+                              0.25,
+                              ColorManager.textColor,
+                            ),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              constraints: const BoxConstraints.tightFor(height: 48),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: const OutlineInputBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide(color: ColorManager.kPrimaryColor),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.arrow_drop_down),
+                            iconSize: 20,
+                            items: paymentMethods.map((String method) {
+                              return DropdownMenuItem<String>(
+                                value: method,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _getPaymentMethodIcon(method),
+                                      size: 16,
+                                      color: ColorManager.kPrimaryColor,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      method,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s14,
+                                        0.25,
+                                        ColorManager.textColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  selectedPaymentMethod = newValue;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Return Amount
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Return Amount',
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s12,
+                            0.25,
+                            Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 48,
+                          child: TextFormField(
+                            controller: paidAmountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlignVertical: TextAlignVertical.center,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: '₹${returnedTotal.toStringAsFixed(2)}',
+                              prefixIcon: const Icon(Icons.currency_rupee, size: 16),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                              constraints: const BoxConstraints.tightFor(height: 48),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: ColorManager.kPrimaryColor),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s14,
+                              0.25,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Maximum returnable amount: ₹${returnedTotal.toStringAsFixed(2)}',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s11,
+                  0.25,
+                  Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+
+  IconData _getPaymentMethodIcon(String method) {
+    switch (method) {
+      case 'CASH':
+        return Icons.money;
+      case 'CARD':
+        return Icons.credit_card;
+      case 'UPI':
+        return Icons.qr_code;
+      default:
+        return Icons.payment;
+    }
   }
 }
