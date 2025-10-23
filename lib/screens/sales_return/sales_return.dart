@@ -72,7 +72,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   // Payment related variables
   String selectedPaymentMethod = 'CASH';
   TextEditingController paidAmountController = TextEditingController();
-  bool hasPayment = true;
+  FocusNode paidAmountFocusNode = FocusNode();
+  bool hasPayment = false;
   final List<String> paymentMethods = ['CASH', 'CARD', 'UPI'];
   bool isCompletingReturn = false;
 
@@ -128,6 +129,21 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         // If no order number passed, load initial data
         loadInitData();
       }
+    });
+
+    // Select-all behavior when focusing the return amount field
+    paidAmountFocusNode.addListener(() {
+      if (paidAmountFocusNode.hasFocus) {
+        paidAmountController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: paidAmountController.text.length,
+        );
+      }
+    });
+
+    // Real-time validation: rebuild on amount changes
+    paidAmountController.addListener(() {
+      if (mounted) setState(() {});
     });
 
     super.initState();
@@ -290,6 +306,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   @override
   void dispose() {
     paidAmountController.dispose();
+    paidAmountFocusNode.dispose();
     super.dispose();
   }
 
@@ -343,7 +360,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     ],
                   ),
                   const SizedBox(
-                    height: 15,
+                    height: 5,
                   ),
                   // Search and filters section commented out
                   // SizedBox(
@@ -481,7 +498,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   //   ),
                   // ),
                   const SizedBox(
-                    height: 20,
+                    height: 8,
                   ),
                   // Enhanced Order Details Card
                   Consumer<SalesProvider>(
@@ -1486,10 +1503,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                 child: Center(
                                   child: Icon(
                                     item.isReturned
-                                        ? Icons.pending
+                                        ? Icons.check_circle
                                         : Icons.cancel,
                                     color: item.isReturned
-                                        ? Colors.amber
+                                        ? Colors.green
                                         : Colors.red,
                                     size: 20,
                                   ),
@@ -1900,6 +1917,15 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         returnedTotal += itemReturned;
       }
 
+      // Autofill the return amount when payment is enabled and field is empty
+      if (hasPayment && paidAmountController.text.isEmpty) {
+        paidAmountController.text = returnedTotal.toStringAsFixed(2);
+      }
+
+      // Real-time validation flag
+      final double enteredAmount = double.tryParse(paidAmountController.text) ?? 0.0;
+      final bool isExceedingMax = hasPayment && enteredAmount > returnedTotal;
+
       return BuildBoxShadowContainer(
         circleRadius: 12,
         margin: const EdgeInsets.symmetric(vertical: 8),
@@ -2101,11 +2127,20 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           height: 48,
                           child: TextFormField(
                             controller: paidAmountController,
+                            focusNode: paidAmountFocusNode,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             textAlignVertical: TextAlignVertical.center,
+                            onTap: () {
+                              paidAmountController.selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset: paidAmountController.text.length,
+                              );
+                            },
                             decoration: InputDecoration(
                               isDense: true,
-                              hintText: '₹${returnedTotal.toStringAsFixed(2)}',
+                              errorText: isExceedingMax
+                                  ? 'Return amount cannot exceed ₹${returnedTotal.toStringAsFixed(2)}'
+                                  : null,
                               prefixIcon: const Icon(Icons.currency_rupee, size: 16),
                               prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                               constraints: const BoxConstraints.tightFor(height: 48),
