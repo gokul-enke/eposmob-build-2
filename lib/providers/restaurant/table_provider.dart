@@ -18,7 +18,7 @@ class TableProvider with ChangeNotifier {
   String? get error => _error;
 
   Future<void> loadTables(
-      {bool forceRefresh = false, String? accessToken}) async {
+      {bool forceRefresh = true, String? accessToken}) async {
     debugPrint(
         '🚀 TableProvider: loadTables called - forceRefresh: $forceRefresh, current tables count: ${_tables.length}');
 
