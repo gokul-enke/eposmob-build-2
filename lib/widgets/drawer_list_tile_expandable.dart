@@ -21,6 +21,12 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? listTitle3;
   final VoidCallback? onTapTitle4;
   final String? listTitle4;
+  
+  // Permission parameters for sub-items
+  final bool? showTitle1;
+  final bool? showTitle2;
+  final bool? showTitle3;
+  final bool? showTitle4;
 
   const DrawerListTileExpandableColumn({
     super.key,
@@ -38,6 +44,11 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
     this.onTapTitle3,
     this.listTitle4,
     this.onTapTitle4,
+    // Permission defaults - show all by default for backward compatibility
+    this.showTitle1 = true,
+    this.showTitle2 = true,
+    this.showTitle3 = true,
+    this.showTitle4 = true,
   });
 
   @override
@@ -125,27 +136,30 @@ class _DrawerListTileExpandableColumnState
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Column(
                     children: [
-                      ListTile(
-                        selected: _selectedTileIndex == 0,
-                        selectedTileColor: _selectedTileIndex == 0
-                            ? Colors.blue.withOpacity(0.1)
-                            : null,
-                        contentPadding: ResponsiveWidget.isTablet(context)
-                            ? const EdgeInsets.only(left: 15, right: 10)
-                            : const EdgeInsets.only(left: 45, right: 15),
-                        horizontalTitleGap: 0.0,
-                        visualDensity:
-                            const VisualDensity(vertical: -4, horizontal: 0),
-                        minVerticalPadding: 0,
-                        onTap: () => _onTapTile(0, widget.onTapTitle1),
-                        leading: const BubbleIcon(),
-                        title: Text(
-                          widget.listTitle1,
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s11, 0.21, ColorManager.textColor),
+                      // First sub-item - only show if permission allows
+                      if (widget.showTitle1 == true)
+                        ListTile(
+                          selected: _selectedTileIndex == 0,
+                          selectedTileColor: _selectedTileIndex == 0
+                              ? Colors.blue.withOpacity(0.1)
+                              : null,
+                          contentPadding: ResponsiveWidget.isTablet(context)
+                              ? const EdgeInsets.only(left: 15, right: 10)
+                              : const EdgeInsets.only(left: 45, right: 15),
+                          horizontalTitleGap: 0.0,
+                          visualDensity:
+                              const VisualDensity(vertical: -4, horizontal: 0),
+                          minVerticalPadding: 0,
+                          onTap: () => _onTapTile(0, widget.onTapTitle1),
+                          leading: const BubbleIcon(),
+                          title: Text(
+                            widget.listTitle1,
+                            style: buildCustomStyle(FontWeightManager.medium,
+                                FontSize.s11, 0.21, ColorManager.textColor),
+                          ),
                         ),
-                      ),
-                      widget.listTitle2 != null
+                      // Second sub-item - only show if permission allows and title exists
+                      widget.listTitle2 != null && widget.showTitle2 == true
                           ? ListTile(
                               selected: _selectedTileIndex == 1,
                               selectedTileColor: _selectedTileIndex == 1
@@ -170,7 +184,8 @@ class _DrawerListTileExpandableColumnState
                               ),
                             )
                           : Container(),
-                      widget.listTitle3 != null
+                      // Third sub-item - only show if permission allows and title exists
+                      widget.listTitle3 != null && widget.showTitle3 == true
                           ? ListTile(
                               selected: _selectedTileIndex == 2,
                               selectedTileColor: _selectedTileIndex == 2

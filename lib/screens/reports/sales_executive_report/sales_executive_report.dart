@@ -427,6 +427,8 @@ class _SalesExecutiveReportScreenState
                                 3: FlexColumnWidth(1.5), // Total Sales
                                 4: FlexColumnWidth(1.5), // UPI Sales
                                 5: FlexColumnWidth(1.5), // Cash Sales
+                                6: FlexColumnWidth(1.5), // Credit Sales
+                                7: FlexColumnWidth(1.5), // Collected Sales
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -440,6 +442,8 @@ class _SalesExecutiveReportScreenState
                                     _buildTableHeader("Total Sales"),
                                     _buildTableHeader("UPI Sales"),
                                     _buildTableHeader("Cash Sales"),
+                                    _buildTableHeader("Credit Sales"),
+                                    _buildTableHeader("Collected Sales"),
                                   ],
                                 ),
                               ],
@@ -481,6 +485,10 @@ class _SalesExecutiveReportScreenState
                                                     1.5), // UPI Sales
                                                 5: FlexColumnWidth(
                                                     1.5), // Cash Sales
+                                                6: FlexColumnWidth(
+                                                    1.5), // Credit Sales
+                                                7: FlexColumnWidth(
+                                                    1.5), // Collected Sales
                                               },
                                               border: null,
                                               defaultVerticalAlignment:
@@ -508,6 +516,10 @@ class _SalesExecutiveReportScreenState
                                                         "₹${report.formattedUpiSales}"),
                                                     _buildTableCell(
                                                         "₹${report.formattedCashSales}"),
+                                                    _buildTableCell(
+                                                        "₹${report.formattedCreditSales}"),
+                                                    _buildTableCell(
+                                                        "₹${report.formattedCollectedSales}"),
                                                   ],
                                                 );
                                               }).toList(),

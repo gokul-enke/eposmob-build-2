@@ -43,6 +43,8 @@ class SalesExecutiveReportData {
   final String? totalSales;
   final String? upiSales;
   final String? cashSales;
+  final int? creditSales;
+  final int? collectedSales;
 
   SalesExecutiveReportData({
     this.name,
@@ -51,6 +53,8 @@ class SalesExecutiveReportData {
     this.totalSales,
     this.upiSales,
     this.cashSales,
+    this.creditSales,
+    this.collectedSales,
   });
 
   factory SalesExecutiveReportData.fromJson(Map<String, dynamic> json) =>
@@ -64,6 +68,12 @@ class SalesExecutiveReportData {
         totalSales: (json["total_sales"] ?? json["totalSales"])?.toString() ?? "0.000",
         upiSales: (json["upi_sales"] ?? json["upiSales"])?.toString() ?? "0.000",
         cashSales: (json["cash_sales"] ?? json["cashSales"])?.toString() ?? "0.000",
+        creditSales: (json["credit_sales"] ?? json["creditSales"]) is String
+            ? int.tryParse((json["credit_sales"] ?? json["creditSales"]).toString()) ?? 0
+            : (json["credit_sales"] ?? json["creditSales"] ?? 0),
+        collectedSales: (json["collected_sales"] ?? json["collectedSales"]) is String
+            ? int.tryParse((json["collected_sales"] ?? json["collectedSales"]).toString()) ?? 0
+            : (json["collected_sales"] ?? json["collectedSales"] ?? 0),
       );
 
   Map<String, dynamic> toJson() => {
@@ -73,6 +83,8 @@ class SalesExecutiveReportData {
         "totalSales": totalSales,
         "upiSales": upiSales,
         "cashSales": cashSales,
+        "creditSales": creditSales,
+        "collectedSales": collectedSales,
       };
 
   // Helper methods for calculations
@@ -88,6 +100,14 @@ class SalesExecutiveReportData {
     return double.tryParse(cashSales ?? "0") ?? 0.0;
   }
 
+  double get creditSalesAmount {
+    return (creditSales ?? 0).toDouble();
+  }
+
+  double get collectedSalesAmount {
+    return (collectedSales ?? 0).toDouble();
+  }
+
   // Formatted getters for display
   String get formattedTotalSales {
     return totalSalesAmount.toStringAsFixed(2);
@@ -101,6 +121,14 @@ class SalesExecutiveReportData {
     return cashSalesAmount.toStringAsFixed(2);
   }
 
+  String get formattedCreditSales {
+    return creditSalesAmount.toStringAsFixed(2);
+  }
+
+  String get formattedCollectedSales {
+    return collectedSalesAmount.toStringAsFixed(2);
+  }
+
   // Calculate percentage of UPI vs Cash sales
   double get upiPercentage {
     if (totalSalesAmount == 0) return 0.0;
@@ -110,6 +138,16 @@ class SalesExecutiveReportData {
   double get cashPercentage {
     if (totalSalesAmount == 0) return 0.0;
     return (cashSalesAmount / totalSalesAmount) * 100;
+  }
+
+  double get creditPercentage {
+    if (totalSalesAmount == 0) return 0.0;
+    return (creditSalesAmount / totalSalesAmount) * 100;
+  }
+
+  double get collectedPercentage {
+    if (totalSalesAmount == 0) return 0.0;
+    return (collectedSalesAmount / totalSalesAmount) * 100;
   }
 
   // Average sales per order
