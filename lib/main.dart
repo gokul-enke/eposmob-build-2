@@ -39,6 +39,7 @@ import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
@@ -269,6 +270,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BillingProvider()),
         ChangeNotifierProvider(create: (_) => WhatsappProvider()),
         ChangeNotifierProvider(create: (_) => PineLabsTerminalProvider()),
+        ChangeNotifierProvider(create: (_) => RoleProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(

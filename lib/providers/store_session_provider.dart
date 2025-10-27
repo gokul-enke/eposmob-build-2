@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
 
 class StoreSessionProvider extends ChangeNotifier {
@@ -67,8 +68,18 @@ class StoreSessionProvider extends ChangeNotifier {
     final docConfigProvider = context.read<DocumentConfigProvider>();
     final categoryProvider = context.read<CategoryProvider>();
     final localProductProvider = context.read<LocalProductProvider>();
+    final roleProvider = context.read<RoleProvider>();
 
     try {
+      await _updateStatus('Loading user permissions...');
+      try {
+        await roleProvider.fetchRoles(context);
+        await _updateStatus('User permissions loaded successfully');
+      } catch (e) {
+        debugPrint('Warning: Failed to load user permissions: $e');
+        await _updateStatus('Warning: Could not load permissions');
+      }
+
       await _updateStatus('Loading general settings...');
       await generalSettingsProvider.fetchGeneralSettings();
 

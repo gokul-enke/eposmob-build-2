@@ -21,6 +21,7 @@ import '../screens/login/login.dart';
 import 'drawer_list_tile_expandable.dart';
 import '../widgets/user_switcher.dart';
 import '../widgets/store_switcher.dart';
+import '../providers/role_provider.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -123,6 +124,7 @@ class _SideMenuState extends State<SideMenu> {
   void initState() {
     super.initState();
     _loadUserRole();
+    // Roles are now loaded during store bootstrap for better performance
   }
 
   void _loadUserRole() async {
@@ -211,17 +213,26 @@ class _SideMenuState extends State<SideMenu> {
           const SizedBox(
             height: 20,
           ),
-          if (_hasRole('sales_executive'))
-            Obx(
-              () => DrawerListTile(
-                iconPath: ImageAssets.homeIcon,
-                title: 'Home',
-                onTap: () {
-                  sideBarController.index.value = 46;
-                },
-                selected: sideBarController.index.value == 46,
-              ),
-            ),
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              final hasPermission = roleProvider.currentUserHasPermissionSync('view_order');
+              
+              if (!hasPermission) {
+                return const SizedBox.shrink(); // Hide menu item if no permission
+              }
+
+              return Obx(
+                () => DrawerListTile(
+                  iconPath: ImageAssets.homeIcon,
+                  title: 'Home',
+                  onTap: () {
+                    sideBarController.index.value = 46;
+                  },
+                  selected: sideBarController.index.value == 46,
+                ),
+              );
+            },
+          ),
           if (_hasAnyRole(['attender']))
             // if (_hasRole('attender'))
             Obx(
