@@ -1,7 +1,15 @@
-git tag v0.1.0-dev.241
-git push build v0.1.0-dev.241
-git push origin v0.1.0-dev.240
-git push build1 v0.1.0-dev.179
+demo build
+git tag v0.1.0-dev.242
+git push build v0.1.0-dev.242
+
+souq build
+git tag v0.1.0-dev.242
+git push origin v0.1.0-dev.242
+
+yougoit build
+git tag v0.1.0-dev.242
+git push build1 v0.1.0-dev.242
+
 
 # eposenke demo
 https://eposdemo.hypersouq.in
