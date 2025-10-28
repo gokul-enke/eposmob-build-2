@@ -899,7 +899,7 @@ class ThermalPrinter {
     //   ),
     // );
 
-    // bytes += generator.emptyLines(1);  
+    // bytes += generator.emptyLines(1);
 
     // Use Sales Return Bill configuration labels
     String purchaseLabel =
@@ -1698,6 +1698,7 @@ class ThermalPrinter {
       debugPrint("Added left side item: Items = $itemCount");
     }
 
+    // Add Total Qty to left side
     leftSideItems.add({
       'label': 'Total Qty',
       'value': totalQuantity % 1 == 0
@@ -1711,20 +1712,22 @@ class ThermalPrinter {
     debugPrint(
         "Added left side item: Total Qty = ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}");
 
-    // Right side items
+    // Add Total MRP to left side (under Total Qty)
     if (displayConfig?['showMRPTotal']?.visible == true) {
-      rightSideItems.add({
+      leftSideItems.add({
         'label': 'Total MRP',
         'value': totalMrp.toStringAsFixed(2),
+
         'textSize': 'small',
         'bold': 'false',
         'fontStyle': 'normal',
         'fontType': 'fontA' // Different font type for MRP
       });
       debugPrint(
-          "Added right side item: Total MRP = ${totalMrp.toStringAsFixed(2)}");
+          "Added left side item: Total MRP = ${totalMrp.toStringAsFixed(2)}");
     }
 
+    // Right side items (without Total MRP which is now on the left)
     if (displayConfig?['showDiscount']?.visible == true) {
       rightSideItems.add({
         'label': 'Discount',
