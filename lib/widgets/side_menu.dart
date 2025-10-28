@@ -188,8 +188,9 @@ class _SideMenuState extends State<SideMenu> {
           // ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync('view_order');
-              
+              final hasPermission =
+                  roleProvider.currentUserHasPermissionSync('view_user');
+
               if (!hasPermission) {
                 return const SizedBox.shrink();
               }
@@ -213,82 +214,105 @@ class _SideMenuState extends State<SideMenu> {
           const SizedBox(
             height: 20,
           ),
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              final hasPermission =
-                  roleProvider.currentUserHasPermissionSync('view_order');
+          userRole == 'sales_executive'
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission = roleProvider
+                        .currentUserHasPermissionSync('create_order');
 
-              if (!hasPermission) {
-                return const SizedBox
-                    .shrink(); // Hide menu item if no permission
-              }
+                    if (!hasPermission) {
+                      return const SizedBox
+                          .shrink(); // Hide menu item if no permission
+                    }
 
-              return Obx(
-                () => DrawerListTile(
-                  iconPath: ImageAssets.homeIcon,
-                  title: 'Home',
-                  onTap: () {
-                    sideBarController.index.value = 46;
+                    return Obx(
+                      () => DrawerListTile(
+                        iconPath: ImageAssets.homeIcon,
+                        title: 'Home',
+                        onTap: () {
+                          sideBarController.index.value = 46;
+                        },
+                        selected: sideBarController.index.value == 46,
+                      ),
+                    );
                   },
-                  selected: sideBarController.index.value == 46,
-                ),
-              );
-            },
-          ),
+                )
+              : const SizedBox.shrink(),
           // Restaurant - Only for attender role (old role-based checking)
-          userRole == 'attender' 
-            ? Obx(
-                () => DrawerListTile(
-                  iconPath: ImageAssets.barcodeIcon,
-                  title: 'Restaurant',
-                  onTap: () {
-                    sideBarController.index.value = 55;
+          userRole == 'attender'
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission = roleProvider
+                        .currentUserHasPermissionSync('create_order');
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+                    return Obx(
+                      () => DrawerListTile(
+                        iconPath: ImageAssets.barcodeIcon,
+                        title: 'Restaurant',
+                        onTap: () {
+                          sideBarController.index.value = 55;
+                        },
+                        selected: sideBarController.index.value == 55,
+                      ),
+                    );
                   },
-                  selected: sideBarController.index.value == 55,
-                ),
-              )
-            : const SizedBox.shrink(),
+                )
+              : const SizedBox.shrink(),
           // Kitchen Master - Only for kitchen_master role (old role-based checking)
           userRole == 'kitchen_master'
-            ? Obx(
-                () => DrawerListTile(
-                  iconPath: ImageAssets.barcodeIcon,
-                  title: 'Kitchen Master',
-                  onTap: () {
-                    sideBarController.index.value = 56;
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission = roleProvider
+                        .currentUserHasPermissionSync('create_order');
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+                    return Obx(
+                      () => DrawerListTile(
+                        iconPath: ImageAssets.barcodeIcon,
+                        title: 'Kitchen Master',
+                        onTap: () {
+                          sideBarController.index.value = 56;
+                        },
+                        selected: sideBarController.index.value == 56,
+                      ),
+                    );
                   },
-                  selected: sideBarController.index.value == 56,
-                ),
-              )
-            : const SizedBox.shrink(),
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync('view_order');
-              
-              if (!hasPermission) {
-                return const SizedBox.shrink();
-              }
+                )
+              : const SizedBox.shrink(),
+          userRole == 'sales_executive'
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission =
+                        roleProvider.currentUserHasPermissionSync('view_order');
 
-              return Obx(
-                () => DrawerListTile(
-                  iconPath: ImageAssets.dashBoardIcon,
-                  title: 'Dashboard',
-                  onTap: () {
-                    // debugPrint(" 'Dashboard',${sideBarController.index.value}");
-                    sideBarController.index.value = 1;
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Obx(
+                      () => DrawerListTile(
+                        iconPath: ImageAssets.dashBoardIcon,
+                        title: 'Dashboard',
+                        onTap: () {
+                          // debugPrint(" 'Dashboard',${sideBarController.index.value}");
+                          sideBarController.index.value = 1;
+                        },
+                        selected: sideBarController.index.value == 1,
+                      ),
+                    );
                   },
-                  selected: sideBarController.index.value == 1,
-                ),
-              );
-            },
-          ),
+                )
+              : const SizedBox.shrink(),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
               final hasSalesPermission =
                   roleProvider.currentUserHasPermissionSync('view_order');
-              final hasConfirmedOrdersPermission = roleProvider
-                  .currentUserHasPermissionSync('view_order');
+              final hasConfirmedOrdersPermission =
+                  roleProvider.currentUserHasPermissionSync('view_order');
               final hasSalesReturnPermission = roleProvider
                   .currentUserHasPermissionSync('page_CreateSalesReturn');
 
@@ -344,8 +368,9 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync('view_category');
-              
+              final hasPermission =
+                  roleProvider.currentUserHasPermissionSync('view_category');
+
               if (!hasPermission) {
                 return const SizedBox.shrink();
               }
@@ -370,9 +395,11 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
-              final hasProductPermission = roleProvider.currentUserHasPermissionSync('view_product');
-              final hasStockPermission = roleProvider.currentUserHasPermissionSync('page_StockManagement');
-              
+              final hasProductPermission =
+                  roleProvider.currentUserHasPermissionSync('view_product');
+              final hasStockPermission = roleProvider
+                  .currentUserHasPermissionSync('page_StockManagement');
+
               // Only show the expandable menu if user has at least one permission
               if (!hasProductPermission && !hasStockPermission) {
                 return const SizedBox.shrink();
@@ -409,8 +436,9 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync('view_supplier');
-              
+              final hasPermission =
+                  roleProvider.currentUserHasPermissionSync('view_supplier');
+
               if (!hasPermission) {
                 return const SizedBox.shrink();
               }
@@ -440,12 +468,19 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
-              final hasSalesExecutiveReportsPermission = roleProvider.currentUserHasPermissionSync('view_order');
-              final hasCustomerTransactionsPermission = roleProvider.currentUserHasPermissionSync('page_CustomerTransactionReport');
-              final hasSupplierTransactionsPermission = roleProvider.currentUserHasPermissionSync('page_SupplierTransactionsReport');
-              
+              final hasSalesExecutiveReportsPermission = roleProvider
+                  .currentUserHasPermissionSync('page_SalesExecutiveReport');
+              final hasCustomerTransactionsPermission =
+                  roleProvider.currentUserHasPermissionSync(
+                      'page_CustomerTransactionReport');
+              final hasSupplierTransactionsPermission =
+                  roleProvider.currentUserHasPermissionSync(
+                      'page_SupplierTransactionsReport');
+
               // Only show the expandable menu if user has at least one permission
-              if (!hasSalesExecutiveReportsPermission && !hasCustomerTransactionsPermission && !hasSupplierTransactionsPermission) {
+              if (!hasSalesExecutiveReportsPermission &&
+                  !hasCustomerTransactionsPermission &&
+                  !hasSupplierTransactionsPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -485,12 +520,17 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
-              final hasInvoicePermission = roleProvider.currentUserHasPermissionSync('page_Invoices');
-              final hasReceiptsPermission = roleProvider.currentUserHasPermissionSync('page_Vouchers');
-              final hasCompanyAccountsPermission = roleProvider.currentUserHasPermissionSync('view_order');
-              
+              final hasInvoicePermission =
+                  roleProvider.currentUserHasPermissionSync('page_Invoices');
+              final hasReceiptsPermission =
+                  roleProvider.currentUserHasPermissionSync('page_Vouchers');
+              final hasCompanyAccountsPermission = roleProvider
+                  .currentUserHasPermissionSync('view_company::account');
+
               // Only show the expandable menu if user has at least one permission
-              if (!hasInvoicePermission && !hasReceiptsPermission && !hasCompanyAccountsPermission) {
+              if (!hasInvoicePermission &&
+                  !hasReceiptsPermission &&
+                  !hasCompanyAccountsPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -536,11 +576,14 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
-              final hasSupplierTransactionsPermission = roleProvider.currentUserHasPermissionSync('page_SupplierTransactions');
-              final hasCustomerTransactionsPermission = roleProvider.currentUserHasPermissionSync('page_CustomerTransactions');
-              
+              final hasSupplierTransactionsPermission = roleProvider
+                  .currentUserHasPermissionSync('page_SupplierTransactions');
+              final hasCustomerTransactionsPermission = roleProvider
+                  .currentUserHasPermissionSync('page_CustomerTransactions');
+
               // Only show the expandable menu if user has at least one permission
-              if (!hasSupplierTransactionsPermission && !hasCustomerTransactionsPermission) {
+              if (!hasSupplierTransactionsPermission &&
+                  !hasCustomerTransactionsPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -570,8 +613,9 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync('view_customer');
-              
+              final hasPermission =
+                  roleProvider.currentUserHasPermissionSync('view_customer');
+
               if (!hasPermission) {
                 return const SizedBox.shrink();
               }
@@ -593,8 +637,9 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync('view_order');
-              
+              final hasPermission =
+                  roleProvider.currentUserHasPermissionSync('view_setting');
+
               if (!hasPermission) {
                 return const SizedBox.shrink();
               }
@@ -607,8 +652,8 @@ class _SideMenuState extends State<SideMenu> {
                     padding: const EdgeInsets.only(left: 45.0),
                     child: Text(
                       'Other',
-                      style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
-                          0.16, ColorManager.textColor),
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s13, 0.16, ColorManager.textColor),
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -628,8 +673,9 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync('view_order');
-              
+              final hasPermission =
+                  roleProvider.currentUserHasPermissionSync('view_setting');
+
               if (!hasPermission) {
                 return const SizedBox.shrink();
               }
@@ -742,10 +788,23 @@ class _SideMenuState extends State<SideMenu> {
                     }
                   },
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-                const StoreSwitcher(),
+                Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission =
+                        roleProvider.currentUserHasPermissionSync('view_store');
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+                    return const Column(
+                      children: [
+                        SizedBox(height: 16),
+                        Divider(height: 1),
+                        SizedBox(height: 16),
+                        StoreSwitcher(),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
