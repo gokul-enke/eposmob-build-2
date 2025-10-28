@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -34,7 +35,6 @@ class _SupplierInformationEditWidgetState
   late TextEditingController _addressController;
   late TextEditingController _balanceController;
   late TextEditingController _currentBalanceController;
-  late TextEditingController _paymentTypeController;
   late TextEditingController _productCategoriesController;
 
   @override
@@ -52,8 +52,6 @@ class _SupplierInformationEditWidgetState
     _balanceController = TextEditingController(text: widget.supplier.balance.toStringAsFixed(2));
     _currentBalanceController = TextEditingController(
         text: widget.supplier.currentBalance?.toStringAsFixed(2));
-    _paymentTypeController =
-        TextEditingController(text: widget.supplier.paymentType);
     _productCategoriesController =
         TextEditingController(text: widget.supplier.productCategories);
   }
@@ -67,7 +65,6 @@ class _SupplierInformationEditWidgetState
     _addressController.dispose();
     _balanceController.dispose();
     _currentBalanceController.dispose();
-    _paymentTypeController.dispose();
     _productCategoriesController.dispose();
     super.dispose();
   }
@@ -187,19 +184,22 @@ class _SupplierInformationEditWidgetState
                   leftLabel: 'Balance',
                   leftHint: 'Enter balance amount',
                   leftKeyboardType: TextInputType.number,
+                  leftInputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+                  ],
                   rightController: _currentBalanceController,
                   rightLabel: 'Current Balance',
                   rightHint: 'Enter current balance',
                   rightKeyboardType: TextInputType.number,
+                  rightInputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+                  ],
                 ),
                 const SizedBox(height: 20),
-                _buildTwoFieldRow(
-                  leftController: _paymentTypeController,
-                  leftLabel: 'Payment Type',
-                  leftHint: 'e.g., Credit, Cash, Bank Transfer',
-                  rightController: _productCategoriesController,
-                  rightLabel: 'Product Categories',
-                  rightHint: 'e.g., Electronics, Furniture',
+                _buildTextField(
+                  controller: _productCategoriesController,
+                  label: 'Product Categories',
+                  hintText: 'e.g., Electronics, Furniture',
                 ),
               ],
             ),
@@ -283,6 +283,7 @@ class _SupplierInformationEditWidgetState
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
     bool isRequired = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,6 +310,7 @@ class _SupplierInformationEditWidgetState
           keyboardType: keyboardType,
           size: widget.size,
           width: double.infinity,
+          inputFormatters: inputFormatters,
           validator: isRequired ? (value) {
             if (value == null || value.isEmpty) {
               return '$label is required';
@@ -326,11 +328,13 @@ class _SupplierInformationEditWidgetState
     required String leftHint,
     TextInputType leftKeyboardType = TextInputType.text,
     bool leftRequired = false,
+    List<TextInputFormatter>? leftInputFormatters,
     required TextEditingController rightController,
     required String rightLabel,
     required String rightHint,
     TextInputType rightKeyboardType = TextInputType.text,
     bool rightRequired = false,
+    List<TextInputFormatter>? rightInputFormatters,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,6 +346,7 @@ class _SupplierInformationEditWidgetState
             hintText: leftHint,
             keyboardType: leftKeyboardType,
             isRequired: leftRequired,
+            inputFormatters: leftInputFormatters,
           ),
         ),
         const SizedBox(width: 20),
@@ -352,6 +357,7 @@ class _SupplierInformationEditWidgetState
             hintText: rightHint,
             keyboardType: rightKeyboardType,
             isRequired: rightRequired,
+            inputFormatters: rightInputFormatters,
           ),
         ),
       ],

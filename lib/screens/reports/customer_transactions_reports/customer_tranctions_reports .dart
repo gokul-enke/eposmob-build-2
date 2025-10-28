@@ -230,6 +230,7 @@ class _CustomerTransactionsReportScreenState
       String customerName = transaction.customerName ?? 'Unknown Customer';
       double amount = double.tryParse(transaction.amount ?? '0') ?? 0.0;
       String type = transaction.type ?? 'unknown';
+      double transactionBalance = double.tryParse(transaction.balance ?? '0') ?? 0.0;
 
       if (!filteredCustomerSummary.containsKey(customerName)) {
         filteredCustomerSummary[customerName] = CustomerTransactionSummary(
@@ -239,18 +240,17 @@ class _CustomerTransactionsReportScreenState
         );
       }
 
-      // Assuming "Credit" type increases balance and "Debit" type decreases balance
+      // Calculate totals for display purposes
       if (transaction.type?.toLowerCase() == 'credit') {
         filteredCustomerSummary[customerName]!.totalCredit += amount;
       } else if (transaction.type?.toLowerCase() == 'debit') {
         filteredCustomerSummary[customerName]!.totalDebit += amount;
       }
-    }
 
-    // Calculate balance for each customer
-    filteredCustomerSummary.forEach((name, summary) {
-      summary.balance = summary.totalCredit - summary.totalDebit;
-    });
+      // Use the API-provided balance for the last transaction of each customer
+      // This gives us the running balance from the server
+      filteredCustomerSummary[customerName]!.balance = transactionBalance;
+    }
 
     setState(() {
       customerSummary = filteredCustomerSummary;

@@ -288,14 +288,6 @@ class _CustomerInformationEditWidgetState
       final customerId = widget.customer?.id;
       if (customerId == null) throw Exception("Invalid customer ID");
 
-      // Prepare payment status string
-      String paymentStatus = '';
-      if (selectedPaymentType == PaymentType.toPay) {
-        paymentStatus = 'to_pay';
-      } else if (selectedPaymentType == PaymentType.toReceive) {
-        paymentStatus = 'to_receive';
-      }
-
       final response = await customerProvider.updateCustomer(
         accessToken,
         phoneController.text,
@@ -310,7 +302,6 @@ class _CustomerInformationEditWidgetState
         dob: selectedDate?.toIso8601String().split('T')[0], // Format as YYYY-MM-DD
         storeId: widget.customer?.storeId ?? 1,
         balance: balanceController.text.trim(),
-        paymentType: paymentStatus.isNotEmpty ? paymentStatus : null,
       );
 
       Navigator.pop(context); // Close loading dialog
@@ -348,7 +339,7 @@ class _CustomerInformationEditWidgetState
             minRedeemablePoints: widget.customer!.minRedeemablePoints,
             pricePerPoint: widget.customer!.pricePerPoint,
             balance: double.tryParse(balanceController.text.trim()) ?? widget.customer!.balance,
-            paymentType: paymentStatus.isNotEmpty ? paymentStatus : widget.customer!.paymentType,
+            paymentType: widget.customer!.paymentType,
             address: widget.customer!.address,
             pincode: widget.customer!.pincode,
             city: widget.customer!.city,
@@ -469,101 +460,24 @@ class _CustomerInformationEditWidgetState
   }
 
   Widget _buildBalanceAndPaymentTypeFields() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 1,
-          child: buildColumnWidgetForTextFields(
-            controller: balanceController,
-            hintText: 'Balance',
-            title: 'Balance',
-            size: widget.size,
-            width: double.infinity,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-            ],
-            validator: (value) {
-              if (value != null && value.isNotEmpty) {
-                final balance = double.tryParse(value);
-                if (balance == null) {
-                  return 'Please enter a valid balance';
-                }
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          flex: 1,
-          child: _buildPaymentTypeField(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaymentTypeField() {
-    String displayText = '';
-    switch (selectedPaymentType) {
-      case PaymentType.toPay:
-        displayText = 'To Pay';
-        break;
-      case PaymentType.toReceive:
-        displayText = 'To Receive';
-        break;
-      case PaymentType.none:
-        displayText = '';
-        break;
-    }
-
     return buildColumnWidgetForTextFields(
-      controller: TextEditingController(text: displayText),
-      hintText: 'Select Payment Type',
-      title: 'Payment Type',
+      controller: balanceController,
+      hintText: 'Balance',
+      title: 'Balance',
       size: widget.size,
       width: double.infinity,
-      readOnly: true,
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Select Payment Type'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  title: const Text('To Pay'),
-                  onTap: () {
-                    setState(() {
-                      selectedPaymentType = PaymentType.toPay;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('To Receive'),
-                  onTap: () {
-                    setState(() {
-                      selectedPaymentType = PaymentType.toReceive;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('None'),
-                  onTap: () {
-                    setState(() {
-                      selectedPaymentType = PaymentType.none;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+      ],
+      validator: (value) {
+        if (value != null && value.isNotEmpty) {
+          final balance = double.tryParse(value);
+          if (balance == null) {
+            return 'Please enter a valid balance';
+          }
+        }
+        return null;
       },
     );
   }

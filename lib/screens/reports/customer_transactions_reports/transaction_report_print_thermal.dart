@@ -485,6 +485,7 @@ class TransactionReportThermalPrinter {
       String transactionType = '';
       String type = '';
       double amount = 0.0;
+      double transactionBalance = 0.0;
       // String tax = '10'; // Default tax value - COMMENTED OUT (Tax column hidden)
       // String status = ''; // COMMENTED OUT (Status column hidden)
       String date = '';
@@ -495,6 +496,7 @@ class TransactionReportThermalPrinter {
         transactionType = item['transactionType'] ?? 'N/A';
         type = item['type'] ?? 'N/A';
         amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+        transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
         // status = item['status'] ?? 'N/A'; // COMMENTED OUT (Status column hidden)
         date = item['date'] ?? 'N/A';
       } else {
@@ -511,6 +513,7 @@ class TransactionReportThermalPrinter {
               'N/A';
           type = item['type']?.toString() ?? 'N/A';
           amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+          transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
           // status = item['status']?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
           date = item['date']?.toString() ?? 'N/A';
         } else {
@@ -539,6 +542,7 @@ class TransactionReportThermalPrinter {
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
             amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
+            transactionBalance = double.tryParse(item.balance?.toString() ?? '0') ?? 0.0;
             // status = item.status?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
             date = item.date?.toString() ?? 'N/A';
 
@@ -553,6 +557,7 @@ class TransactionReportThermalPrinter {
             transactionType = 'N/A';
             type = 'N/A';
             amount = 0.0;
+            transactionBalance = 0.0;
             // status = 'N/A'; // COMMENTED OUT (Status column hidden)
             date = 'N/A';
           }
@@ -586,12 +591,8 @@ class TransactionReportThermalPrinter {
       String creditAmount =
           (type.toLowerCase() == 'credit') ? formattedAmount : '-';
 
-      // Update running balance
-      if (type.toLowerCase() == 'debit') {
-        runningBalance -= amount;
-      } else if (type.toLowerCase() == 'credit') {
-        runningBalance += amount;
-      }
+      // Use API-provided balance instead of calculating
+      runningBalance = transactionBalance;
 
       // Format date to show only date (no time)
       String formattedDate = date;
