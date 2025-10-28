@@ -962,6 +962,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (Hive.isBoxOpen('confirmed_orders')) {
         await Hive.box<HiveSavedOrder>('confirmed_orders').close();
       }
+      if (Hive.isBoxOpen('categories')) {
+        await Hive.box<HiveCategory>('categories').close();
+      }
 
       // Delete all Hive files
       final appDir = await getApplicationDocumentsDirectory();

@@ -429,6 +429,7 @@ class _SalesExecutiveReportScreenState
                                 5: FlexColumnWidth(1.5), // Cash Sales
                                 6: FlexColumnWidth(1.5), // Credit Sales
                                 7: FlexColumnWidth(1.5), // Collected Sales
+                                8: FlexColumnWidth(1.2), // Actions
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -444,6 +445,7 @@ class _SalesExecutiveReportScreenState
                                     _buildTableHeader("Cash Sales"),
                                     _buildTableHeader("Credit Sales"),
                                     _buildTableHeader("Collected Sales"),
+                                    _buildTableHeader("Actions"),
                                   ],
                                 ),
                               ],
@@ -489,6 +491,7 @@ class _SalesExecutiveReportScreenState
                                                     1.5), // Credit Sales
                                                 7: FlexColumnWidth(
                                                     1.5), // Collected Sales
+                                                8: FlexColumnWidth(1.2), // Actions
                                               },
                                               border: null,
                                               defaultVerticalAlignment:
@@ -520,6 +523,7 @@ class _SalesExecutiveReportScreenState
                                                         "₹${report.formattedCreditSales}"),
                                                     _buildTableCell(
                                                         "₹${report.formattedCollectedSales}"),
+                                                    _buildActionsCell(report),
                                                   ],
                                                 );
                                               }).toList(),
@@ -663,6 +667,177 @@ class _SalesExecutiveReportScreenState
             Colors.black,
           ),
         ),
+      ),
+    );
+  }
+
+  TableCell _buildActionsCell(SalesExecutiveReportData report) {
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: BuildBoxShadowContainer(
+            margin: const EdgeInsets.only(left: 5, right: 5),
+            circleRadius: 5,
+            child: IconButton(
+              icon: Icon(
+                Icons.visibility,
+                size: 18,
+                color: ColorManager.kPrimaryColor.withOpacity(0.9),
+              ),
+              onPressed: () => _showExecutiveDetails(report),
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showExecutiveDetails(SalesExecutiveReportData report) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 8,
+          backgroundColor: Colors.white,
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width / 1.8,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Sales Executive Details',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s20,
+                        0.30,
+                        Colors.black,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+                BuildBoxShadowContainer(
+                  circleRadius: 12,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Executive Details',
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s16,
+                            0.24,
+                            Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(2),
+                            1: FlexColumnWidth(2),
+                          },
+                          defaultVerticalAlignment:
+                              TableCellVerticalAlignment.middle,
+                          children: [
+                            // Order matches screenshot: left column sequence then right column sequence
+                            _detailsRow('Name', report.name ?? 'N/A', 'Phone', report.phone ?? 'N/A'),
+                            _detailsRow('Total Orders', (report.orderCount ?? 0).toString(), 'Total Sales', '₹${report.formattedTotalSales}'),
+                            _detailsRow('Total Payment Received', '₹${report.formattedTotalPaymentReceived}', 'Total Amount Collected On Sale', '₹${report.formattedCollectedSales}'),
+                            _detailsRow('Total Credit Collected (Prev Balance)', '₹${report.formattedCreditCollectedPrev}', 'Total UPI Sales', '₹${report.formattedUpiSales}'),
+                            _detailsRow('Total Cash Sales', '₹${report.formattedCashSales}', 'Total Credit Amount', '₹${report.formattedCreditSales}'),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ColorManager.kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  TableRow _detailsRow(
+      String leftTitle, String leftValue, String rightTitle, String rightValue) {
+    return TableRow(
+      children: [
+        _detailsCell(leftTitle, leftValue),
+        _detailsCell(rightTitle, rightValue),
+      ],
+    );
+  }
+
+  Widget _detailsCell(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s13,
+              0.18,
+              Colors.black,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s13,
+              0.18,
+              Colors.black,
+            ),
+          ),
+        ],
       ),
     );
   }

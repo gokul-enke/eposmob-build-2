@@ -21,6 +21,10 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? listTitle3;
   final VoidCallback? onTapTitle4;
   final String? listTitle4;
+  // Optional: allow custom icon size per tile (kept consistent with DrawerListTile)
+  final double? iconSize;
+  // Optional: allow custom horizontal gap between icon and title per tile
+  final double? horizontalGap;
   
   // Permission parameters for sub-items
   final bool? showTitle1;
@@ -49,6 +53,8 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
     this.showTitle2 = true,
     this.showTitle3 = true,
     this.showTitle4 = true,
+    this.iconSize,
+    this.horizontalGap,
   });
 
   @override
@@ -70,6 +76,9 @@ class _DrawerListTileExpandableColumnState
 
   @override
   Widget build(BuildContext context) {
+    final double resolvedIconSize = widget.iconSize ?? 18.0;
+    final double leadingBox = resolvedIconSize + 4.0; // small padding around icon
+    final double gap = widget.horizontalGap ?? 12.0;
     return widget.selected
         ? Column(
             children: [
@@ -95,7 +104,7 @@ class _DrawerListTileExpandableColumnState
                     contentPadding: ResponsiveWidget.isTablet(context)
                         ? const EdgeInsets.only(left: 15, right: 10)
                         : const EdgeInsets.only(left: 45, right: 15),
-                    horizontalTitleGap: 0.0,
+                    horizontalTitleGap: gap,
                     visualDensity:
                         const VisualDensity(vertical: -4, horizontal: 0),
                     minVerticalPadding: 0,
@@ -104,16 +113,26 @@ class _DrawerListTileExpandableColumnState
                         _isExpanded = !_isExpanded;
                       });
                     },
-                    leading: widget.icon != null
-                        ? Icon(
-                            widget.icon,
-                            color: Colors.white,
-                            size: 20,
-                          )
-                        : WebsafeSvg.asset(
-                            widget.iconPath!,
-                            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                          ),
+                    minLeadingWidth: leadingBox,
+                    leading: SizedBox(
+                      width: leadingBox,
+                      height: leadingBox,
+                      child: Center(
+                        child: widget.icon != null
+                            ? Icon(
+                                widget.icon,
+                                color: Colors.white,
+                                size: resolvedIconSize,
+                              )
+                            : WebsafeSvg.asset(
+                                widget.iconPath!,
+                                width: resolvedIconSize,
+                                height: resolvedIconSize,
+                                colorFilter: const ColorFilter.mode(
+                                    Colors.white, BlendMode.srcIn),
+                              ),
+                      ),
+                    ),
                     trailing: _isExpanded
                         ? const Icon(
                             Icons.keyboard_arrow_up_sharp,
@@ -245,23 +264,36 @@ class _DrawerListTileExpandableColumnState
             contentPadding: ResponsiveWidget.isTablet(context)
                 ? const EdgeInsets.only(left: 15, right: 10)
                 : const EdgeInsets.only(left: 45, right: 15),
-            horizontalTitleGap: 0.0,
+            horizontalTitleGap: gap,
             visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
             minVerticalPadding: 0,
             onTap: widget.onTap,
-            leading: widget.icon != null
-                ? Icon(widget.icon,
-                    size: 20,
-                    color: widget.selected
-                        ? Colors.white
-                        : ColorManager.kPrimaryColor)
-                : WebsafeSvg.asset(
-                    widget.iconPath!,
-                    colorFilter: ColorFilter.mode(
-                      widget.selected ? Colors.white : ColorManager.kPrimaryColor,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+            minLeadingWidth: leadingBox,
+            leading: SizedBox(
+              width: leadingBox,
+              height: leadingBox,
+              child: Center(
+                child: widget.icon != null
+                    ? Icon(
+                        widget.icon,
+                        size: resolvedIconSize,
+                        color: widget.selected
+                            ? Colors.white
+                            : ColorManager.kPrimaryColor,
+                      )
+                    : WebsafeSvg.asset(
+                        widget.iconPath!,
+                        width: resolvedIconSize,
+                        height: resolvedIconSize,
+                        colorFilter: ColorFilter.mode(
+                          widget.selected
+                              ? Colors.white
+                              : ColorManager.kPrimaryColor,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+              ),
+            ),
             title: Text(
               widget.title,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
