@@ -6,6 +6,11 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dropdown_with_search.dart';
@@ -42,6 +47,233 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       loadInvoices();
     });
   }
+
+  Future<void> _performZatcaPhase2SendWithPdf(Invoice invoice) async {
+    try {
+      final String? token = Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Send With PDF] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      if (token == null || token.isEmpty) {
+        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
+        showScaffoldError(context: context, message: 'Missing authentication token');
+        return;
+      }
+
+      showScaffold(context: context, message: 'Processing ZATCA Phase 2...');
+      showLoadingOverlay(context, message: 'Processing...');
+
+      final provider = Provider.of<InvoiceProvider>(context, listen: false);
+      final result = await provider.zatcaPhase2InvoicePrint(
+        id: invoice.id,
+        accessToken: token,
+      );
+
+      debugPrint('[ZATCA][Phase2 Send With PDF] Response: '+result.toString());
+      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+        final data = result['data'] ?? {};
+        final String invoiceNumber = (data['invoice_number']?.toString() ?? invoice.invoiceNumber);
+        final String? downloadUrl = data['download_url']?.toString();
+        final String? fileName = data['filename']?.toString();
+        if (downloadUrl != null && downloadUrl.isNotEmpty) {
+          await _downloadAndOpenPdf(downloadUrl, suggestedFileName: fileName);
+        }
+        showScaffold(
+          context: context,
+          message: 'Invoice '+invoiceNumber+' processed under ZATCA Phase 2.',
+        );
+      } else {
+        final msg = (result is Map ? result['message'] : null) ?? 'Failed to process ZATCA Phase 2';
+        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: '+msg.toString());
+        showScaffoldError(context: context, message: msg.toString());
+      }
+    } catch (e) {
+      debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: '+e.toString());
+      showScaffoldError(context: context, message: 'Error: '+e.toString());
+    } finally {
+      hideLoadingOverlay();
+    }
+  }
+
+  Future<void> _performZatcaPhase2Resync(Invoice invoice) async {
+    try {
+      final String? token = Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Resync] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      if (token == null || token.isEmpty) {
+        debugPrint('[ZATCA][Phase2 Resync] ERROR: Missing authentication token');
+        showScaffoldError(context: context, message: 'Missing authentication token');
+        return;
+      }
+
+      showScaffold(context: context, message: 'Resyncing invoice with ZATCA...');
+      showLoadingOverlay(context, message: 'Resyncing...');
+
+      final provider = Provider.of<InvoiceProvider>(context, listen: false);
+      final result = await provider.zatcaPhase2InvoiceResync(
+        id: invoice.id,
+        accessToken: token,
+      );
+
+      debugPrint('[ZATCA][Phase2 Resync] Response: '+result.toString());
+      if (result is Map) {
+        final bool ok = (result['status'] == 'success') || (result['success'] == true) || (result['status'] == true);
+        final data = (result['data'] is Map) ? result['data'] as Map : null;
+        final String invoiceNumber = data?['invoice_number']?.toString() ?? invoice.invoiceNumber;
+        final String resyncStatus = data?['resync_status']?.toString() ?? (ok ? 'success' : 'failed');
+        final String? rawError = data?['error']?.toString();
+        if (ok) {
+          showScaffold(
+            context: context,
+            message: 'Invoice '+invoiceNumber+' resynced with status: '+resyncStatus,
+          );
+        } else {
+          String detail = rawError != null
+              ? rawError.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim()
+              : (result['message']?.toString() ?? 'Failed to resync invoice');
+          if (detail.length > 220) detail = detail.substring(0, 220)+'...';
+          final errMsg = 'Resync failed for '+invoiceNumber+' (status: '+resyncStatus+'). '+detail;
+          debugPrint('[ZATCA][Phase2 Resync] ERROR: '+errMsg);
+          showScaffoldError(context: context, message: errMsg);
+        }
+      } else {
+        showScaffoldError(context: context, message: 'Failed to resync invoice');
+      }
+    } catch (e) {
+      debugPrint('[ZATCA][Phase2 Resync] EXCEPTION: '+e.toString());
+      showScaffoldError(context: context, message: 'Error: '+e.toString());
+    } finally {
+      hideLoadingOverlay();
+    }
+  }
+
+  Future<void> _showInvoiceActionsSheet(Invoice invoice) async {
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Text(
+                  'More Options',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.green.withOpacity(0.12),
+                    child: const Icon(Icons.qr_code, color: Colors.green),
+                  ),
+                  title: const Text('ZATCA Print'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _performZatcaPhase1Print(invoice);
+                  },
+                ),
+                ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.orange.withOpacity(0.12),
+                    child: const Icon(Icons.description, color: Colors.orange),
+                  ),
+                  title: const Text('ZATCA Phase 2'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _performZatcaPhase2SendWithPdf(invoice);
+                  },
+                ),
+                ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.purple.withOpacity(0.12),
+                    child: const Icon(Icons.sync, color: Colors.purple),
+                  ),
+                  title: const Text('Resync Invoice'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _performZatcaPhase2Resync(invoice);
+                  },
+                ),
+                ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor:
+                        ColorManager.kPrimaryColor.withOpacity(0.12),
+                    child: Icon(Icons.send,
+                        color: ColorManager.kPrimaryColor),
+                  ),
+                  title: const Text('Send to ZATCA'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _performZatcaPhase2Send(invoice);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _performZatcaPhase2Send(Invoice invoice) async {
+    try {
+      final String? token = Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Send] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      if (token == null || token.isEmpty) {
+        debugPrint('[ZATCA][Phase2 Send] ERROR: Missing authentication token');
+        showScaffoldError(context: context, message: 'Missing authentication token');
+        return;
+      }
+
+      showScaffold(context: context, message: 'Sending to ZATCA...');
+      showLoadingOverlay(context, message: 'Sending...');
+
+      final provider = Provider.of<InvoiceProvider>(context, listen: false);
+      final result = await provider.zatcaPhase2InvoicePrint(
+        id: invoice.id,
+        accessToken: token,
+      );
+
+      debugPrint('[ZATCA][Phase2 Send] Response: '+result.toString());
+      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+        final data = result['data'] ?? {};
+        final String invoiceNumber = (data['invoice_number']?.toString() ?? invoice.invoiceNumber);
+        // Do NOT open PDF here per requirement. Just inform the user.
+        showScaffold(
+          context: context,
+          message: 'Invoice '+invoiceNumber+' submitted to ZATCA successfully.',
+        );
+      } else {
+        final msg = (result is Map ? result['message'] : null) ?? 'Failed to send to ZATCA';
+        debugPrint('[ZATCA][Phase2 Send] ERROR: '+msg.toString());
+        showScaffoldError(context: context, message: msg.toString());
+      }
+    } catch (e) {
+      debugPrint('[ZATCA][Phase2 Send] EXCEPTION: '+e.toString());
+      showScaffoldError(context: context, message: 'Error: '+e.toString());
+    } finally {
+      hideLoadingOverlay();
+    }
+  }
+
+  
 
   Future<void> loadInvoices() async {
     if (isInitialized) return;
@@ -858,15 +1090,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                               ],
                             ),
                             child: Table(
-                              columnWidths: const {
-                                0: FlexColumnWidth(1.5), // Invoice Number
-                                1: FlexColumnWidth(1.0), // Amount
-                                2: FlexColumnWidth(2.0), // Name
-                                3: FlexColumnWidth(1.5), // Invoice Date
-                                4: FlexColumnWidth(1.0), // Type
-                                5: FlexColumnWidth(1.5), // Due Date
-                                6: FlexColumnWidth(1.0), // Status
-                                7: FlexColumnWidth(1.0), // Action
+                              columnWidths: {
+                                0: const FlexColumnWidth(1.4), // Invoice Number
+                                1: const FlexColumnWidth(0.9), // Amount
+                                2: const FlexColumnWidth(1.6), // Name (reduced)
+                                3: const FlexColumnWidth(1.3), // Invoice Date (reduced)
+                                4: const FlexColumnWidth(0.9), // Type
+                                5: const FlexColumnWidth(1.3), // Due Date (reduced)
+                                6: const FlexColumnWidth(0.9), // Status
+                                // Make action column wider on small screens
+                                7: FlexColumnWidth(MediaQuery.of(context).size.width < 900 ? 2.2 : 1.5),
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -908,17 +1141,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                         physics: const BouncingScrollPhysics(),
                                         scrollDirection: Axis.vertical,
                                         child: Table(
-                                          columnWidths: const {
-                                            0: FlexColumnWidth(
-                                                1.5), // Invoice Number
-                                            1: FlexColumnWidth(1.0), // Amount
-                                            2: FlexColumnWidth(2.0), // Name
-                                            3: FlexColumnWidth(
-                                                1.5), // Invoice Date
-                                            4: FlexColumnWidth(1.0), // Type
-                                            5: FlexColumnWidth(1.5), // Due Date
-                                            6: FlexColumnWidth(1.0), // Status
-                                            7: FlexColumnWidth(1.0), // Action
+                                          columnWidths: {
+                                            0: const FlexColumnWidth(1.4), // Invoice Number
+                                            1: const FlexColumnWidth(0.9), // Amount
+                                            2: const FlexColumnWidth(1.6), // Name (reduced)
+                                            3: const FlexColumnWidth(1.3), // Invoice Date (reduced)
+                                            4: const FlexColumnWidth(0.9), // Type
+                                            5: const FlexColumnWidth(1.3), // Due Date (reduced)
+                                            6: const FlexColumnWidth(0.9), // Status
+                                            7: FlexColumnWidth(MediaQuery.of(context).size.width < 900 ? 2.2 : 1.5),
                                           },
                                           border: null,
                                           defaultVerticalAlignment:
@@ -957,36 +1188,59 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                     padding:
                                                         const EdgeInsets.all(
                                                             8.0),
-                                                    child:
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        const SizedBox(width: 8),
                                                         BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            circleRadius: 5,
-                                                            child: IconButton(
-                                                              icon: Icon(
-                                                                Icons
-                                                                    .visibility,
-                                                                size: 18,
-                                                                color: ColorManager
-                                                                    .kPrimaryColor
-                                                                    .withOpacity(
-                                                                        0.9),
-                                                              ),
-                                                              onPressed: () =>
-                                                                  _showInvoiceDetails(
-                                                                      invoice),
-                                                              constraints:
-                                                                  const BoxConstraints(
-                                                                minWidth: 36,
-                                                                minHeight: 36,
-                                                              ),
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                            )),
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                                  left: 5,
+                                                                  right: 5),
+                                                          circleRadius: 5,
+                                                          child: IconButton(
+                                                            icon: Icon(
+                                                              Icons
+                                                                  .visibility,
+                                                              size: 18,
+                                                              color: ColorManager
+                                                                  .kPrimaryColor
+                                                                  .withOpacity(
+                                                                      0.9),
+                                                            ),
+                                                            onPressed: () =>
+                                                                _showInvoiceDetails(
+                                                                    invoice),
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                              minWidth: 36,
+                                                              minHeight: 36,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets
+                                                                    .zero,
+                                                          ),
+                                                        ),
+                                                        BuildBoxShadowContainer(
+                                                          margin: const EdgeInsets.only(left: 5, right: 5),
+                                                          circleRadius: 5,
+                                                          child: IconButton(
+                                                            icon: Icon(
+                                                              Icons.more_vert,
+                                                              size: 18,
+                                                              color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                            ),
+                                                            onPressed: () => _showInvoiceActionsSheet(invoice),
+                                                            constraints: const BoxConstraints(
+                                                              minWidth: 36,
+                                                              minHeight: 36,
+                                                            ),
+                                                            padding: EdgeInsets.zero,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -1005,6 +1259,89 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         );
       }),
     );
+  }
+
+  
+
+  Future<void> _performZatcaPhase1Print(Invoice invoice) async {
+    try {
+      final String? token = Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase1 Print] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      if (token == null || token.isEmpty) {
+        debugPrint('[ZATCA][Phase1 Print] ERROR: Missing authentication token');
+        showScaffoldError(context: context, message: 'Missing authentication token');
+        return;
+      }
+
+      showScaffold(context: context, message: 'Processing ZATCA Print...');
+      showLoadingOverlay(context, message: 'Processing...');
+
+      final provider = Provider.of<InvoiceProvider>(context, listen: false);
+      final result = await provider.zatcaPhase1InvoicePrint(
+        id: invoice.id,
+        accessToken: token,
+      );
+
+      debugPrint('[ZATCA][Phase1 Print] Response: '+result.toString());
+      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+        final data = result['data'] ?? {};
+        final String? downloadUrl = data['download_url']?.toString();
+        final String? fileName = data['filename']?.toString();
+        if (downloadUrl != null && downloadUrl.isNotEmpty) {
+          await _downloadAndOpenPdf(downloadUrl, suggestedFileName: fileName);
+        } else {
+          showScaffold(
+            context: context,
+            message: (result['message']?.toString() ?? 'ZATCA Print completed'),
+          );
+        }
+      } else {
+        final msg = (result is Map ? result['message'] : null) ?? 'Failed to trigger ZATCA Print';
+        debugPrint('[ZATCA][Phase1 Print] ERROR: '+msg.toString());
+        showScaffoldError(context: context, message: msg.toString());
+      }
+    } catch (e) {
+      debugPrint('[ZATCA][Phase1 Print] EXCEPTION: '+e.toString());
+      showScaffoldError(context: context, message: 'Error: '+e.toString());
+    } finally {
+      hideLoadingOverlay();
+    }
+  }
+
+  Future<void> _downloadAndOpenPdf(String url, {String? suggestedFileName}) async {
+    try {
+      if (kIsWeb) {
+        await launchUrlString(url, mode: LaunchMode.externalApplication);
+        showScaffold(context: context, message: 'Opened PDF in browser');
+        return;
+      }
+
+      final dir = await getApplicationDocumentsDirectory();
+      final String fileName = (suggestedFileName != null && suggestedFileName.trim().isNotEmpty)
+          ? suggestedFileName
+          : 'invoice_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final String savePath = '${dir.path}/$fileName';
+
+      final dio = Dio();
+      await dio.download(
+        url,
+        savePath,
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      await OpenFile.open(savePath);
+      showScaffold(context: context, message: 'PDF downloaded');
+    } catch (e) {
+      debugPrint('[ZATCA][PDF] ERROR while downloading/opening: '+e.toString());
+      try {
+        await launchUrlString(url, mode: LaunchMode.externalApplication);
+      } catch (_) {}
+      showScaffoldError(context: context, message: 'Failed to open PDF');
+    }
   }
 
   Widget _buildStatusChip(String status) {

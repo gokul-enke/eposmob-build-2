@@ -5,9 +5,10 @@ class APPUrl {
   // static String baseURL = "https://kmstoys.enke.in";
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
-  static String baseURL = "https://eposdemo.hypersouq.in";
+  // static String baseURL = "https://eposdemo.hypersouq.in";
+  // static String baseURL = "https://actdemo.yougoit.in";
   // static String baseURL = "https://epos.hypersouq.in";
-  //  static String baseURL = "https://epos.yougoit.in";
+  static String baseURL = "https://epos.yougoit.in";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
   // static String baseURL = "https://icy-goats-brake.loca.lt";
@@ -27,6 +28,7 @@ class APPUrl {
   static String getProductUrl =
       '$baseURL/api/v1/product/executive/list-products';
   static String addToCartUrl = '$baseURL/api/v1/cart/add-to-cart';
+  static String listRoles = '$baseURL/api/v1/roles/list';
   static String removeFromCartUrl = '$baseURL/api/v1/cart/remove-from-cart';
   static String listCartUrl = '$baseURL/api/v1/cart/executive/list-cart-items';
   static String updateCartItemPriceUrl =
@@ -176,6 +178,14 @@ class APPUrl {
   static String executivesOverview =
       '$baseURL/api/v1/dashboard/executives-overview';
   static String salesGraph = '$baseURL/api/v1/dashboard/executive-sales-graph';
+
+  // ZATCA endpoints
+  static String zatcaPhase1InvoicePrint =
+      '$baseURL/api/v1/zatca/phase1/invoice/print';
+  static String zatcaPhase2InvoicePrint =
+      '$baseURL/api/v1/zatca/phase2/invoice/print';
+  static String zatcaPhase2InvoiceResync =
+      '$baseURL/api/v1/zatca/phase2/invoice/resync';
 
   // Supplier Dashboard Endpoints
   static String suppliersOverview =

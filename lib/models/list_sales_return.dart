@@ -101,6 +101,7 @@ class SalesReturnOrder {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<SalesReturnItem> items;
+  final Order? order; // Add nested order object
 
   SalesReturnOrder({
     required this.id,
@@ -111,6 +112,7 @@ class SalesReturnOrder {
     required this.createdAt,
     required this.updatedAt,
     required this.items,
+    this.order,
   });
 
   factory SalesReturnOrder.fromJson(Map<String, dynamic> json) {
@@ -126,6 +128,7 @@ class SalesReturnOrder {
               ?.map((item) => SalesReturnItem.fromJson(item))
               .toList() ??
           [],
+      order: json['order'] != null ? Order.fromJson(json['order']) : null,
     );
   }
 }
@@ -280,6 +283,124 @@ class Product {
       companyId: json['company_id'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+    );
+  }
+}
+
+// Add Order class for nested order object in sales return
+class Order {
+  final int id;
+  final int cartId;
+  final int? addressId;
+  final String orderDate;
+  final String orderNumber;
+  final int? paymentId;
+  final List<String>? paymentMethod;
+  final String? paymentStatus;
+  final String? deliveryStatus;
+  final String status;
+  final String subTotal;
+  final String discount;
+  final String grandTotal;
+  final String? tax;
+  final String? shippingCost;
+  final String sourceType;
+  final int deliveryMethodId;
+  final int companyId;
+  final OrderCustomer? customer;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  Order({
+    required this.id,
+    required this.cartId,
+    this.addressId,
+    required this.orderDate,
+    required this.orderNumber,
+    this.paymentId,
+    this.paymentMethod,
+    this.paymentStatus,
+    this.deliveryStatus,
+    required this.status,
+    required this.subTotal,
+    required this.discount,
+    required this.grandTotal,
+    this.tax,
+    this.shippingCost,
+    required this.sourceType,
+    required this.deliveryMethodId,
+    required this.companyId,
+    this.customer,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory Order.fromJson(Map<String, dynamic> json) {
+    return Order(
+      id: json['id'],
+      cartId: json['cart_id'],
+      addressId: json['address_id'],
+      orderDate: json['order_date'],
+      orderNumber: json['order_number'],
+      paymentId: json['payment_id'],
+      paymentMethod: json['payment_method'] != null
+          ? List<String>.from(json['payment_method'])
+          : null,
+      paymentStatus: json['payment_status'],
+      deliveryStatus: json['delivery_status'],
+      status: json['status'],
+      subTotal: json['sub_total'].toString(),
+      discount: json['discount'].toString(),
+      grandTotal: json['grand_total'].toString(),
+      tax: json['tax']?.toString(),
+      shippingCost: json['shipping_cost']?.toString(),
+      sourceType: json['source_type'],
+      deliveryMethodId: json['delivery_method_id'],
+      companyId: json['company_id'],
+      customer:
+          json['customer'] != null ? OrderCustomer.fromJson(json['customer']) : null,
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
+    );
+  }
+}
+
+class OrderCustomer {
+  final int id;
+  final int userId;
+  final int? laravelThroughKey;
+  final OrderCustomerUser? user;
+
+  OrderCustomer({
+    required this.id,
+    required this.userId,
+    this.laravelThroughKey,
+    this.user,
+  });
+
+  factory OrderCustomer.fromJson(Map<String, dynamic> json) {
+    return OrderCustomer(
+      id: json['id'],
+      userId: json['user_id'],
+      laravelThroughKey: json['laravel_through_key'],
+      user: json['user'] != null ? OrderCustomerUser.fromJson(json['user']) : null,
+    );
+  }
+}
+
+class OrderCustomerUser {
+  final int id;
+  final String name;
+
+  OrderCustomerUser({
+    required this.id,
+    required this.name,
+  });
+
+  factory OrderCustomerUser.fromJson(Map<String, dynamic> json) {
+    return OrderCustomerUser(
+      id: json['id'],
+      name: json['name']?.toString() ?? '',
     );
   }
 }

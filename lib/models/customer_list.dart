@@ -64,6 +64,7 @@ class CustomerListModelData {
 
   // Financial fields
   final double? balance;
+  final String? paymentType;
 
   // Address fields
   final String? address;
@@ -101,6 +102,7 @@ class CustomerListModelData {
     this.minRedeemablePoints,
     this.pricePerPoint,
     this.balance,
+    this.paymentType,
     this.address,
     this.pincode,
     this.city,
@@ -142,6 +144,7 @@ class CustomerListModelData {
         minRedeemablePoints: json["min_redeemable_points"],
         pricePerPoint: json["price_per_point"]?.toDouble(),
         balance: json["balance"]?.toDouble(),
+        paymentType: json["payment_type"],
         address: json["address"],
         pincode: json["pin_code"] ?? json["pincode"],
         city: json["city"],
@@ -182,6 +185,7 @@ class CustomerListModelData {
         "min_redeemable_points": minRedeemablePoints,
         "price_per_point": pricePerPoint,
         "balance": balance,
+        "payment_type": paymentType,
         "address": address,
         "pin_code": pincode,
         "city": city,

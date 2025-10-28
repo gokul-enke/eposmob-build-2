@@ -31,7 +31,7 @@ class _SupplierAutocompleteState extends State<SupplierAutocomplete> {
   void initState() {
     super.initState();
     filteredSuppliers = widget.supplierList;
-    
+
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
         setState(() {
@@ -39,6 +39,14 @@ class _SupplierAutocompleteState extends State<SupplierAutocomplete> {
         });
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant SupplierAutocomplete oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.supplierList != widget.supplierList) {
+      filteredSuppliers = widget.supplierList;
+    }
   }
 
   @override
@@ -86,6 +94,8 @@ class _SupplierAutocompleteState extends State<SupplierAutocomplete> {
               _filterSuppliers(value);
               if (value.isEmpty) {
                 widget.onSelected('');
+              } else {
+                widget.onSelected(value);
               }
             },
             onTap: () {

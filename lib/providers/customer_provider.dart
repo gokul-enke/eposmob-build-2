@@ -274,7 +274,9 @@ class CustomerProvider extends ChangeNotifier {
       String city,
       String state,
       String country,
-      BuildContext context) async {
+      BuildContext context,
+      {String? balance,
+      String? paymentType}) async {
     debugPrint("addCustomer API called");
     final Map<String, dynamic> apiBodyData = {
       'phone': phone,
@@ -287,6 +289,14 @@ class CustomerProvider extends ChangeNotifier {
       'state': state,
       'country': country,
     };
+    
+    // Add optional parameters if provided
+    if (balance != null && balance.isNotEmpty) {
+      apiBodyData['balance'] = balance;
+    }
+    if (paymentType != null && paymentType.isNotEmpty) {
+      apiBodyData['payment_type'] = paymentType;
+    }
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addCustomerUrl);
     // Get API key from SharedPreferences
@@ -367,6 +377,8 @@ class CustomerProvider extends ChangeNotifier {
     String? gender,
     String? dob,
     int? storeId,
+    String? balance,
+    String? paymentType,
   }) async {
     debugPrint("updateCustomer API called");
     final Map<String, dynamic> apiBodyData = {
@@ -393,6 +405,12 @@ class CustomerProvider extends ChangeNotifier {
     }
     if (storeId != null) {
       apiBodyData['store_id'] = storeId;
+    }
+    if (balance != null && balance.isNotEmpty) {
+      apiBodyData['balance'] = balance;
+    }
+    if (paymentType != null && paymentType.isNotEmpty) {
+      apiBodyData['payment_type'] = paymentType;
     }
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.updateCustomerUrl);

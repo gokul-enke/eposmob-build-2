@@ -260,7 +260,14 @@ class _SalesScreenState extends State<SalesScreen> {
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
       final appSettings = appSettingsProvider.appSettings;
-      final billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      
+      // Check if orderReturns data is available to determine which config to use
+      final billDocumentConfig = (orderData.orderReturns != null && 
+          orderData.orderReturns!.returnItems != null && 
+          orderData.orderReturns!.returnItems!.isNotEmpty)
+          ? (docConfigProvider.getDocumentConfig("Sales Return Bill") ?? 
+             docConfigProvider.getDocumentConfig("Bill"))
+          : docConfigProvider.getDocumentConfig("Bill");
 
       if (appSettings == null || billDocumentConfig == null) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -299,6 +306,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerAddress: orderData.customerDetails?.address?.isNotEmpty == true
             ? orderData.customerDetails!.address!.join(', ')
             : null,
+        orderReturns: orderData.orderReturns,
       );
 
       // Close loading dialog
@@ -431,11 +439,11 @@ class _SalesScreenState extends State<SalesScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Row(
+            title: const Row(
               children: [
                 Icon(Icons.warning, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text('WhatsApp Not Connected'),
+                SizedBox(width: 8),
+                Text('WhatsApp Not Connected'),
               ],
             ),
             content: Text(
@@ -521,11 +529,11 @@ class _SalesScreenState extends State<SalesScreen> {
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Row(
+          title: const Row(
             children: [
-              const Icon(Icons.message, color: Color(0xFF25D366)),
-              const SizedBox(width: 8),
-              const Text('Send via WhatsApp Bot'),
+              Icon(Icons.message, color: Color(0xFF25D366)),
+              SizedBox(width: 8),
+              Text('Send via WhatsApp Bot'),
             ],
           ),
           content: Column(
@@ -665,7 +673,14 @@ class _SalesScreenState extends State<SalesScreen> {
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
       final appSettings = appSettingsProvider.appSettings;
-      final billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      
+      // Check if orderReturns data is available to determine which config to use
+      final billDocumentConfig = (orderData.orderReturns != null && 
+          orderData.orderReturns!.returnItems != null && 
+          orderData.orderReturns!.returnItems!.isNotEmpty)
+          ? (docConfigProvider.getDocumentConfig("Sales Return Bill") ?? 
+             docConfigProvider.getDocumentConfig("Bill"))
+          : docConfigProvider.getDocumentConfig("Bill");
 
       if (appSettings == null || billDocumentConfig == null) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -704,6 +719,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerAddress: orderData.customerDetails?.address?.isNotEmpty == true
             ? orderData.customerDetails!.address!.join(', ')
             : null,
+        orderReturns: orderData.orderReturns,
       );
 
       if (pdfFile == null) {
@@ -1265,6 +1281,7 @@ Powered by CloudPOS''',
                       customerPhone: customerPhone,
                       customerEmail: customerEmail,
                       customerAddress: customerAddress,
+                      orderReturns: orderDetails.data?.orderReturns,
                     ),
                   ),
                 );

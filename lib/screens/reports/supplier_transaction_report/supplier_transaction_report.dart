@@ -354,47 +354,44 @@ class _SupplierTransactionReportScreenState
     return Column(
       children: [
         // First row of filters
-        SizedBox(
-          height: 90,
-          child: Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: _buildSupplierAutocompleteField(),
+        Row(
+          children: [
+            Expanded(
+              flex: 1,
+              child: _buildSupplierAutocompleteField(),
+            ),
+            Expanded(
+              flex: 1,
+              child: _buildDateField(
+                "From Date",
+                _fromDateController,
+                true,
               ),
-              Expanded(
-                flex: 1,
-                child: _buildDateField(
-                  "From Date",
-                  _fromDateController,
-                  true,
+            ),
+            Expanded(
+              flex: 1,
+              child: _buildDateField(
+                "To Date",
+                _toDateController,
+                false,
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 45, left: 10),
+                child: CustomRoundButton(
+                  title: "Reset",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  fct: _resetFilters,
+                  height: 45,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
                 ),
               ),
-              Expanded(
-                flex: 1,
-                child: _buildDateField(
-                  "To Date",
-                  _toDateController,
-                  false,
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 45, left: 10),
-                  child: CustomRoundButton(
-                    title: "Reset",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    fct: _resetFilters,
-                    height: 45,
-                    width: double.infinity,
-                    fontSize: FontSize.s12,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );

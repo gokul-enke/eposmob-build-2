@@ -307,7 +307,24 @@ class _PrintPageState extends State<PrintPage> {
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
       debugPrint("Loading document configurations from provider...");
-      _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales Return Bill") ?? docConfigProvider.getDocumentConfig("Bill");
+      
+      // Check if orderReturns data is available
+      if (widget.orderReturns != null && 
+          widget.orderReturns!.returnItems != null && 
+          widget.orderReturns!.returnItems!.isNotEmpty) {
+        debugPrint("Order has returns, trying to load 'Sales Return Bill' configuration...");
+        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales Return Bill");
+        
+        if (_billDocumentConfig != null) {
+          debugPrint("SUCCESS: Sales Return Bill configuration loaded");
+        } else {
+          debugPrint("Sales Return Bill configuration not found, falling back to Bill configuration");
+          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+        }
+      } else {
+        debugPrint("No returns in order, loading 'Bill' configuration...");
+        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      }
 
       if (_billDocumentConfig == null) {
         debugPrint(
@@ -344,13 +361,29 @@ class _PrintPageState extends State<PrintPage> {
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      // Check if orderReturns data is available and load appropriate config
+      if (widget.orderReturns != null && 
+          widget.orderReturns!.returnItems != null && 
+          widget.orderReturns!.returnItems!.isNotEmpty) {
+        debugPrint("Order has returns, loading 'Sales Return Bill' configuration from API...");
+        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales Return Bill");
+        
+        if (_billDocumentConfig != null) {
+          debugPrint("SUCCESS: Sales Return Bill configuration loaded from API");
+        } else {
+          debugPrint("Sales Return Bill not found, falling back to Bill configuration");
+          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+        }
+      } else {
+        debugPrint("No returns, loading 'Bill' configuration from API...");
+        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      }
 
       if (_billDocumentConfig != null) {
-        debugPrint("SUCCESS: Bill document configuration loaded from API");
+        debugPrint("SUCCESS: Document configuration loaded from API");
       } else {
         debugPrint(
-            "ERROR: Bill document configuration still null after API fetch");
+            "ERROR: Document configuration still null after API fetch");
       }
 
       setState(() {

@@ -185,6 +185,8 @@ class ThermalPrinter {
           isFromLocalStorage,
           selectedPaperSize,
           selectedFontType,
+          displayConfig,
+          billDocumentConfig,
         );
         debugPrint("Order returns section built successfully");
       }
@@ -201,10 +203,12 @@ class ThermalPrinter {
           cartItems,
           isFromLocalStorage,
           selectedFontType,
+          displayConfig,
         );
         debugPrint("Total summary section built successfully");
       } else {
         // Add Amount in words under order summary when there are no returns
+        // Use 'showAmountInWords' for regular bills (no returns)
         if (displayConfig?['showAmountInWords']?.visible == true) {
           debugPrint("Building amount in words (no returns scenario)...");
           bytes += _buildAmountInWords(
@@ -262,7 +266,8 @@ class ThermalPrinter {
 
       // Date and Time (moved to bottom, just above barcode)
       debugPrint("Building date/time row...");
-      bytes += _buildDateTimeRow(generator, orderDate, selectedFontType);
+      bytes += _buildDateTimeRow(
+          generator, orderDate, selectedFontType, isFromLocalStorage);
       debugPrint("Date/time row built successfully");
 
       // Order ID Barcode (just before Terms & Conditions)
@@ -327,14 +332,13 @@ class ThermalPrinter {
     bool isFromLocalStorage,
     String selectedPaperSize,
     PosFontType fontType,
+    Map<String, DisplayOption>? displayConfig,
+    DocumentConfig? billDocumentConfig,
   ) {
     List<int> bytes = [];
 
     debugPrint("===== BUILD ORDER RETURNS SECTION =====");
     debugPrint("Return items count: ${orderReturns.returnItems!.length}");
-
-    // Add spacing before return section
-    bytes += generator.emptyLines(2);
 
     // Returns heading
     bytes += generator.text(
@@ -350,52 +354,132 @@ class ThermalPrinter {
 
     bytes += generator.emptyLines(1);
 
-    // Create headers for the return table
-    List<PosColumn> headerColumns = [
-      PosColumn(
-        text: 'Sl#',
-        width: 2,
-        styles: PosStyles(
-          fontType: fontType,
-          align: PosAlign.left,
-          bold: true,
-          height: textSizeSmall,
-        ),
-      ),
-      PosColumn(
-        text: 'DESCRIPTION',
-        width: 5,
-        styles: PosStyles(
-          fontType: fontType,
-          align: PosAlign.left,
-          bold: true,
-          height: textSizeSmall,
-        ),
-      ),
-      PosColumn(
-        text: 'QTY',
-        width: 2,
-        styles: PosStyles(
-          fontType: fontType,
-          align: PosAlign.right,
-          bold: true,
-          height: textSizeSmall,
-        ),
-      ),
-      PosColumn(
-        text: 'AMOUNT',
-        width: 3,
-        styles: PosStyles(
-          fontType: fontType,
-          align: PosAlign.right,
-          bold: true,
-          height: textSizeSmall,
-        ),
-      ),
-    ];
+    // Build dynamic header for return table (same as cart table)
+    List<PosColumn> headerColumns = [];
 
-    bytes += generator.row(headerColumns);
-    bytes += generator.hr();
+    if (displayConfig?['showReturnSLNumber']?.visible == true) {
+      final label = (displayConfig?['showReturnSLNumber']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showReturnSLNumber']!.value as String
+          : (billDocumentConfig?.resolvedLabels?.returnSlNumber?.isNotEmpty ==
+                  true
+              ? billDocumentConfig!.resolvedLabels!.returnSlNumber!
+              : 'SL#');
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: 1,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: textSizeSmall)));
+    }
+
+    if (displayConfig?['showReturnParticulars']?.visible == true) {
+      final label = (displayConfig?['showReturnParticulars']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showReturnParticulars']!.value as String
+          : (billDocumentConfig
+                      ?.resolvedLabels?.returnParticulars?.isNotEmpty ==
+                  true
+              ? billDocumentConfig!.resolvedLabels!.returnParticulars!
+              : 'PARTICULARS');
+      int particularsWidth = 3;
+      if (displayConfig?['showReturnSLNumber']?.visible != true) {
+        particularsWidth += 1;
+      }
+      // Add MRP width if MRP is not visible
+      if (displayConfig?['showReturnMRP']?.visible != true) {
+        particularsWidth += 2; // Add MRP width if MRP is not visible
+      }
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: particularsWidth,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: textSizeSmall)));
+    }
+
+    if (displayConfig?['showReturnMRP']?.visible == true) {
+      final label = (displayConfig?['showReturnMRP']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showReturnMRP']!.value as String
+          : (billDocumentConfig?.resolvedLabels?.returnMrp?.isNotEmpty == true
+              ? billDocumentConfig!.resolvedLabels!.returnMrp!
+              : 'MRP');
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: 2,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: textSizeSmall)));
+    }
+
+    if (displayConfig?['showReturnQty']?.visible == true) {
+      final label = (displayConfig?['showReturnQty']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showReturnQty']!.value as String
+          : (billDocumentConfig?.resolvedLabels?.returnQty?.isNotEmpty == true
+              ? billDocumentConfig!.resolvedLabels!.returnQty!
+              : 'QTY');
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: 2,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: textSizeSmall)));
+    }
+
+    if (displayConfig?['showReturnRate']?.visible == true) {
+      final label = (displayConfig?['showReturnRate']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showReturnRate']!.value as String
+          : (billDocumentConfig?.resolvedLabels?.returnRate?.isNotEmpty == true
+              ? billDocumentConfig!.resolvedLabels!.returnRate!
+              : 'RATE');
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: 2,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: textSizeSmall)));
+    }
+
+    if (displayConfig?['showReturnTotal']?.visible == true) {
+      final label = (displayConfig?['showReturnTotal']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showReturnTotal']!.value as String
+          : (billDocumentConfig?.resolvedLabels?.returnTotal?.isNotEmpty == true
+              ? billDocumentConfig!.resolvedLabels!.returnTotal!
+              : 'TOTAL');
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: 2,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: textSizeSmall)));
+    }
+
+    if (headerColumns.isNotEmpty) {
+      bytes += generator.row(headerColumns);
+      bytes += generator.hr();
+    }
 
     // Calculate individual item rates and amounts by matching with original cart items
     double calculatedReturnTotal = 0.0;
@@ -405,6 +489,7 @@ class ThermalPrinter {
       final itemQuantity = returnItem.quantity ?? 0;
 
       // Try to find matching original cart item by product name
+      double itemMrp = 0.0;
       double itemRate = 0.0;
       double itemAmount = 0.0;
 
@@ -440,9 +525,28 @@ class ThermalPrinter {
           }
         }
 
-        // If product names match, use the original unit price
+        // If product names match, use the original unit price and MRP
         if (cartItemProductName == returnItem.productName) {
           itemRate = cartItemUnitPrice;
+
+          // Fetch MRP from cartItem
+          if (isFromLocalStorage) {
+            itemMrp =
+                double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
+          } else {
+            if (cartItem is Map<String, dynamic>) {
+              itemMrp =
+                  double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
+            } else {
+              try {
+                itemMrp =
+                    double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0;
+              } catch (e) {
+                itemMrp = 0.0;
+              }
+            }
+          }
+
           itemAmount = itemQuantity * itemRate;
           calculatedReturnTotal += itemAmount;
           break;
@@ -466,55 +570,152 @@ class ThermalPrinter {
         itemRate = averageRate;
       }
 
-      // Build return item row
-      List<PosColumn> returnItemColumns = [
-        PosColumn(
-          text: (i + 1).toString(),
-          width: 2,
-          styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: false,
-            height: textSizeSmall,
-          ),
-        ),
-        PosColumn(
-          text: _sanitizeTextForThermalPrinter(returnItem.productName ?? ''),
-          width: 5,
-          styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: false,
-            height: textSizeSmall,
-          ),
-        ),
-        PosColumn(
-          text: itemQuantity.toString(),
-          width: 2,
-          styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.right,
-            bold: false,
-            height: textSizeSmall,
-          ),
-        ),
-        PosColumn(
-          text: itemAmount.toStringAsFixed(2),
-          width: 3,
-          styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.right,
-            bold: false,
-            height: textSizeSmall,
-          ),
-        ),
-      ];
+      String slNumber = (i + 1).toString();
+      String productName = returnItem.productName ?? '';
+      String mrp = itemMrp.toStringAsFixed(2);
+      String quantity = itemQuantity.toString();
+      String unitPrice = itemRate.toStringAsFixed(2);
+      String totalPrice = itemAmount.toStringAsFixed(2);
 
-      bytes += generator.row(returnItemColumns);
+      // Row 1: Product name with SL# (same as cart table)
+      if (displayConfig?['showReturnParticulars']?.visible == true ||
+          displayConfig?['showReturnSLNumber']?.visible == true) {
+        int maxCharsPerLine = 40;
+
+        String leftColumnText = '';
+        if (displayConfig?['showReturnSLNumber']?.visible == true &&
+            displayConfig?['showReturnParticulars']?.visible == true) {
+          leftColumnText =
+              '$slNumber ${_sanitizeTextForThermalPrinter(productName)}';
+        } else if (displayConfig?['showReturnSLNumber']?.visible == true) {
+          leftColumnText = slNumber;
+        } else {
+          leftColumnText = _sanitizeTextForThermalPrinter(productName);
+        }
+
+        if (leftColumnText.length <= maxCharsPerLine) {
+          List<PosColumn> productRow = [
+            PosColumn(
+                text: leftColumnText,
+                width: 11,
+                styles: PosStyles(
+                    fontType: fontType,
+                    align: PosAlign.left,
+                    bold: false,
+                    height: textSizeSmall)),
+            PosColumn(
+                text: '',
+                width: 1,
+                styles: PosStyles(
+                    fontType: fontType,
+                    align: PosAlign.right,
+                    bold: false,
+                    height: textSizeSmall)),
+          ];
+          bytes += generator.row(productRow);
+        } else {
+          String remainingText = leftColumnText;
+          while (remainingText.isNotEmpty) {
+            String currentLine;
+            if (remainingText.length <= maxCharsPerLine) {
+              currentLine = remainingText;
+              remainingText = '';
+            } else {
+              int breakPoint = maxCharsPerLine;
+              for (int j = maxCharsPerLine - 1;
+                  j >= maxCharsPerLine - 10 && j >= 0;
+                  j--) {
+                if (j < remainingText.length && remainingText[j] == ' ') {
+                  breakPoint = j;
+                  break;
+                }
+              }
+              currentLine = remainingText.substring(0, breakPoint).trim();
+              remainingText = remainingText.substring(breakPoint).trim();
+            }
+            List<PosColumn> wrappedRow = [
+              PosColumn(
+                  text: currentLine,
+                  width: 11,
+                  styles: PosStyles(
+                      fontType: fontType,
+                      align: PosAlign.left,
+                      bold: false,
+                      height: textSizeSmall)),
+              PosColumn(
+                  text: '',
+                  width: 1,
+                  styles: PosStyles(
+                      fontType: fontType,
+                      align: PosAlign.right,
+                      bold: false,
+                      height: textSizeSmall)),
+            ];
+            bytes += generator.row(wrappedRow);
+          }
+        }
+      }
+
+      // Row 2: Price details (same as cart table)
+      List<PosColumn> priceDetailsRow = [];
+
+      // Adjust empty space width based on whether MRP is visible
+      int emptySpaceWidth = 4;
+      if (displayConfig?['showReturnMRP']?.visible != true) {
+        emptySpaceWidth += 2; // Add MRP width if MRP is not visible
+      }
+      priceDetailsRow.add(PosColumn(
+          text: '',
+          width: emptySpaceWidth,
+          styles: PosStyles(fontType: fontType, align: PosAlign.left)));
+
+      if (displayConfig?['showReturnMRP']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: mrp,
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: textSizeSmall)));
+      }
+      if (displayConfig?['showReturnQty']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: quantity,
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: textSizeSmall)));
+      }
+      if (displayConfig?['showReturnRate']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: unitPrice,
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: textSizeSmall)));
+      }
+      if (displayConfig?['showReturnTotal']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: totalPrice,
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: textSizeSmall)));
+      }
+
+      if (priceDetailsRow.isNotEmpty) {
+        bytes += generator.row(priceDetailsRow);
+      }
     }
 
     bytes += generator.hr();
-    bytes += generator.emptyLines(1);
 
     // Return Summary heading removed per request
 
@@ -593,7 +794,6 @@ class ThermalPrinter {
     ];
 
     bytes += generator.row(returnNetTotalColumns);
-    bytes += generator.emptyLines(2);
 
     debugPrint("===== END BUILD ORDER RETURNS SECTION =====");
     return bytes;
@@ -607,6 +807,7 @@ class ThermalPrinter {
     List<dynamic> cartItems,
     bool isFromLocalStorage,
     PosFontType fontType,
+    Map<String, DisplayOption>? displayConfig,
   ) {
     List<int> bytes = [];
 
@@ -685,7 +886,7 @@ class ThermalPrinter {
     // Calculate final total (order total - return total)
     double finalTotal = orderTotal - returnTotal;
 
-    bytes += generator.emptyLines(1);
+    // bytes += generator.emptyLines(1);
     // TOTAL SUMMARY heading removed per request
     // bytes += generator.text(
     //   'TOTAL SUMMARY',
@@ -698,12 +899,23 @@ class ThermalPrinter {
     //   ),
     // );
 
-    bytes += generator.emptyLines(1);
+    // bytes += generator.emptyLines(1);  
 
-    // Order Total
+    // Use Sales Return Bill configuration labels
+    String purchaseLabel =
+        (displayConfig?['showFinalPurchase']?.value as String?) ??
+            'Order Total:';
+    String returnLabel =
+        (displayConfig?['showFinalReturn']?.value as String?) ??
+            'Return Total:';
+    String finalTotalLabel =
+        (displayConfig?['showFinalNetAmount']?.value as String?) ??
+            'Final Total:';
+
+    // Order Total (Purchase)
     List<PosColumn> orderTotalColumns = [
       PosColumn(
-        text: 'Order Total:',
+        text: purchaseLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -729,7 +941,7 @@ class ThermalPrinter {
     // Return Total
     List<PosColumn> returnTotalColumns = [
       PosColumn(
-        text: 'Return Total:',
+        text: returnLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -756,7 +968,7 @@ class ThermalPrinter {
     // Final Total
     List<PosColumn> finalTotalColumns = [
       PosColumn(
-        text: 'Final Total:',
+        text: finalTotalLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -780,7 +992,11 @@ class ThermalPrinter {
     bytes += generator.row(finalTotalColumns);
 
     // Amount in words for final total (when there are returns)
-    bytes += _buildAmountInWords(generator, finalTotal, fontType);
+    // Use 'showFinalAmountInWords' for Sales Return Bill configuration
+    if (displayConfig?['showFinalAmountInWords']?.visible == true) {
+      debugPrint("Building final amount in words (returns scenario)...");
+      bytes += _buildAmountInWords(generator, finalTotal, fontType);
+    }
 
     bytes += generator.emptyLines(1);
 
@@ -1044,10 +1260,14 @@ class ThermalPrinter {
     debugPrint("Building header columns...");
 
     if (displayConfig?['showSLNumber']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final slLabel =
           (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showSLNumber']!.value as String
-              : 'SL#';
+              : (billDocumentConfig?.resolvedLabels?.slNumber?.isNotEmpty ==
+                      true
+                  ? billDocumentConfig!.resolvedLabels!.slNumber!
+                  : 'SL#');
       headerColumns.add(PosColumn(
           text: slLabel,
           width: 1,
@@ -1062,15 +1282,22 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showParticulars']?.visible == true) {
-      final label =
-          (displayConfig?['showParticulars']?.value as String?)?.isNotEmpty ==
-                  true
-              ? displayConfig!['showParticulars']!.value as String
-              : 'PARTICULARS';
+      // Use displayConfig value first, then fallback to resolved_labels, then default
+      final label = (displayConfig?['showParticulars']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showParticulars']!.value as String
+          : (billDocumentConfig?.resolvedLabels?.particulars?.isNotEmpty == true
+              ? billDocumentConfig!.resolvedLabels!.particulars!
+              : 'PARTICULARS');
       // Fixed width for header title
       int particularsWidth = 3;
       if (displayConfig?['showSLNumber']?.visible != true) {
         particularsWidth += 1; // Add SL width if SL is not visible
+      }
+      // Add MRP width if MRP is not visible
+      if (displayConfig?['showMRP']?.visible != true) {
+        particularsWidth += 2; // Add MRP width if MRP is not visible
       }
 
       headerColumns.add(PosColumn(
@@ -1087,10 +1314,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showMRP']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final mrpLabel =
           (displayConfig?['showMRP']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showMRP']!.value as String
-              : 'MRP';
+              : (billDocumentConfig?.resolvedLabels?.mrp?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.mrp!
+                  : 'MRP');
       headerColumns.add(PosColumn(
           text: mrpLabel.toUpperCase(),
           width: 2,
@@ -1105,10 +1335,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showQty']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showQty']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showQty']!.value as String
-              : 'QTY';
+              : (billDocumentConfig?.resolvedLabels?.qty?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.qty!
+                  : 'QTY');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
@@ -1123,10 +1356,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showRate']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showRate']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showRate']!.value as String
-              : 'RATE';
+              : (billDocumentConfig?.resolvedLabels?.rate?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.rate!
+                  : 'RATE');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
@@ -1141,10 +1377,13 @@ class ThermalPrinter {
     }
 
     if (displayConfig?['showTotal']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showTotal']!.value as String
-              : 'TOTAL';
+              : (billDocumentConfig?.resolvedLabels?.total?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.total!
+                  : 'TOTAL');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
@@ -1315,16 +1554,19 @@ class ThermalPrinter {
       List<PosColumn> priceDetailsRow = [];
       int priceRowWidth = 0;
 
-      // Add empty space for SL column (width 1)
-      // if (displayConfig?['showSLNumber']?.visible == true) {
+      // Add empty space for SL column and product name area
+      // Adjust width based on whether MRP is visible
+      int emptySpaceWidth = 4;
+      if (displayConfig?['showMRP']?.visible != true) {
+        emptySpaceWidth += 2; // Add MRP width if MRP is not visible
+      }
       priceDetailsRow.add(PosColumn(
           text: '',
-          width: 4,
+          width: emptySpaceWidth,
           styles: PosStyles(fontType: fontType, align: PosAlign.left)));
-      priceRowWidth += 4;
+      priceRowWidth += emptySpaceWidth;
       debugPrint(
-          "Added empty space column with width 4, total width: $priceRowWidth");
-      // }
+          "Added empty space column with width $emptySpaceWidth, total width: $priceRowWidth");
 
       // Add price columns with the old working widths (like your old code)
       if (displayConfig?['showMRP']?.visible == true) {
@@ -1650,10 +1892,9 @@ class ThermalPrinter {
       bytes += generator.row(columns);
     }
 
-    bytes += generator.emptyLines(1);
-
     //Amount in Words
     if (displayConfig?['showSaved']?.visible == true && saved > 0) {
+      bytes += generator.emptyLines(1);
       bytes += generator.text('You Saved: ${saved.toStringAsFixed(2)}',
           styles: PosStyles(
               fontType: fontType,
@@ -1851,21 +2092,32 @@ class ThermalPrinter {
     return bytes;
   }
 
-  List<int> _buildDateTimeRow(
-      Generator generator, String orderDate, PosFontType fontType) {
+  List<int> _buildDateTimeRow(Generator generator, String orderDate,
+      PosFontType fontType, bool isFromLocalStorage) {
     List<int> bytes = [];
 
     debugPrint("===== BUILD DATE TIME ROW DEBUG =====");
     debugPrint("Order date: $orderDate");
+    debugPrint("Is from local storage: $isFromLocalStorage");
 
     // Add top divider line
     // bytes += generator.hr();
 
     // Add date and time row with smaller text size
     debugPrint("Creating date/time row with 6+6 column layout");
+
+    // Use appropriate date formatting based on source
+    String formattedDate = isFromLocalStorage
+        ? DateHelper.formatToISODateOnlyFromISO(orderDate)
+        : DateHelper.formatISODate(orderDate);
+
+    String formattedTime = isFromLocalStorage
+        ? DateHelper.formatToISODateFromIST(orderDate)
+        : DateHelper.formatISODateToIST(orderDate);
+
     List<PosColumn> dateTimeColumns = [
       PosColumn(
-          text: DateHelper.formatISODate(orderDate),
+          text: formattedDate,
           width: 6,
           styles: PosStyles(
               fontType: fontType,
@@ -1874,7 +2126,7 @@ class ThermalPrinter {
               height: textSizeSmall,
               width: textSizeSmall)),
       PosColumn(
-          text: DateHelper.formatISODateToIST(orderDate),
+          text: formattedTime,
           width: 6,
           styles: PosStyles(
               fontType: fontType,

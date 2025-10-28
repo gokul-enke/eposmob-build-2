@@ -31,7 +31,7 @@ class DateHelper {
   }
 
   // To Print Local to Local Date and Time
-  static String formatToISODateToIST(String isoDateString) {
+  static String formatToISODateFromIST(String isoDateString) {
     final DateTime local = DateTime.parse(isoDateString).toLocal();
     final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm a');
     return formatter.format(local);

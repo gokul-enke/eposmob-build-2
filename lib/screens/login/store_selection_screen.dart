@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/executive.dart';
-import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/main_screen.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:provider/provider.dart';
 
 class StoreSelectionScreen extends StatefulWidget {
   final List<Store> stores;
+  final bool isFromLogin;
 
   const StoreSelectionScreen({
-    Key? key,
+    super.key,
     required this.stores,
-  }) : super(key: key);
+    this.isFromLogin = false,
+  });
 
   @override
   State<StoreSelectionScreen> createState() => _StoreSelectionScreenState();
@@ -20,7 +24,19 @@ class StoreSelectionScreen extends StatefulWidget {
 
 class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   int? _selectedStoreId;
-  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+    storeSession.initializeStores(
+      widget.stores,
+      activeStoreId: storeSession.activeStore?.storeId,
+    );
+    _selectedStoreId = storeSession.activeStore?.storeId ??
+        (widget.stores.isNotEmpty ? widget.stores.first.storeId : null);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +49,16 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       appBar: AppBar(
         backgroundColor: ColorManager.kPrimaryColor,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            if (widget.isFromLogin) {
+              Navigator.of(context).pushReplacementNamed('/login');
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           'Select Store',
           style: TextStyle(
@@ -43,7 +69,6 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
           ),
         ),
         centerTitle: true,
-        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
@@ -120,13 +145,24 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       final store = widget.stores[index];
                       final isSelected = _selectedStoreId == store.storeId;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildStoreCard(
-                          store: store,
-                          isSelected: isSelected,
-                          isMobile: isMobile,
-                        ),
+                      return Consumer<StoreSessionProvider>(
+                        builder: (context, storeSession, _) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Opacity(
+                              opacity:
+                                  storeSession.isBootstrapping ? 0.5 : 1.0,
+                              child: IgnorePointer(
+                                ignoring: storeSession.isBootstrapping,
+                                child: _buildStoreCard(
+                                  store: store,
+                                  isSelected: isSelected,
+                                  isMobile: isMobile,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -136,20 +172,39 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
           if (_selectedStoreId != null)
             Container(
               padding: EdgeInsets.all(isMobile ? 16 : 24),
-              child: _isSubmitting
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: ColorManager.kPrimaryColor,
-                      ),
-                    )
-                  : CustomRoundButton(
-                      width: isMobile ? double.infinity : 400,
-                      height: isMobile ? 50 : 60,
-                      fontSize: FontSize.s14,
-                      radius: 25, // Increased border radius for more rounded corners
-                      title: 'Continue',
-                      fct: _handleSubmit,
-                    ),
+              child: Consumer<StoreSessionProvider>(
+                builder: (context, storeSession, _) {
+                  if (storeSession.isBootstrapping) {
+                    return Column(
+                      children: [
+                        const CircularProgressIndicator(
+                          color: ColorManager.kPrimaryColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          storeSession.statusMessage ??
+                              'Preparing your workspace...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: FontConstants.fontFamily,
+                            fontSize: FontSize.s12,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return CustomRoundButton(
+                    width: isMobile ? double.infinity : 400,
+                    height: isMobile ? 50 : 60,
+                    fontSize: FontSize.s14,
+                    radius: 25,
+                    title: 'Continue',
+                    fct: _handleSubmit,
+                  );
+                },
+              ),
             ),
         ],
       ),
@@ -305,22 +360,31 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   Future<void> _handleSubmit() async {
     if (_selectedStoreId == null) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    final selectedStore = widget.stores
+        .firstWhere((store) => store.storeId == _selectedStoreId);
 
     try {
-      // Save the selected store ID
-      await SharedPreferenceProvider().saveActiveStoreId(_selectedStoreId!);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
 
-      if (mounted) {
-        // Navigate to main screen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const MainScreen(),
-          ),
-        );
-      }
+      await storeSession.bootstrapStore(
+        context: context,
+        store: selectedStore,
+      );
+
+      if (!mounted) return;
+
+      showScaffold(
+        context: context,
+        message:
+            '${selectedStore.storeName ?? "Store"} ready. Loading dashboard...',
+      );
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const MainScreen(),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -329,12 +393,6 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             backgroundColor: Colors.red,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
       }
     }
   }

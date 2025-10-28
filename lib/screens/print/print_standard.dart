@@ -156,20 +156,31 @@ class StandardPrinter {
       debugPrint(
           "showTermsConditions: ${updatedSettings?['showTermsConditions']?.visible}");
 
-
 //display returns
-      debugPrint("showReturnSLNumber: ${updatedSettings?['showReturnSLNumber']?.visible}");
-      debugPrint("showReturnParticulars: ${updatedSettings?['showReturnParticulars']?.visible}");
-      debugPrint("showReturnQty: ${updatedSettings?['showReturnQty']?.visible}");
-      debugPrint("showReturnRate: ${updatedSettings?['showReturnRate']?.visible}");
-      debugPrint("showReturnTotal: ${updatedSettings?['showReturnTotal']?.visible}");
-      debugPrint("showReturnNetAmount: ${updatedSettings?['showReturnNetAmount']?.visible}");
-      debugPrint("showReturnTotalAmount: ${updatedSettings?['showReturnTotalAmount']?.visible}");
-      debugPrint("showReturnItemsCount: ${updatedSettings?['showReturnItemsCount']?.visible}");
-      debugPrint("showFinalNetAmount: ${updatedSettings?['showFinalNetAmount']?.visible}");
-      debugPrint("showFinalPurchase: ${updatedSettings?['showFinalPurchase']?.visible}");
-      debugPrint("showFinalReturn: ${updatedSettings?['showFinalReturn']?.visible}");
-      debugPrint("showFinalAmountInWords: ${updatedSettings?['showFinalAmountInWords']?.visible}");    
+      debugPrint(
+          "showReturnSLNumber: ${updatedSettings?['showReturnSLNumber']?.visible}");
+      debugPrint(
+          "showReturnParticulars: ${updatedSettings?['showReturnParticulars']?.visible}");
+      debugPrint(
+          "showReturnQty: ${updatedSettings?['showReturnQty']?.visible}");
+      debugPrint(
+          "showReturnRate: ${updatedSettings?['showReturnRate']?.visible}");
+      debugPrint(
+          "showReturnTotal: ${updatedSettings?['showReturnTotal']?.visible}");
+      debugPrint(
+          "showReturnNetAmount: ${updatedSettings?['showReturnNetAmount']?.visible}");
+      debugPrint(
+          "showReturnTotalAmount: ${updatedSettings?['showReturnTotalAmount']?.visible}");
+      debugPrint(
+          "showReturnItemsCount: ${updatedSettings?['showReturnItemsCount']?.visible}");
+      debugPrint(
+          "showFinalNetAmount: ${updatedSettings?['showFinalNetAmount']?.visible}");
+      debugPrint(
+          "showFinalPurchase: ${updatedSettings?['showFinalPurchase']?.visible}");
+      debugPrint(
+          "showFinalReturn: ${updatedSettings?['showFinalReturn']?.visible}");
+      debugPrint(
+          "showFinalAmountInWords: ${updatedSettings?['showFinalAmountInWords']?.visible}");
 
       // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
@@ -353,7 +364,7 @@ class StandardPrinter {
               ),
 
             // Date and Time Row - minimal design
-            _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+            _buildDateTimeRowPDF(selectedPaperSize, orderDate, isFromLocalStorage),
 
             // Customer Information Section - if available
             if (customerName != null ||
@@ -397,53 +408,56 @@ class StandardPrinter {
             pw.SizedBox(height: 5), // Reduced from 8
 
             // Summary - minimal design without borders
-    if ((updatedSettings?['showItemsCount']?.visible == true) ||
-        (updatedSettings?['showMRPTotal']?.visible == true) ||
-        (updatedSettings?['showSaved']?.visible == true) ||
-        (updatedSettings?['showDiscount']?.visible == true) ||
-        (updatedSettings?['showNetAmount']?.visible == true))
-      pw.Container(
-        padding: const pw.EdgeInsets.symmetric(
-            vertical: 5, horizontal: 8), // Reduced padding
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('ORDER SUMMARY', style: subheaderStyle),
-            pw.SizedBox(height: 5), // Reduced from 10
-            _buildPdfSummary(
-                summaryStyle,
-                netTotalStyle,
-                updatedSettings,
-                formattedTotal,
-                savedTotal,
-                discountAmount,
-                cartItems.length,
-                billDocumentConfig),
-            
-            // Add Amount in words under order summary when there are no returns
-            if (updatedSettings?['showAmountInWords']?.visible == true && 
-                (orderReturns == null || orderReturns.returnItems?.isEmpty == true))
-              pw.Column(
-                children: [
-                  pw.SizedBox(height: 5),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('Amount in words:', style: summaryStyle),
-                      pw.Expanded(
-                        child: pw.Text(
-                          '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
-                          style: summaryStyle,
-                          textAlign: pw.TextAlign.right,
-                        ),
+            if ((updatedSettings?['showItemsCount']?.visible == true) ||
+                (updatedSettings?['showMRPTotal']?.visible == true) ||
+                (updatedSettings?['showSaved']?.visible == true) ||
+                (updatedSettings?['showDiscount']?.visible == true) ||
+                (updatedSettings?['showNetAmount']?.visible == true))
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(
+                    vertical: 5, horizontal: 8), // Reduced padding
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('ORDER SUMMARY', style: subheaderStyle),
+                    pw.SizedBox(height: 5), // Reduced from 10
+                    _buildPdfSummary(
+                        summaryStyle,
+                        netTotalStyle,
+                        updatedSettings,
+                        formattedTotal,
+                        savedTotal,
+                        discountAmount,
+                        cartItems.length,
+                        billDocumentConfig),
+
+                    // Add Amount in words under order summary when there are no returns
+                    if (updatedSettings?['showAmountInWords']?.visible ==
+                            true &&
+                        (orderReturns == null ||
+                            orderReturns.returnItems?.isEmpty == true))
+                      pw.Column(
+                        children: [
+                          pw.SizedBox(height: 5),
+                          pw.Row(
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('Amount in words:', style: summaryStyle),
+                              pw.Expanded(
+                                child: pw.Text(
+                                  '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                                  style: summaryStyle,
+                                  textAlign: pw.TextAlign.right,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-          ],
-        ),
-      ),
 
             // Add Order Returns section if orderReturns is not null and has items
             if (orderReturns != null &&
@@ -459,28 +473,28 @@ class StandardPrinter {
                 netTotalStyle,
                 cartItems, // Pass cartItems to match return items with original prices
                 isFromLocalStorage,
-                updatedSettings, // Pass isFromLocalStorage parameter
+                updatedSettings, // Pass displayConfig
+                billDocumentConfig, // Pass billDocumentConfig for resolved_labels
               ),
             ],
 
-    // Add Total Summary section ONLY when there are returns
-    if (orderReturns != null && 
-        orderReturns.returnItems != null && 
-        orderReturns.returnItems!.isNotEmpty) ...[
-      pw.SizedBox(height: 10),
-      _buildTotalSummarySection(
-        selectedPaperSize,
-        formattedTotal,
-        orderReturns,
-        cartItems,
-        isFromLocalStorage,
-        subheaderStyle,
-        summaryStyle,
-        netTotalStyle,
-        updatedSettings,
-      ),
-      pw.SizedBox(height: 10),
-    ],
+            // Add Total Summary section ONLY when there are returns
+            if (orderReturns != null &&
+                orderReturns.returnItems != null &&
+                orderReturns.returnItems!.isNotEmpty) ...[
+              _buildTotalSummarySection(
+                selectedPaperSize,
+                formattedTotal,
+                orderReturns,
+                cartItems,
+                isFromLocalStorage,
+                subheaderStyle,
+                summaryStyle,
+                netTotalStyle,
+                updatedSettings,
+              ),
+              pw.SizedBox(height: 10),
+            ],
 
             // Footer section - compact design
             pw.Column(
@@ -703,57 +717,76 @@ class StandardPrinter {
     int visibleColIndex = 0;
 
     if (displayConfig?['showSLNumber']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final slLabel =
           (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showSLNumber']!.value as String
-              : 'SL#';
+              : (billDocumentConfig?.resolvedLabels?.slNumber?.isNotEmpty ==
+                      true
+                  ? billDocumentConfig!.resolvedLabels!.slNumber!
+                  : 'SL#');
       tableHeaders.add(slLabel);
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
       columnWidths.add(1); // Smaller width for serial number
     }
     if (displayConfig?['showParticulars']?.visible == true) {
-      final label =
-          (displayConfig?['showParticulars']?.value as String?)?.isNotEmpty ==
-                  true
-              ? displayConfig!['showParticulars']!.value as String
-              : 'PARTICULARS';
+      // Use displayConfig value first, then fallback to resolved_labels, then default
+      final label = (displayConfig?['showParticulars']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showParticulars']!.value as String
+          : (billDocumentConfig?.resolvedLabels?.particulars?.isNotEmpty == true
+              ? billDocumentConfig!.resolvedLabels!.particulars!
+              : 'PARTICULARS');
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
       columnWidths.add(
           5); // Much larger width for product names to accommodate long names
     }
     if (displayConfig?['showMRP']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final mrpLabel =
           (displayConfig?['showMRP']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showMRP']!.value as String
-              : 'MRP';
+              : (billDocumentConfig?.resolvedLabels?.mrp?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.mrp!
+                  : 'MRP');
       tableHeaders.add(mrpLabel.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Slightly larger for price values
     }
     if (displayConfig?['showQty']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showQty']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showQty']!.value as String
-              : 'QTY';
+              : (billDocumentConfig?.resolvedLabels?.qty?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.qty!
+                  : 'QTY');
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Compact for quantity
     }
     if (displayConfig?['showRate']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showRate']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showRate']!.value as String
-              : 'RATE';
+              : (billDocumentConfig?.resolvedLabels?.rate?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.rate!
+                  : 'RATE');
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Slightly larger for price values
     }
     if (displayConfig?['showTotal']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
           (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showTotal']!.value as String
-              : 'TOTAL';
+              : (billDocumentConfig?.resolvedLabels?.total?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.total!
+                  : 'TOTAL');
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Slightly larger for total values
@@ -974,7 +1007,16 @@ class StandardPrinter {
   }
 
   // Date and Time Row for PDF - minimal design
-  pw.Widget _buildDateTimeRowPDF(String selectedPaperSize, String orderDate) {
+  pw.Widget _buildDateTimeRowPDF(String selectedPaperSize, String orderDate, bool isFromLocalStorage) {
+    // Use appropriate date formatting based on source
+    String formattedDate = isFromLocalStorage 
+        ? DateHelper.formatToISODateOnlyFromISO(orderDate)
+        : DateHelper.formatISODate(orderDate);
+    
+    String formattedTime = isFromLocalStorage 
+        ? DateHelper.formatToISODateFromIST(orderDate)
+        : DateHelper.formatISODateToIST(orderDate);
+    
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(
           vertical: 0, horizontal: 8), // Reduced padding
@@ -982,7 +1024,7 @@ class StandardPrinter {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'Date: ${DateHelper.formatISODate(orderDate)}',
+            'Date: $formattedDate',
             style: pw.TextStyle(
               fontSize:
                   selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
@@ -990,7 +1032,7 @@ class StandardPrinter {
             ),
           ),
           pw.Text(
-            'Time: ${DateHelper.formatISODateToIST(orderDate)}',
+            'Time: $formattedTime',
             style: pw.TextStyle(
               fontSize:
                   selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
@@ -1168,257 +1210,146 @@ class StandardPrinter {
   }
 
   // Add this new method to build the order returns section
-pw.Widget _buildOrderReturnsSection(
-  String selectedPaperSize,
-  OrderReturns orderReturns,
-  pw.TextStyle subheaderStyle,
-  pw.TextStyle bodyStyle,
-  pw.TextStyle tableHeaderStyle,
-  pw.TextStyle summaryStyle,
-  pw.TextStyle netTotalStyle,
-  List<dynamic> cartItems,
-  bool isFromLocalStorage,
-  Map<String, DisplayOption>? displayConfig, // Add this parameter
-) {
-  // Create headers for the return table using configuration
-  final List<String> tableHeaders = [];
-  final Map<int, pw.Alignment> cellAlignmentsMap = {};
-  final List<double> columnWidths = [];
-  int visibleColIndex = 0;
+  pw.Widget _buildOrderReturnsSection(
+    String selectedPaperSize,
+    OrderReturns orderReturns,
+    pw.TextStyle subheaderStyle,
+    pw.TextStyle bodyStyle,
+    pw.TextStyle tableHeaderStyle,
+    pw.TextStyle summaryStyle,
+    pw.TextStyle netTotalStyle,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    Map<String, DisplayOption>? displayConfig,
+    DocumentConfig? billDocumentConfig, // Add this parameter
+  ) {
+    // Create headers for the return table using configuration
+    final List<String> tableHeaders = [];
+    final Map<int, pw.Alignment> cellAlignmentsMap = {};
+    final List<double> columnWidths = [];
+    int visibleColIndex = 0;
 
-  // Use configured labels or defaults
-  final slLabel = displayConfig?['showReturnSLNumber']?.value as String? ?? 'Sl#';
-  final particularsLabel = displayConfig?['showReturnParticulars']?.value as String? ?? 'DESCRIPTION';
-  final qtyLabel = displayConfig?['showReturnQty']?.value as String? ?? 'QTY';
-  final rateLabel = displayConfig?['showReturnRate']?.value as String? ?? 'RATE';
-  final totalLabel = displayConfig?['showReturnTotal']?.value as String? ?? 'AMOUNT';
+    // Use configured labels with fallback: displayConfig > resolved_labels > default
+    final slLabel =
+        (displayConfig?['showReturnSLNumber']?.value as String?)?.isNotEmpty ==
+                true
+            ? displayConfig!['showReturnSLNumber']!.value as String
+            : (billDocumentConfig?.resolvedLabels?.returnSlNumber?.isNotEmpty ==
+                    true
+                ? billDocumentConfig!.resolvedLabels!.returnSlNumber!
+                : 'Sl#');
 
-  if (displayConfig?['showReturnSLNumber']?.visible == true) {
-    tableHeaders.add(slLabel);
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(1);
-  }
-  if (displayConfig?['showReturnParticulars']?.visible == true) {
-    tableHeaders.add(particularsLabel.toUpperCase());
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(5);
-  }
-  if (displayConfig?['showReturnQty']?.visible == true) {
-    tableHeaders.add(qtyLabel.toUpperCase());
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-    columnWidths.add(1.5);
-  }
-  if (displayConfig?['showReturnRate']?.visible == true) {
-    tableHeaders.add(rateLabel.toUpperCase());
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-    columnWidths.add(1.5);
-  }
-  if (displayConfig?['showReturnTotal']?.visible == true) {
-    tableHeaders.add(totalLabel.toUpperCase());
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-    columnWidths.add(1.5);
-  }
+    final particularsLabel = (displayConfig?['showReturnParticulars']?.value
+                    as String?)
+                ?.isNotEmpty ==
+            true
+        ? displayConfig!['showReturnParticulars']!.value as String
+        : (billDocumentConfig?.resolvedLabels?.returnParticulars?.isNotEmpty ==
+                true
+            ? billDocumentConfig!.resolvedLabels!.returnParticulars!
+            : 'DESCRIPTION');
 
-  // Create table data for return items
-  List<List<String>> tableData = [];
-  double calculatedReturnTotal = 0.0;
+    final qtyLabel =
+        (displayConfig?['showReturnQty']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showReturnQty']!.value as String
+            : (billDocumentConfig?.resolvedLabels?.returnQty?.isNotEmpty == true
+                ? billDocumentConfig!.resolvedLabels!.returnQty!
+                : 'QTY');
 
-  for (var i = 0; i < orderReturns.returnItems!.length; i++) {
-    final returnItem = orderReturns.returnItems![i];
-    final itemQuantity = returnItem.quantity ?? 0;
+    final rateLabel =
+        (displayConfig?['showReturnRate']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showReturnRate']!.value as String
+            : (billDocumentConfig?.resolvedLabels?.returnRate?.isNotEmpty ==
+                    true
+                ? billDocumentConfig!.resolvedLabels!.returnRate!
+                : 'RATE');
 
-    String itemRate = '0.00';
-    String itemAmount = '0.00';
+    final totalLabel = (displayConfig?['showReturnTotal']?.value as String?)
+                ?.isNotEmpty ==
+            true
+        ? displayConfig!['showReturnTotal']!.value as String
+        : (billDocumentConfig?.resolvedLabels?.returnTotal?.isNotEmpty == true
+            ? billDocumentConfig!.resolvedLabels!.returnTotal!
+            : 'AMOUNT');
 
-    // Look for matching item in cartItems
-    for (var cartItem in cartItems) {
-      String cartItemProductName = '';
-      String cartItemUnitPrice = '0.00';
+    final mrpLabel =
+        (displayConfig?['showReturnMRP']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showReturnMRP']!.value as String
+            : (billDocumentConfig?.resolvedLabels?.returnMrp?.isNotEmpty == true
+                ? billDocumentConfig!.resolvedLabels!.returnMrp!
+                : 'MRP');
 
-      if (isFromLocalStorage) {
-        cartItemProductName = cartItem['productName'] ?? '';
-        cartItemUnitPrice = (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
-      } else {
-        if (cartItem is Map<String, dynamic>) {
-          cartItemProductName = cartItem['product_name']?.toString() ?? cartItem['productName']?.toString() ?? '';
-          cartItemUnitPrice = (double.tryParse(cartItem['unit_price']?.toString() ?? cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
-        } else {
-          try {
-            cartItemProductName = cartItem.productName?.toString() ?? '';
-            cartItemUnitPrice = (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
-          } catch (e) {
-            cartItemProductName = '';
-            cartItemUnitPrice = '0.00';
-          }
-        }
-      }
-
-      if (cartItemProductName == returnItem.productName) {
-        itemRate = cartItemUnitPrice;
-        final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
-        itemAmount = amount.toStringAsFixed(2);
-        calculatedReturnTotal += amount;
-        break;
-      }
-    }
-
-    // If no match found, fall back to average rate calculation
-    if (itemRate == '0.00' && itemAmount == '0.00') {
-      final totalReturnAmount = double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
-      int totalQuantity = 0;
-      for (var item in orderReturns.returnItems!) {
-        totalQuantity += item.quantity ?? 0;
-      }
-      final averageRate = totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
-      final amount = itemQuantity * averageRate;
-      itemRate = averageRate.toStringAsFixed(2);
-      itemAmount = amount.toStringAsFixed(2);
-      calculatedReturnTotal += amount;
-    }
-
-    List<String> rowData = [];
     if (displayConfig?['showReturnSLNumber']?.visible == true) {
-      rowData.add((i + 1).toString());
+      tableHeaders.add(slLabel);
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+      columnWidths.add(1);
     }
     if (displayConfig?['showReturnParticulars']?.visible == true) {
-      rowData.add(returnItem.productName ?? '');
+      tableHeaders.add(particularsLabel.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+      columnWidths.add(5);
+    }
+    if (displayConfig?['showReturnMRP']?.visible == true) {
+      tableHeaders.add(mrpLabel.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5);
     }
     if (displayConfig?['showReturnQty']?.visible == true) {
-      rowData.add(returnItem.quantity?.toString() ?? '');
+      tableHeaders.add(qtyLabel.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5);
     }
     if (displayConfig?['showReturnRate']?.visible == true) {
-      rowData.add(itemRate);
+      tableHeaders.add(rateLabel.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5);
     }
     if (displayConfig?['showReturnTotal']?.visible == true) {
-      rowData.add(itemAmount);
+      tableHeaders.add(totalLabel.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5);
     }
 
-    tableData.add(rowData);
-  }
+    // Create table data for return items
+    List<List<String>> tableData = [];
+    double calculatedReturnTotal = 0.0;
 
-  return pw.Container(
-    padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.SizedBox(height: 20),
-        pw.Text('RETURNS', style: subheaderStyle),
-        pw.SizedBox(height: 10),
-        // Return Items Table
-        if (tableHeaders.isNotEmpty && tableData.isNotEmpty)
-          pw.Table.fromTextArray(
-            headers: tableHeaders,
-            data: tableData,
-            headerStyle: tableHeaderStyle,
-            headerDecoration: const pw.BoxDecoration(
-              color: PdfColors.grey200,
-            ),
-            headerHeight: 20,
-            cellStyle: bodyStyle,
-            cellHeight: 18,
-            cellAlignments: cellAlignmentsMap,
-            cellPadding: const pw.EdgeInsets.all(3),
-            border: const pw.TableBorder(
-              top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-              bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-              left: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-              right: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-              horizontalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-              verticalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-            ),
-            columnWidths: {
-              for (var i in columnWidths.asMap().keys)
-                i: pw.FlexColumnWidth(columnWidths[i])
-            },
-          )
-        else
-          pw.Text('No return items to display', style: bodyStyle),
-        pw.SizedBox(height: 15),
-        // Return Summary
-        if (displayConfig?['showReturnNetAmount']?.visible == true ||
-            displayConfig?['showReturnTotalAmount']?.visible == true ||
-            displayConfig?['showReturnItemsCount']?.visible == true)
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('RETURN SUMMARY', style: subheaderStyle),
-              pw.SizedBox(height: 3),
-              // Display Item Count
-              if (displayConfig?['showReturnItemsCount']?.visible == true)
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Total Items:', style: summaryStyle),
-                    pw.Text(orderReturns.returnItems!.length.toString(), style: summaryStyle),
-                  ],
-                ),
-              if (displayConfig?['showReturnItemsCount']?.visible == true) pw.SizedBox(height: 2),
-              // Display Total MRP
-              if (displayConfig?['showReturnTotalAmount']?.visible == true)
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Total MRP:', style: summaryStyle),
-                    pw.Text(calculatedReturnTotal.toStringAsFixed(2), style: summaryStyle),
-                  ],
-                ),
-              if (displayConfig?['showReturnTotalAmount']?.visible == true) pw.SizedBox(height: 2),
-              // Display Net Total
-              if (displayConfig?['showReturnNetAmount']?.visible == true) ...[
-                pw.Divider(color: PdfColors.black),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Net Total:', style: netTotalStyle),
-                    pw.Text(calculatedReturnTotal.toStringAsFixed(2), style: netTotalStyle),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        pw.SizedBox(height: 15),
-      ],
-    ),
-  );
-}
-
-  // Add this new method to build the total summary section
-pw.Widget _buildTotalSummarySection(
-  String selectedPaperSize,
-  String formattedTotal,
-  OrderReturns? orderReturns,
-  List<dynamic> cartItems,
-  bool isFromLocalStorage,
-  pw.TextStyle subheaderStyle,
-  pw.TextStyle summaryStyle,
-  pw.TextStyle netTotalStyle,
-  Map<String, DisplayOption>? displayConfig, // Add this parameter
-) {
-  double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
-  double returnTotal = 0.0;
-
-  // Calculate return total (same logic as before)
-  if (orderReturns != null && orderReturns.returnItems != null && orderReturns.returnItems!.isNotEmpty) {
     for (var i = 0; i < orderReturns.returnItems!.length; i++) {
       final returnItem = orderReturns.returnItems![i];
       final itemQuantity = returnItem.quantity ?? 0;
-      String itemRate = '0.00';
 
+      String itemMrp = '0.00';
+      String itemRate = '0.00';
+      String itemAmount = '0.00';
+
+      // Look for matching item in cartItems
       for (var cartItem in cartItems) {
         String cartItemProductName = '';
         String cartItemUnitPrice = '0.00';
 
         if (isFromLocalStorage) {
           cartItemProductName = cartItem['productName'] ?? '';
-          cartItemUnitPrice = (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+          cartItemUnitPrice =
+              (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
         } else {
           if (cartItem is Map<String, dynamic>) {
-            cartItemProductName = cartItem['product_name']?.toString() ?? cartItem['productName']?.toString() ?? '';
-            cartItemUnitPrice = (double.tryParse(cartItem['unit_price']?.toString() ?? cartItem['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+            cartItemProductName = cartItem['product_name']?.toString() ??
+                cartItem['productName']?.toString() ??
+                '';
+            cartItemUnitPrice = (double.tryParse(
+                        cartItem['unit_price']?.toString() ??
+                            cartItem['unitPrice']?.toString() ??
+                            '0') ??
+                    0.0)
+                .toStringAsFixed(2);
           } else {
             try {
               cartItemProductName = cartItem.productName?.toString() ?? '';
-              cartItemUnitPrice = (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+              cartItemUnitPrice =
+                  (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ??
+                          0.0)
+                      .toStringAsFixed(2);
             } catch (e) {
               cartItemProductName = '';
               cartItemUnitPrice = '0.00';
@@ -1428,96 +1359,320 @@ pw.Widget _buildTotalSummarySection(
 
         if (cartItemProductName == returnItem.productName) {
           itemRate = cartItemUnitPrice;
+          
+          // Fetch MRP from cartItem
+          if (isFromLocalStorage) {
+            itemMrp = (double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0)
+                .toStringAsFixed(2);
+          } else {
+            if (cartItem is Map<String, dynamic>) {
+              itemMrp = (double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+            } else {
+              try {
+                itemMrp = (double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0)
+                    .toStringAsFixed(2);
+              } catch (e) {
+                itemMrp = '0.00';
+              }
+            }
+          }
+          
           final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
-          returnTotal += amount;
+          itemAmount = amount.toStringAsFixed(2);
+          calculatedReturnTotal += amount;
           break;
         }
       }
 
-      if (itemRate == '0.00' && orderReturns.returnTotalAmount != null) {
-        final totalReturnAmount = double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+      // If no match found, fall back to average rate calculation
+      if (itemRate == '0.00' && itemAmount == '0.00') {
+        final totalReturnAmount =
+            double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
         int totalQuantity = 0;
         for (var item in orderReturns.returnItems!) {
           totalQuantity += item.quantity ?? 0;
         }
-        final averageRate = totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+        final averageRate =
+            totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
         final amount = itemQuantity * averageRate;
-        returnTotal += amount;
+        itemRate = averageRate.toStringAsFixed(2);
+        itemAmount = amount.toStringAsFixed(2);
+        calculatedReturnTotal += amount;
       }
+
+      List<String> rowData = [];
+      if (displayConfig?['showReturnSLNumber']?.visible == true) {
+        rowData.add((i + 1).toString());
+      }
+      if (displayConfig?['showReturnParticulars']?.visible == true) {
+        rowData.add(returnItem.productName ?? '');
+      }
+      if (displayConfig?['showReturnMRP']?.visible == true) {
+        rowData.add(itemMrp);
+      }
+      if (displayConfig?['showReturnQty']?.visible == true) {
+        rowData.add(returnItem.quantity?.toString() ?? '');
+      }
+      if (displayConfig?['showReturnRate']?.visible == true) {
+        rowData.add(itemRate);
+      }
+      if (displayConfig?['showReturnTotal']?.visible == true) {
+        rowData.add(itemAmount);
+      }
+
+      tableData.add(rowData);
     }
-  }
 
-  double finalTotal = orderTotal - returnTotal;
-
-  return pw.Container(
-    padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text('FINAL SUMMARY', style: subheaderStyle),
-        pw.SizedBox(height: 5),
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            // Display Order Total
-            if (displayConfig?['showFinalPurchase']?.visible == true)
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Total Purchase:', style: summaryStyle),
-                  pw.Text(orderTotal.toStringAsFixed(2), style: summaryStyle),
-                ],
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('RETURNS', style: subheaderStyle),
+          pw.SizedBox(height: 10),
+          // Return Items Table
+          if (tableHeaders.isNotEmpty && tableData.isNotEmpty)
+            pw.Table.fromTextArray(
+              headers: tableHeaders,
+              data: tableData,
+              headerStyle: tableHeaderStyle,
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.grey200,
               ),
-            if (displayConfig?['showFinalPurchase']?.visible == true) pw.SizedBox(height: 2),
-            // Display Return Total
-            if (displayConfig?['showFinalReturn']?.visible == true && 
-                orderReturns != null && 
-                orderReturns.returnItems != null && 
-                orderReturns.returnItems!.isNotEmpty)
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Total Return:', style: summaryStyle),
-                  pw.Text(returnTotal.toStringAsFixed(2), style: summaryStyle),
-                ],
+              headerHeight: 20,
+              cellStyle: bodyStyle,
+              cellHeight: 18,
+              cellAlignments: cellAlignmentsMap,
+              cellPadding: const pw.EdgeInsets.all(3),
+              border: const pw.TableBorder(
+                top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+                bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+                left: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+                right: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+                horizontalInside:
+                    pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+                verticalInside:
+                    pw.BorderSide(color: PdfColors.grey700, width: 0.5),
               ),
-            if (displayConfig?['showFinalReturn']?.visible == true && 
-                orderReturns != null && 
-                orderReturns.returnItems != null && 
-                orderReturns.returnItems!.isNotEmpty) 
-              pw.SizedBox(height: 2),
-            // Display Final Total
-            if (displayConfig?['showFinalNetAmount']?.visible == true) ...[
-              pw.Divider(color: PdfColors.black),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Net Total:', style: netTotalStyle),
-                  pw.Text(finalTotal.toStringAsFixed(2), style: netTotalStyle),
-                ],
-              ),
-            ],
-            // Amount in words
-            if (displayConfig?['showFinalAmountInWords']?.visible == true) ...[
-              pw.SizedBox(height: 5),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Amount in words:', style: summaryStyle),
-                  pw.Text(
-                    '${AmountHelper().convertNumberToWords(finalTotal)} Only.',
-                    style: summaryStyle,
-                    textAlign: pw.TextAlign.right,
+              columnWidths: {
+                for (var i in columnWidths.asMap().keys)
+                  i: pw.FlexColumnWidth(columnWidths[i])
+              },
+            )
+          else
+            pw.Text('No return items to display', style: bodyStyle),
+          pw.SizedBox(height: 15),
+          // Return Summary
+          if (displayConfig?['showReturnNetAmount']?.visible == true ||
+              displayConfig?['showReturnTotalAmount']?.visible == true ||
+              displayConfig?['showReturnItemsCount']?.visible == true)
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('RETURN SUMMARY', style: subheaderStyle),
+                pw.SizedBox(height: 3),
+                // Display Item Count
+                if (displayConfig?['showReturnItemsCount']?.visible == true)
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Total Items:', style: summaryStyle),
+                      pw.Text(orderReturns.returnItems!.length.toString(),
+                          style: summaryStyle),
+                    ],
+                  ),
+                if (displayConfig?['showReturnItemsCount']?.visible == true)
+                  pw.SizedBox(height: 2),
+                // Display Total MRP
+                if (displayConfig?['showReturnTotalAmount']?.visible == true)
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Total MRP:', style: summaryStyle),
+                      pw.Text(calculatedReturnTotal.toStringAsFixed(2),
+                          style: summaryStyle),
+                    ],
+                  ),
+                if (displayConfig?['showReturnTotalAmount']?.visible == true)
+                  pw.SizedBox(height: 2),
+                // Display Net Total
+                if (displayConfig?['showReturnNetAmount']?.visible == true) ...[
+                  pw.Divider(color: PdfColors.black),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Net Total:', style: netTotalStyle),
+                      pw.Text(calculatedReturnTotal.toStringAsFixed(2),
+                          style: netTotalStyle),
+                    ],
                   ),
                 ],
-              ),
+              ],
+            ),
+          pw.SizedBox(height: 15),
+        ],
+      ),
+    );
+  }
+
+  // Add this new method to build the total summary section
+  pw.Widget _buildTotalSummarySection(
+    String selectedPaperSize,
+    String formattedTotal,
+    OrderReturns? orderReturns,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    pw.TextStyle subheaderStyle,
+    pw.TextStyle summaryStyle,
+    pw.TextStyle netTotalStyle,
+    Map<String, DisplayOption>? displayConfig, // Add this parameter
+  ) {
+    double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
+    double returnTotal = 0.0;
+
+    // Calculate return total (same logic as before)
+    if (orderReturns != null &&
+        orderReturns.returnItems != null &&
+        orderReturns.returnItems!.isNotEmpty) {
+      for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+        final returnItem = orderReturns.returnItems![i];
+        final itemQuantity = returnItem.quantity ?? 0;
+        String itemRate = '0.00';
+
+        for (var cartItem in cartItems) {
+          String cartItemProductName = '';
+          String cartItemUnitPrice = '0.00';
+
+          if (isFromLocalStorage) {
+            cartItemProductName = cartItem['productName'] ?? '';
+            cartItemUnitPrice =
+                (double.tryParse(cartItem['unitPrice']?.toString() ?? '0') ??
+                        0.0)
+                    .toStringAsFixed(2);
+          } else {
+            if (cartItem is Map<String, dynamic>) {
+              cartItemProductName = cartItem['product_name']?.toString() ??
+                  cartItem['productName']?.toString() ??
+                  '';
+              cartItemUnitPrice = (double.tryParse(
+                          cartItem['unit_price']?.toString() ??
+                              cartItem['unitPrice']?.toString() ??
+                              '0') ??
+                      0.0)
+                  .toStringAsFixed(2);
+            } else {
+              try {
+                cartItemProductName = cartItem.productName?.toString() ?? '';
+                cartItemUnitPrice =
+                    (double.tryParse(cartItem.unitPrice?.toString() ?? '0') ??
+                            0.0)
+                        .toStringAsFixed(2);
+              } catch (e) {
+                cartItemProductName = '';
+                cartItemUnitPrice = '0.00';
+              }
+            }
+          }
+
+          if (cartItemProductName == returnItem.productName) {
+            itemRate = cartItemUnitPrice;
+            final amount = itemQuantity * (double.tryParse(itemRate) ?? 0.0);
+            returnTotal += amount;
+            break;
+          }
+        }
+
+        if (itemRate == '0.00' && orderReturns.returnTotalAmount != null) {
+          final totalReturnAmount =
+              double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
+          int totalQuantity = 0;
+          for (var item in orderReturns.returnItems!) {
+            totalQuantity += item.quantity ?? 0;
+          }
+          final averageRate =
+              totalQuantity > 0 ? totalReturnAmount / totalQuantity : 0.0;
+          final amount = itemQuantity * averageRate;
+          returnTotal += amount;
+        }
+      }
+    }
+
+    double finalTotal = orderTotal - returnTotal;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('FINAL SUMMARY', style: subheaderStyle),
+          pw.SizedBox(height: 5),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Display Order Total
+              if (displayConfig?['showFinalPurchase']?.visible == true)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Total Purchase:', style: summaryStyle),
+                    pw.Text(orderTotal.toStringAsFixed(2), style: summaryStyle),
+                  ],
+                ),
+              if (displayConfig?['showFinalPurchase']?.visible == true)
+                pw.SizedBox(height: 2),
+              // Display Return Total
+              if (displayConfig?['showFinalReturn']?.visible == true &&
+                  orderReturns != null &&
+                  orderReturns.returnItems != null &&
+                  orderReturns.returnItems!.isNotEmpty)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Total Return:', style: summaryStyle),
+                    pw.Text(returnTotal.toStringAsFixed(2),
+                        style: summaryStyle),
+                  ],
+                ),
+              if (displayConfig?['showFinalReturn']?.visible == true &&
+                  orderReturns != null &&
+                  orderReturns.returnItems != null &&
+                  orderReturns.returnItems!.isNotEmpty)
+                pw.SizedBox(height: 2),
+              // Display Final Total
+              if (displayConfig?['showFinalNetAmount']?.visible == true) ...[
+                pw.Divider(color: PdfColors.black),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Net Total:', style: netTotalStyle),
+                    pw.Text(finalTotal.toStringAsFixed(2),
+                        style: netTotalStyle),
+                  ],
+                ),
+              ],
+              // Amount in words
+              if (displayConfig?['showFinalAmountInWords']?.visible ==
+                  true) ...[
+                pw.SizedBox(height: 5),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Amount in words:', style: summaryStyle),
+                    pw.Text(
+                      '${AmountHelper().convertNumberToWords(finalTotal)} Only.',
+                      style: summaryStyle,
+                      textAlign: pw.TextAlign.right,
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
-        ),
-      ],
-    ),
-  );
-}
+          ),
+        ],
+      ),
+    );
+  }
 
   // Helper method to calculate cart total from items
   double _calculateCartTotal(List<dynamic> cartItems, bool isFromLocalStorage) {
@@ -1604,6 +1759,7 @@ pw.Widget _buildTotalSummarySection(
     String? customerPhone,
     String? customerEmail,
     String? customerAddress,
+    OrderReturns? orderReturns,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -1869,7 +2025,7 @@ pw.Widget _buildTotalSummarySection(
                   ),
 
                 // Date and Time Row - minimal design
-                _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+                _buildDateTimeRowPDF(selectedPaperSize, orderDate, isFromLocalStorage),
 
                 // Customer Information Section - if available
                 if (customerName != null ||
@@ -1943,8 +2099,47 @@ pw.Widget _buildTotalSummarySection(
                     ),
                   ),
 
+                // Order Returns section - added when returns exist
+                if (orderReturns != null &&
+                    (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
+                  pw.SizedBox(height: 5), // Add spacing before return section
+                  _buildOrderReturnsSection(
+                    selectedPaperSize,
+                    orderReturns,
+                    subheaderStyle,
+                    bodyStyle,
+                    tableHeaderStyle,
+                    summaryStyle,
+                    netTotalStyle,
+                    cartItems,
+                    isFromLocalStorage,
+                    updatedSettings,
+                    billDocumentConfig, // Pass billDocumentConfig for resolved_labels
+                  ),
+                ],
+
+                // Total Summary section - ONLY when there are returns
+                if (orderReturns != null &&
+                    (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
+                  _buildTotalSummarySection(
+                    selectedPaperSize,
+                    formattedTotal,
+                    orderReturns,
+                    cartItems,
+                    isFromLocalStorage,
+                    subheaderStyle,
+                    summaryStyle,
+                    netTotalStyle,
+                    updatedSettings,
+                  ),
+                ],
+
                 // Amount in words - consistent with summary layout
-                if (updatedSettings?['showAmountInWords']?.visible == true)
+                // Only show when there are NO returns (when returns exist, it's shown in Total Summary)
+                if (updatedSettings?['showAmountInWords']?.visible == true &&
+                    (orderReturns == null ||
+                        orderReturns.returnItems == null ||
+                        orderReturns.returnItems!.isEmpty))
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 0, horizontal: 8), // Same padding as summary

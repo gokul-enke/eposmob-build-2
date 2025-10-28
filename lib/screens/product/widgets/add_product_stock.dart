@@ -31,6 +31,9 @@ import 'dart:convert';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/components/build_restricted_payment_selector.dart';
 import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
+import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StockItem {
   String barcode;
@@ -63,7 +66,7 @@ class StockItem {
   String wholesalePriceTax; // Add this for wholesale price with tax
   Map<String, dynamic>? calculatedTaxData; // Store calculated tax data
   bool isHidden; // Add this field to track if item is hidden (soft delete)
-  
+
   StockItem({
     this.barcode = '',
     this.category = '',
@@ -168,57 +171,83 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _disposeRowResources(int index) {
     // Text controllers
     if (categorySearchControllers.containsKey(index)) {
-      try { categorySearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        categorySearchControllers[index]!.dispose();
+      } catch (_) {}
       categorySearchControllers.remove(index);
     }
     if (productSearchControllers.containsKey(index)) {
-      try { productSearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        productSearchControllers[index]!.dispose();
+      } catch (_) {}
       productSearchControllers.remove(index);
     }
     if (barcodeControllers.containsKey(index)) {
-      try { barcodeControllers[index]!.dispose(); } catch (_) {}
+      try {
+        barcodeControllers[index]!.dispose();
+      } catch (_) {}
       barcodeControllers.remove(index);
     }
     if (quantityControllers.containsKey(index)) {
-      try { quantityControllers[index]!.dispose(); } catch (_) {}
+      try {
+        quantityControllers[index]!.dispose();
+      } catch (_) {}
       quantityControllers.remove(index);
     }
     if (purchaseRateControllers.containsKey(index)) {
-      try { purchaseRateControllers[index]!.dispose(); } catch (_) {}
+      try {
+        purchaseRateControllers[index]!.dispose();
+      } catch (_) {}
       purchaseRateControllers.remove(index);
     }
     if (retailPriceControllers.containsKey(index)) {
-      try { retailPriceControllers[index]!.dispose(); } catch (_) {}
+      try {
+        retailPriceControllers[index]!.dispose();
+      } catch (_) {}
       retailPriceControllers.remove(index);
     }
     if (mrpControllers.containsKey(index)) {
-      try { mrpControllers[index]!.dispose(); } catch (_) {}
+      try {
+        mrpControllers[index]!.dispose();
+      } catch (_) {}
       mrpControllers.remove(index);
     }
     if (wholesaleControllers.containsKey(index)) {
-      try { wholesaleControllers[index]!.dispose(); } catch (_) {}
+      try {
+        wholesaleControllers[index]!.dispose();
+      } catch (_) {}
       wholesaleControllers.remove(index);
     }
     if (batchNumberControllers.containsKey(index)) {
-      try { batchNumberControllers[index]!.dispose(); } catch (_) {}
+      try {
+        batchNumberControllers[index]!.dispose();
+      } catch (_) {}
       batchNumberControllers.remove(index);
     }
     if (unitSearchControllers.containsKey(index)) {
-      try { unitSearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        unitSearchControllers[index]!.dispose();
+      } catch (_) {}
       unitSearchControllers.remove(index);
     }
     if (rackSearchControllers.containsKey(index)) {
-      try { rackSearchControllers[index]!.dispose(); } catch (_) {}
+      try {
+        rackSearchControllers[index]!.dispose();
+      } catch (_) {}
       rackSearchControllers.remove(index);
     }
 
     // Focus nodes
     if (barcodeFocusNodes.containsKey(index)) {
-      try { barcodeFocusNodes[index]!.dispose(); } catch (_) {}
+      try {
+        barcodeFocusNodes[index]!.dispose();
+      } catch (_) {}
       barcodeFocusNodes.remove(index);
     }
     if (quantityFocusNodes.containsKey(index)) {
-      try { quantityFocusNodes[index]!.dispose(); } catch (_) {}
+      try {
+        quantityFocusNodes[index]!.dispose();
+      } catch (_) {}
       quantityFocusNodes.remove(index);
     }
   }
@@ -227,7 +256,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _rebuildIndexCache() {
     _cachedVisibleItems.clear();
     _visibleToOriginalIndexMap.clear();
-    
+
     int visibleIndex = 0;
     for (int i = 0; i < stockItems.length; i++) {
       if (!stockItems[i].isHidden) {
@@ -292,7 +321,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   @override
   void dispose() {
     // Dispose timers
-    
+
     _quantityDebounceTimer?.cancel();
 
     // Dispose all search controllers safely
@@ -500,6 +529,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     await _loadSuppliers();
     await _loadUnits(); // Load units
     await _loadRacks(); // Load racks
+    await _loadActiveStore(); // Load active store from session
   }
 
   Future<void> _loadCategories() async {
@@ -556,6 +586,37 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       }
     } catch (e) {
       debugPrint('Error loading racks: $e');
+    }
+  }
+
+  Future<void> _loadActiveStore() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+
+      if (activeStoreId != null) {
+        final purchaseProvider =
+            Provider.of<PurchaseProvider>(context, listen: false);
+
+        if (purchaseProvider.getStoreList != null) {
+          final store = purchaseProvider.getStoreList!.firstWhere(
+            (s) => s.id == activeStoreId,
+            orElse: () => purchaseProvider.getStoreList!.first,
+          );
+
+          if (mounted) {
+            setState(() {
+              selectedStore = store;
+            });
+          }
+          debugPrint(
+              '✅ Active store loaded: ${store.name} (ID: $activeStoreId)');
+        }
+      } else {
+        debugPrint('⚠️ No active store ID found in preferences');
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading active store: $e');
     }
   }
 
@@ -985,8 +1046,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     setState(() {
       debugPrint('🔄 UPDATING STATE VARIABLES...');
-      // Reset header fields
-      selectedStore = null;
+      // Reset header fields (keep selectedStore as it's loaded from active session)
+      // selectedStore remains unchanged - it's loaded from session
       selectedSupplier = null;
       selectedDate = DateTime.now();
       selectedPurchaseDate = DateTime.now();
@@ -1105,7 +1166,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           backgroundColor: Colors.white,
           title: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.warning,
                 color: Colors.red,
                 size: 28,
@@ -1563,6 +1624,32 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
+  // Show product details modal for the selected stock item
+  void _showProductDetailsModal(int index) {
+    final item = stockItems[index];
+    if (item.productData == null) return;
+
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return ProductDetailsDialog(
+          product: item.productData!,
+          unitPrice: double.tryParse(item.salePrice) ?? 0.0,
+          mrp: double.tryParse(item.mrp) ?? 0.0,
+          quantity: int.tryParse(item.quantity) ?? 1,
+          selectedStock: null, // Stock items don't have selectedStock
+          isCompact: false,
+          currency: currency,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -1697,34 +1784,68 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildStoreDropdown(Size size) {
-    return Consumer<PurchaseProvider>(
-      builder: (context, purchaseProvider, child) {
-        List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
-
-        return BuildDropDownWithSearch<GetStoreModelData>(
-          title: "Store",
-          hintText: "Select Store",
-          value: selectedStore,
-          items: storeList ?? [],
-          onChanged: (value) {
-            setState(() {
-              selectedStore = value;
-            });
-          },
-          displayText: (store) => store.name ?? 'Unknown Store',
-          searchController:
-              TextEditingController(), // A new controller for this dropdown
-          isRequired: true,
-          searchHintText: "Search store...",
-        );
-      },
+    // Display active store as read-only field since it's set from session
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        BuildTextTile(
+          isStarRed: true,
+          isTextField: true,
+          title: 'Store',
+          textStyle: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          height: MediaQuery.of(context).size.height * .07,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.store,
+                  size: 20,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    selectedStore?.name ?? 'Loading active store...',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.27,
+                      selectedStore != null
+                          ? Colors.black.withOpacity(0.8)
+                          : Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+                if (selectedStore != null)
+                  const Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: Colors.green,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildSupplierField() {
     return Consumer<SupplierProvider>(
       builder: (context, supplierProvider, child) {
-        List<Supplier> supplierList = supplierProvider.supplierList ?? [];
+        // Use allSuppliers to avoid pagination issues - shows all suppliers in dropdown
+        List<Supplier> supplierList = supplierProvider.allSuppliers ?? [];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1778,23 +1899,31 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     listen: false)
                                 .fetchSuppliers(accessToken: accessToken);
 
-                            // Find the newly created supplier in the updated list
+                            // Find the newly created supplier in the updated list (use allSuppliers to avoid pagination)
                             final updatedSupplierList =
                                 Provider.of<SupplierProvider>(context,
                                             listen: false)
-                                        .supplierList ??
+                                        .allSuppliers ??
                                     [];
-                            final newSupplier = updatedSupplierList.firstWhere(
-                              (supplier) => supplier.phone == createdPhone,
-                              orElse: () => updatedSupplierList.first,
-                            );
-
-                            setState(() {
-                              selectedSupplier = newSupplier;
-                            });
-
-                            debugPrint(
-                                "✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
+                            
+                            if (updatedSupplierList.isNotEmpty) {
+                              try {
+                                final newSupplier = updatedSupplierList.firstWhere(
+                                  (supplier) => supplier.phone == createdPhone,
+                                );
+                                
+                                setState(() {
+                                  selectedSupplier = newSupplier;
+                                });
+                                
+                                debugPrint(
+                                    "✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
+                              } catch (e) {
+                                // Supplier with matching phone not found, don't auto-select
+                                debugPrint(
+                                    "⚠️ Newly created supplier not found by phone: $createdPhone");
+                              }
+                            }
                           }
                         } catch (e) {
                           debugPrint("❌ ERROR AUTO-SELECTING NEW SUPPLIER: $e");
@@ -1907,7 +2036,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       itemBuilder: (context, visibleIndex) {
         int originalIndex = getOriginalIndex(visibleIndex);
         // Add key for better performance - prevents unnecessary rebuilds
-        return _buildStockRow(originalIndex, visibleIndex, key: ValueKey('stock_row_$originalIndex'));
+        return _buildStockRow(originalIndex, visibleIndex,
+            key: ValueKey('stock_row_$originalIndex'));
       },
     );
   }
@@ -2346,79 +2476,65 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Row Number Indicator
+                // Row Number Indicator (centered circle, no square)
                 SizedBox(
-                  width: 40,
-                  child: Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: item.isSuccessfullyAdded
-                          ? Colors.green.shade50
-                          : Colors.blue.shade50,
-                      border: Border.all(
-                        color: item.isSuccessfullyAdded
-                            ? Colors.green
-                            : Colors.blue,
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: item.isSuccessfullyAdded
-                                  ? Colors.green
-                                  : Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${visibleIndex + 1}',
-                                style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s12,
-                                  0.27,
-                                  Colors.white,
-                                ),
-                              ),
+                  width: 32,
+                  height: 32,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: item.isSuccessfullyAdded
+                              ? Colors.green
+                              : Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${visibleIndex + 1}',
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s10,
+                              0.27,
+                              Colors.white,
                             ),
                           ),
-                          // Updated indicator
-                          if (item.isSuccessfullyAdded &&
-                              item.apiResponse != null &&
-                              item.apiResponse!['localId'] != null) ...[
-                            Consumer<StockProvider>(
-                              builder: (context, stockProvider, child) {
-                                final pendingItem =
-                                    stockProvider.getPendingStockItem(
-                                        item.apiResponse!['localId']);
-                                final bool isUpdated = pendingItem != null &&
-                                    pendingItem['updatedAt'] != null;
-
-                                if (!isUpdated) return const SizedBox.shrink();
-
-                                return Positioned(
-                                  top: -2,
-                                  right: -2,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.orange,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ],
+                        ),
                       ),
-                    ),
+                      // Updated indicator
+                      if (item.isSuccessfullyAdded &&
+                          item.apiResponse != null &&
+                          item.apiResponse!['localId'] != null) ...[
+                        Consumer<StockProvider>(
+                          builder: (context, stockProvider, child) {
+                            final pendingItem = stockProvider
+                                .getPendingStockItem(item.apiResponse!['localId']);
+                            final bool isUpdated =
+                                pendingItem != null && pendingItem['updatedAt'] != null;
+
+                            if (!isUpdated) return const SizedBox.shrink();
+
+                            return const Positioned(
+                              top: 0,
+                              right: 0,
+                              child: SizedBox(
+                                width: 8,
+                                height: 8,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -2463,27 +2579,52 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Category Dropdown with Search
+                // Product Dropdown with Search (maximum width)
                 Expanded(
-                  flex: 2,
-                  child: SizedBox(
-                    height: 40,
-                    child: _buildCategoryDropdown(index),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Product Dropdown with Search
-                Expanded(
-                  flex: 3,
+                  flex: 6,
                   child: SizedBox(
                     height: 40,
                     child: _buildProductDropdown(index),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Quantity Text Field
-                Expanded(
-                  flex: 1,
+                const SizedBox(width: 4),
+                // Info Button for Product Details
+                if (stockItems[index].productData != null) ...[
+                  Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: ColorManager.boxShadowColor,
+                          blurRadius: 3,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: Colors.blue,
+                      ),
+                      onPressed: () => _showProductDetailsModal(index),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      tooltip: "View product details",
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                // Quantity Text Field (smaller and right-aligned)
+                SizedBox(
+                  width: 80, // Fixed width instead of flex
                   child: BuildBoxShadowContainer(
                     circleRadius: 5,
                     height: 40,
@@ -2492,6 +2633,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       controller: _getQuantityController(index),
                       focusNode: _getQuantityFocusNode(index),
                       keyboardType: TextInputType.number,
+                      textAlign: TextAlign.right, // Right-aligned text
                       decoration: const InputDecoration(
                         hintText: 'Qty',
                         border: InputBorder.none,
@@ -2535,11 +2677,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 ),
                 const SizedBox(width: 8),
                 // Actions - Add Stock Button + Clear/Delete Button + Expand Button
-                SizedBox(
-                  width: 150, // Width for actions column
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                       // Clear/Delete Button (Conditional)
                       if (item.productData != null ||
                           item.isSuccessfullyAdded) ...[
@@ -2694,8 +2834,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       //     ),
                       //   ),
                       // ],
-                    ],
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -2919,7 +3058,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             String? matchingUnitKey = unitList.entries
                 .firstWhere(
                   (entry) => entry.value == localProduct.unit,
-                  orElse: () => MapEntry('', ''),
+                  orElse: () => const MapEntry('', ''),
                 )
                 .key;
             if (matchingUnitKey.isNotEmpty) {
@@ -3068,9 +3207,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // First row - Unit, Purchase Rate, Retail Price, MRP
+          // First row - Category, Unit, Purchase Rate, Retail Price, MRP
           Row(
             children: [
+              Expanded(
+                child: _buildExpandedCategoryDropdown(index),
+              ),
+              const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedUnitDropdown(index),
               ),
@@ -3304,46 +3447,65 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildCategoryDropdown(int index) {
-    return Selector<CategoryProvider, List<Category>?>(
-      selector: (context, provider) => provider.category,
-      shouldRebuild: (previous, current) => previous?.length != current?.length,
-      builder: (context, categoryList, child) {
-        final filteredCategories = categoryList
-                ?.where((category) => category.categoryName != "ALL")
-                .toList() ??
-            [];
 
-        return BuildDropDownWithSearch<Category>(
-          title: null,
-          hintText: "Select category",
-          value: stockItems[index].categoryData,
-          items: filteredCategories,
-          onChanged: (category) {
-            setState(() {
-              stockItems[index].categoryData = category;
-              stockItems[index].category = category?.categoryName ?? '';
-              // Clear product when category changes
-              stockItems[index].productData = null;
-              stockItems[index].product = '';
-              // Clear product cache to force refresh
-              _clearProductCache();
-            });
-            if (category != null) {
-              Provider.of<GridSelectionProvider>(context, listen: false)
-                  .listAllProducts(
-                      filterCategory: category.categoryId.toString());
-            }
-            // Update pending item if already added
-            _updatePendingStockItem(index);
-          },
-          displayText: (category) => category.categoryName ?? '',
-          searchController: _getCategorySearchController(index),
-          isRequired: false,
+  Widget _buildExpandedCategoryDropdown(int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Category",
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s11,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 2),
+        SizedBox(
           height: 40,
-          searchHintText: "Search category...",
-        );
-      },
+          child: Selector<CategoryProvider, List<Category>?>(
+            selector: (context, provider) => provider.category,
+            shouldRebuild: (previous, current) => previous?.length != current?.length,
+            builder: (context, categoryList, child) {
+              final filteredCategories = categoryList
+                      ?.where((category) => category.categoryName != "ALL")
+                      .toList() ??
+                  [];
+
+              return BuildDropDownWithSearch<Category>(
+                title: null,
+                hintText: "Select category",
+                value: stockItems[index].categoryData,
+                items: filteredCategories,
+                onChanged: (category) {
+                  setState(() {
+                    stockItems[index].categoryData = category;
+                    stockItems[index].category = category?.categoryName ?? '';
+                    // Clear product when category changes
+                    stockItems[index].productData = null;
+                    stockItems[index].product = '';
+                    // Clear product cache to force refresh
+                    _clearProductCache();
+                  });
+                  if (category != null) {
+                    Provider.of<GridSelectionProvider>(context, listen: false)
+                        .listAllProducts(
+                            filterCategory: category.categoryId.toString());
+                  }
+                  // Update pending item if already added
+                  _updatePendingStockItem(index);
+                },
+                displayText: (category) => category.categoryName ?? '',
+                searchController: _getCategorySearchController(index),
+                isRequired: false,
+                height: 40,
+                searchHintText: "Search category...",
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -3526,7 +3688,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     String? matchingUnitKey = unitList.entries
                         .firstWhere(
                           (entry) => entry.value == product.unit,
-                          orElse: () => MapEntry('', ''),
+                          orElse: () => const MapEntry('', ''),
                         )
                         .key;
                     if (matchingUnitKey.isNotEmpty) {

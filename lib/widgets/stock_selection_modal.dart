@@ -2,14 +2,71 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 
-class StockSelectionModal extends StatelessWidget {
+// Class to represent combined stocks with same pricing
+class CombinedStock {
+  final String? price;
+  final String? mrp;
+  final String? purchasePrice;
+  final String? unit;
+  final String? hsnCode;
+  final num totalQuantity;
+  final List<Stock> originalStocks;
+
+  CombinedStock({
+    required this.price,
+    required this.mrp,
+    required this.purchasePrice,
+    required this.unit,
+    required this.hsnCode,
+    required this.totalQuantity,
+    required this.originalStocks,
+  });
+
+  // Get the stock with earliest expiry date for other properties
+  Stock get firstStock {
+    if (originalStocks.length == 1) return originalStocks.first;
+
+    // Sort by expiry date (earliest first), then by date (earliest first)
+    List<Stock> sortedStocks = List.from(originalStocks);
+    sortedStocks.sort((a, b) {
+      // First priority: expiry date (earliest first)
+      if (a.expiryDate != null && b.expiryDate != null) {
+        try {
+          DateTime dateA = DateTime.parse(a.expiryDate!);
+          DateTime dateB = DateTime.parse(b.expiryDate!);
+          int expiryComparison = dateA.compareTo(dateB);
+          if (expiryComparison != 0) return expiryComparison;
+        } catch (e) {
+          // If parsing fails, fall through to next comparison
+        }
+      }
+
+      // Second priority: stock date (earliest first)
+      if (a.date != null && b.date != null) {
+        try {
+          DateTime dateA = DateTime.parse(a.date!);
+          DateTime dateB = DateTime.parse(b.date!);
+          return dateA.compareTo(dateB);
+        } catch (e) {
+          // If parsing fails, use ID as fallback
+        }
+      }
+
+      // Fallback: use ID
+      return (a.id ?? 0).compareTo(b.id ?? 0);
+    });
+
+    return sortedStocks.first;
+  }
+}
+
+class StockSelectionModal extends StatefulWidget {
   final GetProduct product;
   final List<Stock> stockOptions;
 
@@ -20,7 +77,54 @@ class StockSelectionModal extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<StockSelectionModal> createState() => _StockSelectionModalState();
+}
+
+class _StockSelectionModalState extends State<StockSelectionModal> {
+  Set<int> expandedItems = {};
+
+  // Method to group stocks with identical pricing information
+  List<CombinedStock> _groupStocksByPricing(List<Stock> stocks) {
+    Map<String, List<Stock>> groupedStocks = {};
+
+    for (Stock stock in stocks) {
+      // Create a unique key based on pricing information
+      String key =
+          '${stock.price}_${stock.mrp}_${stock.purchasePrice}_${stock.unit}_${stock.hsnCode}';
+
+      if (groupedStocks.containsKey(key)) {
+        groupedStocks[key]!.add(stock);
+      } else {
+        groupedStocks[key] = [stock];
+      }
+    }
+
+    // Convert grouped stocks to CombinedStock objects
+    List<CombinedStock> combinedStocks = [];
+    groupedStocks.forEach((key, stockList) {
+      num totalQuantity =
+          stockList.fold(0, (sum, stock) => sum + (stock.quantity ?? 0));
+
+      combinedStocks.add(CombinedStock(
+        price: stockList.first.price,
+        mrp: stockList.first.mrp,
+        purchasePrice: stockList.first.purchasePrice,
+        unit: stockList.first.unit,
+        hsnCode: stockList.first.hsnCode,
+        totalQuantity: totalQuantity,
+        originalStocks: stockList,
+      ));
+    });
+
+    return combinedStocks;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Group stocks by pricing information
+    List<CombinedStock> combinedStocks =
+        _groupStocksByPricing(widget.stockOptions);
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -69,7 +173,7 @@ class StockSelectionModal extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Product: ${product.productName}',
+              'Product: ${widget.product.productName}',
               style: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s16,
@@ -92,65 +196,420 @@ class StockSelectionModal extends StatelessWidget {
                     },
                   ),
                   child: ListView.builder(
-                    itemCount: stockOptions.length,
+                    clipBehavior: Clip.none,
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    itemCount: combinedStocks.length,
                     physics: const BouncingScrollPhysics(),
                     itemBuilder: (context, index) {
-                      final stock = stockOptions[index];
-                      return BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        margin: const EdgeInsets.symmetric(vertical: 5),
-                        color: Colors.white,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+                      final combinedStock = combinedStocks[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 5, horizontal: 8),
+                        child: Material(
+                          color: Colors.white,
+                          elevation: 4,
+                          shadowColor: Colors.black.withOpacity(0.12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(7),
                           ),
-                          title: Text(
-                            'Stock ID: ${stock.id}',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s14,
-                              0.21,
-                              ColorManager.textColor,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                'Price: ₹${stock.price ?? "0.00"}',
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                title: Text(
+                                  combinedStock.originalStocks.length > 1
+                                      ? 'Combined Stock (${combinedStock.originalStocks.length} stocks)'
+                                      : 'Stock ID: ${combinedStock.firstStock.id}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s14,
+                                    0.21,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Price: ₹${combinedStock.price ?? "0.00"}',
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                    Text(
+                                      'MRP: ₹${combinedStock.mrp ?? "0.00"}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    Text(
+                                      'Available Quantity: ${combinedStock.totalQuantity}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    // Show expiry date for single stock entries
+                                    if (combinedStock.originalStocks.length ==
+                                            1 &&
+                                        combinedStock.firstStock.expiryDate !=
+                                            null)
+                                      Text(
+                                        'Expiry Date: ${combinedStock.firstStock.expiryDate}',
+                                        style: const TextStyle(
+                                            fontSize: 12, color: Colors.orange),
+                                      ),
+                                    if (combinedStock.originalStocks.length > 1)
+                                      InkWell(
+                                        borderRadius: BorderRadius.circular(4),
+                                        onTap: () {
+                                          setState(() {
+                                            if (expandedItems.contains(index)) {
+                                              expandedItems.remove(index);
+                                            } else {
+                                              expandedItems.add(index);
+                                            }
+                                          });
+                                        },
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              'From ${combinedStock.originalStocks.length} stock entries',
+                                              style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Icon(
+                                              expandedItems.contains(index)
+                                                  ? Icons.expand_less
+                                                  : Icons.expand_more,
+                                              size: 16,
+                                              color: ColorManager.kPrimaryColor,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                trailing: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: ColorManager.kPrimaryColor,
+                                    foregroundColor: Colors.white,
+                                    textStyle: const TextStyle(fontSize: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    // Return both product and selected combined stock
+                                    // For combined stocks, return the first stock but with updated quantity
+                                    Stock selectedStock = Stock(
+                                      id: combinedStock.firstStock.id,
+                                      productId:
+                                          combinedStock.firstStock.productId,
+                                      supplier:
+                                          combinedStock.firstStock.supplier,
+                                      quantity: combinedStock.totalQuantity,
+                                      price: combinedStock.price,
+                                      sku: combinedStock.firstStock.sku,
+                                      mrp: combinedStock.mrp,
+                                      unit: combinedStock.unit,
+                                      purchasePrice:
+                                          combinedStock.purchasePrice,
+                                      date: combinedStock.firstStock.date,
+                                      expiryDate:
+                                          combinedStock.firstStock.expiryDate,
+                                      rack: combinedStock.firstStock.rack,
+                                      hsnCode: combinedStock.hsnCode,
+                                    );
+
+                                    Navigator.pop(context, {
+                                      'product': widget.product,
+                                      'stock': selectedStock,
+                                      'originalStocks': combinedStock
+                                          .originalStocks, // Include original stocks for reference
+                                    });
+                                  },
+                                  child: const Text('Choose'),
+                                ),
                               ),
-                              Text(
-                                'MRP: ₹${stock.mrp ?? "0.00"}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              Text(
-                                'Available Quantity: ${stock.quantity ?? 0}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
+                              // Show expanded stock details inside the same card
+                              if (combinedStock.originalStocks.length > 1 &&
+                                  expandedItems.contains(index))
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(7),
+                                      bottomRight: Radius.circular(7),
+                                    ),
+                                    border: Border(
+                                      top: BorderSide(
+                                          color: Colors.grey[300]!, width: 1),
+                                    ),
+                                  ),
+                                  clipBehavior: Clip.none,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Header section
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.inventory_2_rounded,
+                                            color: ColorManager.kPrimaryColor,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Individual Stock Details',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: ColorManager.kPrimaryColor,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: ColorManager.kPrimaryColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              '${combinedStock.originalStocks.length} items',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      // Stock items
+                                      ...combinedStock.originalStocks
+                                          .map((stock) => Container(
+                                                width: double.infinity,
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 8),
+                                                padding:
+                                                    const EdgeInsets.all(12),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                      color: Colors.grey[300]!),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withOpacity(0.03),
+                                                      spreadRadius: 1,
+                                                      blurRadius: 2,
+                                                      offset:
+                                                          const Offset(0, 1),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    // Stock icon
+                                                    Container(
+                                                      width: 36,
+                                                      height: 36,
+                                                      decoration: BoxDecoration(
+                                                        color: stock.expiryDate !=
+                                                                null
+                                                            ? Colors.orange
+                                                                .withOpacity(
+                                                                    0.1)
+                                                            : Colors.grey
+                                                                .withOpacity(
+                                                                    0.1),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.inventory,
+                                                        color:
+                                                            stock.expiryDate !=
+                                                                    null
+                                                                ? Colors.orange
+                                                                : Colors.grey,
+                                                        size: 18,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    // Stock details
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              Text(
+                                                                'Stock ID: ',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 11,
+                                                                  color: Colors
+                                                                          .grey[
+                                                                      600],
+                                                                ),
+                                                              ),
+                                                              Text(
+                                                                '${stock.id}',
+                                                                style:
+                                                                    const TextStyle(
+                                                                  fontSize: 11,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color: Colors
+                                                                      .black87,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 4),
+                                                          Row(
+                                                            children: [
+                                                              Icon(
+                                                                Icons
+                                                                    .inventory_2,
+                                                                size: 12,
+                                                                color: Colors
+                                                                    .grey[600],
+                                                              ),
+                                                              const SizedBox(
+                                                                  width: 4),
+                                                              Text(
+                                                                'Qty: ${stock.quantity}',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 10,
+                                                                  color: Colors
+                                                                          .grey[
+                                                                      700],
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                  width: 16),
+                                                              Icon(
+                                                                stock.expiryDate !=
+                                                                        null
+                                                                    ? Icons
+                                                                        .schedule
+                                                                    : Icons
+                                                                        .all_inclusive,
+                                                                size: 12,
+                                                                color: stock.expiryDate !=
+                                                                        null
+                                                                    ? Colors
+                                                                        .orange
+                                                                    : Colors
+                                                                        .grey,
+                                                              ),
+                                                              const SizedBox(
+                                                                  width: 4),
+                                                              Flexible(
+                                                                child: Text(
+                                                                  stock.expiryDate !=
+                                                                          null
+                                                                      ? stock
+                                                                          .expiryDate!
+                                                                      : 'No expiry',
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        10,
+                                                                    color: stock.expiryDate !=
+                                                                            null
+                                                                        ? Colors
+                                                                            .orange
+                                                                        : Colors
+                                                                            .grey,
+                                                                    fontWeight: stock.expiryDate !=
+                                                                            null
+                                                                        ? FontWeight
+                                                                            .w500
+                                                                        : FontWeight
+                                                                            .normal,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    // Choose button
+                                                    ElevatedButton(
+                                                      style: ElevatedButton
+                                                          .styleFrom(
+                                                        backgroundColor:
+                                                            ColorManager
+                                                                .kPrimaryColor,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                        textStyle:
+                                                            const TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 6,
+                                                        ),
+                                                        minimumSize:
+                                                            const Size(60, 28),
+                                                        shape:
+                                                            RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(6),
+                                                        ),
+                                                      ),
+                                                      onPressed: () {
+                                                        // Return the specific individual stock
+                                                        Navigator.pop(context, {
+                                                          'product':
+                                                              widget.product,
+                                                          'stock': stock,
+                                                          'originalStocks': [
+                                                            stock
+                                                          ], // Single stock in array
+                                                        });
+                                                      },
+                                                      child:
+                                                          const Text('Choose'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ))
+                                          .toList(),
+                                    ],
+                                  ),
+                                ),
                             ],
-                          ),
-                          trailing: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ColorManager.kPrimaryColor,
-                              foregroundColor: Colors.white,
-                              textStyle: const TextStyle(fontSize: 12),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                            onPressed: () {
-                              // Return both product and selected stock
-                              Navigator.pop(context, {
-                                'product': product,
-                                'stock': stock,
-                              });
-                            },
-                            child: const Text('Choose'),
                           ),
                         ),
                       );

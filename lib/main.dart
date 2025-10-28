@@ -37,6 +37,9 @@ import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
@@ -45,9 +48,14 @@ import 'screens/login/login.dart';
 import 'screens/login/base_url_wrapper.dart';
 import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    await _requestPermissions();
+  }
 
   // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
   // Safer than Documents (less likely to be deleted by user)
@@ -85,6 +93,27 @@ void main() async {
   Get.put(CategoryProvider());
   HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
+}
+
+Future<void> _requestPermissions() async {
+  final statuses = await [
+    Permission.bluetooth,
+    Permission.bluetoothConnect,
+    Permission.bluetoothScan,
+    Permission.locationWhenInUse,
+    Permission.location,
+  ].request();
+
+  statuses.forEach((permission, status) {
+    if (status.isGranted) {
+      debugPrint('$permission permission granted.');
+    } else if (status.isDenied) {
+      debugPrint('$permission permission denied.');
+    } else if (status.isPermanentlyDenied) {
+      debugPrint('$permission permission permanently denied.');
+      openAppSettings();
+    }
+  });
 }
 
 Future<void> _initializeHiveBoxes() async {
@@ -234,11 +263,14 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
+        ChangeNotifierProvider(create: (_) => StoreSessionProvider()),
         ChangeNotifierProvider(create: (_) => TableProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => BillingProvider()),
         ChangeNotifierProvider(create: (_) => WhatsappProvider()),
+        ChangeNotifierProvider(create: (_) => PineLabsTerminalProvider()),
+        ChangeNotifierProvider(create: (_) => RoleProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(

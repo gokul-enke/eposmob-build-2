@@ -16,6 +16,8 @@ class SalesProvider with ChangeNotifier {
   List<SalesReturnCart> _salesReturnItems = [];
   int currentPage = 1;
   int totalPages = 1;
+  int salesReturnCurrentPage = 1;
+  int salesReturnTotalPages = 1;
   List<ListOrderModelData> get orders => _orders;
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
@@ -281,12 +283,9 @@ class SalesProvider with ChangeNotifier {
 
   Future<void> fetchSalesReturn({
     required String accessToken,
-    required int customerId,
     int? page,
   }) async {
-    final queryParameters = <String, String>{
-      'customer_id': "1",
-    };
+    final queryParameters = <String, String>{};
     if (page != null) queryParameters['page'] = page.toString();
 
     final uri = Uri.parse(APPUrl.listSalesReturn)
@@ -324,6 +323,12 @@ class SalesProvider with ChangeNotifier {
           debugPrint(
               'fetch Sales Return list response data: ${salesReturnResponse.data.data}');
           _salesReturnOrders = salesReturnResponse.data.data; // Store fetched data from nested structure
+          
+          // Update pagination for sales return
+          salesReturnCurrentPage = salesReturnResponse.data.currentPage;
+          salesReturnTotalPages = salesReturnResponse.data.lastPage;
+          debugPrint('Sales Return Pagination - Current: $salesReturnCurrentPage, Total: $salesReturnTotalPages');
+          
           notifyListeners(); // Notify listeners to update UI
         } catch (e, stackTrace) {
           debugPrint('=== JSON PARSING ERROR ===');
@@ -457,6 +462,9 @@ class SalesProvider with ChangeNotifier {
   Future<void> completeSalesReturn({
     required String accessToken,
     required int returnOrderId,
+    String? paymentMethod,
+    double? paidAmount,
+    bool? hasPayment,
   }) async {
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
@@ -477,11 +485,21 @@ class SalesProvider with ChangeNotifier {
       },
       body: jsonEncode({
         'return_order_id': returnOrderId,
+        if (hasPayment == true) ...{
+          'payment_method': paymentMethod,
+          'paid_amount': paidAmount,
+          'has_payment': hasPayment,
+        } else ...{
+          'has_payment': false,
+        }
       }),
     );
 
     debugPrint("accessToken $accessToken");
     debugPrint("returnOrderId $returnOrderId");
+    debugPrint("hasPayment $hasPayment");
+    debugPrint("paymentMethod $paymentMethod");
+    debugPrint("paidAmount $paidAmount");
 
     if (response.statusCode == 200) {
       debugPrint('Sales return submitted successfully: ${response.body}');

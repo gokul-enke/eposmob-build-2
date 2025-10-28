@@ -159,26 +159,42 @@ class _CustomerInformationViewWidgetState
                         title: "Account Information",
                         icon: Icons.account_circle,
                         children: [
-                                                     _buildInfoRow(
-                             icon: Icons.credit_score_outlined,
-                             label: "Loyalty Points",
-                             value: widget.customer?.loyaltyPoints?.toString() ?? "0",
-                             valueColor: ColorManager.kSuccessColor,
-                           ),
-                           const SizedBox(height: 16),
-                           _buildInfoRow(
-                             icon: Icons.calendar_today_outlined,
-                             label: "Member Since",
-                             value: widget.customer?.createdAt != null 
-                                 ? "${widget.customer!.createdAt!.day}/${widget.customer!.createdAt!.month}/${widget.customer!.createdAt!.year}"
-                                 : "Not available",
-                           ),
-                           const SizedBox(height: 16),
-                           _buildInfoRow(
-                             icon: Icons.shopping_bag_outlined,
-                             label: "Total Orders",
-                             value: widget.customer?.orders?.length.toString() ?? "0",
-                           ),
+                          _buildInfoRow(
+                            icon: Icons.account_balance_wallet_outlined,
+                            label: "Balance",
+                            value: "₹${widget.customer?.balance?.toStringAsFixed(2) ?? "0.00"}",
+                            valueColor: (widget.customer?.balance ?? 0) > 0 
+                                ? ColorManager.kSuccessColor 
+                                : ColorManager.kGreyColor,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoRow(
+                            icon: Icons.payment_outlined,
+                            label: "Payment Type",
+                            value: _getPaymentTypeDisplay(widget.customer?.paymentType),
+                            valueColor: _getPaymentTypeColor(widget.customer?.paymentType),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoRow(
+                            icon: Icons.credit_score_outlined,
+                            label: "Loyalty Points",
+                            value: widget.customer?.loyaltyPoints?.toString() ?? "0",
+                            valueColor: ColorManager.kSuccessColor,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoRow(
+                            icon: Icons.calendar_today_outlined,
+                            label: "Member Since",
+                            value: widget.customer?.createdAt != null 
+                                ? "${widget.customer!.createdAt!.day}/${widget.customer!.createdAt!.month}/${widget.customer!.createdAt!.year}"
+                                : "Not available",
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoRow(
+                            icon: Icons.shopping_bag_outlined,
+                            label: "Total Orders",
+                            value: widget.customer?.orders?.length.toString() ?? "0",
+                          ),
                         ],
                       ),
                       
@@ -408,5 +424,33 @@ class _CustomerInformationViewWidgetState
         ),
       ),
     );
+  }
+
+  String _getPaymentTypeDisplay(String? paymentType) {
+    if (paymentType == null || paymentType.isEmpty) {
+      return "Not set";
+    }
+    switch (paymentType.toLowerCase()) {
+      case 'to_pay':
+        return "To Pay";
+      case 'to_receive':
+        return "To Receive";
+      default:
+        return "Not set";
+    }
+  }
+
+  Color _getPaymentTypeColor(String? paymentType) {
+    if (paymentType == null || paymentType.isEmpty) {
+      return ColorManager.kGreyColor;
+    }
+    switch (paymentType.toLowerCase()) {
+      case 'to_pay':
+        return Colors.orange;
+      case 'to_receive':
+        return ColorManager.kSuccessColor;
+      default:
+        return ColorManager.kGreyColor;
+    }
   }
 }

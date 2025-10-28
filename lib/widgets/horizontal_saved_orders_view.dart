@@ -1,10 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart'; // Added import
 import 'package:pos_machine/resources/color_manager.dart';
@@ -215,8 +215,12 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
 
   Widget _buildSavedOrderCard(
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
-    String time = _formatTimeWith12Hour(order.createdAt);
+    String date = DateHelper.formatToISODateOnlyFromISO(order.createdAt);
+    String time = DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
+
+    debugPrint("SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
+    debugPrint("SavedOrder ${order.orderNumber} formatted date: $date | formatted time: $time");
 
     // Get currency from AppSettingsProvider
     final appSettingsProvider =
@@ -243,21 +247,26 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Header row with order number and time
+                Text(
+                  order.orderNumber,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: isSelected
+                        ? ColorManager.kPrimaryColor
+                        : Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Text(
-                        order.orderNumber,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: isSelected
-                              ? ColorManager.kPrimaryColor
-                              : Colors.black87,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
                       ),
                     ),
                     Text(
@@ -355,17 +364,6 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
       ),
     );
   }
-
-  String _formatTimeWith12Hour(String isoDate) {
-    // Convert ISO date string to DateTime
-    DateTime dateTime = DateTime.parse(isoDate);
-
-    // Format time in 12-hour format with AM/PM
-    String formattedTime = DateFormat('h:mm a').format(dateTime);
-
-    return formattedTime;
-  }
-
   void _showDeleteConfirmationDialog(
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
     DeleteConfirmationDialog.show(

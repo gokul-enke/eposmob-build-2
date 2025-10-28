@@ -171,7 +171,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                           order.deliveryDate!.isNotEmpty) ...[
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Delivery Date: ${DateHelper.formatISODate(order.deliveryDate!)}',
+                                          'Delivery Date: ${DateHelper.formatToISODateOnlyFromISO(order.deliveryDate!)}',
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s10,
@@ -274,11 +274,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
   }
 
   String _formatDateTime(String isoDateString) {
-    return DateHelper.formatISODate(isoDateString);
+    return DateHelper.formatToISODateOnlyFromISO(isoDateString);
   }
 
   String _formatTime(String isoDateString) {
-    return DateHelper.formatISODateToIST(isoDateString);
+    return DateHelper.formatToISODateFromIST(isoDateString);
   }
 
   void _printOrder(SavedOrder order) {

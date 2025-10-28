@@ -36,8 +36,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('TransactionScreen:initState');
     final accessToken =
         Provider.of<AuthModel>(context, listen: false).token ?? '';
+    debugPrint(
+        'TransactionScreen:obtainedToken length=${accessToken.length} isEmpty=${accessToken.isEmpty}');
     Provider.of<TransactionProvider>(context, listen: false)
         .setAccessToken(accessToken);
     loadInitData();
@@ -51,6 +54,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   void loadInitData() async {
     try {
+      debugPrint('TransactionScreen:loadInitData start');
       setState(() => initLoading = true);
       await Provider.of<TransactionProvider>(context, listen: false)
           .fetchAllTransactionsBatch();
@@ -58,12 +62,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
         isInitialized = true;
         initLoading = false;
       });
+      debugPrint('TransactionScreen:loadInitData success');
     } catch (error) {
       debugPrint("Error loading transactions: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error loading transactions: $error")),
       );
       setState(() => initLoading = false);
+      debugPrint('TransactionScreen:loadInitData error=$error');
     }
   }
 
@@ -399,7 +405,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('TransactionScreen:build start');
     final transactionProvider = Provider.of<TransactionProvider>(context);
+    debugPrint('TransactionScreen:build transactionProvider=not-null isLoading=${transactionProvider.transactionIsLoading}');
     Size size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
 
@@ -475,15 +483,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: _buildSearchField(
-                        title: "Supplier",
-                        child: SupplierAutocomplete(
-                          size: size,
-                          onSelected: (_) => searchTransactions(),
-                          supplierList:
-                              transactionProvider.getSupplierOptions(),
-                          controller: supplierSearchController,
-                        ),
+                      child: Builder(
+                        builder: (ctx) {
+                          debugPrint('TransactionScreen:building SupplierAutocomplete');
+                          final supplierOptions = transactionProvider.getSupplierOptions();
+                          debugPrint('TransactionScreen:supplierOptions length=${supplierOptions.length}');
+                          return _buildSearchField(
+                            title: "Supplier",
+                            child: SupplierAutocomplete(
+                              size: size,
+                              onSelected: (_) => searchTransactions(),
+                              supplierList: supplierOptions,
+                              controller: supplierSearchController,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 10),
