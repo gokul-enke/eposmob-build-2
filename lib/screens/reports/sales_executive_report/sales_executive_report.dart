@@ -491,7 +491,8 @@ class _SalesExecutiveReportScreenState
                                                     1.5), // Credit Sales
                                                 7: FlexColumnWidth(
                                                     1.5), // Collected Sales
-                                                8: FlexColumnWidth(1.2), // Actions
+                                                8: FlexColumnWidth(
+                                                    1.2), // Actions
                                               },
                                               border: null,
                                               defaultVerticalAlignment:
@@ -766,11 +767,28 @@ class _SalesExecutiveReportScreenState
                               TableCellVerticalAlignment.middle,
                           children: [
                             // Order matches screenshot: left column sequence then right column sequence
-                            _detailsRow('Name', report.name ?? 'N/A', 'Phone', report.phone ?? 'N/A'),
-                            _detailsRow('Total Orders', (report.orderCount ?? 0).toString(), 'Total Sales', '₹${report.formattedTotalSales}'),
-                            _detailsRow('Total Payment Received', '₹${report.formattedTotalPaymentReceived}', 'Total Amount Collected On Sale', '₹${report.formattedCollectedSales}'),
-                            _detailsRow('Total Credit Collected (Prev Balance)', '₹${report.formattedCreditCollectedPrev}', 'Total UPI Sales', '₹${report.formattedUpiSales}'),
-                            _detailsRow('Total Cash Sales', '₹${report.formattedCashSales}', 'Total Credit Amount', '₹${report.formattedCreditSales}'),
+                            _detailsRow('Name', report.name ?? 'N/A', 'Phone',
+                                report.phone ?? 'N/A'),
+                            _detailsRow(
+                                'Total Orders',
+                                (report.orderCount ?? 0).toString(),
+                                'Total Sales',
+                                '₹${report.formattedTotalSales}'),
+                            _detailsRow(
+                                'Total Payment Received',
+                                '₹${report.formattedTotalPaymentReceived}',
+                                'Total Amount Collected On Sale',
+                                '₹${report.formattedTotalCollectedOnSale}'),
+                            _detailsRow(
+                                'Total Credit Collected (Prev Balance)',
+                                '₹${report.formattedCollectedSales}',
+                                'Total UPI Sales',
+                                '₹${report.formattedUpiSales}'),
+                            _detailsRow(
+                                'Total Cash Sales',
+                                '₹${report.formattedCashSales}',
+                                'Total Credit Amount',
+                                '₹${report.formattedCreditSales}'),
                           ],
                         )
                       ],
@@ -802,8 +820,8 @@ class _SalesExecutiveReportScreenState
     );
   }
 
-  TableRow _detailsRow(
-      String leftTitle, String leftValue, String rightTitle, String rightValue) {
+  TableRow _detailsRow(String leftTitle, String leftValue, String rightTitle,
+      String rightValue) {
     return TableRow(
       children: [
         _detailsCell(leftTitle, leftValue),

@@ -88,6 +88,22 @@ class _CustomerTransactionsReportScreenState
   }
 
   Future<void> loadInitData() async {
+    // Use default date filters when called without parameters
+    await loadInitDataWithFilters(
+      dateFrom: _fromDateController.text,
+      dateTo: _toDateController.text,
+    );
+  }
+
+  Future<void> loadInitDataWithFilters({
+    String? customerId,
+    String? customerName,
+    String? type,
+    String? transactionType,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
+  }) async {
     setState(() {
       initLoading = true;
     });
@@ -99,8 +115,14 @@ class _CustomerTransactionsReportScreenState
           Provider.of<InvoiceProvider>(context, listen: false);
 
       final value = await invoiceProvider.listAllTransaction(
-        type: null,
+        type: type,
         accessToken: accessToken ?? "",
+        customerId: customerId,
+        customerName: customerName,
+        transactionType: transactionType,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        page: page,
       );
 
       if (value['status'] == 'success') {
@@ -111,8 +133,8 @@ class _CustomerTransactionsReportScreenState
         // Populate customer suggestions
         final suggestions = getCustomerSuggestions();
 
-        // Apply filters immediately
-        _applyFilters();
+        // Apply filters immediately (data is already filtered from API)
+        _calculateCustomerSummary();
 
         // Update the customer suggestions and trigger a rebuild
         setState(() {
@@ -162,6 +184,15 @@ class _CustomerTransactionsReportScreenState
   }
 
   void _applyFilters() {
+    // Use API filtering instead of client-side filtering
+    loadInitDataWithFilters(
+      customerName: searchCustomer.isNotEmpty ? searchCustomer : null,
+      dateFrom: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+      dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
+    );
+  }
+
+  void _calculateCustomerSummary() {
     if (allTransactions == null || allTransactions!.isEmpty) {
       setState(() {
         customerSummary.clear();
@@ -169,64 +200,9 @@ class _CustomerTransactionsReportScreenState
       return;
     }
 
-    // Apply filters
-    List<ListTransaction> filteredList = [...allTransactions!];
-
-    // Customer filter
-    if (searchCustomer.isNotEmpty) {
-      filteredList = filteredList
-          .where((transaction) => (transaction.customerName ?? '')
-              .toLowerCase()
-              .contains(searchCustomer.toLowerCase()))
-          .toList();
-    }
-
-    // Date range filter
-    if (_fromDateController.text.isNotEmpty ||
-        _toDateController.text.isNotEmpty) {
-      try {
-        final formatter = DateFormat('yyyy-MM-dd');
-
-        filteredList = filteredList.where((transaction) {
-          if (transaction.date == null) return false;
-
-          try {
-            final transactionDate = formatter.parse(transaction.date!);
-
-            // If from date is set, check that transaction date is not before it
-            if (_fromDateController.text.isNotEmpty) {
-              final fromDate = formatter.parse(_fromDateController.text);
-              if (transactionDate.isBefore(fromDate)) return false;
-            }
-
-            // If to date is set, check that transaction date is not after it
-            if (_toDateController.text.isNotEmpty) {
-              final toDate = formatter.parse(_toDateController.text);
-              // Include the to date by adding one day and checking if transaction date is before
-              final toDatePlusOne = toDate.add(const Duration(days: 1));
-              if (transactionDate.isAfter(toDate)) return false;
-            }
-
-            return true;
-          } catch (e) {
-            debugPrint('Date parsing error for transaction: $e');
-            return false;
-          }
-        }).toList();
-      } catch (e) {
-        debugPrint('Date parsing error: $e');
-      }
-    }
-
-    // Recalculate customer summary with filtered transactions
-    _calculateCustomerSummaryFromFilteredList(filteredList);
-  }
-
-  void _calculateCustomerSummaryFromFilteredList(
-      List<ListTransaction> filteredList) {
     Map<String, CustomerTransactionSummary> filteredCustomerSummary = {};
 
-    for (var transaction in filteredList) {
+    for (var transaction in allTransactions!) {
       String customerName = transaction.customerName ?? 'Unknown Customer';
       double amount = double.tryParse(transaction.amount ?? '0') ?? 0.0;
       String type = transaction.type ?? 'unknown';
@@ -274,8 +250,11 @@ class _CustomerTransactionsReportScreenState
     // Set default date values
     _setInitialDateFilters();
 
-    // Reload data
-    loadInitData();
+    // Reload data with default filters
+    loadInitDataWithFilters(
+      dateFrom: _fromDateController.text,
+      dateTo: _toDateController.text,
+    );
   }
 
   @override
@@ -284,7 +263,11 @@ class _CustomerTransactionsReportScreenState
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: () async => loadInitData(),
+        onRefresh: () async => loadInitDataWithFilters(
+        customerName: searchCustomer.isNotEmpty ? searchCustomer : null,
+        dateFrom: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+        dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
+      ),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           padding: const EdgeInsets.all(8),

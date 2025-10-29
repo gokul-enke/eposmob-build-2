@@ -894,16 +894,29 @@ class InvoiceProvider extends ChangeNotifier {
   Future<dynamic> listAllTransaction({
     String? type,
     required String accessToken,
+    String? customerId,
+    String? customerName,
+    String? transactionType,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
   }) async {
-    final Map<String, dynamic> apiBodyData = {
-      'type': type,
-    };
-    // debugPrint(apiBodyData.toString());
-    final url = type == null
-        ? Uri.parse(APPUrl.listAllTransaction)
-        : type == "Cr"
-            ? Uri.parse("${APPUrl.listAllTransaction}?type=Cr")
-            : Uri.parse("${APPUrl.listAllTransaction}?type=Dr");
+    // Build query parameters
+    Map<String, String> queryParams = {};
+    
+    if (type != null) queryParams['type'] = type;
+    if (customerId != null) queryParams['customer_id'] = customerId;
+    if (customerName != null) queryParams['customer_name'] = customerName;
+    if (transactionType != null) queryParams['transaction_type'] = transactionType;
+    if (dateFrom != null) queryParams['date_from'] = dateFrom;
+    if (dateTo != null) queryParams['date_to'] = dateTo;
+    if (page != null) queryParams['page'] = page.toString();
+    
+    // Build URL with query parameters
+    Uri url = Uri.parse(APPUrl.listAllTransaction);
+    if (queryParams.isNotEmpty) {
+      url = Uri.parse(APPUrl.listAllTransaction).replace(queryParameters: queryParams);
+    }
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');

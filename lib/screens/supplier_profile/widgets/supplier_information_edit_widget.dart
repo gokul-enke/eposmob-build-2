@@ -7,6 +7,9 @@ import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/providers/supplier_provider.dart';
 
 class SupplierInformationEditWidget extends StatefulWidget {
   final Size size;
@@ -145,6 +148,7 @@ class _SupplierInformationEditWidgetState
                   rightLabel: 'Phone Number',
                   rightHint: 'Enter phone number',
                   rightKeyboardType: TextInputType.phone,
+                  rightRequired: true,
                 ),
                 const SizedBox(height: 20),
                 _buildTextField(
@@ -184,6 +188,7 @@ class _SupplierInformationEditWidgetState
                   leftLabel: 'Balance',
                   leftHint: 'Enter balance amount',
                   leftKeyboardType: TextInputType.number,
+                  leftRequired: true,
                   leftInputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
                   ],
@@ -397,41 +402,76 @@ class _SupplierInformationEditWidgetState
     );
   }
 
-  void _saveChanges() {
-    if (_formKey.currentState!.validate()) {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            color: ColorManager.kPrimaryColor,
+  Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token') ?? '';
+
+      final provider = context.read<SupplierProvider>();
+
+      final result = await provider.updateSupplier(
+        id: widget.supplier.id,
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        accessToken: accessToken,
+        balance: double.tryParse(_balanceController.text.trim()) ?? 0.0,
+        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+        altPhone: _altPhoneController.text.trim().isEmpty ? null : _altPhoneController.text.trim(),
+        productCategories: _productCategoriesController.text.trim().isEmpty ? null : _productCategoriesController.text.trim(),
+      );
+
+      Navigator.pop(context);
+
+      final isSuccess = (result['status']?.toString().toLowerCase() == 'success');
+      final message = result['message']?.toString() ?? 'Updated';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(isSuccess ? Icons.check_circle : Icons.error, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(isSuccess ? 'Supplier information updated successfully' : message),
+            ],
+          ),
+          backgroundColor: isSuccess ? ColorManager.kSuccessColor : ColorManager.kRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
       );
-
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 1), () {
-        Navigator.pop(context); // Close loading dialog
-        
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('Supplier information updated successfully'),
-              ],
-            ),
-            backgroundColor: ColorManager.kSuccessColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Failed to update supplier'),
+            ],
           ),
-        );
-      });
+          backgroundColor: ColorManager.kRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
     }
   }
 }

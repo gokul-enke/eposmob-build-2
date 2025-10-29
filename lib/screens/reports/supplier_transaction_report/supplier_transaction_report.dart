@@ -14,13 +14,9 @@ import 'dart:ui';
 import 'package:intl/intl.dart';
 
 // Import the supplier autocomplete and date filtering components
-import 'package:pos_machine/screens/suppliers/widgets/supplier_auto_complete.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'dart:async';
-
-// Import the supplier transaction details screen
-import 'supplier_transaction_details_screen.dart';
 
 class SupplierTransactionReportScreen extends StatefulWidget {
   const SupplierTransactionReportScreen({super.key});
@@ -36,6 +32,9 @@ class _SupplierTransactionReportScreenState
   bool initLoading = false;
   List<Supplier>? allSuppliers = [];
 
+  // For storing API response data
+  List<dynamic>? _transactionData = [];
+  
   // For grouping supplier transactions
   Map<String, SupplierTransactionSummary> supplierSummary = {};
 
@@ -46,6 +45,7 @@ class _SupplierTransactionReportScreenState
 
   // Filter variables
   String searchSupplier = '';
+  String? selectedSupplierId;
 
   // Supplier suggestions for autocomplete
   List<String> supplierSuggestions = [];
@@ -96,25 +96,23 @@ class _SupplierTransactionReportScreenState
       SupplierProvider supplierProvider =
           Provider.of<SupplierProvider>(context, listen: false);
 
-      // Fetch all suppliers with their transaction data
+      // Fetch suppliers for autocomplete suggestions
       await supplierProvider.fetchSuppliers(
         accessToken: accessToken ?? "",
         supplierName: null,
       );
 
-      // Get all suppliers from the provider's allSuppliers list (not the paginated supplierList)
+      // Get all suppliers for suggestions
       allSuppliers = supplierProvider.allSuppliers ?? [];
-
-      // Populate supplier suggestions
       final suggestions = getSupplierSuggestions();
 
-      // Apply filters immediately
-      _applyFilters();
-
-      // Update the supplier suggestions and trigger a rebuild
       setState(() {
         supplierSuggestions = suggestions;
       });
+
+      // Load filtered transaction data from API
+      await _loadFilteredTransactionData();
+
     } catch (error) {
       debugPrint('Error loading supplier data: $error');
       if (mounted) {
@@ -148,128 +146,185 @@ class _SupplierTransactionReportScreenState
     return suggestions;
   }
 
-  void _applyFilters() {
-    if (allSuppliers == null || allSuppliers!.isEmpty) {
+  // Load filtered transaction data from API
+  Future<void> _loadFilteredTransactionData() async {
+    debugPrint('🔄 [SUPPLIER_TX_REPORT] Starting _loadFilteredTransactionData');
+    debugPrint('📋 [SUPPLIER_TX_REPORT] Search supplier: "${searchSupplier}"');
+    debugPrint('📅 [SUPPLIER_TX_REPORT] From date: "${_fromDateController.text}"');
+    debugPrint('📅 [SUPPLIER_TX_REPORT] To date: "${_toDateController.text}"');
+    debugPrint('👥 [SUPPLIER_TX_REPORT] Total suppliers available: ${allSuppliers?.length ?? 0}');
+    
+    try {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('🔑 [SUPPLIER_TX_REPORT] Access token: ${accessToken != null ? "Present" : "NULL"}');
+      
+      SupplierProvider supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
+
+      // Use pre-selected supplierId if available (set on autocomplete selection)
+      String? supplierId = selectedSupplierId;
+      if (supplierId != null && supplierId.isNotEmpty) {
+        debugPrint('✅ [SUPPLIER_TX_REPORT] Using selected supplierId: $supplierId for fetch');
+      } else {
+        debugPrint('ℹ️ [SUPPLIER_TX_REPORT] No supplier selected, fetching for all suppliers');
+      }
+
+      // Call API with filters
+      debugPrint('🌐 [SUPPLIER_TX_REPORT] Calling fetchSupplierTransactions API');
+      debugPrint('📤 [SUPPLIER_TX_REPORT] API Parameters:');
+      debugPrint('   - supplierName: null (using supplierId when selected)');
+      debugPrint('   - supplierId: ${supplierId ?? "null"}');
+      debugPrint('   - fromDate: ${_fromDateController.text.isNotEmpty ? _fromDateController.text : "null"}');
+      debugPrint('   - toDate: ${_toDateController.text.isNotEmpty ? _toDateController.text : "null"}');
+      debugPrint('   - listAll: true');
+      
+      final response = await supplierProvider.fetchSupplierTransactions(
+        accessToken: accessToken ?? "",
+        supplierName: null, // Always prefer ID for accuracy
+        supplierId: supplierId,
+        transactionType: null, // Can be added later if needed
+        fromDate: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+        toDate: _toDateController.text.isNotEmpty ? _toDateController.text : null,
+        listAll: true,
+      );
+      
+      debugPrint('📥 [SUPPLIER_TX_REPORT] API Response received');
+      debugPrint('📊 [SUPPLIER_TX_REPORT] Response keys: ${response.keys.toList()}');
+      final dataNode = response['data'];
+      debugPrint('🧪 [SUPPLIER_TX_REPORT] data node type: ${dataNode.runtimeType}');
+
+      List<dynamic> transactionList = const [];
+      bool extracted = false;
+
+      if (dataNode is List) {
+        // API returned data as a top-level list
+        transactionList = List<dynamic>.from(dataNode);
+        extracted = true;
+        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed transactions from List at data (count=${transactionList.length})');
+      } else if (dataNode is Map) {
+        // Common patterns: data: { data: [...]} or data: { transactions: [...] }
+        if (dataNode['data'] is List) {
+          transactionList = List<dynamic>.from(dataNode['data']);
+          extracted = true;
+          debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed transactions from data["data"] (count=${transactionList.length})');
+        } else if (dataNode['transactions'] is List) {
+          transactionList = List<dynamic>.from(dataNode['transactions']);
+          extracted = true;
+          debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed transactions from data["transactions"] (count=${transactionList.length})');
+        } else {
+          debugPrint('⚠️ [SUPPLIER_TX_REPORT] Unknown Map structure for data node: keys=${dataNode.keys.toList()}');
+        }
+      } else {
+        debugPrint('⚠️ [SUPPLIER_TX_REPORT] data node is null or unsupported');
+      }
+
+      if (extracted) {
+        setState(() {
+          _transactionData = transactionList;
+        });
+        debugPrint('💾 [SUPPLIER_TX_REPORT] Transaction data saved to state');
+      } else {
+        debugPrint('⚠️ [SUPPLIER_TX_REPORT] No transaction data in response');
+        setState(() {
+          _transactionData = [];
+        });
+      }
+
+      // Process the API response to create supplier summary
+      debugPrint('⚙️ [SUPPLIER_TX_REPORT] Starting to process API transaction data');
+      _processApiTransactionData();
+      debugPrint('✅ [SUPPLIER_TX_REPORT] _loadFilteredTransactionData completed successfully');
+
+    } catch (error) {
+      debugPrint('💥 [SUPPLIER_TX_REPORT] ERROR in _loadFilteredTransactionData: $error');
+      debugPrint('📍 [SUPPLIER_TX_REPORT] Error stack trace: ${StackTrace.current}');
+      setState(() {
+        _transactionData = [];
+        supplierSummary.clear();
+      });
+    }
+  }
+
+  // Process API transaction data to create supplier summary
+  void _processApiTransactionData() {
+    debugPrint('⚙️ [SUPPLIER_TX_REPORT] Starting _processApiTransactionData');
+    
+    if (_transactionData == null || _transactionData!.isEmpty) {
+      debugPrint('📭 [SUPPLIER_TX_REPORT] No transaction data to process');
       setState(() {
         supplierSummary.clear();
       });
       return;
     }
+    
+    debugPrint('📊 [SUPPLIER_TX_REPORT] Processing ${_transactionData!.length} transactions');
 
-    // Apply filters
-    List<Supplier> filteredList = [...allSuppliers!];
+    Map<String, SupplierTransactionSummary> processedSummary = {};
+    int processedCount = 0;
+    int skippedCount = 0;
 
-    // Supplier filter
-    if (searchSupplier.isNotEmpty) {
-      filteredList = filteredList
-          .where((supplier) => supplier.name
-              .toLowerCase()
-              .contains(searchSupplier.toLowerCase()))
-          .toList();
-    }
-
-    // Date range filter for transactions - similar to customer report logic
-    if (_fromDateController.text.isNotEmpty ||
-        _toDateController.text.isNotEmpty) {
-      try {
-        final formatter = DateFormat('yyyy-MM-dd');
-
-        filteredList = filteredList.map((supplier) {
-          // Filter transactions within date range
-          List<SupplierTransaction> filteredTransactions = supplier.transactions.where((transaction) {
-            if (transaction.date.isEmpty) return false;
-
-            try {
-              final transactionDate = formatter.parse(transaction.date);
-
-              // If from date is set, check that transaction date is not before it
-              if (_fromDateController.text.isNotEmpty) {
-                final fromDate = formatter.parse(_fromDateController.text);
-                if (transactionDate.isBefore(fromDate)) return false;
-              }
-
-              // If to date is set, check that transaction date is not after it
-              if (_toDateController.text.isNotEmpty) {
-                final toDate = formatter.parse(_toDateController.text);
-                // Include the to date by adding one day and checking if transaction date is before
-                if (transactionDate.isAfter(toDate)) return false;
-              }
-
-              return true;
-            } catch (e) {
-              debugPrint('Date parsing error for transaction: $e');
-              return false;
-            }
-          }).toList();
-
-          // Return supplier with filtered transactions
-          return Supplier(
-            id: supplier.id,
-            name: supplier.name,
-            email: supplier.email,
-            phone: supplier.phone,
-            altPhone: supplier.altPhone,
-            productCategories: supplier.productCategories,
-            address: supplier.address,
-            balance: supplier.balance,
-            paymentType: supplier.paymentType,
-            companyId: supplier.companyId,
-            currentBalance: supplier.currentBalance,
-            balanceStatus: supplier.balanceStatus,
-            createdAt: supplier.createdAt,
-            updatedAt: supplier.updatedAt,
-            userId: supplier.userId,
-            transactions: filteredTransactions,
-            purchases: supplier.purchases,
-          );
-        }).toList();
-      } catch (e) {
-        debugPrint('Date parsing error: $e');
-      }
-    }
-
-    // Recalculate supplier summary with filtered suppliers
-    _calculateSupplierSummaryFromFilteredList(filteredList);
-  }
-
-  void _calculateSupplierSummaryFromFilteredList(List<Supplier> filteredList) {
-    Map<String, SupplierTransactionSummary> filteredSupplierSummary = {};
-
-    for (var supplier in filteredList) {
-      String supplierName = supplier.name;
-      double totalDebit = 0.0;
-      double totalCredit = 0.0;
-
-      // Calculate totals from filtered transactions (similar to customer report logic)
-      for (var transaction in supplier.transactions) {
-        double amount = double.tryParse(transaction.amount) ?? 0.0;
-
-        // Assuming "Credit" type increases balance and "Debit" type decreases balance
-        if (transaction.type.toLowerCase() == 'credit') {
-          totalCredit += amount;
-        } else if (transaction.type.toLowerCase() == 'debit') {
-          totalDebit += amount;
-        }
+    for (var transaction in _transactionData!) {
+      final supplierData = transaction['supplier'];
+      if (supplierData == null) {
+        skippedCount++;
+        debugPrint('⚠️ [SUPPLIER_TX_REPORT] Transaction ${processedCount + skippedCount} has no supplier data, skipping');
+        continue;
       }
 
-      // Calculate balance from transactions (similar to customer report)
-      double calculatedBalance = totalCredit - totalDebit;
+      // Supplier name can be either at supplier.name or supplier.user.name based on API
+      String supplierName = (supplierData['name'] as String?) ??
+          ((supplierData['user'] is Map && (supplierData['user'] as Map)['name'] is String)
+              ? ((supplierData['user'] as Map)['name'] as String)
+              : 'Unknown');
+      double amount = double.tryParse(transaction['amount'].toString()) ?? 0.0;
+      String type = transaction['type'] ?? '';
+      
+      debugPrint('📝 [SUPPLIER_TX_REPORT] Processing transaction ${processedCount + 1}: Supplier="$supplierName", Amount=$amount, Type="$type"');
 
-      // Only add suppliers that have transactions or non-zero balances
-      if (supplier.transactions.isNotEmpty || supplier.currentBalance != 0.0) {
-        filteredSupplierSummary[supplierName] = SupplierTransactionSummary(
+      // Initialize summary if not exists
+      if (!processedSummary.containsKey(supplierName)) {
+        debugPrint('➕ [SUPPLIER_TX_REPORT] Creating new summary for supplier: "$supplierName"');
+        processedSummary[supplierName] = SupplierTransactionSummary(
           supplierName: supplierName,
-          totalDebit: totalDebit,
-          totalCredit: totalCredit,
-          balance: calculatedBalance, // Use calculated balance from transactions
-          transactionCount: supplier.transactions.length,
+          totalDebit: 0.0,
+          totalCredit: 0.0,
+          balance: 0.0,
+          transactionCount: 0,
         );
       }
+
+      final summary = processedSummary[supplierName]!;
+
+      // Update totals based on transaction type
+      if (type.toLowerCase() == 'credit') {
+        summary.totalCredit += amount;
+        debugPrint('💰 [SUPPLIER_TX_REPORT] Added $amount to credit for "$supplierName" (total: ${summary.totalCredit})');
+      } else if (type.toLowerCase() == 'debit') {
+        summary.totalDebit += amount;
+        debugPrint('💸 [SUPPLIER_TX_REPORT] Added $amount to debit for "$supplierName" (total: ${summary.totalDebit})');
+      } else {
+        debugPrint('❓ [SUPPLIER_TX_REPORT] Unknown transaction type: "$type" for "$supplierName"');
+      }
+
+      summary.transactionCount++;
+      processedCount++;
     }
+    
+    debugPrint('📈 [SUPPLIER_TX_REPORT] Processed $processedCount transactions, skipped $skippedCount');
+
+    // Calculate final balance for each supplier
+    debugPrint('🧮 [SUPPLIER_TX_REPORT] Calculating final balances');
+    processedSummary.forEach((supplierName, summary) {
+      summary.balance = summary.totalCredit - summary.totalDebit;
+      debugPrint('🏪 [SUPPLIER_TX_REPORT] "$supplierName": Credit=${summary.totalCredit}, Debit=${summary.totalDebit}, Balance=${summary.balance}, Count=${summary.transactionCount}');
+    });
 
     setState(() {
-      supplierSummary = filteredSupplierSummary;
+      supplierSummary = processedSummary;
     });
+    
+    debugPrint('✅ [SUPPLIER_TX_REPORT] _processApiTransactionData completed. ${processedSummary.length} suppliers in summary');
   }
 
   void _resetFilters() {
@@ -284,6 +339,9 @@ class _SupplierTransactionReportScreenState
     // Reset the search variables
     setState(() {
       searchSupplier = '';
+      selectedSupplierId = null;
+      _transactionData = [];
+      supplierSummary.clear();
     });
 
     // Set default date values
@@ -299,7 +357,7 @@ class _SupplierTransactionReportScreenState
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: () async => loadInitData(),
+        onRefresh: () async => await _loadFilteredTransactionData(),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           padding: const EdgeInsets.all(8),
@@ -355,6 +413,7 @@ class _SupplierTransactionReportScreenState
       children: [
         // First row of filters
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               flex: 1,
@@ -398,6 +457,17 @@ class _SupplierTransactionReportScreenState
   }
 
   Widget _buildSupplierAutocompleteField() {
+    // Derive currently selected Supplier from selectedSupplierId to show in dropdown
+    Supplier? currentSelected;
+    if (selectedSupplierId != null && allSuppliers != null && allSuppliers!.isNotEmpty) {
+      try {
+        currentSelected = allSuppliers!
+            .firstWhere((s) => s.id.toString() == selectedSupplierId);
+      } catch (_) {
+        currentSelected = null;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -416,19 +486,25 @@ class _SupplierTransactionReportScreenState
             ),
           ),
           const SizedBox(height: 8),
-          SupplierAutocomplete(
-            size: MediaQuery.of(context).size,
-            supplierList: supplierSuggestions, // This will now update properly
-            controller: _supplierController,
-            onSelected: (String selectedSupplier) {
-              // Cancel any pending search
-              _supplierSearchTimer?.cancel();
-
+          BuildDropDownWithSearch<Supplier>(
+            title: null,
+            hintText: "Search Supplier",
+            value: currentSelected,
+            items: allSuppliers ?? const <Supplier>[],
+            displayText: (s) => s.name,
+            height: 45,
+            margin: EdgeInsets.zero,
+            onChanged: (Supplier? s) {
               setState(() {
-                searchSupplier = selectedSupplier;
+                selectedSupplierId = s?.id.toString();
+                searchSupplier = s?.name ?? '';
               });
-              _applyFilters();
+              debugPrint('🔗 [SUPPLIER_TX_REPORT] dropdown onChanged: name="${s?.name}", supplierId=${selectedSupplierId ?? 'null'}');
+              _loadFilteredTransactionData();
             },
+            searchHintText: 'Type to search supplier...',
+            // Ensure consistent padding/width like date fields
+            width: double.infinity,
           ),
         ],
       ),
@@ -470,7 +546,7 @@ class _SupplierTransactionReportScreenState
                     _toDateController.text = formattedDate;
                   }
                 });
-                _applyFilters();
+                _loadFilteredTransactionData();
               },
               initialDate: controller.text.isNotEmpty
                   ? DateFormat('yyyy-MM-dd').parse(controller.text)
