@@ -563,6 +563,16 @@ class BillingPageMobileState extends State<BillingPageMobile>
   }
 
   void createOrderAndPrint() async {
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final selectedMethods = billingProvider.getSelectedPaymentMethodsExcludingEmpty();
+    
+    debugPrint('🖨️ [Print Order] Starting print order...');
+    debugPrint('🖨️ [Print Order] Selected payment methods: $selectedMethods');
+    debugPrint('🖨️ [Print Order] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+    debugPrint('🖨️ [Print Order] isCashSelected: ${billingProvider.isCashSelected}');
+    debugPrint('🖨️ [Print Order] isCardSelected: ${billingProvider.isCardSelected}');
+    debugPrint('🖨️ [Print Order] isUpiSelected: ${billingProvider.isUpiSelected}');
+    
     final createdOrderNumber =
         await CheckoutService(context).createOrderAndPrint();
     if (createdOrderNumber != null && createdOrderNumber.isNotEmpty) {

@@ -51,7 +51,7 @@ class PineLabsTerminalProvider with ChangeNotifier {
       _bindingStatus = 'BINDING FAILED.';
       _isBound = false;
       addStatusMessage('BINDING FAILED. $result');
-      print('❌ [PineLabs] Binding FAILED: $result');
+      print(' [PineLabs] Binding FAILED: $result');
     }
     _isBindingInitiated = false;
     notifyListeners();
@@ -63,18 +63,19 @@ class PineLabsTerminalProvider with ChangeNotifier {
     if (!PineLabsConfig.areCredentialsConfigured()) {
       final errorMsg =
           'Pine Labs credentials not configured. Please update ApplicationId and UserId in pine_labs_config.dart';
-      print('❌ [PineLabs] $errorMsg');
+      print(' [PineLabs] $errorMsg');
       addStatusMessage('CONFIG ERROR: $errorMsg');
       return 'CONFIG_ERROR';
     }
 
     await ensureBinding();
     if (!_isBound) {
-      print('❌ [PineLabs] Cannot process sale - service not bound');
+      print(' [PineLabs] Cannot process sale - service not bound');
       return 'BINDING FAILED';
     }
-    final int paymentAmount = amount.round();
-    print('💳 [PineLabs] Processing sale: ₹$paymentAmount, Ref: $billingRefNo');
+    // Pine Labs expects amount in minor units (paise). Convert ₹ to paise.
+    final int paymentAmount = (amount * 100).round();
+    print(' [PineLabs] Processing sale: ₹${amount.toStringAsFixed(2)} (paise: $paymentAmount), Ref: $billingRefNo');
     final payload = {
       "Detail": {
         "BillingRefNo": billingRefNo,

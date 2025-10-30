@@ -770,18 +770,24 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  // 22. Multi-Payment Methods - Cash, Card, UPI, Debit with individual amounts
+  // 22. Multi-Payment Methods - Cash, Card, UPI, Debit, Online with individual amounts
   bool _isCashSelected = false;
   bool _isCardSelected = false;
   bool _isUpiSelected = false;
   bool _isDebitSelected = false;
+  bool _isOnlineSelected = false;
   bool _toCustomerCreditEnabled = false;
+  
+  // Pine Labs payment success state
+  bool _pineLabsPaymentSuccess = false;
   
   bool get isCashSelected => _isCashSelected;
   bool get isCardSelected => _isCardSelected;
   bool get isUpiSelected => _isUpiSelected;
   bool get isDebitSelected => _isDebitSelected;
+  bool get isOnlineSelected => _isOnlineSelected;
   bool get toCustomerCreditEnabled => _toCustomerCreditEnabled;
+  bool get pineLabsPaymentSuccess => _pineLabsPaymentSuccess;
   
   // 23. Payment Validation - Ensure payment methods are selected before confirmation
   bool _isPaymentValid = false;
@@ -828,6 +834,12 @@ class BillingProvider extends ChangeNotifier {
         _isDebitSelected = selected;
         if (!selected) debitAmountController.clear();
         break;
+      case 'ONLINE':
+        _isOnlineSelected = selected;
+        // Keep UI in sync: when ONLINE is selected, reflect Pine Labs paid state
+        _pineLabsPaymentSuccess = selected;
+        debugPrint('[BillingProvider] ONLINE set to $selected -> pineLabsPaymentSuccess=$_pineLabsPaymentSuccess');
+        break;
     }
     validatePayment();
     calculateBalance();
@@ -839,12 +851,19 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  void setPineLabsPaymentSuccess(bool success) {
+    _pineLabsPaymentSuccess = success;
+    notifyListeners();
+  }
+  
   void clearAllPaymentMethods() {
     _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;
     _isDebitSelected = false;
+    _isOnlineSelected = false;
     _toCustomerCreditEnabled = false;
+    _pineLabsPaymentSuccess = false;
     
     cashAmountController.clear();
     cardAmountController.clear();
@@ -865,6 +884,7 @@ class BillingProvider extends ChangeNotifier {
     if (_isCardSelected) methods.add("CARD");
     if (_isUpiSelected) methods.add("UPI");
     if (_isDebitSelected) methods.add("DEBIT");
+    if (_isOnlineSelected) methods.add("ONLINE");
     return methods;
   }
 
@@ -916,6 +936,14 @@ class BillingProvider extends ChangeNotifier {
       });
     }
     
+    // Include ONLINE (Pine Labs) with cart total as amount
+    if (_isOnlineSelected) {
+      paidMethods.add({
+        "method": "ONLINE",
+        "amount": totalOrderAmount,
+      });
+    }
+    
     // Note: DEBIT (to customer credit) is excluded from paid methods list
     
     return paidMethods;
@@ -946,6 +974,10 @@ class BillingProvider extends ChangeNotifier {
           break;
         case 'DEBIT':
           amount = double.tryParse(debitAmountController.text) ?? 0;
+          break;
+        case 'ONLINE':
+          // ONLINE (Pine Labs) uses cart total
+          amount = totalOrderAmount;
           break;
       }
       
@@ -1273,6 +1305,7 @@ class BillingProvider extends ChangeNotifier {
             _isCardSelected = methods.contains('CARD');
             _isUpiSelected = methods.contains('UPI');
             _isDebitSelected = methods.contains('DEBIT');
+            _isOnlineSelected = methods.contains('ONLINE');
 
             if (_isCashSelected) {
               cashAmountController.text = (amounts['CASH'] ?? '0').toString();
@@ -1285,6 +1318,12 @@ class BillingProvider extends ChangeNotifier {
             }
             if (_isDebitSelected) {
               debitAmountController.text = (amounts['DEBIT'] ?? '0').toString();
+            }
+
+            // Reflect Pine Labs success if ONLINE was part of saved methods
+            if (_isOnlineSelected) {
+              debugPrint('♻️ [Rehydrate] ONLINE detected in multi-payment. Setting PineLabs success');
+              setPineLabsPaymentSuccess(true);
             }
 
             parsedMulti = true;
@@ -1309,6 +1348,11 @@ class BillingProvider extends ChangeNotifier {
               break;
             case 'DEBIT':
               debitAmountController.text = paidText;
+              break;
+            case 'ONLINE':
+              // No amount field for ONLINE; mark Pine Labs success for UI state
+              debugPrint('♻️ [Rehydrate] ONLINE detected in single-payment. Setting PineLabs success');
+              setPineLabsPaymentSuccess(true);
               break;
           }
         }
@@ -2194,9 +2238,10 @@ class BillingProvider extends ChangeNotifier {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    double onlineAmount = _isOnlineSelected ? totalOrderAmount : 0.0;
     // Note: We don't include debit/toCustomerCredit in total paid amount
     // as it represents money going to customer credit, not money collected
-    return cashAmount + cardAmount + upiAmount;
+    return cashAmount + cardAmount + upiAmount + onlineAmount;
   }
 
   // MISSED LOGIC: Get selected payment methods excluding debit when no amount
@@ -2213,6 +2258,9 @@ class BillingProvider extends ChangeNotifier {
         (double.tryParse(upiAmountController.text) ?? 0) > 0) {
       methods.add("UPI");
     }
+    if (_isOnlineSelected) {
+      methods.add("ONLINE");
+    }
     // Note: Debit is handled separately as customer credit, not a payment method
     return methods;
   }
@@ -2225,6 +2273,7 @@ class BillingProvider extends ChangeNotifier {
     if (methods.contains("CASH")) activeMethods.add("Cash");
     if (methods.contains("CARD")) activeMethods.add("Card");
     if (methods.contains("UPI")) activeMethods.add("UPI");
+    if (methods.contains("ONLINE")) activeMethods.add("Online");
     // DEBIT is not shown in label for collected payments
     
     if (activeMethods.isEmpty) {
