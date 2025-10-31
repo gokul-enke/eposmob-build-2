@@ -30,7 +30,7 @@ class SupplierTransactionReportThermalPrinter {
   String _getLabel(DocumentConfig? config, String field, String fallback) {
     final resolvedLabels = config?.resolvedLabels;
     if (resolvedLabels == null) return fallback;
-    
+
     switch (field) {
       case 'sl_number':
         return resolvedLabels.slNumber ?? fallback;
@@ -85,7 +85,8 @@ class SupplierTransactionReportThermalPrinter {
     debugPrint("  Address: $supplierAddress");
     debugPrint("===== END SUPPLIER THERMAL PRINTER DEBUG INFO =====");
 
-    debugPrint("===== SUPPLIER TRANSACTION REPORT THERMAL PRINTING DEBUG =====");
+    debugPrint(
+        "===== SUPPLIER TRANSACTION REPORT THERMAL PRINTING DEBUG =====");
 
     // Ensure billDocumentConfig is loaded before printing
     if (billDocumentConfig == null) {
@@ -107,7 +108,7 @@ class SupplierTransactionReportThermalPrinter {
     // Use the loaded display configuration with fallback
     final apiDisplayConfig = billDocumentConfig.displayConfiguration?.options;
     _debugPrintTemplateSettings(apiDisplayConfig);
-    
+
     // Ensure complete display config by merging with fallback
     final displayConfig = _ensureCompleteDisplayConfig(apiDisplayConfig);
 
@@ -158,8 +159,16 @@ class SupplierTransactionReportThermalPrinter {
           fromDate != null ||
           toDate != null) {
         debugPrint("Building supplier details...");
-        bytes += _buildSupplierDetails(generator, supplierName, supplierPhone,
-            supplierEmail, supplierAddress, fromDate, toDate, selectedFontType, displayConfig);
+        bytes += _buildSupplierDetails(
+            generator,
+            supplierName,
+            supplierPhone,
+            supplierEmail,
+            supplierAddress,
+            fromDate,
+            toDate,
+            selectedFontType,
+            displayConfig);
         debugPrint("Supplier details built successfully");
       }
 
@@ -199,14 +208,16 @@ class SupplierTransactionReportThermalPrinter {
       // Footer
       if (displayConfig?['showFooter']?.visible == true) {
         debugPrint("Building footer...");
-        bytes += _buildFooter(generator, displayConfig, billDocumentConfig, selectedFontType);
+        bytes += _buildFooter(
+            generator, displayConfig, billDocumentConfig, selectedFontType);
         debugPrint("Footer built successfully");
       }
 
       // Cut the receipt
       bytes += generator.cut();
 
-      debugPrint("Supplier transaction report generated, sending to printer...");
+      debugPrint(
+          "Supplier transaction report generated, sending to printer...");
       // Print receipt
       await printerManager.send(
           type: selectedPrinter.typePrinter, bytes: bytes);
@@ -258,7 +269,8 @@ class SupplierTransactionReportThermalPrinter {
 
     // Show subheader if enabled
     if (displayConfig?['showSubheader']?.visible == true) {
-      String subheaderText = docConfig?.subheader ?? 'Supplier Transaction Report';
+      String subheaderText =
+          docConfig?.subheader ?? 'Supplier Transaction Report';
       bytes += generator.text(subheaderText,
           styles: PosStyles(
               fontType: fontType,
@@ -420,7 +432,8 @@ class SupplierTransactionReportThermalPrinter {
             bold: true,
             height: is58mm ? textSizeSmall : textSizeSmall)));
     totalHeaderWidth += 2;
-    debugPrint("Added Date column with width 2, total width: $totalHeaderWidth");
+    debugPrint(
+        "Added Date column with width 2, total width: $totalHeaderWidth");
 
     // Add Type column (transaction type) - use resolved label (item)
     headerColumns.add(PosColumn(
@@ -474,6 +487,44 @@ class SupplierTransactionReportThermalPrinter {
       totalHeaderWidth += 3;
       debugPrint(
           "Added Status column with width 3, total width: $totalHeaderWidth");
+    } else {
+      // When status column is disabled, distribute extra width among other columns
+      // We have 3 remaining width to distribute (12 - (1+2+2+2+2) = 3)
+      // Adding 1 to Date column, 1 to Type column, and 1 to Credit column
+      // This keeps the total at 12: 1(SL) + 3(Date) + 3(Type) + 2(Debit) + 3(Credit) = 12
+      headerColumns[1] = PosColumn(
+          // Date column
+          text: _getLabel(billDocumentConfig, 'date', 'Date'),
+          width: 3,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: is58mm ? textSizeSmall : textSizeSmall));
+
+      headerColumns[2] = PosColumn(
+          // Type column
+          text: _getLabel(billDocumentConfig, 'item', 'Type'),
+          width: 3,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: is58mm ? textSizeSmall : textSizeSmall));
+
+      headerColumns[4] = PosColumn(
+          // Credit column
+          text: _getLabel(billDocumentConfig, 'credit', 'Credit'),
+          width: 3,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: is58mm ? textSizeSmall : textSizeSmall));
+
+      totalHeaderWidth += 3; // Add the redistributed width
+      debugPrint(
+          "Redistributed width among columns since status is disabled, total width: $totalHeaderWidth");
     }
 
     debugPrint("Final header total width: $totalHeaderWidth");
@@ -500,11 +551,13 @@ class SupplierTransactionReportThermalPrinter {
       String date = item.date;
 
       String slNumber = (i + 1).toString();
-      
+
       // Format amounts for Debit/Credit columns
-      String debitAmount = (type.toLowerCase() == 'debit') ? amount.toStringAsFixed(2) : '-';
-      String creditAmount = (type.toLowerCase() == 'credit') ? amount.toStringAsFixed(2) : '-';
-      
+      String debitAmount =
+          (type.toLowerCase() == 'debit') ? amount.toStringAsFixed(2) : '-';
+      String creditAmount =
+          (type.toLowerCase() == 'credit') ? amount.toStringAsFixed(2) : '-';
+
       // Format date to show only date (not time)
       String formattedDate = date;
       try {
@@ -514,7 +567,7 @@ class SupplierTransactionReportThermalPrinter {
         // Keep original date if parsing fails
         formattedDate = date;
       }
-      
+
       // Format status to match image
       String displayStatus = status;
       if (status == 'SUCC') {
@@ -524,11 +577,11 @@ class SupplierTransactionReportThermalPrinter {
       } else if (status == 'INIT') {
         displayStatus = 'Initiated';
       }
-      
+
       debugPrint(
           "Item $i: Date: $formattedDate, Type: $transactionType, Debit: $debitAmount, Credit: $creditAmount, Status: $displayStatus");
 
-      // Create row with 6 columns: SL, Date, Type, Debit, Credit, Status
+      // Create row with columns: SL, Date, Type, Debit, Credit, Status
       List<PosColumn> itemRow = [
         PosColumn(
             text: slNumber,
@@ -582,9 +635,44 @@ class SupplierTransactionReportThermalPrinter {
                 align: PosAlign.left,
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)));
+      } else {
+        // When status column is disabled, redistribute the width
+        // Update Date column width from 2 to 3
+        itemRow[1] = PosColumn(
+            text: formattedDate,
+            width: 3,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall));
+
+        // Update Type column width from 2 to 3
+        itemRow[2] = PosColumn(
+            text: transactionType,
+            width: 3,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall));
+
+        // Update Credit column width from 2 to 3
+        itemRow[4] = PosColumn(
+            text: creditAmount,
+            width: 3,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall));
       }
 
-      int itemRowWidth = 1 + 2 + 2 + 2 + 2 + (displayConfig?['showStatus']?.visible == true ? 3 : 0);
+      int itemRowWidth = 1 +
+          (displayConfig?['showStatus']?.visible == true
+              ? (2 + 2 + 2 + 2 + 3)
+              : // With status: 1+2+2+2+2+3 = 12
+              (3 + 3 + 2 + 3)); // Without status: 1+3+3+2+3 = 12
       debugPrint("Item row total width: $itemRowWidth");
       if (itemRowWidth != 12) {
         debugPrint(
@@ -651,7 +739,8 @@ class SupplierTransactionReportThermalPrinter {
 
     // Show Total Debit if enabled
     if (displayConfig?['showTotalDebit']?.visible == true) {
-      bytes += generator.text('Total Debit: Rs. ${totalDebit.toStringAsFixed(2)}',
+      bytes += generator.text(
+          'Total Debit: Rs. ${totalDebit.toStringAsFixed(2)}',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.right,
@@ -676,19 +765,19 @@ class SupplierTransactionReportThermalPrinter {
     return bytes;
   }
 
-
-
-  List<int> _buildFooter(Generator generator,
-      Map<String, DisplayOption>? displayConfig, DocumentConfig? billDocumentConfig, PosFontType fontType) {
+  List<int> _buildFooter(
+      Generator generator,
+      Map<String, DisplayOption>? displayConfig,
+      DocumentConfig? billDocumentConfig,
+      PosFontType fontType) {
     List<int> bytes = [];
 
     if (displayConfig?['showFooter']?.visible == true) {
       final footerText = billDocumentConfig?.footer ??
           'This is a computer-generated document. No signature is required.';
-      
+
       bytes += generator.hr();
-      bytes += generator.text(
-          footerText,
+      bytes += generator.text(footerText,
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
@@ -742,8 +831,6 @@ class SupplierTransactionReportThermalPrinter {
     return bytes;
   }
 
-
-
   Future<void> _connectToPrinter(BluetoothPrinter printer) async {
     switch (printer.typePrinter) {
       case PrinterType.usb:
@@ -788,26 +875,27 @@ class SupplierTransactionReportThermalPrinter {
 
   // Create fallback display configuration when API doesn't provide column settings
   Map<String, DisplayOption> _createFallbackDisplayConfig() {
-    debugPrint("⚠️ Creating fallback display configuration for Supplier Statement (Thermal)");
+    debugPrint(
+        "⚠️ Creating fallback display configuration for Supplier Statement (Thermal)");
     return {
       // Header/Footer settings
       'showHeader': DisplayOption(visible: true, value: null),
       'showSubheader': DisplayOption(visible: true, value: null),
       'showFooter': DisplayOption(visible: true, value: null),
       'showDates': DisplayOption(visible: true, value: null),
-      
+
       // Supplier details
       'showSupplierName': DisplayOption(visible: true, value: null),
       'showSupplierEmail': DisplayOption(visible: true, value: null),
       'showSupplierPhone': DisplayOption(visible: true, value: null),
       'showSupplierAddress': DisplayOption(visible: true, value: null),
-      
+
       // Table column visibility - matching image (SL, Date, Debit, Credit, Status)
       'showSlNumber': DisplayOption(visible: true, value: null),
       'showDate': DisplayOption(visible: true, value: null),
       'showDebit': DisplayOption(visible: true, value: null),
       'showCredit': DisplayOption(visible: true, value: null),
-      
+
       // Summary totals (shown at bottom, not in table)
       'showTotalCredit': DisplayOption(visible: true, value: null),
       'showTotalDebit': DisplayOption(visible: true, value: null),
@@ -817,20 +905,21 @@ class SupplierTransactionReportThermalPrinter {
   }
 
   // Merge API config with fallback to ensure all required keys exist
-  Map<String, DisplayOption> _ensureCompleteDisplayConfig(Map<String, DisplayOption>? apiConfig) {
+  Map<String, DisplayOption> _ensureCompleteDisplayConfig(
+      Map<String, DisplayOption>? apiConfig) {
     final fallback = _createFallbackDisplayConfig();
-    
+
     if (apiConfig == null || apiConfig.isEmpty) {
       debugPrint("⚠️ API config is null/empty, using complete fallback");
       return fallback;
     }
-    
+
     // Merge: API config takes precedence, but fallback fills in missing keys
     final merged = Map<String, DisplayOption>.from(fallback);
     apiConfig.forEach((key, value) {
       merged[key] = value;
     });
-    
+
     debugPrint("✅ Merged display config with ${merged.length} total options");
     return merged;
   }
