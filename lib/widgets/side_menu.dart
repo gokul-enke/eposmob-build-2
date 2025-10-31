@@ -523,6 +523,8 @@ class _SideMenuState extends State<SideMenu> {
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync('page_Invoices');
               final hasReceiptsPermission =
+                  roleProvider.currentUserHasPermissionSync('page_Receipts');
+              final hasCustomerVouchersPermission =
                   roleProvider.currentUserHasPermissionSync('page_Vouchers');
               final hasCompanyAccountsPermission = roleProvider
                   .currentUserHasPermissionSync('view_company::account');
@@ -530,6 +532,7 @@ class _SideMenuState extends State<SideMenu> {
               // Only show the expandable menu if user has at least one permission
               if (!hasInvoicePermission &&
                   !hasReceiptsPermission &&
+                  !hasCustomerVouchersPermission &&
                   !hasCompanyAccountsPermission) {
                 return const SizedBox.shrink();
               }
@@ -543,15 +546,25 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 47;
                     },
                     onTapTitle3: () {
+                      sideBarController.index.value = 70; // Customer Vouchers
+                    },
+                    onTapTitle4: () {
+                      sideBarController.index.value = 72; // Supplier Vouchers
+                    },
+                    onTapTitle5: () {
                       sideBarController.index.value = 59; // Company Accounts
                     },
                     listTitle1: "Invoice",
                     listTitle2: "Receipts",
-                    listTitle3: "Company Accounts",
+                    listTitle3: "Customer Vouchers",
+                    listTitle4: "Supplier Vouchers",
+                    listTitle5: "Company Accounts",
                     // Permission-based visibility
                     showTitle1: hasInvoicePermission,
                     showTitle2: hasReceiptsPermission,
-                    showTitle3: hasCompanyAccountsPermission,
+                    showTitle3: hasCustomerVouchersPermission,
+                    showTitle4: hasCompanyAccountsPermission,
+                    showTitle5: hasCompanyAccountsPermission,
                     iconPath: ImageAssets.transactionIcon,
                     title: 'Accounts',
                     onTap: () {
@@ -567,9 +580,14 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 25 ||
                         sideBarController.index.value == 48 ||
                         sideBarController.index.value == 47 ||
+                        sideBarController.index.value == 70 ||
+                        sideBarController.index.value == 71 ||
+                        sideBarController.index.value == 72 ||
+                        sideBarController.index.value == 73 ||
                         sideBarController.index.value == 59 ||
                         sideBarController.index.value == 60 ||
-                        sideBarController.index.value == 61),
+                        sideBarController.index.value == 61
+                        ),
               );
             },
           ),

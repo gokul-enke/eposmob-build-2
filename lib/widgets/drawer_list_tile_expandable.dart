@@ -21,6 +21,8 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? listTitle3;
   final VoidCallback? onTapTitle4;
   final String? listTitle4;
+  final VoidCallback? onTapTitle5;
+  final String? listTitle5;
   // Optional: allow custom icon size per tile (kept consistent with DrawerListTile)
   final double? iconSize;
   // Optional: allow custom horizontal gap between icon and title per tile
@@ -31,6 +33,7 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final bool? showTitle2;
   final bool? showTitle3;
   final bool? showTitle4;
+  final bool? showTitle5;
 
   const DrawerListTileExpandableColumn({
     super.key,
@@ -48,11 +51,14 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
     this.onTapTitle3,
     this.listTitle4,
     this.onTapTitle4,
+    this.listTitle5,
+    this.onTapTitle5,
     // Permission defaults - show all by default for backward compatibility
     this.showTitle1 = true,
     this.showTitle2 = true,
     this.showTitle3 = true,
     this.showTitle4 = true,
+    this.showTitle5 = true,
     this.iconSize,
     this.horizontalGap,
   });
@@ -229,7 +235,7 @@ class _DrawerListTileExpandableColumnState
                               ),
                             )
                           : Container(),
-                      widget.listTitle4 != null
+                      widget.listTitle4 != null && widget.showTitle4 == true
                           ? ListTile(
                               selected: _selectedTileIndex == 3,
                               selectedTileColor: _selectedTileIndex == 3
@@ -246,6 +252,32 @@ class _DrawerListTileExpandableColumnState
                               leading: const BubbleIcon(),
                               title: Text(
                                 widget.listTitle4 ?? '',
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s10,
+                                    0.21,
+                                    ColorManager.textColor),
+                              ),
+                            )
+                          : Container(),
+                      // Fifth sub-item - only show if permission allows and title exists
+                      widget.listTitle5 != null && widget.showTitle5 == true
+                          ? ListTile(
+                              selected: _selectedTileIndex == 4,
+                              selectedTileColor: _selectedTileIndex == 4
+                                  ? Colors.blue.withOpacity(0.1)
+                                  : null,
+                              contentPadding: ResponsiveWidget.isTablet(context)
+                                  ? const EdgeInsets.only(left: 15, right: 10)
+                                  : const EdgeInsets.only(left: 45, right: 15),
+                              horizontalTitleGap: 0.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(4, widget.onTapTitle5!),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle5 ?? '',
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s10,

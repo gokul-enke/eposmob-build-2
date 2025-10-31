@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/components/build_container_box.dart';
 
 class CalendarPickerTableCell extends StatefulWidget {
   final Function(DateTime) onDateSelected;
@@ -16,6 +17,7 @@ class CalendarPickerTableCell extends StatefulWidget {
   final bool isRequired;
   final bool isForExpiry;
   final bool isAllowEdit;
+  final bool allowTextInput;
 
   const CalendarPickerTableCell({
     Key? key, 
@@ -28,6 +30,7 @@ class CalendarPickerTableCell extends StatefulWidget {
     this.isRequired = false,
     this.isForExpiry = false,
     this.isAllowEdit = true,
+    this.allowTextInput = false,
   }) : super(key: key);
 
   @override
@@ -467,62 +470,55 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
   Widget build(BuildContext context) {
     final hasDate = selectedDate != null || widget.initialDate != null;
     
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Colors.white, // Always white background like other fields
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Calendar icon - click to show calendar picker
-          InkWell(
-            onTap: () => _selectDate(context),
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.all(2.0),
-              child: Icon(
-                Icons.calendar_today,
-                size: 16,
-                color: Colors.grey.shade600,
-              ),
+    return GestureDetector(
+      onTap: () => _selectDate(context),
+      child: BuildBoxShadowContainer(
+        circleRadius: 7,
+        blurRadius: 6,
+        offsetValue: const Offset(1, 1),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Calendar icon
+            Icon(
+              Icons.calendar_today,
+              size: 16,
+              color: Colors.grey.shade600,
             ),
-          ),
-          const SizedBox(width: 12),
-          // Date display/text input area
-          Expanded(
-            child: isTextInputMode
-              ? TextFormField(
-                  controller: textController,
-                  focusNode: textFocusNode,
-                  inputFormatters: [DateInputFormatter()],
-                  decoration: InputDecoration(
-                    hintText: 'Type: 20250205',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    isDense: true,
-                    hintStyle: buildCustomStyle(
+            const SizedBox(width: 12),
+            // Date display/text input area
+            Expanded(
+              child: isTextInputMode && widget.allowTextInput
+                ? TextFormField(
+                    controller: textController,
+                    focusNode: textFocusNode,
+                    inputFormatters: [DateInputFormatter()],
+                    decoration: InputDecoration(
+                      hintText: 'Type: 20250205',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                      hintStyle: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.27,
+                        Colors.black87,
+                      ),
+                    ),
+                    style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s12,
                       0.27,
-                      Colors.black87,
+                      ColorManager.textColor.withOpacity(.5),
                     ),
-                  ),
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.27,
-                    ColorManager.textColor.withOpacity(.5),
-                  ),
-                  onFieldSubmitted: _handleTextInput,
-                  onChanged: _onTextChanged,
-                  keyboardType: TextInputType.number,
-                )
-              : GestureDetector(
-                  onTap: widget.isAllowEdit ? _toggleInputMode : null,
-                  child: Container(
+                    onFieldSubmitted: _handleTextInput,
+                    onChanged: _onTextChanged,
+                    keyboardType: TextInputType.number,
+                  )
+                : Container(
                     width: double.infinity,
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -536,51 +532,51 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-          ),
-          // Mode toggle icon (edit icon for text input)
-          if (!isTextInputMode && widget.isAllowEdit)
-            InkWell(
-              onTap: _toggleInputMode,
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.all(2.0),
-                child: Icon(
-                  Icons.edit,
-                  size: 14,
-                  color: Colors.grey.shade600,
+            ),
+            // Mode toggle icon (edit icon for text input) - only show if allowTextInput is true
+            if (!isTextInputMode && widget.allowTextInput)
+              InkWell(
+                onTap: _toggleInputMode,
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Icon(
+                    Icons.edit,
+                    size: 14,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ),
-            ),
-          // Close icon when in text input mode
-          if (isTextInputMode)
-            InkWell(
-              onTap: _toggleInputMode,
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.all(2.0),
-                child: Icon(
-                  Icons.close,
-                  size: 14,
-                  color: Colors.grey.shade600,
+            // Close icon when in text input mode
+            if (isTextInputMode && widget.allowTextInput)
+              InkWell(
+                onTap: _toggleInputMode,
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Icon(
+                    Icons.close,
+                    size: 14,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ),
-            ),
-          // Required indicator
-          if (widget.isRequired && !hasDate)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Text(
-                '*',
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s12,
-                  0.27,
-                  Colors.red,
+            // Required indicator
+            if (widget.isRequired && !hasDate)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  '*',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.27,
+                    Colors.red,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

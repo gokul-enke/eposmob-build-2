@@ -46,3 +46,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{userappdata}\com.enke\pos_machine\epos\hive_data"
+Type: dirifempty; Name: "{userappdata}\com.enke\pos_machine\epos"
+Type: dirifempty; Name: "{userappdata}\com.enke\pos_machine"

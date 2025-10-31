@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/cart.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/customer_voucher_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -32,6 +33,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
@@ -278,6 +280,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WhatsappProvider()),
         ChangeNotifierProvider(create: (_) => PineLabsTerminalProvider()),
         ChangeNotifierProvider(create: (_) => RoleProvider()),
+        ChangeNotifierProvider(create: (_) => CustomerVoucherProvider()),
+        ChangeNotifierProvider(create: (_) => SupplierVoucherProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(
