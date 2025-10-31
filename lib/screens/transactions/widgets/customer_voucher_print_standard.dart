@@ -6,15 +6,14 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/supplier_voucher.dart';
+import 'package:pos_machine/models/customer_voucher.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter/foundation.dart';
 
-class SupplierVoucherStandardPrinter {
+class CustomerVoucherStandardPrinter {
   final BuildContext context;
 
-  SupplierVoucherStandardPrinter(this.context);
+  CustomerVoucherStandardPrinter(this.context);
 
   // Helper method to get or create the epos directory
   Future<Directory> _getEposDirectory() async {
@@ -32,52 +31,57 @@ class SupplierVoucherStandardPrinter {
     }
   }
 
-  Future<void> generateAndPrintSupplierVoucherPDF({
+  Future<void> generateAndPrintCustomerVoucherPDF({
     required BluetoothPrinter? selectedPrinter,
-    required SupplierVoucher voucher,
+    required CustomerVoucher voucher,
     required String selectedPaperSize,
     required DocumentConfig? voucherDocumentConfig,
     required String customerCareNumber,
     required String customerCareEmail,
   }) async {
-    debugPrint("===== STANDARD PRINTER - SUPPLIER VOUCHER PDF DEBUG INFO =====");
+    debugPrint("===== PDF GENERATION - CUSTOMER VOUCHER DEBUG INFO =====");
     debugPrint("Voucher Number: ${voucher.voucherNumber}");
-    debugPrint("Supplier: ${voucher.supplier.name}");
+    debugPrint("Customer: ${voucher.customer.user.name}");
     debugPrint("Paper Size: $selectedPaperSize");
-    debugPrint("===== END STANDARD PRINTER DEBUG INFO =====");
+    debugPrint("===== END PDF GENERATION DEBUG INFO =====");
 
     try {
-      debugPrint("PDF generation for supplier voucher started");
-      debugPrint("Document Config Header: ${voucherDocumentConfig?.header}");
-      debugPrint("Document Config Subheader: ${voucherDocumentConfig?.subheader}");
-      debugPrint("Document Config Terms: ${voucherDocumentConfig?.terms}");
-      debugPrint("Document Config Footer: ${voucherDocumentConfig?.footer}");
+      if (voucherDocumentConfig == null) {
+        debugPrint("ERROR: Voucher document configuration not loaded yet.");
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: "Document configurations not loaded. Please wait.",
+          );
+        }
+        return;
+      }
+
+      if (context.mounted) {
+        showScaffold(
+          context: context,
+          message: "Preparing $selectedPaperSize document for printing...",
+        );
+      }
 
       // Generate PDF
       final pdf = await _generatePDF(voucher, voucherDocumentConfig, selectedPaperSize);
 
       // Save and print
       await _printPDF(pdf, voucher.voucherNumber);
-
-      if (context.mounted) {
-        showScaffold(
-          context: context,
-          message: 'Supplier Voucher PDF printed successfully',
-        );
-      }
     } catch (e) {
-      debugPrint('Error generating PDF: $e');
+      debugPrint("Error generating PDF: ${e.toString()}");
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating PDF: $e',
+          message: "Error generating PDF: ${e.toString()}",
         );
       }
     }
   }
 
   Future<pw.Document> _generatePDF(
-    SupplierVoucher voucher,
+    CustomerVoucher voucher,
     DocumentConfig? voucherDocumentConfig,
     String selectedPaperSize,
   ) async {
@@ -123,7 +127,7 @@ class SupplierVoucherStandardPrinter {
               // Header
               pw.Center(
                 child: pw.Text(
-                  voucherDocumentConfig?.header ?? 'Supplier Voucher',
+                  voucherDocumentConfig?.header ?? 'Voucher',
                   style: headerStyle,
                 ),
               ),
@@ -171,13 +175,16 @@ class SupplierVoucherStandardPrinter {
               ),
               pw.SizedBox(height: 10),
 
-              // Supplier Information
+              // Customer Information
               pw.Text(
-                'Supplier Details',
+                'Customer Details',
                 style: summaryStyle,
               ),
-              pw.Text('Name: ${voucher.supplier.name}', style: bodyStyle),
-              pw.Text('Phone: ${voucher.supplier.phone}', style: bodyStyle),
+              pw.Text('Name: ${voucher.customer.user.name}', style: bodyStyle),
+              pw.Text('Phone: ${voucher.customer.user.phone}', style: bodyStyle),
+              if (voucher.customer.user.email != null &&
+                  voucher.customer.user.email!.isNotEmpty)
+                pw.Text('Email: ${voucher.customer.user.email}', style: bodyStyle),
               pw.SizedBox(height: 10),
 
               // Divider
@@ -310,8 +317,8 @@ class SupplierVoucherStandardPrinter {
       String sanitizedVoucherNumber =
           voucherNumber.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
       final file =
-          File('${output.path}/SupplierVoucher_$sanitizedVoucherNumber.pdf');
-      
+          File('${output.path}/CustomerVoucher_$sanitizedVoucherNumber.pdf');
+
       final bytes = await pdf.save();
       await file.writeAsBytes(bytes);
 
@@ -369,7 +376,7 @@ class SupplierVoucherStandardPrinter {
   Future<void> _handleWindowsPdf(File file) async {
     try {
       // First try to open with the default Windows PDF viewer
-      final result = await OpenFile.open(file.path);
+      await OpenFile.open(file.path);
 
       // Always show success message on Windows, regardless of result
       if (context.mounted) {
@@ -393,8 +400,8 @@ class SupplierVoucherStandardPrinter {
         await Share.shareXFiles(
           [XFile(file.path)],
           subject:
-              'Supplier Voucher #${file.path.split('/').last.replaceAll('.pdf', '').replaceAll('SupplierVoucher_', '')}',
-          text: 'Your supplier voucher',
+              'Customer Voucher #${file.path.split('/').last.replaceAll('.pdf', '').replaceAll('CustomerVoucher_', '')}',
+          text: 'Your customer voucher',
         );
 
         if (context.mounted) {

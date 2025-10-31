@@ -16,6 +16,7 @@ import '../../providers/auth_model.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/customer_voucher_print.dart';
 
 class CustomerVoucherListScreen extends StatefulWidget {
   const CustomerVoucherListScreen({super.key});
@@ -594,11 +595,18 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                                                         0.9),
                                                               ),
                                                               onPressed: () {
-                                                                showScaffold(
-                                                                  context:
-                                                                      context,
-                                                                  message:
-                                                                      'Print functionality coming soon',
+                                                                Navigator.push(
+                                                                  context,
+                                                                  MaterialPageRoute(
+                                                                    builder:
+                                                                        (context) =>
+                                                                            CustomerVoucherPrintPage(
+                                                                      voucher:
+                                                                          voucher,
+                                                                      returnToPreviousRoute:
+                                                                          true,
+                                                                    ),
+                                                                  ),
                                                                 );
                                                               },
                                                               constraints:
