@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/customer_voucher.dart';
 import 'package:pos_machine/resources/app_url.dart';
+import 'dart:async';
 
 class CustomerVoucherProvider extends ChangeNotifier {
   bool _isLoading = false;
@@ -324,6 +325,120 @@ class CustomerVoucherProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  //          *********************** ZATCA PHASE 2 VOUCHER PRINT ***************************************************
+  Future<dynamic> zatcaPhase2VoucherPrint({
+    required int id,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(APPUrl.zatcaPhase2VoucherPrint);
+
+    debugPrint('[ZATCA][Provider] Phase2 Voucher Print URL: $uri');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final headers = {
+        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'X-Tenant': apiKey,
+      };
+      debugPrint('[ZATCA][Provider] Headers: $headers');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
+
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+            },
+            body: {'id': id.toString()},
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return response.body;
+        }
+      } else {
+        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        return {
+          'status': 'error',
+          'message': 'Failed with status ${response.statusCode}'
+        };
+      }
+    } on TimeoutException catch (_) {
+      debugPrint('[ZATCA][Provider] ERROR: Request timed out');
+      return {'status': 'error', 'message': 'Request timed out'};
+    } catch (e) {
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
+  //          *********************** ZATCA PHASE 2 VOUCHER RESYNC ***************************************************
+  Future<dynamic> zatcaPhase2VoucherResync({
+    required int id,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(APPUrl.zatcaPhase2VoucherResync);
+
+    debugPrint('[ZATCA][Provider] Phase2 Voucher Resync URL: $uri');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final maskedHeaders = {
+        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'X-Tenant': apiKey,
+      };
+      debugPrint('[ZATCA][Provider] Headers: $maskedHeaders');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
+
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+            },
+            body: {'id': id.toString()},
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return response.body;
+        }
+      } else {
+        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        return {
+          'status': 'error',
+          'message': 'Failed with status ${response.statusCode}'
+        };
+      }
+    } on TimeoutException catch (_) {
+      debugPrint('[ZATCA][Provider] ERROR: Request timed out');
+      return {'status': 'error', 'message': 'Request timed out'};
+    } catch (e) {
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
+      return {'status': 'error', 'message': e.toString()};
     }
   }
 }

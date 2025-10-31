@@ -192,6 +192,12 @@ class APPUrl {
   static String zatcaPhase2InvoiceResync =
       '$baseURL/api/v1/zatca/phase2/invoice/resync';
 
+  // ZATCA Voucher endpoints
+  static String zatcaPhase2VoucherPrint =
+      '$baseURL/api/v1/zatca/phase2/voucher/print';
+  static String zatcaPhase2VoucherResync =
+      '$baseURL/api/v1/zatca/phase2/voucher/resync';
+
   // Supplier Dashboard Endpoints
   static String suppliersOverview =
       '$baseURL/api/v1/dashboard/suppliers-overview';
