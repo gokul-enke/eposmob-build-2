@@ -78,7 +78,8 @@ class OrderDetailsModelData {
       OrderDetailsModelData(
         ordersId: json["orders_id"],
         storeId: json["store_id"],
-        storeName: json["store_name"],
+        // Use cart store name as fallback when order store name is not available
+        storeName: json["store_name"] ?? (json["cart"] != null ? (json["cart"] as Map)["store_name"] : null),
         orderDate: json["order_date"],
         deliveryDate: json["delivery_date"],
         deliveryTime: json["delivery_time"],
