@@ -332,6 +332,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
         // New order: strictly local cart only (no API here)
         debugPrint(
             '🛒 Adding product to local cart via LocalProductProvider (new order)');
+        // Try to pass a specific stock reference when it's safe to infer
+        // 1) If provider's selectedProduct matches this product, use its selectedStock
+        // 2) Else if the product has exactly one stock entry, use that
+        final selectedStockToUse =
+            (localProductProvider.selectedProduct?.productId ==
+                    product.productId)
+                ? localProductProvider.selectedStock
+                : ((product.stock != null && product.stock!.length == 1)
+                    ? product.stock!.first
+                    : null);
+
         localProductProvider.addToCart(
           product: product,
           quantity: quantity,
@@ -339,6 +350,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               ? double.tryParse(product.price!.price!)
               : null,
           mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
+          selectedStock: selectedStockToUse,
         );
 
         if (mounted) {
@@ -396,8 +408,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         });
       }
 
-      // Get cart total from local provider
-      final total = localProductProvider.cartTotal;
+      // Get cart total from local provider (apply round-off when enabled)
+      final total = localProductProvider.getRoundedTotal(context);
 
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
@@ -2084,6 +2096,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   int? _selectedCustomerID;
   String? _selectedCustomerPhone;
   List<CustomerListModelData> _customers = [];
+  bool _customersInitialized = false;
 
   // Discount Variables
   bool _isCouponApplied = false;
@@ -2096,24 +2109,28 @@ class _OrderPanelState extends State<_OrderPanel> {
   @override
   void didUpdateWidget(covariant _OrderPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Initialize customers when first loaded - defer to avoid setState during build
-    if (_customers.isEmpty) {
+    // Initialize customers only once
+    if (!_customersInitialized) {
+      _customersInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _fetchCustomers();
       });
     }
 
-    if (widget.tableId != oldWidget.tableId && widget.tableId != null) {
-      _fetchSavedOrders();
-    } else if (widget.tableId == null) {
-      setState(() {
-        _savedOrders = [];
-        _selectedOrder = null;
-        _error = null;
-      });
-      // Clear state when no table is selected
-      _clearOrderEditingState();
-      widget.onOrderSelected(null);
+    // Only react when tableId actually changes
+    if (widget.tableId != oldWidget.tableId) {
+      if (widget.tableId != null) {
+        _fetchSavedOrders();
+      } else {
+        setState(() {
+          _savedOrders = [];
+          _selectedOrder = null;
+          _error = null;
+          // Clear state synchronously to avoid nested setState
+          _clearOrderEditingStateSync();
+        });
+        widget.onOrderSelected(null);
+      }
     }
 
     // Check if refresh counter has changed (indicating a refresh is needed)
@@ -3184,6 +3201,40 @@ class _OrderPanelState extends State<_OrderPanel> {
       _toCustomerCreditEnabled = false;
       _toCustomerCreditAmount = 0.0;
     });
+    debugPrint('✅ Order editing state cleared');
+  }
+
+  // Sync variant without setState to avoid triggering extra rebuilds in lifecycle hooks
+  void _clearOrderEditingStateSync() {
+    debugPrint('🧹 Clearing previous order editing state...');
+    // Clear customer selection
+    _selectedCustomer = null;
+    _selectedCustomerID = null;
+    _selectedCustomerPhone = null;
+
+    // Clear payment methods
+    _isCashSelected = false;
+    _isCardSelected = false;
+    _isUpiSelected = false;
+    _isDebitSelected = false;
+    _cashAmount = "";
+    _cardAmount = "";
+    _upiAmount = '';
+    _debitAmount = '';
+    _orderComment = "";
+    _transactionNumber = "";
+
+    // Clear discount state
+    _isCouponApplied = false;
+    _flatDiscount = 0.0;
+    _percentageDiscount = 0.0;
+    _couponCode = "";
+
+    // Reset balance and credit state
+    _balanceAmount = 0.0;
+    _toCustomerCreditEnabled = false;
+    _toCustomerCreditAmount = 0.0;
+
     debugPrint('✅ Order editing state cleared');
   }
 

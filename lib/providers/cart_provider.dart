@@ -902,7 +902,7 @@ class CartProvider with ChangeNotifier {
       apiBodyData = {
         "phone": customerPhone,
         "transaction_number": transactionId,
-        "payment_methods": paymentMethods,
+        "payment_method": paymentMethods,
         "paid_methods": paidMethods,
         "source_type": "executive",
         "balance": balanceAmount,
