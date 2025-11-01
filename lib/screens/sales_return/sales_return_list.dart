@@ -7,6 +7,8 @@ import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/sales_return/widgets/sales_return_detail_modal.dart';
+import 'package:pos_machine/screens/print/return_bill_print.dart';
+import 'package:pos_machine/models/order_details.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_container_box.dart';
 import '../../components/build_pagination_control.dart';
@@ -271,26 +273,69 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             child: Padding(
               padding: const EdgeInsets.all(15.0),
               child: Center(
-                child: BuildBoxShadowContainer(
-                    margin: const EdgeInsets.only(left: 5, right: 5),
-                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                    circleRadius: 5,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.visibility,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
-                        // Show modal with sales return details
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return SalesReturnDetailModal(order: order);
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // View button
+                    BuildBoxShadowContainer(
+                        margin: const EdgeInsets.only(left: 5, right: 5),
+                        color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                        circleRadius: 5,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.visibility,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            // Show modal with sales return details
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return SalesReturnDetailModal(order: order);
+                              },
+                            );
                           },
-                        );
-                      },
-                    )),
+                        )),
+                    // Print button
+                    BuildBoxShadowContainer(
+                        margin: const EdgeInsets.only(left: 5, right: 5),
+                        color: Colors.green.withOpacity(0.9),
+                        circleRadius: 5,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.print,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            // Convert SalesReturnOrder items to OrderReturnItem list
+                            List<OrderReturnItem> returnItems = order.items.map((item) {
+                              return OrderReturnItem(
+                                id: item.id,
+                                productName: item.cartItem.product?.name ?? 'Unknown',
+                                quantity: item.quantity is int ? item.quantity as int : (item.quantity as double).toInt(),
+                                reason: item.reason,
+                              );
+                            }).toList();
+
+                            // Navigate to Return Bill Print Page
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReturnBillPrintPage(
+                                  returnItems: returnItems,
+                                  returnTotalAmount: order.totalAmount,
+                                  orderDate: order.createdAt.toString(),
+                                  orderNumber: order.order?.orderNumber ?? order.orderId.toString(),
+                                  customerName: order.order?.customer?.user?.name,
+                                ),
+                              ),
+                            );
+                          },
+                        )),
+                  ],
+                ),
               ),
             )),
       ],

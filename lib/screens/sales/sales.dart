@@ -273,7 +273,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final billDocumentConfig = (orderData.orderReturns != null && 
           orderData.orderReturns!.returnItems != null && 
           orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales Return Bill") ?? 
+          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ?? 
              docConfigProvider.getDocumentConfig("Bill"))
           : docConfigProvider.getDocumentConfig("Bill");
 
@@ -686,7 +686,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final billDocumentConfig = (orderData.orderReturns != null && 
           orderData.orderReturns!.returnItems != null && 
           orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales Return Bill") ?? 
+          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ?? 
              docConfigProvider.getDocumentConfig("Bill"))
           : docConfigProvider.getDocumentConfig("Bill");
 

@@ -3,6 +3,8 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/screens/print/return_bill_print.dart';
+import 'package:pos_machine/models/order_details.dart';
 
 class SalesReturnDetailModal extends StatelessWidget {
   final SalesReturnOrder order;
@@ -164,11 +166,43 @@ class SalesReturnDetailModal extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 CustomRoundButton(
+                  fct: () {
+                    // Convert SalesReturnOrder items to OrderReturnItem list
+                    List<OrderReturnItem> returnItems = order.items.map((item) {
+                      return OrderReturnItem(
+                        id: item.id,
+                        productName: item.cartItem.product?.name ?? 'Unknown',
+                        quantity: item.quantity is int ? item.quantity as int : (item.quantity as double).toInt(),
+                        reason: item.reason,
+                      );
+                    }).toList();
+
+                    // Navigate to Return Bill Print Page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ReturnBillPrintPage(
+                          returnItems: returnItems,
+                          returnTotalAmount: order.totalAmount,
+                          orderDate: order.createdAt.toString(),
+                          orderNumber: order.order?.orderNumber ?? order.orderId.toString(),
+                          customerName: order.order?.customer?.user?.name,
+                        ),
+                      ),
+                    );
+                  },
+                  title: "Print",
+                  fontSize: FontSize.s12,
+                  height: MediaQuery.of(context).size.height * .05,
+                  width: 80,
+                ),
+                const SizedBox(width: 12),
+                CustomRoundButton(
                   fct: () => Navigator.of(context).pop(),
                   title: "Close",
                   fontSize: FontSize.s12,
                   height: MediaQuery.of(context).size.height * .05,
-                  width: 60,
+                  width: 80,
                 ),
               ],
             ),

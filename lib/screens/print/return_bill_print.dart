@@ -3,10 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
-import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
@@ -15,47 +13,41 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/print_thermal.dart';
-import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/screens/print/return_bill_print_thermal.dart';
+import 'package:pos_machine/screens/print/return_bill_print_standard.dart';
 import 'package:pos_machine/models/order_details.dart';
 
-class PrintPage extends StatefulWidget {
-  final List<dynamic> cartItems;
+class ReturnBillPrintPage extends StatefulWidget {
+  final List<OrderReturnItem> returnItems;
   final String? storeName;
-  final String formattedTotal;
-  final String? savedTotal;
-  final String? discountAmount;
+  final String returnTotalAmount;
   final String orderDate;
   final String orderNumber;
-  final bool isFromLocalStorage;
   final String? customerName;
   final String? customerPhone;
   final String? customerEmail;
   final String? customerAddress;
-  final OrderReturns? orderReturns; // Add this line
+  final String? customerBalance;
 
-  const PrintPage({
+  const ReturnBillPrintPage({
     super.key,
-    required this.cartItems,
-    required this.formattedTotal,
-    this.savedTotal,
-    this.discountAmount,
+    required this.returnItems,
+    required this.returnTotalAmount,
     this.storeName,
     required this.orderDate,
     required this.orderNumber,
-    this.isFromLocalStorage = false,
     this.customerName,
     this.customerPhone,
     this.customerEmail,
     this.customerAddress,
-    this.orderReturns, // Add this line
+    this.customerBalance,
   });
 
   @override
-  _PrintPageState createState() => _PrintPageState();
+  _ReturnBillPrintPageState createState() => _ReturnBillPrintPageState();
 }
 
-class _PrintPageState extends State<PrintPage> {
+class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
   var printerManager = PrinterManager.instance;
   var devices = <BluetoothPrinter>[];
   StreamSubscription<PrinterDevice>? _subscription;
@@ -64,7 +56,7 @@ class _PrintPageState extends State<PrintPage> {
   bool _isLoading = true;
   String selectedPaperSize = '80mm';
 
-  DocumentConfig? _billDocumentConfig;
+  DocumentConfig? _returnBillDocumentConfig;
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -98,25 +90,25 @@ class _PrintPageState extends State<PrintPage> {
   @override
   void dispose() {
     debugPrint(
-        '[PrintPage] dispose(): canceling discovery subscription if any');
+        '[ReturnBillPrintPage] dispose(): canceling discovery subscription if any');
     _subscription?.cancel();
     super.dispose();
   }
 
   Future<void> _checkPermissions() async {
-    debugPrint('[PrintPage] _checkPermissions() called');
+    debugPrint('[ReturnBillPrintPage] _checkPermissions() called');
     if (await _requestPermissions()) {
-      debugPrint('[PrintPage] Permissions granted. Proceeding to scan.');
+      debugPrint('[ReturnBillPrintPage] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
-      debugPrint('[PrintPage] Permissions NOT granted. Showing dialog.');
+      debugPrint('[ReturnBillPrintPage] Permissions NOT granted. Showing dialog.');
       _showPermissionDeniedDialog();
     }
   }
 
   Future<bool> _requestPermissions() async {
     debugPrint(
-        '[PrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
+        '[ReturnBillPrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
     if (Theme.of(context).platform == TargetPlatform.android) {
       Map<Permission, PermissionStatus> statuses = await [
         Permission.bluetooth,
@@ -127,15 +119,15 @@ class _PrintPageState extends State<PrintPage> {
 
       statuses.forEach((perm, status) {
         debugPrint(
-            '[PrintPage] Permission ${perm.toString()} => ${status.toString()}');
+            '[ReturnBillPrintPage] Permission ${perm.toString()} => ${status.toString()}');
       });
 
       final granted = statuses.values.every((status) => status.isGranted);
-      debugPrint('[PrintPage] All permissions granted: $granted');
+      debugPrint('[ReturnBillPrintPage] All permissions granted: $granted');
       return granted;
     }
     debugPrint(
-        '[PrintPage] Non-Android platform; skipping runtime permission request.');
+        '[ReturnBillPrintPage] Non-Android platform; skipping runtime permission request.');
     return true;
   }
 
@@ -162,11 +154,11 @@ class _PrintPageState extends State<PrintPage> {
   void _scan() async {
     if (_isScanning) {
       debugPrint(
-          '[PrintPage] _scan() requested but a scan is already in progress. Ignoring.');
+          '[ReturnBillPrintPage] _scan() requested but a scan is already in progress. Ignoring.');
       return;
     }
     debugPrint(
-        '[PrintPage] Starting scan... platform=${Platform.operatingSystem}');
+        '[ReturnBillPrintPage] Starting scan... platform=${Platform.operatingSystem}');
     await _subscription?.cancel();
     setState(() {
       _isScanning = true;
@@ -176,12 +168,12 @@ class _PrintPageState extends State<PrintPage> {
     try {
       // Bluetooth discovery only on mobile platforms
       if (Platform.isAndroid || Platform.isIOS) {
-        debugPrint('[PrintPage] Beginning Bluetooth discovery (isBle=false)');
+        debugPrint('[ReturnBillPrintPage] Beginning Bluetooth discovery (isBle=false)');
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
           debugPrint(
-              '[PrintPage] BT device found: name=${device.name}, address=${device.address}');
+              '[ReturnBillPrintPage] BT device found: name=${device.name}, address=${device.address}');
           final printer = BluetoothPrinter(
             deviceName: device.name,
             address: device.address,
@@ -191,23 +183,23 @@ class _PrintPageState extends State<PrintPage> {
             devices.add(printer);
           });
         }, onError: (err) {
-          debugPrint('[PrintPage] Bluetooth discovery error: $err');
+          debugPrint('[ReturnBillPrintPage] Bluetooth discovery error: $err');
         }, onDone: () {
           final btCount = devices
               .where((p) => p.typePrinter == PrinterType.bluetooth)
               .length;
           debugPrint(
-              '[PrintPage] Bluetooth discovery done. Total BT devices: $btCount');
+              '[ReturnBillPrintPage] Bluetooth discovery done. Total BT devices: $btCount');
         }, cancelOnError: false);
       } else {
         debugPrint(
-            '[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
+            '[ReturnBillPrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
-      debugPrint('[PrintPage] Beginning USB discovery');
+      debugPrint('[ReturnBillPrintPage] Beginning USB discovery');
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
         debugPrint(
-            '[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+            '[ReturnBillPrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -219,21 +211,21 @@ class _PrintPageState extends State<PrintPage> {
         });
       });
       debugPrint(
-          '[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
+          '[ReturnBillPrintPage] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {
-      debugPrint('[PrintPage] Error during scanning: $e');
-      debugPrint('[PrintPage] Stacktrace: $st');
+      debugPrint('[ReturnBillPrintPage] Error during scanning: $e');
+      debugPrint('[ReturnBillPrintPage] Stacktrace: $st');
     } finally {
       setState(() {
         _isScanning = false;
       });
-      debugPrint('[PrintPage] Scan finished. devices.length=${devices.length}');
+      debugPrint('[ReturnBillPrintPage] Scan finished. devices.length=${devices.length}');
     }
   }
 
   Future<void> _loadDefaultPrinter() async {
     debugPrint(
-        '[PrintPage] _loadDefaultPrinter() reading from SharedPreferences');
+        '[ReturnBillPrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
     final defaultPrinterJson = prefs.getString('default_printer');
 
@@ -253,9 +245,9 @@ class _PrintPageState extends State<PrintPage> {
         _isLoading = false;
       });
       debugPrint(
-          '[PrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
+          '[ReturnBillPrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
 
-      if (selectedPrinter != null && _billDocumentConfig != null) {
+      if (selectedPrinter != null && _returnBillDocumentConfig != null) {
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         final appSettings = appSettingsProvider.appSettings;
@@ -268,7 +260,7 @@ class _PrintPageState extends State<PrintPage> {
       setState(() {
         _isLoading = false;
       });
-      debugPrint('[PrintPage] No default printer found in SharedPreferences');
+      debugPrint('[ReturnBillPrintPage] No default printer found in SharedPreferences');
     }
   }
 
@@ -286,7 +278,7 @@ class _PrintPageState extends State<PrintPage> {
 
   void selectPrinter(BluetoothPrinter printer) {
     debugPrint(
-        '[PrintPage] selectPrinter(): name=${printer.deviceName}, address=${printer.address}, type=${printer.typePrinter}');
+        '[ReturnBillPrintPage] selectPrinter(): name=${printer.deviceName}, address=${printer.address}, type=${printer.typePrinter}');
     setState(() {
       selectedPrinter = printer;
     });
@@ -306,29 +298,13 @@ class _PrintPageState extends State<PrintPage> {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
-      debugPrint("Loading document configurations from provider...");
+      debugPrint("Loading Return Bill document configurations from provider...");
       
-      // Check if orderReturns data is available
-      if (widget.orderReturns != null && 
-          widget.orderReturns!.returnItems != null && 
-          widget.orderReturns!.returnItems!.isNotEmpty) {
-        debugPrint("Order has returns, trying to load 'Sales Return Bill' configuration...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales and Return Bill");
-        
-        if (_billDocumentConfig != null) {
-          debugPrint("SUCCESS: Sales Return Bill configuration loaded");
-        } else {
-          debugPrint("Sales Return Bill configuration not found, falling back to Bill configuration");
-          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-        }
-      } else {
-        debugPrint("No returns in order, loading 'Bill' configuration...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      }
+      _returnBillDocumentConfig = docConfigProvider.getDocumentConfig("Return Bill");
 
-      if (_billDocumentConfig == null) {
+      if (_returnBillDocumentConfig == null) {
         debugPrint(
-            "WARNING: Bill document configuration not found in provider, may need to load manually");
+            "WARNING: Return Bill document configuration not found in provider, may need to load manually");
         // Fallback: try to load if not available
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
@@ -339,7 +315,7 @@ class _PrintPageState extends State<PrintPage> {
           return;
         }
       } else {
-        debugPrint("SUCCESS: Bill document configuration loaded from provider");
+        debugPrint("SUCCESS: Return Bill document configuration loaded from provider");
       }
 
       setState(() {
@@ -361,29 +337,14 @@ class _PrintPageState extends State<PrintPage> {
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      // Check if orderReturns data is available and load appropriate config
-      if (widget.orderReturns != null && 
-          widget.orderReturns!.returnItems != null && 
-          widget.orderReturns!.returnItems!.isNotEmpty) {
-        debugPrint("Order has returns, loading 'Sales Return Bill' configuration from API...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales and Return Bill");
-        
-        if (_billDocumentConfig != null) {
-          debugPrint("SUCCESS: Sales Return Bill configuration loaded from API");
-        } else {
-          debugPrint("Sales Return Bill not found, falling back to Bill configuration");
-          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-        }
-      } else {
-        debugPrint("No returns, loading 'Bill' configuration from API...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      }
+      debugPrint("Loading 'Return Bill' configuration from API...");
+      _returnBillDocumentConfig = docConfigProvider.getDocumentConfig("Return Bill");
 
-      if (_billDocumentConfig != null) {
-        debugPrint("SUCCESS: Document configuration loaded from API");
+      if (_returnBillDocumentConfig != null) {
+        debugPrint("SUCCESS: Return Bill document configuration loaded from API");
       } else {
         debugPrint(
-            "ERROR: Document configuration still null after API fetch");
+            "ERROR: Return Bill document configuration still null after API fetch");
       }
 
       setState(() {
@@ -405,8 +366,8 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _handlePrinting(
       String customerCareNumber, String customerCareEmail) async {
-    if (_billDocumentConfig == null) {
-      debugPrint("ERROR: Bill document configuration not loaded yet.");
+    if (_returnBillDocumentConfig == null) {
+      debugPrint("ERROR: Return Bill document configuration not loaded yet.");
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -425,51 +386,45 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _printThermalReceipt(
       String customerCareNumber, String customerCareEmail) async {
-    final thermalPrinter = ThermalPrinter(context);
+    final thermalPrinter = ReturnBillThermalPrinter(context);
 
-    await thermalPrinter.printReceipt(
+    await thermalPrinter.printReturnBill(
       selectedPrinter: selectedPrinter!,
-      cartItems: widget.cartItems,
-      formattedTotal: widget.formattedTotal,
-      savedTotal: widget.savedTotal,
-      discountAmount: widget.discountAmount,
+      returnItems: widget.returnItems,
+      returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
-      isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
-      billDocumentConfig: _billDocumentConfig,
+      returnBillDocumentConfig: _returnBillDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
       customerName: widget.customerName,
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
-      orderReturns: widget.orderReturns, // Add this line
+      customerBalance: widget.customerBalance,
     );
   }
 
   Future<void> _generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
-    final standardPrinter = StandardPrinter(context);
+    final standardPrinter = ReturnBillStandardPrinter(context);
 
     await standardPrinter.generateAndPrintPDF(
       selectedPrinter: selectedPrinter,
-      cartItems: widget.cartItems,
-      formattedTotal: widget.formattedTotal,
-      savedTotal: widget.savedTotal,
-      discountAmount: widget.discountAmount,
+      returnItems: widget.returnItems,
+      returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
-      isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
-      billDocumentConfig: _billDocumentConfig,
+      returnBillDocumentConfig: _returnBillDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
       customerName: widget.customerName,
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
-      orderReturns: widget.orderReturns, // Add this line
+      customerBalance: widget.customerBalance,
     );
   }
 
@@ -522,7 +477,7 @@ class _PrintPageState extends State<PrintPage> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
-          'Select Printer',
+          'Print Return Bill',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -532,8 +487,6 @@ class _PrintPageState extends State<PrintPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
-            SideBarController sideBarController = Get.put(SideBarController());
-            sideBarController.index.value = 46;
           },
         ),
         elevation: 0,
@@ -547,6 +500,9 @@ class _PrintPageState extends State<PrintPage> {
             // Paper Size Selection Card
             Card(
               elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -554,7 +510,7 @@ class _PrintPageState extends State<PrintPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -564,17 +520,21 @@ class _PrintPageState extends State<PrintPage> {
                       'Paper Size',
                       style: TextStyle(
                         color: textPrimaryColor,
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: selectedPaperSize,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         contentPadding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                       items: paperSizes.map((String size) {
                         return DropdownMenuItem<String>(
@@ -596,6 +556,9 @@ class _PrintPageState extends State<PrintPage> {
             const SizedBox(height: 16),
             Card(
               elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -603,7 +566,7 @@ class _PrintPageState extends State<PrintPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -613,7 +576,7 @@ class _PrintPageState extends State<PrintPage> {
                       'Available Printers',
                       style: TextStyle(
                         color: textPrimaryColor,
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -621,7 +584,7 @@ class _PrintPageState extends State<PrintPage> {
                     Text(
                       _isScanning
                           ? 'Scanning...'
-                          : '${devices.length} devices found',
+                          : '${devices.length} device${devices.length != 1 ? 's' : ''} found',
                       style: const TextStyle(
                         color: textSecondaryColor,
                         fontSize: 14,
@@ -645,11 +608,11 @@ class _PrintPageState extends State<PrintPage> {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            'No printers found',
+                            'No Printers Found',
                             style: TextStyle(
-                              color: textSecondaryColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                              color: textPrimaryColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -659,6 +622,7 @@ class _PrintPageState extends State<PrintPage> {
                               color: textSecondaryColor.withOpacity(0.8),
                               fontSize: 14,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -670,22 +634,32 @@ class _PrintPageState extends State<PrintPage> {
                         final isSelected = selectedPrinter == printer;
 
                         return Card(
-                          elevation: isSelected ? 2 : 1,
-                          margin: const EdgeInsets.only(bottom: 8),
+                          elevation: isSelected ? 3 : 1,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: isSelected
+                                ? BorderSide(color: primaryColor, width: 2)
+                                : BorderSide.none,
+                          ),
                           child: Container(
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: isSelected
-                                  ? Border.all(color: primaryColor, width: 2)
-                                  : null,
+                              borderRadius: BorderRadius.circular(10),
+                              color: isSelected
+                                  ? primaryColor.withOpacity(0.05)
+                                  : Colors.white,
                             ),
                             child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
                               leading: Icon(
                                 Icons.print,
                                 color: isSelected
                                     ? primaryColor
                                     : textSecondaryColor,
-                                size: 28,
+                                size: 32,
                               ),
                               title: Text(
                                 printer.deviceName ?? 'Unknown device',
@@ -693,29 +667,29 @@ class _PrintPageState extends State<PrintPage> {
                                   color: textPrimaryColor,
                                   fontWeight: isSelected
                                       ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 16,
+                                      : FontWeight.w600,
+                                  fontSize: 15,
                                 ),
                               ),
                               subtitle: Text(
-                                printer.address ?? '',
+                                printer.address ?? 'No address',
                                 style: const TextStyle(
                                   color: textSecondaryColor,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                 ),
                               ),
                               trailing: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: isSelected
                                       ? accentColor
-                                      : Colors.grey[200],
+                                      : Colors.grey[300],
                                   foregroundColor: isSelected
                                       ? Colors.white
                                       : textSecondaryColor,
                                   elevation: isSelected ? 2 : 0,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
+                                    horizontal: 20,
+                                    vertical: 10,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20),
@@ -726,6 +700,7 @@ class _PrintPageState extends State<PrintPage> {
                                   isSelected ? 'Selected' : 'Select',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ),
@@ -736,7 +711,7 @@ class _PrintPageState extends State<PrintPage> {
                     ),
             ),
             const SizedBox(height: 16),
-            if (_billDocumentConfig == null)
+            if (_returnBillDocumentConfig == null)
               Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 8),
@@ -747,14 +722,15 @@ class _PrintPageState extends State<PrintPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.orange, size: 20),
-                    SizedBox(width: 8),
+                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Loading document configuration...',
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -787,7 +763,7 @@ class _PrintPageState extends State<PrintPage> {
                   );
                   return;
                 }
-                if (_billDocumentConfig == null) {
+                if (_returnBillDocumentConfig == null) {
                   showScaffoldError(
                     context: context,
                     message:
@@ -798,9 +774,9 @@ class _PrintPageState extends State<PrintPage> {
                 _handlePrinting(appSettings!.customerCarePhone,
                     appSettings.customerCareEmail);
               },
-              icon: const Icon(Icons.receipt_long),
+              icon: const Icon(Icons.receipt_long, size: 20),
               label: const Text(
-                'Print Receipt',
+                'Print Return Bill',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -812,7 +788,7 @@ class _PrintPageState extends State<PrintPage> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 3,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
@@ -824,6 +800,9 @@ class _PrintPageState extends State<PrintPage> {
         tooltip: 'Scan for printers',
         backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
         elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: _isScanning
             ? const SizedBox(
                 width: 24,

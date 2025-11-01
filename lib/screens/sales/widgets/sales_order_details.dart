@@ -572,7 +572,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           (orderDetailsModelData!.orderReturns != null &&
                   orderDetailsModelData!.orderReturns!.returnItems != null &&
                   orderDetailsModelData!.orderReturns!.returnItems!.isNotEmpty)
-              ? (docConfigProvider.getDocumentConfig("Sales Return Bill") ??
+              ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
                   docConfigProvider.getDocumentConfig("Bill"))
               : docConfigProvider.getDocumentConfig("Bill");
 
