@@ -117,6 +117,10 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(22)
   final bool? toCustomerCredit;
 
+  // Table association for restaurant drafts (optional)
+  @HiveField(23)
+  final String? tableId;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -142,6 +146,7 @@ class HiveSavedOrder extends HiveObject {
     this.flatDiscount,
     this.percentageDiscount,
     this.toCustomerCredit,
+    this.tableId,
   });
 }
 

@@ -123,13 +123,14 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       flatDiscount: fields[20] as double?,
       percentageDiscount: fields[21] as double?,
       toCustomerCredit: fields[22] as bool?,
+      tableId: fields[23] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveSavedOrder obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -175,7 +176,9 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       ..writeByte(21)
       ..write(obj.percentageDiscount)
       ..writeByte(22)
-      ..write(obj.toCustomerCredit);
+      ..write(obj.toCustomerCredit)
+      ..writeByte(23)
+      ..write(obj.tableId);
   }
 
   @override
