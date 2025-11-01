@@ -5423,21 +5423,21 @@ class _OrderPanelState extends State<_OrderPanel> {
           : (_selectedOrder['comment'] ?? 'Order confirmed from restaurant');
 
       // Validate customer selection (mandatory)
-      // if ((_selectedCustomerID == null) &&
-      //     (_selectedCustomer == null) &&
-      //     (_selectedCustomerPhone == null ||
-      //         _selectedCustomerPhone!.toString().isEmpty)) {
-      //   showScaffoldError(
-      //     context: context,
-      //     message: 'Please select a customer',
-      //   );
-      //   if (mounted) {
-      //     setState(() {
-      //       _isLoadingConfirm = false;
-      //     });
-      //   }
-      //   return;
-      // }
+      if ((_selectedCustomerID == null) &&
+          (_selectedCustomer == null) &&
+          (_selectedCustomerPhone == null ||
+              _selectedCustomerPhone!.toString().isEmpty)) {
+        showScaffoldError(
+          context: context,
+          message: 'Please select a customer',
+        );
+        if (mounted) {
+          setState(() {
+            _isLoadingConfirm = false;
+          });
+        }
+        return;
+      }
 
       // Validate payment method selection (mandatory)
       if (!_hasPaymentMethod()) {
