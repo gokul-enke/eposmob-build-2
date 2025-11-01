@@ -72,12 +72,246 @@ class _DrawerListTileExpandableColumnState
     extends State<DrawerListTileExpandableColumn> {
   bool _isExpanded = true;
   int _selectedTileIndex = 0;
+  
 
   void _onTapTile(int index, VoidCallback onTap) {
     setState(() {
       _selectedTileIndex = index;
     });
     onTap();
+  }
+
+  Future<void> _openCollapsedMenu(BuildContext ctx) async {
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final offset = box.localToGlobal(Offset.zero);
+    final size = box.size;
+
+    final position = RelativeRect.fromLTRB(
+      offset.dx + size.width + 8,
+      offset.dy,
+      double.infinity,
+      double.infinity,
+    );
+
+    final List<PopupMenuEntry<String>> items = [];
+    // Header
+    items.add(
+      PopupMenuItem<String>(
+        enabled: false,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: widget.icon != null
+                    ? Icon(widget.icon, size: 14, color: ColorManager.kPrimaryColor)
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: ColorManager.kPrimaryColor,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    items.add(const PopupMenuDivider());
+
+    // Sub-items based on permissions with compact styling
+    if (widget.showTitle1 == true) {
+      items.add(PopupMenuItem<String>(
+        value: '1',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.listTitle1,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+    if (widget.listTitle2 != null && widget.showTitle2 == true) {
+      items.add(PopupMenuItem<String>(
+        value: '2',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.listTitle2!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+    if (widget.listTitle3 != null && widget.showTitle3 == true) {
+      items.add(PopupMenuItem<String>(
+        value: '3',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.listTitle3!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+    if (widget.listTitle4 != null && widget.showTitle4 == true) {
+      items.add(PopupMenuItem<String>(
+        value: '4',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.listTitle4!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+    if (widget.listTitle5 != null && widget.showTitle5 == true) {
+      items.add(PopupMenuItem<String>(
+        value: '5',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.listTitle5!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+
+    final choice = await showMenu<String>(
+      context: ctx,
+      position: position,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      items: items,
+      elevation: 12,
+      color: Colors.white, // White background
+    );
+
+    switch (choice) {
+      case '1':
+        widget.onTapTitle1();
+        break;
+      case '2':
+        widget.onTapTitle2?.call();
+        break;
+      case '3':
+        widget.onTapTitle3?.call();
+        break;
+      case '4':
+        widget.onTapTitle4?.call();
+        break;
+      case '5':
+        widget.onTapTitle5?.call();
+        break;
+      default:
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -90,44 +324,41 @@ class _DrawerListTileExpandableColumnState
     final sidebarState = context.findAncestorStateOfType<CollapsibleSidebarState>();
     final isSidebarExpanded = sidebarState?.isExpanded ?? true;
 
-    // Collapsed state - icon only with tooltip
+    // Collapsed state - icon only with click to show popup menu
     if (!isSidebarExpanded) {
       return Tooltip(
         message: widget.title,
         preferBelow: false,
         verticalOffset: 20,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container
-              (
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _openCollapsedMenu(context),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: widget.selected
-                      ? ColorManager.kPrimaryColor.withOpacity(0.15)
+                      ? ColorManager.kPrimaryColor
                       : Colors.transparent,
                 ),
                 child: Center(
                   child: widget.icon != null
                       ? Icon(
                           widget.icon,
-                          size: 20,
-                          color: ColorManager.kPrimaryColor,
+                          size: 16,
+                          color: widget.selected ? Colors.white : ColorManager.kPrimaryColor,
                         )
                       : WebsafeSvg.asset(
                           widget.iconPath!,
-                          width: 20,
-                          height: 20,
-                          colorFilter: const ColorFilter.mode(
-                            ColorManager.kPrimaryColor,
+                          width: 16,
+                          height: 16,
+                          colorFilter: ColorFilter.mode(
+                            widget.selected ? Colors.white : ColorManager.kPrimaryColor,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -171,6 +402,8 @@ class _DrawerListTileExpandableColumnState
                     setState(() {
                       _isExpanded = !_isExpanded;
                     });
+                    // Also perform the navigation action when main title is tapped
+                    widget.onTap();
                   },
                   minLeadingWidth: leadingBox,
                   leading: SizedBox(
@@ -414,6 +647,8 @@ class _DrawerListTileExpandableColumnState
             ),
           );
   }
+
+  // Helper method to build sub-item tiles for panel
 }
 
 class BubbleIcon extends StatelessWidget {

@@ -39,7 +39,7 @@ class CollapsibleSidebar extends StatefulWidget {
 
 class CollapsibleSidebarState extends State<CollapsibleSidebar> {
   bool _isExpanded = true;
-  final double _expandedWidth = 240;
+  final double _expandedWidth = 200;
   final double _collapsedWidth = 60;
 
   // Public getter for child widgets to access expanded state
@@ -63,14 +63,7 @@ class CollapsibleSidebarState extends State<CollapsibleSidebar> {
               width: _isExpanded ? _expandedWidth : _collapsedWidth,
               height: double.infinity,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white,
-                    Colors.grey.shade50,
-                  ],
-                ),
+                color: Colors.white,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -160,27 +153,29 @@ class _SideMenuState extends State<SideMenu> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(height: isExpanded ? 8 : 6),
-          // Modern toggle button - aligned to right
+          // Modern toggle button - aligned to right in expanded, centered in collapsed
           Align(
-            alignment: Alignment.centerRight,
+            alignment: isExpanded ? Alignment.centerRight : Alignment.center,
             child: Container(
-              margin: EdgeInsets.only(right: isExpanded ? 10 : 8),
+              margin: EdgeInsets.only(right: isExpanded ? 10 : 8, left: isExpanded ? 10 : 8, top: isExpanded ? 8 : 6, bottom: isExpanded ? 8 : 6),
               decoration: BoxDecoration(
                 color: ColorManager.kPrimaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.transparent,
-                ),
-                child: Icon(
+              child: IconButton(
+                icon: Icon(
                   isExpanded ? Icons.menu_open : Icons.menu,
                   color: ColorManager.kPrimaryColor,
-                  size: 20,
+                  size: isExpanded ? 24 : 16,
                 ),
+                tooltip: isExpanded ? 'Collapse Sidebar' : 'Expand Sidebar',
+                padding: EdgeInsets.all(isExpanded ? 8 : 8),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  final CollapsibleSidebarState? sidebarState =
+                      context.findAncestorStateOfType<CollapsibleSidebarState>();
+                  sidebarState?._toggleSidebar();
+                },
               ),
             ),
           ),
@@ -992,37 +987,35 @@ class DrawerListTile extends StatelessWidget {
         message: title,
         preferBelow: false,
         verticalOffset: 20,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: selected
-                      ? ColorManager.kPrimaryColor.withOpacity(0.15)
+                      ? ColorManager.kPrimaryColor
                       : Colors.transparent,
                 ),
                 child: Center(
                   child: icon != null
                       ? Icon(
                           icon,
-                          size: 20,
-                          color: ColorManager.kPrimaryColor,
+                          size: 16,
+                          color: selected ? Colors.white : ColorManager.kPrimaryColor,
                         )
                       : WebsafeSvg.asset(
                           iconPath!,
-                          width: 20,
-                          height: 20,
-                          colorFilter: const ColorFilter.mode(
-                            ColorManager.kPrimaryColor,
+                          width: 16,
+                          height: 16,
+                          colorFilter: ColorFilter.mode(
+                            selected ? Colors.white : ColorManager.kPrimaryColor,
                             BlendMode.srcIn,
                           ),
                         ),

@@ -3210,14 +3210,14 @@ class BillingPageState extends State<BillingPage>
               isLoading: isLoadingConfirmOrder,
             ),
           ],
-          // if (!_hasInternet) ...[
+          if (!_hasInternet) ...[
             _buildActionButton(
               text: 'Save and Print',
               color: ColorManager.kButtonYellow,
               onPressed: _saveOrderAndPrint,
               isLoading: isLoadingSaveOrderAndPrint,
             ),
-          // ],
+          ],
         ],
       ),
     );
