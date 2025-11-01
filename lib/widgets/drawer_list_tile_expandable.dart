@@ -4,7 +4,7 @@ import 'package:websafe_svg/websafe_svg.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
-import '../responsive.dart';
+import 'side_menu.dart';
 
 class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? iconPath;
@@ -83,253 +83,329 @@ class _DrawerListTileExpandableColumnState
   @override
   Widget build(BuildContext context) {
     final double resolvedIconSize = widget.iconSize ?? 18.0;
-    final double leadingBox = resolvedIconSize + 4.0; // small padding around icon
+    final double leadingBox = resolvedIconSize + 4.0;
     final double gap = widget.horizontalGap ?? 12.0;
+    
+    // Check if sidebar is collapsed
+    final sidebarState = context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final isSidebarExpanded = sidebarState?.isExpanded ?? true;
+
+    // Collapsed state - icon only with tooltip
+    if (!isSidebarExpanded) {
+      return Tooltip(
+        message: widget.title,
+        preferBelow: false,
+        verticalOffset: 20,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 8),
+          decoration: BoxDecoration(
+            color: widget.selected ? ColorManager.kPrimaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onTap,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.all(10),
+                child: Center(
+                  child: widget.icon != null
+                      ? Icon(
+                          widget.icon,
+                          size: 20,
+                          color: widget.selected ? Colors.white : ColorManager.kPrimaryColor,
+                        )
+                      : WebsafeSvg.asset(
+                          widget.iconPath!,
+                          width: 20,
+                          height: 20,
+                          colorFilter: ColorFilter.mode(
+                            widget.selected ? Colors.white : ColorManager.kPrimaryColor,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Expanded state
     return widget.selected
         ? Column(
             children: [
-              Stack(
-                children: [
-                  Positioned(
-                    left: ResponsiveWidget.isTablet(context) ? 10 : 20,
-                    right: ResponsiveWidget.isTablet(context) ? 10 : 20,
-                    child: Container(
-                      alignment: Alignment.center,
-                      // width intentionally omitted so it won't stretch full width
-                      height: MediaQuery.of(context).size.height * .055,
-                      margin: const EdgeInsets.only(bottom: 5),
-                      padding: const EdgeInsets.only(left: 20),
-                      decoration: BoxDecoration(
-                        color: ColorManager.kPrimaryColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 1.5, horizontal: 15),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      ColorManager.kPrimaryColor,
+                      ColorManager.kPrimaryColor.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ColorManager.kPrimaryColor.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ListTile(
+                  selected: widget.selected,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  horizontalTitleGap: gap,
+                  visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                  minVerticalPadding: 0,
+                  onTap: () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  },
+                  minLeadingWidth: leadingBox,
+                  leading: SizedBox(
+                    width: leadingBox,
+                    height: leadingBox,
+                    child: Center(
+                      child: widget.icon != null
+                          ? Icon(
+                              widget.icon,
+                              color: Colors.white,
+                              size: resolvedIconSize,
+                            )
+                          : WebsafeSvg.asset(
+                              widget.iconPath!,
+                              width: resolvedIconSize,
+                              height: resolvedIconSize,
+                              colorFilter: const ColorFilter.mode(
+                                  Colors.white, BlendMode.srcIn),
+                            ),
                     ),
                   ),
-                  ListTile(
-                    selected: widget.selected,
-                    contentPadding: ResponsiveWidget.isTablet(context)
-                        ? const EdgeInsets.only(left: 15, right: 10)
-                        : const EdgeInsets.only(left: 45, right: 15),
-                    horizontalTitleGap: gap,
-                    visualDensity:
-                        const VisualDensity(vertical: -4, horizontal: 0),
-                    minVerticalPadding: 0,
-                    onTap: () {
-                      setState(() {
-                        _isExpanded = !_isExpanded;
-                      });
-                    },
-                    minLeadingWidth: leadingBox,
-                    leading: SizedBox(
-                      width: leadingBox,
-                      height: leadingBox,
-                      child: Center(
-                        child: widget.icon != null
-                            ? Icon(
-                                widget.icon,
-                                color: Colors.white,
-                                size: resolvedIconSize,
-                              )
-                            : WebsafeSvg.asset(
-                                widget.iconPath!,
-                                width: resolvedIconSize,
-                                height: resolvedIconSize,
-                                colorFilter: const ColorFilter.mode(
-                                    Colors.white, BlendMode.srcIn),
-                              ),
-                      ),
-                    ),
-                    trailing: _isExpanded
-                        ? const Icon(
-                            Icons.keyboard_arrow_up_sharp,
-                            color: Colors.white,
-                          )
-                        : const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Colors.white,
-                          ),
-                    title: Text(
-                      widget.title,
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s14, 0.21, ColorManager.textColor),
+                  trailing: Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white,
+                  ),
+                  title: Text(
+                    widget.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                   ),
-                ],
+                ),
               ),
               if (_isExpanded)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 2),
                   child: Column(
                     children: [
                       // First sub-item - only show if permission allows
                       if (widget.showTitle1 == true)
-                        ListTile(
-                          selected: _selectedTileIndex == 0,
-                          selectedTileColor: _selectedTileIndex == 0
-                              ? Colors.blue.withOpacity(0.1)
-                              : null,
-                          contentPadding: ResponsiveWidget.isTablet(context)
-                              ? const EdgeInsets.only(left: 15, right: 10)
-                              : const EdgeInsets.only(left: 45, right: 15),
-                          horizontalTitleGap: 0.0,
-                          visualDensity:
-                              const VisualDensity(vertical: -4, horizontal: 0),
-                          minVerticalPadding: 0,
-                          onTap: () => _onTapTile(0, widget.onTapTitle1),
-                          leading: const BubbleIcon(),
-                          title: Text(
-                            widget.listTitle1,
-                            style: buildCustomStyle(FontWeightManager.medium,
-                                FontSize.s11, 0.21, ColorManager.textColor),
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _selectedTileIndex == 0
+                                ? ColorManager.kPrimaryColor.withOpacity(0.08)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ListTile(
+                            selected: _selectedTileIndex == 0,
+                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
+                            horizontalTitleGap: 8.0,
+                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                            minVerticalPadding: 0,
+                            onTap: () => _onTapTile(0, widget.onTapTitle1),
+                            leading: const BubbleIcon(),
+                            title: Text(
+                              widget.listTitle1,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.21,
+                                ColorManager.textColor,
+                              ),
+                            ),
                           ),
                         ),
                       // Second sub-item - only show if permission allows and title exists
-                      widget.listTitle2 != null && widget.showTitle2 == true
-                          ? ListTile(
-                              selected: _selectedTileIndex == 1,
-                              selectedTileColor: _selectedTileIndex == 1
-                                  ? Colors.blue.withOpacity(0.1)
-                                  : null,
-                              contentPadding: ResponsiveWidget.isTablet(context)
-                                  ? const EdgeInsets.only(left: 15, right: 10)
-                                  : const EdgeInsets.only(left: 45, right: 15),
-                              horizontalTitleGap: 0.0,
-                              visualDensity: const VisualDensity(
-                                  vertical: -4, horizontal: 0),
-                              minVerticalPadding: 0,
-                              onTap: () => _onTapTile(1, widget.onTapTitle2!),
-                              leading: const BubbleIcon(),
-                              title: Text(
-                                widget.listTitle2 ?? '',
-                                style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.21,
-                                    ColorManager.textColor),
+                      if (widget.listTitle2 != null && widget.showTitle2 == true)
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _selectedTileIndex == 1
+                                ? ColorManager.kPrimaryColor.withOpacity(0.08)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ListTile(
+                            selected: _selectedTileIndex == 1,
+                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
+                            horizontalTitleGap: 8.0,
+                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                            minVerticalPadding: 0,
+                            onTap: () => _onTapTile(1, widget.onTapTitle2!),
+                            leading: const BubbleIcon(),
+                            title: Text(
+                              widget.listTitle2 ?? '',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.21,
+                                ColorManager.textColor,
                               ),
-                            )
-                          : Container(),
+                            ),
+                          ),
+                        ),
                       // Third sub-item - only show if permission allows and title exists
-                      widget.listTitle3 != null && widget.showTitle3 == true
-                          ? ListTile(
-                              selected: _selectedTileIndex == 2,
-                              selectedTileColor: _selectedTileIndex == 2
-                                  ? Colors.blue.withOpacity(0.1)
-                                  : null,
-                              contentPadding: ResponsiveWidget.isTablet(context)
-                                  ? const EdgeInsets.only(left: 15, right: 10)
-                                  : const EdgeInsets.only(left: 45, right: 15),
-                              horizontalTitleGap: 0.0,
-                              visualDensity: const VisualDensity(
-                                  vertical: -4, horizontal: 0),
-                              minVerticalPadding: 0,
-                              onTap: () => _onTapTile(2, widget.onTapTitle3!),
-                              leading: const BubbleIcon(),
-                              title: Text(
-                                widget.listTitle3 ?? '',
-                                style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.21,
-                                    ColorManager.textColor),
+                      if (widget.listTitle3 != null && widget.showTitle3 == true)
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _selectedTileIndex == 2
+                                ? ColorManager.kPrimaryColor.withOpacity(0.08)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ListTile(
+                            selected: _selectedTileIndex == 2,
+                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
+                            horizontalTitleGap: 8.0,
+                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                            minVerticalPadding: 0,
+                            onTap: () => _onTapTile(2, widget.onTapTitle3!),
+                            leading: const BubbleIcon(),
+                            title: Text(
+                              widget.listTitle3 ?? '',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.21,
+                                ColorManager.textColor,
                               ),
-                            )
-                          : Container(),
-                      widget.listTitle4 != null && widget.showTitle4 == true
-                          ? ListTile(
-                              selected: _selectedTileIndex == 3,
-                              selectedTileColor: _selectedTileIndex == 3
-                                  ? Colors.blue.withOpacity(0.1)
-                                  : null,
-                              contentPadding: ResponsiveWidget.isTablet(context)
-                                  ? const EdgeInsets.only(left: 15, right: 10)
-                                  : const EdgeInsets.only(left: 45, right: 15),
-                              horizontalTitleGap: 0.0,
-                              visualDensity: const VisualDensity(
-                                  vertical: -4, horizontal: 0),
-                              minVerticalPadding: 0,
-                              onTap: () => _onTapTile(3, widget.onTapTitle4!),
-                              leading: const BubbleIcon(),
-                              title: Text(
-                                widget.listTitle4 ?? '',
-                                style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.21,
-                                    ColorManager.textColor),
+                            ),
+                          ),
+                        ),
+                      // Fourth sub-item
+                      if (widget.listTitle4 != null && widget.showTitle4 == true)
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _selectedTileIndex == 3
+                                ? ColorManager.kPrimaryColor.withOpacity(0.08)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ListTile(
+                            selected: _selectedTileIndex == 3,
+                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
+                            horizontalTitleGap: 8.0,
+                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                            minVerticalPadding: 0,
+                            onTap: () => _onTapTile(3, widget.onTapTitle4!),
+                            leading: const BubbleIcon(),
+                            title: Text(
+                              widget.listTitle4 ?? '',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.21,
+                                ColorManager.textColor,
                               ),
-                            )
-                          : Container(),
+                            ),
+                          ),
+                        ),
                       // Fifth sub-item - only show if permission allows and title exists
-                      widget.listTitle5 != null && widget.showTitle5 == true
-                          ? ListTile(
-                              selected: _selectedTileIndex == 4,
-                              selectedTileColor: _selectedTileIndex == 4
-                                  ? Colors.blue.withOpacity(0.1)
-                                  : null,
-                              contentPadding: ResponsiveWidget.isTablet(context)
-                                  ? const EdgeInsets.only(left: 15, right: 10)
-                                  : const EdgeInsets.only(left: 45, right: 15),
-                              horizontalTitleGap: 0.0,
-                              visualDensity: const VisualDensity(
-                                  vertical: -4, horizontal: 0),
-                              minVerticalPadding: 0,
-                              onTap: () => _onTapTile(4, widget.onTapTitle5!),
-                              leading: const BubbleIcon(),
-                              title: Text(
-                                widget.listTitle5 ?? '',
-                                style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.21,
-                                    ColorManager.textColor),
+                      if (widget.listTitle5 != null && widget.showTitle5 == true)
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _selectedTileIndex == 4
+                                ? ColorManager.kPrimaryColor.withOpacity(0.08)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ListTile(
+                            selected: _selectedTileIndex == 4,
+                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
+                            horizontalTitleGap: 8.0,
+                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                            minVerticalPadding: 0,
+                            onTap: () => _onTapTile(4, widget.onTapTitle5!),
+                            leading: const BubbleIcon(),
+                            title: Text(
+                              widget.listTitle5 ?? '',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.21,
+                                ColorManager.textColor,
                               ),
-                            )
-                          : Container(),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
             ],
           )
-        : ListTile(
-            selected: widget.selected,
-            contentPadding: ResponsiveWidget.isTablet(context)
-                ? const EdgeInsets.only(left: 15, right: 10)
-                : const EdgeInsets.only(left: 45, right: 15),
-            horizontalTitleGap: gap,
-            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-            minVerticalPadding: 0,
-            onTap: widget.onTap,
-            minLeadingWidth: leadingBox,
-            leading: SizedBox(
-              width: leadingBox,
-              height: leadingBox,
-              child: Center(
-                child: widget.icon != null
-                    ? Icon(
-                        widget.icon,
-                        size: resolvedIconSize,
-                        color: widget.selected
-                            ? Colors.white
-                            : ColorManager.kPrimaryColor,
-                      )
-                    : WebsafeSvg.asset(
-                        widget.iconPath!,
-                        width: resolvedIconSize,
-                        height: resolvedIconSize,
-                        colorFilter: ColorFilter.mode(
-                          widget.selected
-                              ? Colors.white
-                              : ColorManager.kPrimaryColor,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-              ),
+        : Container(
+            margin: const EdgeInsets.symmetric(vertical: 0.5, horizontal: 15),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
             ),
-            title: Text(
-              widget.title,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
-                  0.21, ColorManager.textColor),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.onTap,
+                borderRadius: BorderRadius.circular(10),
+                child: ListTile(
+                  selected: widget.selected,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  horizontalTitleGap: gap,
+                  visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                  minVerticalPadding: 0,
+                  minLeadingWidth: leadingBox,
+                  leading: SizedBox(
+                    width: leadingBox,
+                    height: leadingBox,
+                    child: Center(
+                      child: widget.icon != null
+                          ? Icon(
+                              widget.icon,
+                              size: resolvedIconSize,
+                              color: ColorManager.kPrimaryColor,
+                            )
+                          : WebsafeSvg.asset(
+                              widget.iconPath!,
+                              width: resolvedIconSize,
+                              height: resolvedIconSize,
+                              colorFilter: const ColorFilter.mode(
+                                ColorManager.kPrimaryColor,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                    ),
+                  ),
+                  title: Text(
+                    widget.title,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.21,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                ),
+              ),
             ),
           );
   }

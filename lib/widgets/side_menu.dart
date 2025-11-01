@@ -4,7 +4,6 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 
 import 'package:pos_machine/resources/asset_manager.dart';
-import 'package:pos_machine/responsive.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -40,8 +39,11 @@ class CollapsibleSidebar extends StatefulWidget {
 
 class CollapsibleSidebarState extends State<CollapsibleSidebar> {
   bool _isExpanded = true;
-  final double _expandedWidth = 200;
-  final double _collapsedWidth = 40;
+  final double _expandedWidth = 240;
+  final double _collapsedWidth = 60;
+
+  // Public getter for child widgets to access expanded state
+  bool get isExpanded => _isExpanded;
 
   void _toggleSidebar() {
     setState(() {
@@ -57,21 +59,27 @@ class CollapsibleSidebarState extends State<CollapsibleSidebar> {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
               width: _isExpanded ? _expandedWidth : _collapsedWidth,
               height: double.infinity,
-              child: _isExpanded
-                  ? widget.sidebarContent
-                  : Container(
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.menu),
-                            onPressed: _toggleSidebar,
-                          ),
-                        ],
-                      ),
-                    ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white,
+                    Colors.grey.shade50,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(2, 0),
+                  ),
+                ],
+              ),
+              child: widget.sidebarContent,
             ),
             // Wrap child in a stateful widget to preserve its state
             Expanded(
@@ -135,38 +143,79 @@ class _SideMenuState extends State<SideMenu> {
     });
   }
 
+  bool get _isExpanded {
+    final sidebarState = context.findAncestorStateOfType<CollapsibleSidebarState>();
+    return sidebarState?.isExpanded ?? true;
+  }
+
   @override
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.put(SideBarController());
     final authModel = Provider.of<AuthModel>(context);
-    // Size size = MediaQuery.of(context).size;
+    final isExpanded = _isExpanded;
 
     return SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              final CollapsibleSidebarState? sidebarState =
-                  context.findAncestorStateOfType<CollapsibleSidebarState>();
-              sidebarState?._toggleSidebar();
-            },
-          ),
-          const SizedBox(
-            height: 15,
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0),
-            child: Center(
-              child: Image.asset(
-                ImageAssets.posImageLogo,
-                height: 30,
-                fit: BoxFit.contain,
+          SizedBox(height: isExpanded ? 8 : 6),
+          // Modern toggle button - aligned to right
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              margin: EdgeInsets.only(right: isExpanded ? 10 : 8),
+              decoration: BoxDecoration(
+                color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  isExpanded ? Icons.menu_open : Icons.menu,
+                  color: ColorManager.kPrimaryColor,
+                  size: isExpanded ? 24 : 20,
+                ),
+                tooltip: isExpanded ? 'Collapse Sidebar' : 'Expand Sidebar',
+                padding: EdgeInsets.all(isExpanded ? 8 : 6),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  final CollapsibleSidebarState? sidebarState =
+                      context.findAncestorStateOfType<CollapsibleSidebarState>();
+                  sidebarState?._toggleSidebar();
+                },
               ),
             ),
           ),
+          SizedBox(height: isExpanded ? 12 : 8),
+          // Logo - only show when expanded
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Image.asset(
+                ImageAssets.posImageLogo,
+                height: 35,
+                fit: BoxFit.contain,
+              ),
+            ),
+          if (!isExpanded)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: ColorManager.kPrimaryColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text(
+                  'CP',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
           // const SizedBox(
           //   height: 5,
           // ),
@@ -187,34 +236,43 @@ class _SideMenuState extends State<SideMenu> {
           //     ),
           //   ),
           // ),
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              final hasPermission =
-                  roleProvider.currentUserHasPermissionSync('view_user');
+          if (isExpanded)
+            Consumer<RoleProvider>(
+              builder: (context, roleProvider, child) {
+                final hasPermission =
+                    roleProvider.currentUserHasPermissionSync('view_user');
 
-              if (!hasPermission) {
-                return const SizedBox.shrink();
-              }
+                if (!hasPermission) {
+                  return const SizedBox.shrink();
+                }
 
-              return Column(
-                children: [
-                  const SizedBox(height: 20),
-                  Builder(
-                    builder: (context) {
-                      debugPrint("🔧 SideMenu: Building UserSwitcher widget");
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 15.0),
-                        child: UserSwitcher(),
-                      );
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(
-            height: 20,
-          ),
+                return Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    Builder(
+                      builder: (context) {
+                        debugPrint("🔧 SideMenu: Building UserSwitcher widget");
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 15.0),
+                          child: UserSwitcher(),
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          SizedBox(height: isExpanded ? 12 : 8),
+          // Menu section divider
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Divider(
+                color: Colors.grey.shade300,
+                thickness: 1,
+              ),
+            ),
+          SizedBox(height: isExpanded ? 6 : 4),
           // ========== REORGANIZED MENU (Font Awesome Icons) ==========
           
           // 1. HOME (Index: 46)
@@ -828,81 +886,81 @@ class _SideMenuState extends State<SideMenu> {
           const SizedBox(
             height: 10,
           ),
-          Container(
-            width: 180,
-            margin: ResponsiveWidget.isTablet(context)
-                ? const EdgeInsets.only(
-                    left: 20, top: 20, bottom: 10, right: 10)
-                : const EdgeInsets.only(left: 30, top: 20, bottom: 10),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(17),
-              boxShadow: const [
-                BoxShadow(
-                  color: ColorManager.boxShadowColor,
-                  blurRadius: 6,
-                  offset: Offset(1, 1),
-                ),
-              ],
-              color: Colors.white,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundImage: AssetImage(ImageAssets.profilePhotoIcon),
-                ),
-                const SizedBox(height: 10),
-                FutureBuilder<String>(
-                  future: SharedPreferenceProvider().getCustomerName(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done) {
-                      return Text(
-                        snapshot.data ?? 'Default Name',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+          if (isExpanded)
+            Container(
+              width: 180,
+              margin: const EdgeInsets.only(left: 20, top: 20, bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(17),
+                boxShadow: const [
+                  BoxShadow(
+                    color: ColorManager.boxShadowColor,
+                    blurRadius: 6,
+                    offset: Offset(1, 1),
+                  ),
+                ],
+                color: Colors.white,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircleAvatar(
+                    radius: 30,
+                    backgroundImage: AssetImage(ImageAssets.profilePhotoIcon),
+                  ),
+                  const SizedBox(height: 10),
+                  FutureBuilder<String>(
+                    future: SharedPreferenceProvider().getCustomerName(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        return Text(
+                          snapshot.data ?? 'Default Name',
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s14,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      } else {
+                        return const CircularProgressIndicator();
+                      }
+                    },
+                  ),
+                  Consumer<RoleProvider>(
+                    builder: (context, roleProvider, child) {
+                      final hasPermission =
+                          roleProvider.currentUserHasPermissionSync('view_store');
+                      if (!hasPermission) {
+                        return const SizedBox.shrink();
+                      }
+                      return const Column(
+                        children: [
+                          SizedBox(height: 16),
+                          Divider(height: 1),
+                          SizedBox(height: 16),
+                          StoreSwitcher(),
+                        ],
                       );
-                    } else {
-                      return const CircularProgressIndicator();
-                    }
-                  },
-                ),
-                Consumer<RoleProvider>(
-                  builder: (context, roleProvider, child) {
-                    final hasPermission =
-                        roleProvider.currentUserHasPermissionSync('view_store');
-                    if (!hasPermission) {
-                      return const SizedBox.shrink();
-                    }
-                    return const Column(
-                      children: [
-                        SizedBox(height: 16),
-                        Divider(height: 1),
-                        SizedBox(height: 16),
-                        StoreSwitcher(),
-                      ],
-                    );
-                  },
-                ),
-              ],
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(
-            height: 12,
-          ),
+          const SizedBox(height: 12),
           Center(
             child: Text(
               '2025 CloudPOS App',
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0.16, ColorManager.textColor),
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.16,
+                ColorManager.textColor,
+              ),
             ),
           ),
           const SizedBox(
@@ -921,10 +979,9 @@ class DrawerListTile extends StatelessWidget {
   final int? items;
   final bool selected;
   final VoidCallback onTap;
-  // Optional: allow custom icon size per tile
   final double? iconSize;
-  // Optional: allow custom horizontal gap between icon and title per tile
   final double? horizontalGap;
+  
   const DrawerListTile({
     super.key,
     this.iconPath,
@@ -940,136 +997,174 @@ class DrawerListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double resolvedIconSize = iconSize ?? 18.0;
-    final double leadingBox =
-        resolvedIconSize + 4.0; // small padding around icon
+    final double leadingBox = resolvedIconSize + 4.0;
     final double gap = horizontalGap ?? 12.0;
-    return selected
-        ? Stack(
-            children: [
-              Positioned(
-                left: ResponsiveWidget.isTablet(context) ? 10 : 20,
-                right: ResponsiveWidget.isTablet(context) ? 10 : 20,
-                child: Container(
-                  alignment: Alignment.center,
-                  // width intentionally omitted so it won't stretch full width
-                  height: MediaQuery.of(context).size.height * .055,
-                  // keep only a small bottom margin for spacing between tiles
-                  margin: const EdgeInsets.only(bottom: 5),
-                  padding: const EdgeInsets.only(left: 20),
-                  decoration: BoxDecoration(
-                    color: ColorManager.kPrimaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              ListTile(
-                selected: selected,
-                contentPadding: ResponsiveWidget.isTablet(context)
-                    ? const EdgeInsets.only(left: 15, right: 10)
-                    : const EdgeInsets.only(left: 45, right: 15),
-                horizontalTitleGap: gap,
-                visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                minVerticalPadding: 0,
-                onTap: onTap,
-                minLeadingWidth: leadingBox,
-                leading: SizedBox(
-                  width: leadingBox,
-                  height: leadingBox,
-                  child: Center(
-                    child: icon != null
-                        ? Icon(
-                            icon,
-                            color: Colors.white,
-                            size: resolvedIconSize,
-                          )
-                        : WebsafeSvg.asset(
-                            iconPath!,
-                            width: resolvedIconSize,
-                            height: resolvedIconSize,
-                            colorFilter:
-                                const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+    final sidebarState = context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final isExpanded = sidebarState?.isExpanded ?? true;
+
+    // Collapsed state - icon only with tooltip
+    if (!isExpanded) {
+      return Tooltip(
+        message: title,
+        preferBelow: false,
+        verticalOffset: 20,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 8),
+          decoration: BoxDecoration(
+            color: selected ? ColorManager.kPrimaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.all(10),
+                child: Center(
+                  child: icon != null
+                      ? Icon(
+                          icon,
+                          size: 20,
+                          color: selected ? Colors.white : ColorManager.kPrimaryColor,
+                        )
+                      : WebsafeSvg.asset(
+                          iconPath!,
+                          width: 20,
+                          height: 20,
+                          colorFilter: ColorFilter.mode(
+                            selected ? Colors.white : ColorManager.kPrimaryColor,
+                            BlendMode.srcIn,
                           ),
-                  ),
-                ),
-                trailing: items != null
-                    ? buildNotification(
-                        item: items ?? 0,
-                        selected: selected,
-                      )
-                    : const SizedBox(
-                        height: 5,
-                        width: 5,
-                      ),
-                title: Text(
-                  title,
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s14, 0.21, ColorManager.textColor),
-                ),
-              ),
-            ],
-          )
-        :
-        //     Container(
-        //   alignment: Alignment.center,
-        //   // width: 200,
-        //   // height: MediaQuery.of(context).size.height * .055,
-        //   // margin: ResponsiveWidget.isTablet(context)
-        //   //     ? const EdgeInsets.only(left: 10, bottom: 5)
-        //   //     : const EdgeInsets.only(left: 20, bottom: 5),
-        //  margin: const EdgeInsets.only(left: 20),
-        //   decoration: BoxDecoration(
-        //     color: selected ? ColorManager.kPrimaryColor : Colors.transparent,
-        //     borderRadius: BorderRadius.circular(8),
-        //   ),
-        //   child:
-        ListTile(
-            selected: selected,
-            contentPadding: ResponsiveWidget.isTablet(context)
-                ? const EdgeInsets.only(left: 15, right: 10)
-                : const EdgeInsets.only(left: 45, right: 15),
-            horizontalTitleGap: gap,
-            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-            minVerticalPadding: 0,
-            onTap: onTap,
-            minLeadingWidth: leadingBox,
-            leading: SizedBox(
-              width: leadingBox,
-              height: leadingBox,
-              child: Center(
-                child: icon != null
-                    ? Icon(
-                        icon,
-                        size: resolvedIconSize,
-                        color: selected
-                            ? Colors.white
-                            : ColorManager.kPrimaryColor,
-                      )
-                    : WebsafeSvg.asset(
-                        iconPath!,
-                        width: resolvedIconSize,
-                        height: resolvedIconSize,
-                        colorFilter: ColorFilter.mode(
-                          selected
-                              ? Colors.white
-                              : ColorManager.kPrimaryColor,
-                          BlendMode.srcIn,
                         ),
-                      ),
+                ),
               ),
             ),
-            trailing: items != null
-                ? buildNotification(
-                    item: items ?? 0,
-                    selected: selected,
-                  )
-                : const SizedBox(
-                    height: 5,
-                    width: 5,
+          ),
+        ),
+      );
+    }
+
+    // Expanded state - full tile
+    return selected
+        ? Container(
+            margin: const EdgeInsets.symmetric(vertical: 1.5, horizontal: 15),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  ColorManager.kPrimaryColor,
+                  ColorManager.kPrimaryColor.withOpacity(0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: ColorManager.kPrimaryColor.withOpacity(0.3),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ListTile(
+              selected: selected,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              horizontalTitleGap: gap,
+              visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+              minVerticalPadding: 0,
+              onTap: onTap,
+              minLeadingWidth: leadingBox,
+              leading: SizedBox(
+                width: leadingBox,
+                height: leadingBox,
+                child: Center(
+                  child: icon != null
+                      ? Icon(
+                          icon,
+                          color: Colors.white,
+                          size: resolvedIconSize,
+                        )
+                      : WebsafeSvg.asset(
+                          iconPath!,
+                          width: resolvedIconSize,
+                          height: resolvedIconSize,
+                          colorFilter:
+                              const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                        ),
+                ),
+              ),
+              trailing: items != null
+                  ? buildNotification(
+                      item: items ?? 0,
+                      selected: selected,
+                    )
+                  : null,
+              title: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          )
+        : Container(
+            margin: const EdgeInsets.symmetric(vertical: 0.5, horizontal: 15),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(10),
+                child: ListTile(
+                  selected: selected,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  horizontalTitleGap: gap,
+                  visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                  minVerticalPadding: 0,
+                  minLeadingWidth: leadingBox,
+                  leading: SizedBox(
+                    width: leadingBox,
+                    height: leadingBox,
+                    child: Center(
+                      child: icon != null
+                          ? Icon(
+                              icon,
+                              size: resolvedIconSize,
+                              color: ColorManager.kPrimaryColor,
+                            )
+                          : WebsafeSvg.asset(
+                              iconPath!,
+                              width: resolvedIconSize,
+                              height: resolvedIconSize,
+                              colorFilter: const ColorFilter.mode(
+                                ColorManager.kPrimaryColor,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                    ),
                   ),
-            title: Text(
-              title,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
-                  0.21, ColorManager.textColor),
+                  trailing: items != null
+                      ? buildNotification(
+                          item: items ?? 0,
+                          selected: selected,
+                        )
+                      : null,
+                  title: Text(
+                    title,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.21,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                ),
+              ),
             ),
           );
   }
