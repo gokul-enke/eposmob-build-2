@@ -582,13 +582,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           'quantity': item.quantity,
           'price': item.price,
           'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
+          'stock_id': item.selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
         });
       }
 
       bool orderProcessed = false;
 
       try {
-        // Handle multi-payment if stored as JSON
+        // Handle payment method - ALWAYS use clear format (either single OR multi, not both)
         String? paymentMethod = order.paymentMethod;
         String? paidAmount = order.paidAmount;
         List<String>? paymentMethods;
@@ -624,27 +625,31 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                 });
               }
 
-              // For multi-payment, set single payment fields to null
+              // ✅ For multi-payment, EXPLICITLY set single payment fields to null
               paymentMethod = null;
               paidAmount = null;
             }
           } catch (e) {
             debugPrint("Error parsing multi-payment data during sync: $e");
-            // Fallback to single payment
+            // Fallback to single payment - EXPLICITLY set multi-payment to null
             paymentMethod = order.paymentMethod ?? "CASH";
             paidAmount = order.paidAmount ?? order.total.toString();
+            paymentMethods = null;
+            paidMethods = null;
           }
         } else {
-          // Single payment method
+          // Single payment method - EXPLICITLY set multi-payment to null
           paymentMethod = order.paymentMethod ?? "CASH";
           paidAmount = order.paidAmount ?? order.total.toString();
+          paymentMethods = null;
+          paidMethods = null;
         }
 
         // Call API to add order and WAIT for completion
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
         final response = await cartProvider.addToOrderAPI(
           items: items,
-          cartIds: 0, // Default cart ID as we're syncing saved orders
+          cartIds: 0, // Not used in API, but required parameter
           accessToken: accessToken,
           // Use stored data from local order, with fallbacks if needed
           transactionId: order.transactionId ?? order.orderNumber,
@@ -661,7 +666,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           deliveryMethodId: order.deliveryMethodId ??
               "1", // Use stored delivery method or default
           carNumber: order.carNumber,
-          status: order.status ?? "confirmed",
+          status: "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
           // Include discount data from saved order
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
