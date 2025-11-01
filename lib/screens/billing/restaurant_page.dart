@@ -6195,7 +6195,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: _loadingCartItems
-                                .contains('${cartItem['id']}_decrease')
+                                    .contains('${cartItem['id']}_decrease') ||
+                                !isRemovable
                             ? null
                             : () => _updateCartItemQuantityWithLoading(
                                 cartItem, quantity - 1, 'decrease'),
@@ -6217,7 +6218,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                               : Icon(
                                   Icons.remove,
                                   size: widget.isCompact ? 16 : 18,
-                                  color: const Color(0xFFDC2626),
+                                  color: isRemovable
+                                      ? const Color(0xFFDC2626)
+                                      : Colors.grey,
                                 ),
                         ),
                       ),
