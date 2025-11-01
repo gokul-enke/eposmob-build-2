@@ -302,9 +302,8 @@ class _SideMenuState extends State<SideMenu> {
               : const SizedBox.shrink(),
 
           // 3. RESTAURANT (Index: 55) - Only for attender role
-          // userRole == 'attender'
-              // ? 
-              Consumer<RoleProvider>(
+          userRole == 'attender'
+              ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission = roleProvider
                         .currentUserHasPermissionSync('create_order');
@@ -322,8 +321,8 @@ class _SideMenuState extends State<SideMenu> {
                       ),
                     );
                   },
-                ),
-              // : const SizedBox.shrink(),
+                )
+              : const SizedBox.shrink(),
 
           // 4. KITCHEN MASTER (Index: 56) - Only for kitchen_master role
           userRole == 'kitchen_master'
