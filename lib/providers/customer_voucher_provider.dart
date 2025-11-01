@@ -250,7 +250,6 @@ class CustomerVoucherProvider extends ChangeNotifier {
 
   // Create voucher
   Future<Map<String, dynamic>> createVoucher({
-    required String voucherNumber,
     required String type,
     required double amount,
     required String voucherDate,
@@ -273,7 +272,6 @@ class CustomerVoucherProvider extends ChangeNotifier {
 
     try {
       final body = {
-        'voucher_number': voucherNumber,
         'type': type,
         'amount': amount,
         'voucher_date': voucherDate,

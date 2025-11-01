@@ -50,7 +50,6 @@ class _CreateCustomerVoucherScreenState
   final SideBarController sideBarController = Get.put(SideBarController());
 
   // Form controllers
-  final TextEditingController voucherNumberController = TextEditingController();
   final TextEditingController totalAmountController = TextEditingController();
   final TextEditingController customerSearchController =
       TextEditingController();
@@ -184,7 +183,6 @@ class _CreateCustomerVoucherScreenState
       final result =
           await Provider.of<CustomerVoucherProvider>(context, listen: false)
               .createVoucher(
-        voucherNumber: voucherNumberController.text,
         type: selectedType!,
         amount: double.tryParse(totalAmountController.text) ?? 0,
         voucherDate: DateFormat('yyyy-MM-dd').format(selectedVoucherDate),
@@ -260,17 +258,9 @@ class _CreateCustomerVoucherScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // First row: Voucher Number, Type, Total Amount
+                      // First row: Type, Total Amount
                       Row(
                         children: [
-                          Expanded(
-                            child: _buildTextField(
-                              'Voucher number',
-                              voucherNumberController,
-                              'VOU-0001',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
                           Expanded(
                             child: _buildDropdown(
                               'Type',
@@ -753,7 +743,6 @@ class _CreateCustomerVoucherScreenState
 
   @override
   void dispose() {
-    voucherNumberController.dispose();
     totalAmountController.dispose();
     customerSearchController.dispose();
     super.dispose();
