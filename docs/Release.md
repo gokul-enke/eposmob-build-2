@@ -7,8 +7,8 @@ git tag v0.1.0-dev.256
 git push origin v0.1.0-dev.256
 
 yougoit build
-git tag v0.1.0-dev.244
-git push build v0.1.0-dev.244
+git tag v0.1.0-dev.256
+git push build v0.1.0-dev.256
 
 
 # eposenke demo
