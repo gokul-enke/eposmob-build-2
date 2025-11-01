@@ -450,6 +450,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
               'Order for Table $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
         );
 
+        // Update table status to OCCUPIED when order is sent to kitchen
+        if (_activeTableId != null) {
+          final tableProvider = Provider.of<TableProvider>(context, listen: false);
+          tableProvider.setCurrentOrder(_activeTableId!, response["order_id"].toString());
+          debugPrint('✅ Updated table $_activeTableId status to OCCUPIED');
+        }
+
         // Clear the local cart after successful submission
         if (cartItems.isNotEmpty) {
           debugPrint('🗑️ Clearing local cart after successful kitchen order');
@@ -502,6 +509,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
       );
     }
 
+    // Note: We don't update table status here as the table might still have other orders
+    // The table status should only change to AVAILABLE when ALL orders are completed
+    
     // Deselect the active table
     setState(() {
       _activeTableId = null;
@@ -2191,6 +2201,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       _fetchSavedOrders();
     }
   }
+  
+  // Getter to expose saved orders count
+  int get savedOrdersCount => _savedOrders.length;
 
   // Public method to refresh saved orders silently (no loading spinner)
   void refreshSavedOrdersSilently() {
@@ -5421,6 +5434,38 @@ class _OrderPanelState extends State<_OrderPanel> {
       final comment = _orderComment.isNotEmpty
           ? _orderComment
           : (_selectedOrder['comment'] ?? 'Order confirmed from restaurant');
+
+      // Validate customer selection (mandatory)
+      // if ((_selectedCustomerID == null) &&
+      //     (_selectedCustomer == null) &&
+      //     (_selectedCustomerPhone == null ||
+      //         _selectedCustomerPhone!.toString().isEmpty)) {
+      //   showScaffoldError(
+      //     context: context,
+      //     message: 'Please select a customer',
+      //   );
+      //   if (mounted) {
+      //     setState(() {
+      //       _isLoadingConfirm = false;
+      //     });
+      //   }
+      //   return;
+      // }
+
+      // Validate payment method selection (mandatory)
+      if (!_hasPaymentMethod()) {
+        showScaffoldError(
+          context: context,
+          message: 'Please select a payment method',
+        );
+        if (mounted) {
+          setState(() {
+            _isLoadingConfirm = false;
+          });
+        }
+        _showPaymentMethodModal();
+        return;
+      }
 
       // Prepare payment method data
       String? paymentMethod;
