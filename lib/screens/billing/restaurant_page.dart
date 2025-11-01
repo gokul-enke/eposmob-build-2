@@ -4112,12 +4112,31 @@ class _OrderPanelState extends State<_OrderPanel> {
               itemCount: _localDrafts.length, subtitle: widget.tableId?.toString()),
           Flexible(
             flex: 1,
-            child: SizedBox(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                _refreshLocalDrafts();
+              },
               child: _localDrafts.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No pending orders',
-                        style: buildCustomStyle(FontWeightManager.medium, widget.isCompact ? FontSize.s12 : FontSize.s13, 0.21, const Color(0xFF64748B)),
+                  ? ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                        children: [
+                          Center(
+                            child: Text(
+                              'No pending orders',
+                              style: buildCustomStyle(FontWeightManager.medium, widget.isCompact ? FontSize.s12 : FontSize.s13, 0.21, const Color(0xFF64748B)),
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : MouseRegion(
@@ -4132,7 +4151,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                           },
                         ),
                         child: ListView.separated(
-                          physics: const BouncingScrollPhysics(),
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                           padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                           itemCount: _localDrafts.length,
                           separatorBuilder: (_, __) => Container(
@@ -4153,50 +4172,13 @@ class _OrderPanelState extends State<_OrderPanel> {
               subtitle: widget.tableId.toString()),
           Flexible(
             flex: 2,
-            child: _savedOrders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF059669).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            Icons.add_shopping_cart,
-                            size: widget.isCompact ? 48 : 64,
-                            color: const Color(0xFF059669),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'No orders found',
-                          textAlign: TextAlign.center,
-                          style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              widget.isCompact ? FontSize.s16 : FontSize.s18,
-                              0.21,
-                              const Color(0xFF1E293B)),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Add products from the menu\nto start a new order',
-                          textAlign: TextAlign.center,
-                          style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              widget.isCompact ? FontSize.s13 : FontSize.s14,
-                              0.21,
-                              const Color(0xFF64748B)),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  )
-                : MouseRegion(
-                    cursor: SystemMouseCursors.grab,
-                    child: ScrollConfiguration(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await _fetchSavedOrders();
+                _refreshLocalDrafts();
+              },
+              child: _savedOrders.isEmpty
+                  ? ScrollConfiguration(
                       behavior: ScrollConfiguration.of(context).copyWith(
                         dragDevices: {
                           PointerDeviceKind.mouse,
@@ -4205,22 +4187,79 @@ class _OrderPanelState extends State<_OrderPanel> {
                           PointerDeviceKind.trackpad,
                         },
                       ),
-                      child: ListView.separated(
-                        physics: const BouncingScrollPhysics(),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                         padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-                        itemCount: _savedOrders.length,
-                        separatorBuilder: (_, __) => Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: Colors.grey.shade100,
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF059669).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  Icons.add_shopping_cart,
+                                  size: widget.isCompact ? 48 : 64,
+                                  color: const Color(0xFF059669),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'No orders found',
+                                textAlign: TextAlign.center,
+                                style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    widget.isCompact ? FontSize.s16 : FontSize.s18,
+                                    0.21,
+                                    const Color(0xFF1E293B)),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Add products from the menu\nto start a new order',
+                                textAlign: TextAlign.center,
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                    0.21,
+                                    const Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  : MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
                         ),
-                        itemBuilder: (context, index) {
-                          final order = _savedOrders[index];
-                          return _buildOrderListItem(order);
-                        },
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                          itemCount: _savedOrders.length,
+                          separatorBuilder: (_, __) => Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey.shade100,
+                          ),
+                          itemBuilder: (context, index) {
+                            final order = _savedOrders[index];
+                            return _buildOrderListItem(order);
+                          },
+                        ),
                       ),
                     ),
-                  ),
+            ),
           ),
         ],
       ),
@@ -4475,38 +4514,12 @@ class _OrderPanelState extends State<_OrderPanel> {
             subtitle: '${_selectedOrder['order_number']}',
           ),
           Expanded(
-            child: cartItems.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF64748B).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            Icons.shopping_cart_outlined,
-                            size: widget.isCompact ? 36 : 48,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No items in this order',
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s14 : FontSize.s16,
-                              0.21,
-                              const Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  )
-                : MouseRegion(
-                    cursor: SystemMouseCursors.grab,
-                    child: ScrollConfiguration(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await _refreshSelectedOrderAfterCartUpdate();
+              },
+              child: cartItems.isEmpty
+                  ? ScrollConfiguration(
                       behavior: ScrollConfiguration.of(context).copyWith(
                         dragDevices: {
                           PointerDeviceKind.mouse,
@@ -4515,22 +4528,67 @@ class _OrderPanelState extends State<_OrderPanel> {
                           PointerDeviceKind.trackpad,
                         },
                       ),
-                      child: ListView.separated(
-                        physics: const BouncingScrollPhysics(),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                         padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-                        itemCount: cartItems.length,
-                        separatorBuilder: (_, __) => Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: Colors.grey.shade100,
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF64748B).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.shopping_cart_outlined,
+                                  size: widget.isCompact ? 36 : 48,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No items in this order',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    widget.isCompact ? FontSize.s14 : FontSize.s16,
+                                    0.21,
+                                    const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  : MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
                         ),
-                        itemBuilder: (_, idx) {
-                          final item = cartItems[idx];
-                          return _buildSavedOrderItem(item, idx);
-                        },
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                          itemCount: cartItems.length,
+                          separatorBuilder: (_, __) => Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey.shade100,
+                          ),
+                          itemBuilder: (_, idx) {
+                            final item = cartItems[idx];
+                            return _buildSavedOrderItem(item, idx);
+                          },
+                        ),
                       ),
                     ),
-                  ),
+            ),
           ),
           _buildSavedOrderActionButtons(cartItems),
         ],
