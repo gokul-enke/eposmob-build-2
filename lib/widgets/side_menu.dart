@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/responsive.dart';
@@ -214,6 +215,9 @@ class _SideMenuState extends State<SideMenu> {
           const SizedBox(
             height: 20,
           ),
+          // ========== REORGANIZED MENU (Font Awesome Icons) ==========
+          
+          // 1. HOME (Index: 46)
           userRole == 'sales_executive'
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
@@ -221,13 +225,12 @@ class _SideMenuState extends State<SideMenu> {
                         .currentUserHasPermissionSync('create_order');
 
                     if (!hasPermission) {
-                      return const SizedBox
-                          .shrink(); // Hide menu item if no permission
+                      return const SizedBox.shrink();
                     }
 
                     return Obx(
                       () => DrawerListTile(
-                        iconPath: ImageAssets.homeIcon,
+                        icon: fa.FontAwesomeIcons.home,
                         title: 'Home',
                         onTap: () {
                           sideBarController.index.value = 46;
@@ -238,50 +241,8 @@ class _SideMenuState extends State<SideMenu> {
                   },
                 )
               : const SizedBox.shrink(),
-          // Restaurant - Only for attender role (old role-based checking)
-          userRole == 'attender'
-              ? Consumer<RoleProvider>(
-                  builder: (context, roleProvider, child) {
-                    final hasPermission = roleProvider
-                        .currentUserHasPermissionSync('create_order');
-                    if (!hasPermission) {
-                      return const SizedBox.shrink();
-                    }
-                    return Obx(
-                      () => DrawerListTile(
-                        iconPath: ImageAssets.barcodeIcon,
-                        title: 'Restaurant',
-                        onTap: () {
-                          sideBarController.index.value = 55;
-                        },
-                        selected: sideBarController.index.value == 55,
-                      ),
-                    );
-                  },
-                )
-              : const SizedBox.shrink(),
-          // Kitchen Master - Only for kitchen_master role (old role-based checking)
-          userRole == 'kitchen_master'
-              ? Consumer<RoleProvider>(
-                  builder: (context, roleProvider, child) {
-                    final hasPermission = roleProvider
-                        .currentUserHasPermissionSync('create_order');
-                    if (!hasPermission) {
-                      return const SizedBox.shrink();
-                    }
-                    return Obx(
-                      () => DrawerListTile(
-                        iconPath: ImageAssets.barcodeIcon,
-                        title: 'Kitchen Master',
-                        onTap: () {
-                          sideBarController.index.value = 56;
-                        },
-                        selected: sideBarController.index.value == 56,
-                      ),
-                    );
-                  },
-                )
-              : const SizedBox.shrink(),
+
+          // 2. DASHBOARD (Index: 1)
           userRole == 'sales_executive'
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
@@ -294,10 +255,9 @@ class _SideMenuState extends State<SideMenu> {
 
                     return Obx(
                       () => DrawerListTile(
-                        iconPath: ImageAssets.dashBoardIcon,
+                        icon: fa.FontAwesomeIcons.chartLine,
                         title: 'Dashboard',
                         onTap: () {
-                          // debugPrint(" 'Dashboard',${sideBarController.index.value}");
                           sideBarController.index.value = 1;
                         },
                         selected: sideBarController.index.value == 1,
@@ -306,6 +266,53 @@ class _SideMenuState extends State<SideMenu> {
                   },
                 )
               : const SizedBox.shrink(),
+
+          // 3. RESTAURANT (Index: 55) - Only for attender role
+          userRole == 'attender'
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission = roleProvider
+                        .currentUserHasPermissionSync('create_order');
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+                    return Obx(
+                      () => DrawerListTile(
+                        icon: fa.FontAwesomeIcons.utensils,
+                        title: 'Restaurant',
+                        onTap: () {
+                          sideBarController.index.value = 55;
+                        },
+                        selected: sideBarController.index.value == 55,
+                      ),
+                    );
+                  },
+                )
+              : const SizedBox.shrink(),
+
+          // 4. KITCHEN MASTER (Index: 56) - Only for kitchen_master role
+          userRole == 'kitchen_master'
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission = roleProvider
+                        .currentUserHasPermissionSync('create_order');
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+                    return Obx(
+                      () => DrawerListTile(
+                        icon: fa.FontAwesomeIcons.utensils,
+                        title: 'Kitchen Master',
+                        onTap: () {
+                          sideBarController.index.value = 56;
+                        },
+                        selected: sideBarController.index.value == 56,
+                      ),
+                    );
+                  },
+                )
+              : const SizedBox.shrink(),
+          // 5. SALES (Index: 2) [EXPANDABLE]
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
@@ -341,57 +348,30 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle1: hasSalesPermission,
                   showTitle2: hasConfirmedOrdersPermission,
                   showTitle3: hasSalesReturnPermission,
-                  iconPath: ImageAssets.saleIcon,
+                  icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'Sales',
                   onTap: () {
-                    // debugPrint(" 'Sales',${sideBarController.index.value}");
                     sideBarController.index.value = 2;
                     final salesProvider =
                         Provider.of<SalesProvider>(context, listen: false);
                     String? accessToken =
                         Provider.of<AuthModel>(context, listen: false).token;
-                    //-------------------------
                     salesProvider.fetchOrders(
                       accessToken: accessToken ?? '',
                       storeId: 1,
                     );
                   },
                   selected: sideBarController.index.value == 2 ||
-                      sideBarController.index.value == 51 ||
-                      sideBarController.index.value == 54 ||
-                      sideBarController.index.value == 50 ||
+                      sideBarController.index.value == 11 ||
                       sideBarController.index.value == 49 ||
-                      sideBarController.index.value == 11,
+                      sideBarController.index.value == 50 ||
+                      sideBarController.index.value == 51 ||
+                      sideBarController.index.value == 54,
                 ),
               );
             },
           ),
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              final hasPermission =
-                  roleProvider.currentUserHasPermissionSync('view_category');
-
-              if (!hasPermission) {
-                return const SizedBox.shrink();
-              }
-
-              return Obx(
-                () => DrawerListTile(
-                  iconPath: ImageAssets.creditCardIcon,
-                  title: 'Category',
-                  onTap: () {
-                    sideBarController.index.value = 12;
-                    // debugPrint(" 'Category',${sideBarController.index.value}");
-                  },
-                  selected: sideBarController.index.value == 12 ||
-                      sideBarController.index.value == 13 ||
-                      sideBarController.index.value == 27 ||
-                      sideBarController.index.value == 16 ||
-                      sideBarController.index.value == 34,
-                ),
-              );
-            },
-          ),
+          // 6. PRODUCT (Index: 14) [EXPANDABLE]
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
@@ -418,22 +398,50 @@ class _SideMenuState extends State<SideMenu> {
                     // Permission-based visibility
                     showTitle1: hasProductPermission,
                     showTitle2: hasStockPermission,
-                    iconPath: ImageAssets.allCategoryIcon,
+                    icon: fa.FontAwesomeIcons.cube,
                     title: 'Product',
                     onTap: () async {
                       sideBarController.index.value = 14;
-                      // debugPrint(" 'Category',${sideBarController.index.value}");
                     },
                     selected: sideBarController.index.value == 14 ||
                         sideBarController.index.value == 15 ||
+                        sideBarController.index.value == 17 ||
                         sideBarController.index.value == 18 ||
                         sideBarController.index.value == 28 ||
-                        sideBarController.index.value == 17 ||
                         sideBarController.index.value == 33 ||
                         sideBarController.index.value == 35),
               );
             },
           ),
+
+          // 7. CATEGORY (Index: 12)
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              final hasPermission =
+                  roleProvider.currentUserHasPermissionSync('view_category');
+
+              if (!hasPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTile(
+                  icon: fa.FontAwesomeIcons.tags,
+                  title: 'Category',
+                  onTap: () {
+                    sideBarController.index.value = 12;
+                  },
+                  selected: sideBarController.index.value == 12 ||
+                      sideBarController.index.value == 13 ||
+                      sideBarController.index.value == 16 ||
+                      sideBarController.index.value == 27 ||
+                      sideBarController.index.value == 34,
+                ),
+              );
+            },
+          ),
+
+          // 8. SUPPLIERS (Index: 52)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission =
@@ -445,12 +453,10 @@ class _SideMenuState extends State<SideMenu> {
 
               return Obx(
                 () => DrawerListTile(
-                  iconPath: ImageAssets.cardIcon,
+                  icon: fa.FontAwesomeIcons.truck,
                   title: 'Suppliers',
                   onTap: () {
-                    sideBarController.index.value =
-                        52; // New index for supplier screen
-                    // Load supplier data when selected
+                    sideBarController.index.value = 52;
                     final supplierProvider =
                         Provider.of<SupplierProvider>(context, listen: false);
                     String? accessToken =
@@ -465,6 +471,7 @@ class _SideMenuState extends State<SideMenu> {
               );
             },
           ),
+          // 9. REPORTS (Index: 58) [EXPANDABLE]
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
@@ -487,8 +494,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTileExpandableColumn(
                     onTapTitle1: () {
-                      sideBarController.index.value =
-                          58; // Sales Executive Report
+                      sideBarController.index.value = 58;
                     },
                     onTapTitle2: () {
                       sideBarController.index.value = 65;
@@ -497,19 +503,22 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 67;
                     },
                     listTitle1: "Sales Executive Reports",
-                    listTitle2: "Customer Transactions Reports ",
-                    listTitle3: "Supplier Transactions Reports ",
+                    listTitle2: "Customer Transactions Reports",
+                    listTitle3: "Supplier Transactions Reports",
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
                     showTitle2: hasCustomerTransactionsPermission,
                     showTitle3: hasSupplierTransactionsPermission,
-                    iconPath: ImageAssets.transactionIcon,
+                    icon: fa.FontAwesomeIcons.chartPie,
                     title: 'Reports',
                     onTap: () {
-                      sideBarController.index.value =
-                          58; // Default to Sales Executive Report
+                      sideBarController.index.value = 58;
                     },
-                    selected: sideBarController.index.value == 58 ||
+                    selected: sideBarController.index.value == 39 ||
+                        sideBarController.index.value == 40 ||
+                        sideBarController.index.value == 41 ||
+                        sideBarController.index.value == 42 ||
+                        sideBarController.index.value == 58 ||
                         sideBarController.index.value == 65 ||
                         sideBarController.index.value == 66 ||
                         sideBarController.index.value == 67 ||
@@ -517,6 +526,46 @@ class _SideMenuState extends State<SideMenu> {
               );
             },
           ),
+
+          // 10. TRANSACTIONS (Index: 4) [EXPANDABLE]
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              // Check permissions for each sub-item
+              final hasSupplierTransactionsPermission = roleProvider
+                  .currentUserHasPermissionSync('page_SupplierTransactions');
+              final hasCustomerTransactionsPermission = roleProvider
+                  .currentUserHasPermissionSync('page_CustomerTransactions');
+
+              // Only show the expandable menu if user has at least one permission
+              if (!hasSupplierTransactionsPermission &&
+                  !hasCustomerTransactionsPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTileExpandableColumn(
+                    onTapTitle1: () {
+                      sideBarController.index.value = 4;
+                    },
+                    onTapTitle2: () {
+                      sideBarController.index.value = 23;
+                    },
+                    listTitle1: "Supplier Transactions",
+                    listTitle2: "Customer Transactions",
+                    // Permission-based visibility
+                    showTitle1: hasSupplierTransactionsPermission,
+                    showTitle2: hasCustomerTransactionsPermission,
+                    icon: fa.FontAwesomeIcons.users,
+                    title: 'Party Accounts',
+                    onTap: () {
+                      sideBarController.index.value = 4;
+                    },
+                    selected: sideBarController.index.value == 4 ||
+                        sideBarController.index.value == 23),
+              );
+            },
+          ),
+          // 11. ACCOUNTS (Index: 21) [EXPANDABLE]
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
@@ -546,89 +595,43 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 47;
                     },
                     onTapTitle3: () {
-                      sideBarController.index.value = 70; // Customer Vouchers
+                      sideBarController.index.value = 22;
                     },
                     onTapTitle4: () {
-                      sideBarController.index.value = 72; // Supplier Vouchers
-                    },
-                    onTapTitle5: () {
-                      sideBarController.index.value = 59; // Company Accounts
+                      sideBarController.index.value = 72;
                     },
                     listTitle1: "Invoice",
                     listTitle2: "Receipts",
-                    listTitle3: "Customer Vouchers",
-                    listTitle4: "Supplier Vouchers",
-                    listTitle5: "Company Accounts",
+                    listTitle3: "Voucher (General Expense)",
+                    listTitle4: "Supplier Voucher (Purchase Entry)",
                     // Permission-based visibility
                     showTitle1: hasInvoicePermission,
                     showTitle2: hasReceiptsPermission,
                     showTitle3: hasCustomerVouchersPermission,
                     showTitle4: hasCompanyAccountsPermission,
-                    showTitle5: hasCompanyAccountsPermission,
-                    iconPath: ImageAssets.transactionIcon,
-                    title: 'Accounts',
-                    onTap: () {
-                      sideBarController.index.value = 21;
-                      // debugPrint(" 'Category',${sideBarController.index.value}");
-                    },
-                    selected: sideBarController.index.value == 21 ||
-                        sideBarController.index.value == 22 ||
-                        sideBarController.index.value == 30 ||
-                        sideBarController.index.value == 31 ||
-                        sideBarController.index.value == 32 ||
-                        sideBarController.index.value == 24 ||
-                        sideBarController.index.value == 25 ||
-                        sideBarController.index.value == 48 ||
-                        sideBarController.index.value == 47 ||
-                        sideBarController.index.value == 70 ||
-                        sideBarController.index.value == 71 ||
-                        sideBarController.index.value == 72 ||
-                        sideBarController.index.value == 73 ||
-                        sideBarController.index.value == 59 ||
-                        sideBarController.index.value == 60 ||
-                        sideBarController.index.value == 61
-                        ),
-              );
-            },
-          ),
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              // Check permissions for each sub-item
-              final hasSupplierTransactionsPermission = roleProvider
-                  .currentUserHasPermissionSync('page_SupplierTransactions');
-              final hasCustomerTransactionsPermission = roleProvider
-                  .currentUserHasPermissionSync('page_CustomerTransactions');
-
-              // Only show the expandable menu if user has at least one permission
-              if (!hasSupplierTransactionsPermission &&
-                  !hasCustomerTransactionsPermission) {
-                return const SizedBox.shrink();
-              }
-
-              return Obx(
-                () => DrawerListTileExpandableColumn(
-                    onTapTitle1: () {
-                      sideBarController.index.value = 4;
-                    },
-                    onTapTitle2: () {
-                      sideBarController.index.value = 23;
-                    },
-                    listTitle1: "Supplier Transactions",
-                    listTitle2: "Customer Transactions",
-                    // Permission-based visibility
-                    showTitle1: hasSupplierTransactionsPermission,
-                    showTitle2: hasCustomerTransactionsPermission,
-                    iconPath: ImageAssets.transactionIcon,
+                    icon: fa.FontAwesomeIcons.exchange,
                     title: 'Transactions',
                     onTap: () {
-                      sideBarController.index.value = 4;
-                      // debugPrint(" 'Category',${sideBarController.index.value}");
+                      sideBarController.index.value = 21;
                     },
-                    selected: sideBarController.index.value == 4 ||
-                        sideBarController.index.value == 23),
+                    selected: sideBarController.index.value == 21 ||
+                        sideBarController.index.value == 24 ||
+                        sideBarController.index.value == 31 ||
+                        sideBarController.index.value == 47 ||
+                        sideBarController.index.value == 48 ||
+                        sideBarController.index.value == 22 ||
+                        sideBarController.index.value == 25 ||
+                        sideBarController.index.value == 29 ||
+                        sideBarController.index.value == 32 ||
+                        sideBarController.index.value == 37 ||
+                        sideBarController.index.value == 72 ||
+                        sideBarController.index.value == 73 ||
+                        sideBarController.index.value == 30),
               );
             },
           ),
+
+          // 12. CUSTOMERS (Index: 5)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission =
@@ -640,19 +643,57 @@ class _SideMenuState extends State<SideMenu> {
 
               return Obx(
                 () => DrawerListTile(
-                  iconPath: ImageAssets.customerIcon,
+                  icon: fa.FontAwesomeIcons.users,
                   title: 'Customers',
                   onTap: () {
                     sideBarController.index.value = 5;
-                    // debugPrint(" 'Customers',${sideBarController.index.value}");
                   },
                   selected: sideBarController.index.value == 5 ||
                       sideBarController.index.value == 9 ||
+                      sideBarController.index.value == 10 ||
                       sideBarController.index.value == 38,
                 ),
               );
             },
           ),
+          // COMPANY (Store, About)
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              final hasStorePermission =
+                  roleProvider.currentUserHasPermissionSync('view_store');
+              final hasAboutPermission =
+                  roleProvider.currentUserHasPermissionSync('view_setting');
+
+              if (!hasStorePermission && !hasAboutPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () {
+                    sideBarController.index.value = 43;
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 64;
+                  },
+                  listTitle1: "Store",
+                  listTitle2: "About",
+                  // Permission-based visibility
+                  showTitle1: hasStorePermission,
+                  showTitle2: hasAboutPermission,
+                  icon: fa.FontAwesomeIcons.building,
+                  title: 'Company',
+                  onTap: () {
+                    sideBarController.index.value = 43;
+                  },
+                  selected: sideBarController.index.value == 43 ||
+                      sideBarController.index.value == 44 ||
+                      sideBarController.index.value == 64,
+                ),
+              );
+            },
+          ),
+          // 13. PRINTER (Index: 53)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission =
@@ -677,7 +718,7 @@ class _SideMenuState extends State<SideMenu> {
                   const SizedBox(height: 15),
                   Obx(
                     () => DrawerListTile(
-                      iconPath: ImageAssets.printIcon,
+                      icon: fa.FontAwesomeIcons.print,
                       title: 'Printer',
                       onTap: () {
                         sideBarController.index.value = 53;
@@ -689,6 +730,8 @@ class _SideMenuState extends State<SideMenu> {
               );
             },
           ),
+
+          // 14. SETTINGS (Index: 62)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission =
@@ -700,10 +743,8 @@ class _SideMenuState extends State<SideMenu> {
 
               return Obx(
                 () => DrawerListTile(
-                  iconPath: ImageAssets.settingsIcon,
+                  icon: fa.FontAwesomeIcons.gear,
                   title: 'Settings',
-                  iconSize: 18.0,
-                  horizontalGap: 12.0,
                   onTap: () {
                     sideBarController.index.value = 62;
                   },
@@ -713,8 +754,9 @@ class _SideMenuState extends State<SideMenu> {
               );
             },
           ),
+          // LOGOUT
           DrawerListTile(
-            iconPath: ImageAssets.logoutIcon,
+            icon: fa.FontAwesomeIcons.signOutAlt,
             title: 'Logout',
             onTap: () async {
               String token = authModel.token ?? '';
@@ -846,7 +888,8 @@ class _SideMenuState extends State<SideMenu> {
 }
 
 class DrawerListTile extends StatelessWidget {
-  final String iconPath;
+  final String? iconPath;
+  final IconData? icon;
   final String title;
   final int? items;
   final bool selected;
@@ -857,7 +900,8 @@ class DrawerListTile extends StatelessWidget {
   final double? horizontalGap;
   const DrawerListTile({
     super.key,
-    required this.iconPath,
+    this.iconPath,
+    this.icon,
     required this.title,
     required this.selected,
     required this.onTap,
@@ -905,13 +949,19 @@ class DrawerListTile extends StatelessWidget {
                   width: leadingBox,
                   height: leadingBox,
                   child: Center(
-                    child: WebsafeSvg.asset(
-                      iconPath,
-                      width: resolvedIconSize,
-                      height: resolvedIconSize,
-                      colorFilter:
-                          const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                    ),
+                    child: icon != null
+                        ? Icon(
+                            icon,
+                            color: Colors.white,
+                            size: resolvedIconSize,
+                          )
+                        : WebsafeSvg.asset(
+                            iconPath!,
+                            width: resolvedIconSize,
+                            height: resolvedIconSize,
+                            colorFilter:
+                                const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                          ),
                   ),
                 ),
                 trailing: items != null
@@ -959,15 +1009,25 @@ class DrawerListTile extends StatelessWidget {
               width: leadingBox,
               height: leadingBox,
               child: Center(
-                child: WebsafeSvg.asset(
-                  iconPath,
-                  width: resolvedIconSize,
-                  height: resolvedIconSize,
-                  colorFilter: const ColorFilter.mode(
-                    ColorManager.kPrimaryColor,
-                    BlendMode.srcIn,
-                  ),
-                ),
+                child: icon != null
+                    ? Icon(
+                        icon,
+                        size: resolvedIconSize,
+                        color: selected
+                            ? Colors.white
+                            : ColorManager.kPrimaryColor,
+                      )
+                    : WebsafeSvg.asset(
+                        iconPath!,
+                        width: resolvedIconSize,
+                        height: resolvedIconSize,
+                        colorFilter: ColorFilter.mode(
+                          selected
+                              ? Colors.white
+                              : ColorManager.kPrimaryColor,
+                          BlendMode.srcIn,
+                        ),
+                      ),
               ),
             ),
             trailing: items != null

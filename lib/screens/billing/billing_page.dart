@@ -3210,14 +3210,14 @@ class BillingPageState extends State<BillingPage>
               isLoading: isLoadingConfirmOrder,
             ),
           ],
-          if (!_hasInternet) ...[
+          // if (!_hasInternet) ...[
             _buildActionButton(
               text: 'Save and Print',
               color: ColorManager.kButtonYellow,
               onPressed: _saveOrderAndPrint,
               isLoading: isLoadingSaveOrderAndPrint,
             ),
-          ],
+          // ],
         ],
       ),
     );
@@ -3619,10 +3619,22 @@ class BillingPageState extends State<BillingPage>
           String? customerPhoneToSave =
               selectedCustomerPhone ?? mobileNumberText;
 
-          // Determine payment method and data
-          Map<String, String> paymentData = _getPaymentMethodData();
-          String paymentMethod = paymentData["paymentMethod"]!;
-          String paidAmount = paymentData["paidAmount"]!;
+          // Determine payment method and data using multi-payment JSON format
+          List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+          
+          // Always use multi-payment JSON format for consistency with sync button
+          Map<String, dynamic> multiPaymentData = {
+            "methods": selectedPaymentMethods,
+            "amounts": {
+              "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
+              "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
+              "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
+              "DEBIT": _debitAmountController.text.isNotEmpty ? _debitAmountController.text : "0",
+            },
+            "isMultiPayment": true
+          };
+          String paymentMethod = json.encode(multiPaymentData);
+          String paidAmount = _getTotalPaidAmount().toString();
 
           orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
             customerName: customerNameToSave,
@@ -3657,10 +3669,22 @@ class BillingPageState extends State<BillingPage>
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
-        // Determine payment method and data
-        Map<String, String> paymentData = _getPaymentMethodData();
-        String paymentMethod = paymentData["paymentMethod"]!;
-        String paidAmount = paymentData["paidAmount"]!;
+        // Determine payment method and data using multi-payment JSON format
+        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+        
+        // Always use multi-payment JSON format for consistency with sync button
+        Map<String, dynamic> multiPaymentData = {
+          "methods": selectedPaymentMethods,
+          "amounts": {
+            "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
+            "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
+            "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
+            "DEBIT": _debitAmountController.text.isNotEmpty ? _debitAmountController.text : "0",
+          },
+          "isMultiPayment": true
+        };
+        String paymentMethod = json.encode(multiPaymentData);
+        String paidAmount = _getTotalPaidAmount().toString();
 
         orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
           customerName: customerNameToSave,

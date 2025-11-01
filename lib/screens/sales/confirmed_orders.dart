@@ -628,6 +628,10 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               // ✅ For multi-payment, EXPLICITLY set single payment fields to null
               paymentMethod = null;
               paidAmount = null;
+              
+              debugPrint("✅ Using multi-payment format for sync");
+              debugPrint("  - Payment Methods: $paymentMethods");
+              debugPrint("  - Paid Methods: $paidMethods");
             }
           } catch (e) {
             debugPrint("Error parsing multi-payment data during sync: $e");
@@ -636,6 +640,10 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             paidAmount = order.paidAmount ?? order.total.toString();
             paymentMethods = null;
             paidMethods = null;
+            
+            debugPrint("⚠️ Fallback to single-payment format");
+            debugPrint("  - Payment Method: $paymentMethod");
+            debugPrint("  - Paid Amount: $paidAmount");
           }
         } else {
           // Single payment method - EXPLICITLY set multi-payment to null
@@ -643,6 +651,10 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           paidAmount = order.paidAmount ?? order.total.toString();
           paymentMethods = null;
           paidMethods = null;
+          
+          debugPrint("⚠️ Single-payment format (no JSON detected)");
+          debugPrint("  - Payment Method: $paymentMethod");
+          debugPrint("  - Paid Amount: $paidAmount");
         }
 
         // Call API to add order and WAIT for completion
