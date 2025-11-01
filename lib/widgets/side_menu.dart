@@ -169,20 +169,18 @@ class _SideMenuState extends State<SideMenu> {
                 color: ColorManager.kPrimaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: IconButton(
-                icon: Icon(
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.transparent,
+                ),
+                child: Icon(
                   isExpanded ? Icons.menu_open : Icons.menu,
                   color: ColorManager.kPrimaryColor,
-                  size: isExpanded ? 24 : 20,
+                  size: 20,
                 ),
-                tooltip: isExpanded ? 'Collapse Sidebar' : 'Expand Sidebar',
-                padding: EdgeInsets.all(isExpanded ? 8 : 6),
-                constraints: const BoxConstraints(),
-                onPressed: () {
-                  final CollapsibleSidebarState? sidebarState =
-                      context.findAncestorStateOfType<CollapsibleSidebarState>();
-                  sidebarState?._toggleSidebar();
-                },
               ),
             ),
           ),
@@ -198,24 +196,7 @@ class _SideMenuState extends State<SideMenu> {
               ),
             ),
           if (!isExpanded)
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: ColorManager.kPrimaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(
-                child: Text(
-                  'CP',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox.shrink(),
           // const SizedBox(
           //   height: 5,
           // ),
@@ -791,16 +772,17 @@ class _SideMenuState extends State<SideMenu> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 15),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 45.0),
-                    child: Text(
-                      'Other',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s13, 0.16, ColorManager.textColor),
+                  if (isExpanded) const SizedBox(height: 15),
+                  if (isExpanded)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 45.0),
+                      child: Text(
+                        'Other',
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s13, 0.16, ColorManager.textColor),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 15),
+                  if (isExpanded) const SizedBox(height: 15),
                   Obx(
                     () => DrawerListTile(
                       icon: fa.FontAwesomeIcons.print,
@@ -951,21 +933,23 @@ class _SideMenuState extends State<SideMenu> {
                 ],
               ),
             ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              '2025 CloudPOS App',
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.16,
-                ColorManager.textColor,
+          if (isExpanded) const SizedBox(height: 12),
+          if (isExpanded)
+            Center(
+              child: Text(
+                '2025 CloudPOS App',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.16,
+                  ColorManager.textColor,
+                ),
               ),
             ),
-          ),
-          const SizedBox(
-            height: 50,
-          ),
+          if (isExpanded)
+            const SizedBox(
+              height: 50,
+            ),
         ],
       ),
     );
@@ -1008,33 +992,37 @@ class DrawerListTile extends StatelessWidget {
         message: title,
         preferBelow: false,
         verticalOffset: 20,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 8),
-          decoration: BoxDecoration(
-            color: selected ? ColorManager.kPrimaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(10),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
               child: Container(
-                height: 44,
-                padding: const EdgeInsets.all(10),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected
+                      ? ColorManager.kPrimaryColor.withOpacity(0.15)
+                      : Colors.transparent,
+                ),
                 child: Center(
                   child: icon != null
                       ? Icon(
                           icon,
                           size: 20,
-                          color: selected ? Colors.white : ColorManager.kPrimaryColor,
+                          color: ColorManager.kPrimaryColor,
                         )
                       : WebsafeSvg.asset(
                           iconPath!,
                           width: 20,
                           height: 20,
-                          colorFilter: ColorFilter.mode(
-                            selected ? Colors.white : ColorManager.kPrimaryColor,
+                          colorFilter: const ColorFilter.mode(
+                            ColorManager.kPrimaryColor,
                             BlendMode.srcIn,
                           ),
                         ),

@@ -96,33 +96,38 @@ class _DrawerListTileExpandableColumnState
         message: widget.title,
         preferBelow: false,
         verticalOffset: 20,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 8),
-          decoration: BoxDecoration(
-            color: widget.selected ? ColorManager.kPrimaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onTap,
-              borderRadius: BorderRadius.circular(10),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container
+              (
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
               child: Container(
-                height: 44,
-                padding: const EdgeInsets.all(10),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.selected
+                      ? ColorManager.kPrimaryColor.withOpacity(0.15)
+                      : Colors.transparent,
+                ),
                 child: Center(
                   child: widget.icon != null
                       ? Icon(
                           widget.icon,
                           size: 20,
-                          color: widget.selected ? Colors.white : ColorManager.kPrimaryColor,
+                          color: ColorManager.kPrimaryColor,
                         )
                       : WebsafeSvg.asset(
                           widget.iconPath!,
                           width: 20,
                           height: 20,
-                          colorFilter: ColorFilter.mode(
-                            widget.selected ? Colors.white : ColorManager.kPrimaryColor,
+                          colorFilter: const ColorFilter.mode(
+                            ColorManager.kPrimaryColor,
                             BlendMode.srcIn,
                           ),
                         ),

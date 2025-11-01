@@ -636,17 +636,6 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                     Navigator.pop(context);
                   },
                 ),
-                const SizedBox(width: 10),
-                // Add Product Button
-                CustomRoundButton(
-                  title: "Add New Stock",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 120,
-                  fct: () {
-                    Navigator.pop(context);
-                  },
-                ),
               ],
             ),
           ],

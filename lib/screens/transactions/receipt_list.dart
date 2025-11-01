@@ -669,16 +669,6 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   CustomRoundButton(
-                    title: "Print Voucher",
-                    boxColor: ColorManager.kPrimaryColor,
-                    textColor: Colors.white,
-                    fct: () => _printVoucher(receipt),
-                    height: 45,
-                    width: 150,
-                    fontSize: FontSize.s12,
-                  ),
-                  const SizedBox(width: 15),
-                  CustomRoundButton(
                     title: "Close",
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
@@ -730,28 +720,6 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         ],
       ),
     );
-  }
-
-  void _printVoucher(Receipt receipt) {
-    // TODO: Implement print voucher functionality
-    // This would typically involve:
-    // 1. Format the receipt data for printing
-    // 2. Call the appropriate print service/provider
-    // 3. Handle printer selection if multiple printers available
-    // 4. Show success/error feedback to user
-
-    debugPrint('Print voucher requested for receipt: ${receipt.receiptNumber}');
-
-    // Show a temporary message until print functionality is implemented
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Print voucher for receipt ${receipt.receiptNumber}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    // Close the dialog after initiating print
-    Navigator.pop(context);
   }
 
   Widget _buildTableHeader(String text) {
