@@ -157,53 +157,62 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
         final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
         final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
+        final bool isZatcaSuccess = (invoice.zatcaStatus?.toLowerCase() == 'success');
 
         final List<Widget> dynamicItems = [];
-        // Show Phase 1 Print and generic Send when any of the phases is enabled
-        if (phase1 || phase2) {
-          dynamicItems.addAll([
-            ListTile(
-              leading: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.green.withOpacity(0.12),
-                child: const Icon(Icons.qr_code, color: Colors.green),
+        // If ZATCA is already success for this invoice, only show Phase 2 button
+        if (isZatcaSuccess) {
+          if (phase2) {
+            dynamicItems.add(
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.orange.withOpacity(0.12),
+                  child: const Icon(Icons.description, color: Colors.orange),
+                ),
+                title: const Text('ZATCA Phase 2'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _performZatcaPhase2SendWithPdf(invoice);
+                },
               ),
-              title: const Text('ZATCA Print'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _performZatcaPhase1Print(invoice);
-              },
-            ),
-            ListTile(
-              leading: CircleAvatar(
-                radius: 18,
-                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
-                child: Icon(Icons.send, color: ColorManager.kPrimaryColor),
+            );
+          }
+        } else {
+          // When not success, keep existing behavior: show Print and Send when any phase is enabled
+          if (phase1 || phase2) {
+            dynamicItems.addAll([
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.green.withOpacity(0.12),
+                  child: const Icon(Icons.qr_code, color: Colors.green),
+                ),
+                title: const Text('ZATCA Print'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _performZatcaPhase1Print(invoice);
+                },
               ),
-              title: const Text('Send to ZATCA'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _performZatcaPhase2Send(invoice);
-              },
-            ),
-          ]);
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+                  child: Icon(Icons.send, color: ColorManager.kPrimaryColor),
+                ),
+                title: const Text('Send to ZATCA'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _performZatcaPhase2Send(invoice);
+                },
+              ),
+            ]);
+          }
         }
 
-        // Show Phase 2 specific actions only when Phase 2 is enabled
-        if (phase2) {
-          dynamicItems.addAll([
-            ListTile(
-              leading: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.orange.withOpacity(0.12),
-                child: const Icon(Icons.description, color: Colors.orange),
-              ),
-              title: const Text('ZATCA Phase 2'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _performZatcaPhase2SendWithPdf(invoice);
-              },
-            ),
+        // Show Resync only when Phase 2 is enabled AND not already success
+        if (phase2 && !isZatcaSuccess) {
+          dynamicItems.add(
             ListTile(
               leading: CircleAvatar(
                 radius: 18,
@@ -216,7 +225,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 await _performZatcaPhase2Resync(invoice);
               },
             ),
-          ]);
+          );
         }
 
         return SafeArea(

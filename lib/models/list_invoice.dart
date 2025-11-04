@@ -70,6 +70,7 @@ class Invoice {
   final DateTime createdAt;
   final DateTime updatedAt;
   final Customer customer;
+  final String? zatcaStatus;
 
   Invoice({
     required this.id,
@@ -86,6 +87,7 @@ class Invoice {
     required this.createdAt,
     required this.updatedAt,
     required this.customer,
+    this.zatcaStatus,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
@@ -105,6 +107,7 @@ class Invoice {
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       customer:
           Customer.fromJson(json['customer'] ?? {}), // Handle null customer
+      zatcaStatus: json['zatca_status']?.toString(),
     );
   }
 }
