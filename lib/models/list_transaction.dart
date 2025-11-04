@@ -126,6 +126,7 @@ class ListTransaction {
   final String? orderNumber;
   final String? customerName;
   final String? balance;
+  final int? customerId;
   ListTransaction({
     this.id,
     this.orderId,
@@ -144,6 +145,7 @@ class ListTransaction {
     this.customerName,
     this.orderNumber,
     this.balance,
+    this.customerId,
   });
 
   factory ListTransaction.fromJson(Map<String, dynamic> json) =>
@@ -171,6 +173,7 @@ class ListTransaction {
             : DateTime.parse(json["updated_at"]),
         customerName: json["customer_name"],
         balance: json["balance"],
+        customerId: json["customer_id"],
       );
 
   // Helper method to handle payment_method which can be String or List<String>
@@ -201,6 +204,7 @@ class ListTransaction {
         "updated_at": updatedAt?.toIso8601String(),
         "customer_name": customerName,
         "balance": balance,
+        "customer_id": customerId,
       };
 }
 

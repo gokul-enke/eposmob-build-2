@@ -572,6 +572,28 @@ class SalesProvider with ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Debug print the request body
+    final requestBody = jsonEncode({
+      'return_order_id': returnOrderId,
+      if (hasPayment == true) ...{
+        'payment_method': paymentMethod,
+        'paid_amount': paidAmount,
+        'has_payment': hasPayment,
+      } else ...{
+        'has_payment': false,
+      }
+    });
+    debugPrint('=== COMPLETE SALES RETURN REQUEST BODY ===');
+    debugPrint(requestBody);
+    debugPrint('=== END REQUEST BODY ===');
+
+    debugPrint("accessToken $accessToken");
+    debugPrint("returnOrderId $returnOrderId");
+    debugPrint("hasPayment $hasPayment");
+    debugPrint("paymentMethod $paymentMethod");
+    debugPrint("paidAmount $paidAmount");
+
     final response = await http.post(
       url,
       headers: {
@@ -579,23 +601,8 @@ class SalesProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       },
-      body: jsonEncode({
-        'return_order_id': returnOrderId,
-        if (hasPayment == true) ...{
-          'payment_method': paymentMethod,
-          'paid_amount': paidAmount,
-          'has_payment': hasPayment,
-        } else ...{
-          'has_payment': false,
-        }
-      }),
+      body: requestBody,
     );
-
-    debugPrint("accessToken $accessToken");
-    debugPrint("returnOrderId $returnOrderId");
-    debugPrint("hasPayment $hasPayment");
-    debugPrint("paymentMethod $paymentMethod");
-    debugPrint("paidAmount $paidAmount");
 
     if (response.statusCode == 200) {
       debugPrint('Sales return submitted successfully: ${response.body}');

@@ -50,7 +50,6 @@ class _CreateSupplierVoucherScreenState
   final SideBarController sideBarController = Get.put(SideBarController());
 
   // Form controllers
-  final TextEditingController voucherNumberController = TextEditingController();
   final TextEditingController totalAmountController = TextEditingController();
 
   // Date controllers
@@ -60,22 +59,30 @@ class _CreateSupplierVoucherScreenState
   // Dropdown selections
   String? selectedType;
   String? selectedStatus;
-  int? selectedPaymentMethod;
+  String? selectedPaymentMethod;
   int? selectedSupplierId;
   String? selectedSupplierName;
 
   // Items list
   List<VoucherItem> voucherItems = [VoucherItem()];
 
-  // Options lists
-  List<String> typeOptions = ['Order', 'Other', 'Refund', 'Adjustment'];
-  List<String> statusOptions = ['Paid', 'Pending', 'Overdue'];
-  List<Map<String, dynamic>> paymentMethods = [
-    {'id': 1, 'name': 'COD'},
-    {'id': 2, 'name': 'ONLINE'},
-    {'id': 3, 'name': 'CHEQUE'},
-    {'id': 4, 'name': 'UPI'},
-    {'id': 5, 'name': 'CASH'},
+  // Options lists - Backend values and display names
+  List<Map<String, String>> typeOptions = [
+    {'value': 'order', 'display': 'Order'},
+    {'value': 'discount', 'display': 'Discount'},
+    {'value': 'other', 'display': 'Other'},
+  ];
+  List<Map<String, String>> statusOptions = [
+    {'value': 'paid', 'display': 'Paid'},
+    {'value': 'pending', 'display': 'Pending'},
+    {'value': 'overdue', 'display': 'Overdue'},
+  ];
+  List<Map<String, String>> paymentMethods = [
+    {'value': 'COD', 'display': 'Cash On Delivery'},
+    {'value': 'ONLINE', 'display': 'Online Payment'},
+    {'value': 'CHEQUE', 'display': 'Cheque'},
+    {'value': 'UPI', 'display': 'UPI'},
+    {'value': 'CASH', 'display': 'Cash'},
   ];
   List<Map<String, dynamic>> suppliers = [];
 
@@ -183,11 +190,11 @@ class _CreateSupplierVoucherScreenState
           await Provider.of<SupplierVoucherProvider>(context, listen: false)
               .createVoucher(
         supplierId: selectedSupplierId!,
-        type: selectedType!.toLowerCase(),
+        type: selectedType!,
         amount: double.tryParse(totalAmountController.text) ?? 0,
         voucherDate: DateFormat('yyyy-MM-dd').format(selectedVoucherDate),
         dueDate: DateFormat('yyyy-MM-dd').format(selectedDueDate),
-        status: selectedStatus!.toLowerCase(),
+        status: selectedStatus!,
         paymentMethod: selectedPaymentMethod!,
         voucherItems: items,
         accessToken: accessToken ?? '',
@@ -198,7 +205,8 @@ class _CreateSupplierVoucherScreenState
           context: context,
           message: result['message'] ?? 'Voucher created successfully',
         );
-        sideBarController.index.value = 72;
+        sideBarController.index.value =
+            (sideBarController.index.value == 76) ? 75 : 72;
       } else {
         showScaffoldError(
           context: context,
@@ -244,7 +252,8 @@ class _CreateSupplierVoucherScreenState
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () => sideBarController.index.value = 72,
+                    onPressed: () => sideBarController.index.value =
+                        (sideBarController.index.value == 76) ? 75 : 72,
                   ),
                 ],
               ),
@@ -254,23 +263,11 @@ class _CreateSupplierVoucherScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // First row: Type, Total Amount
                       Row(
                         children: [
                           Expanded(
-                            child: _buildTextField(
-                              'Voucher number',
-                              voucherNumberController,
-                              'EPSVN100089',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown(
-                              'Type',
-                              selectedType,
-                              typeOptions,
-                              (value) => setState(() => selectedType = value),
-                            ),
+                            child: _buildTypeDropdown(),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -284,6 +281,7 @@ class _CreateSupplierVoucherScreenState
                         ],
                       ),
                       const SizedBox(height: 16),
+                      // Second row: Voucher Date, Due Date, Status
                       Row(
                         children: [
                           Expanded(
@@ -305,16 +303,12 @@ class _CreateSupplierVoucherScreenState
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: _buildDropdown(
-                              'Status',
-                              selectedStatus,
-                              statusOptions,
-                              (value) => setState(() => selectedStatus = value),
-                            ),
+                            child: _buildStatusDropdown(),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
+                      // Third row: Payment Method, Supplier
                       Row(
                         children: [
                           Expanded(
@@ -366,7 +360,8 @@ class _CreateSupplierVoucherScreenState
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     borderColor: ColorManager.kPrimaryColor,
-                    fct: () => sideBarController.index.value = 72,
+                    fct: () => sideBarController.index.value =
+                        (sideBarController.index.value == 76) ? 75 : 72,
                     height: 45,
                     width: 120,
                     fontSize: FontSize.s12,
@@ -432,17 +427,12 @@ class _CreateSupplierVoucherScreenState
     );
   }
 
-  Widget _buildDropdown(
-    String label,
-    String? value,
-    List<String> items,
-    Function(String?) onChanged,
-  ) {
+  Widget _buildTypeDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          'Type',
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -450,11 +440,45 @@ class _CreateSupplierVoucherScreenState
         BuildDropDownWithSearch<String>(
           title: null,
           showName: false,
-          hintText: 'Select $label',
-          value: value,
-          items: items,
-          onChanged: onChanged,
-          displayText: (String? item) => item ?? 'Select $label',
+          hintText: 'Select Type',
+          value: selectedType,
+          items: typeOptions.map((t) => t['value']!).toList(),
+          onChanged: (String? value) => setState(() => selectedType = value),
+          displayText: (String? value) {
+            if (value == null) return 'Select Type';
+            final type = typeOptions.firstWhere((t) => t['value'] == value,
+                orElse: () => {'display': 'Unknown'});
+            return type['display']!;
+          },
+          height: 45,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Status',
+          style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
+              Colors.black.withOpacity(0.6)),
+        ),
+        const SizedBox(height: 8),
+        BuildDropDownWithSearch<String>(
+          title: null,
+          showName: false,
+          hintText: 'Select Status',
+          value: selectedStatus,
+          items: statusOptions.map((s) => s['value']!).toList(),
+          onChanged: (String? value) => setState(() => selectedStatus = value),
+          displayText: (String? value) {
+            if (value == null) return 'Select Status';
+            final status = statusOptions.firstWhere((s) => s['value'] == value,
+                orElse: () => {'display': 'Unknown'});
+            return status['display']!;
+          },
           height: 45,
         ),
       ],
@@ -495,19 +519,19 @@ class _CreateSupplierVoucherScreenState
               Colors.black.withOpacity(0.6)),
         ),
         const SizedBox(height: 8),
-        BuildDropDownWithSearch<int>(
+        BuildDropDownWithSearch<String>(
           title: null,
           showName: false,
-          hintText: 'Select an option',
+          hintText: 'Select Payment Method',
           value: selectedPaymentMethod,
-          items: paymentMethods.map((m) => m['id'] as int).toList(),
-          onChanged: (int? value) =>
+          items: paymentMethods.map((m) => m['value']!).toList(),
+          onChanged: (String? value) =>
               setState(() => selectedPaymentMethod = value),
-          displayText: (int? id) {
-            if (id == null) return 'Select an option';
-            final method = paymentMethods.firstWhere((m) => m['id'] == id,
-                orElse: () => {});
-            return method['name'] ?? 'Unknown';
+          displayText: (String? value) {
+            if (value == null) return 'Select Payment Method';
+            final method = paymentMethods.firstWhere((m) => m['value'] == value,
+                orElse: () => {'display': 'Unknown'});
+            return method['display']!;
           },
           height: 45,
         ),
@@ -739,7 +763,6 @@ class _CreateSupplierVoucherScreenState
 
   @override
   void dispose() {
-    voucherNumberController.dispose();
     totalAmountController.dispose();
     super.dispose();
   }

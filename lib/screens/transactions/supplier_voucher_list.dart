@@ -157,7 +157,10 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
         CustomRoundButton(
           title: "Create Supplier Voucher",
           fct: () {
-            Get.find<SideBarController>().index.value = 73;
+            final controller = Get.find<SideBarController>();
+            // If this list was opened via Transactions alias (75), go to 76. Otherwise go to 73.
+            controller.index.value =
+                (controller.index.value == 75) ? 76 : 73;
           },
           fontSize: FontSize.s12,
           height: 45,

@@ -61,22 +61,31 @@ class _CreateCustomerVoucherScreenState
   // Dropdown selections
   String? selectedType;
   String? selectedStatus;
-  int? selectedPaymentMethod;
+  String? selectedPaymentMethod;
   int? selectedCustomerId;
   String? selectedCustomerName;
 
   // Items list
   List<VoucherItem> voucherItems = [VoucherItem()];
 
-  // Options lists
-  List<String> typeOptions = ['Order', 'Discount', 'Sales Return', 'Other'];
-  List<String> statusOptions = ['Paid', 'Pending', 'Overdue'];
-  List<Map<String, dynamic>> paymentMethods = [
-    {'id': 1, 'name': 'COD'},
-    {'id': 2, 'name': 'ONLINE'},
-    {'id': 3, 'name': 'CHEQUE'},
-    {'id': 4, 'name': 'UPI'},
-    {'id': 5, 'name': 'CASH'},
+  // Options lists - Backend values and display names
+  List<Map<String, String>> typeOptions = [
+    {'value': 'order', 'display': 'Order'},
+    {'value': 'discount', 'display': 'Discount'},
+    {'value': 'sales_return', 'display': 'Sales Return'},
+    {'value': 'other', 'display': 'Other'},
+  ];
+  List<Map<String, String>> statusOptions = [
+    {'value': 'paid', 'display': 'Paid'},
+    {'value': 'pending', 'display': 'Pending'},
+    {'value': 'overdue', 'display': 'Overdue'},
+  ];
+  List<Map<String, String>> paymentMethods = [
+    {'value': 'COD', 'display': 'Cash On Delivery'},
+    {'value': 'ONLINE', 'display': 'Online Payment'},
+    {'value': 'CHEQUE', 'display': 'Cheque'},
+    {'value': 'UPI', 'display': 'UPI'},
+    {'value': 'CASH', 'display': 'Cash'},
   ];
   List<Map<String, dynamic>> customers = [];
 
@@ -262,12 +271,7 @@ class _CreateCustomerVoucherScreenState
                       Row(
                         children: [
                           Expanded(
-                            child: _buildDropdown(
-                              'Type',
-                              selectedType,
-                              typeOptions,
-                              (value) => setState(() => selectedType = value),
-                            ),
+                            child: _buildTypeDropdown(),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -303,12 +307,7 @@ class _CreateCustomerVoucherScreenState
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: _buildDropdown(
-                              'Status',
-                              selectedStatus,
-                              statusOptions,
-                              (value) => setState(() => selectedStatus = value),
-                            ),
+                            child: _buildStatusDropdown(),
                           ),
                         ],
                       ),
@@ -436,34 +435,6 @@ class _CreateCustomerVoucherScreenState
     );
   }
 
-  Widget _buildDropdown(
-    String label,
-    String? value,
-    List<String> items,
-    Function(String?) onChanged,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
-              Colors.black.withOpacity(0.6)),
-        ),
-        const SizedBox(height: 8),
-        BuildDropDownWithSearch<String>(
-          title: null,
-          showName: false,
-          hintText: 'Select $label',
-          value: value,
-          items: items,
-          onChanged: onChanged,
-          displayText: (String? item) => item ?? 'Select $label',
-          height: 45,
-        ),
-      ],
-    );
-  }
 
   Widget _buildDateField(
     String label,
@@ -489,6 +460,64 @@ class _CreateCustomerVoucherScreenState
     );
   }
 
+  Widget _buildTypeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Type',
+          style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
+              Colors.black.withOpacity(0.6)),
+        ),
+        const SizedBox(height: 8),
+        BuildDropDownWithSearch<String>(
+          title: null,
+          showName: false,
+          hintText: 'Select Type',
+          value: selectedType,
+          items: typeOptions.map((t) => t['value']!).toList(),
+          onChanged: (String? value) => setState(() => selectedType = value),
+          displayText: (String? value) {
+            if (value == null) return 'Select Type';
+            final type = typeOptions.firstWhere((t) => t['value'] == value,
+                orElse: () => {'display': 'Unknown'});
+            return type['display']!;
+          },
+          height: 45,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Status',
+          style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
+              Colors.black.withOpacity(0.6)),
+        ),
+        const SizedBox(height: 8),
+        BuildDropDownWithSearch<String>(
+          title: null,
+          showName: false,
+          hintText: 'Select Status',
+          value: selectedStatus,
+          items: statusOptions.map((s) => s['value']!).toList(),
+          onChanged: (String? value) => setState(() => selectedStatus = value),
+          displayText: (String? value) {
+            if (value == null) return 'Select Status';
+            final status = statusOptions.firstWhere((s) => s['value'] == value,
+                orElse: () => {'display': 'Unknown'});
+            return status['display']!;
+          },
+          height: 45,
+        ),
+      ],
+    );
+  }
+
   Widget _buildPaymentMethodDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,19 +528,19 @@ class _CreateCustomerVoucherScreenState
               Colors.black.withOpacity(0.6)),
         ),
         const SizedBox(height: 8),
-        BuildDropDownWithSearch<int>(
+        BuildDropDownWithSearch<String>(
           title: null,
           showName: false,
-          hintText: 'Select an option',
+          hintText: 'Select Payment Method',
           value: selectedPaymentMethod,
-          items: paymentMethods.map((m) => m['id'] as int).toList(),
-          onChanged: (int? value) =>
+          items: paymentMethods.map((m) => m['value']!).toList(),
+          onChanged: (String? value) =>
               setState(() => selectedPaymentMethod = value),
-          displayText: (int? id) {
-            if (id == null) return 'Select an option';
-            final method = paymentMethods.firstWhere((m) => m['id'] == id,
-                orElse: () => {});
-            return method['name'] ?? 'Unknown';
+          displayText: (String? value) {
+            if (value == null) return 'Select Payment Method';
+            final method = paymentMethods.firstWhere((m) => m['value'] == value,
+                orElse: () => {'display': 'Unknown'});
+            return method['display']!;
           },
           height: 45,
         ),

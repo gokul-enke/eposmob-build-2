@@ -17,6 +17,7 @@ import '../../components/build_dropdown_with_search.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
+import '../../providers/app_settings_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -153,6 +154,71 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
+        final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+        final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
+        final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
+
+        final List<Widget> dynamicItems = [];
+        // Show Phase 1 Print and generic Send when any of the phases is enabled
+        if (phase1 || phase2) {
+          dynamicItems.addAll([
+            ListTile(
+              leading: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.green.withOpacity(0.12),
+                child: const Icon(Icons.qr_code, color: Colors.green),
+              ),
+              title: const Text('ZATCA Print'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _performZatcaPhase1Print(invoice);
+              },
+            ),
+            ListTile(
+              leading: CircleAvatar(
+                radius: 18,
+                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+                child: Icon(Icons.send, color: ColorManager.kPrimaryColor),
+              ),
+              title: const Text('Send to ZATCA'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _performZatcaPhase2Send(invoice);
+              },
+            ),
+          ]);
+        }
+
+        // Show Phase 2 specific actions only when Phase 2 is enabled
+        if (phase2) {
+          dynamicItems.addAll([
+            ListTile(
+              leading: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.orange.withOpacity(0.12),
+                child: const Icon(Icons.description, color: Colors.orange),
+              ),
+              title: const Text('ZATCA Phase 2'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _performZatcaPhase2SendWithPdf(invoice);
+              },
+            ),
+            ListTile(
+              leading: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.purple.withOpacity(0.12),
+                child: const Icon(Icons.sync, color: Colors.purple),
+              ),
+              title: const Text('Resync Invoice'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _performZatcaPhase2Resync(invoice);
+              },
+            ),
+          ]);
+        }
+
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -174,56 +240,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
-                ListTile(
-                  leading: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.green.withOpacity(0.12),
-                    child: const Icon(Icons.qr_code, color: Colors.green),
-                  ),
-                  title: const Text('ZATCA Print'),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _performZatcaPhase1Print(invoice);
-                  },
-                ),
-                ListTile(
-                  leading: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.orange.withOpacity(0.12),
-                    child: const Icon(Icons.description, color: Colors.orange),
-                  ),
-                  title: const Text('ZATCA Phase 2'),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _performZatcaPhase2SendWithPdf(invoice);
-                  },
-                ),
-                ListTile(
-                  leading: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.purple.withOpacity(0.12),
-                    child: const Icon(Icons.sync, color: Colors.purple),
-                  ),
-                  title: const Text('Resync Invoice'),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _performZatcaPhase2Resync(invoice);
-                  },
-                ),
-                ListTile(
-                  leading: CircleAvatar(
-                    radius: 18,
-                    backgroundColor:
-                        ColorManager.kPrimaryColor.withOpacity(0.12),
-                    child: Icon(Icons.send,
-                        color: ColorManager.kPrimaryColor),
-                  ),
-                  title: const Text('Send to ZATCA'),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _performZatcaPhase2Send(invoice);
-                  },
-                ),
+                ...dynamicItems,
               ],
             ),
           ),
@@ -1222,22 +1239,33 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                                     .zero,
                                                           ),
                                                         ),
-                                                        BuildBoxShadowContainer(
-                                                          margin: const EdgeInsets.only(left: 5, right: 5),
-                                                          circleRadius: 5,
-                                                          child: IconButton(
-                                                            icon: Icon(
-                                                              Icons.more_vert,
-                                                              size: 18,
-                                                              color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                                                            ),
-                                                            onPressed: () => _showInvoiceActionsSheet(invoice),
-                                                            constraints: const BoxConstraints(
-                                                              minWidth: 36,
-                                                              minHeight: 36,
-                                                            ),
-                                                            padding: EdgeInsets.zero,
-                                                          ),
+                                                        Builder(
+                                                          builder: (context) {
+                                                            final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+                                                            final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
+                                                            final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
+                                                            final bool showZatcaMenu = phase1 || phase2;
+                                                            if (!showZatcaMenu) {
+                                                              return const SizedBox.shrink();
+                                                            }
+                                                            return BuildBoxShadowContainer(
+                                                              margin: const EdgeInsets.only(left: 5, right: 5),
+                                                              circleRadius: 5,
+                                                              child: IconButton(
+                                                                icon: Icon(
+                                                                  Icons.more_vert,
+                                                                  size: 18,
+                                                                  color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                                ),
+                                                                onPressed: () => _showInvoiceActionsSheet(invoice),
+                                                                constraints: const BoxConstraints(
+                                                                  minWidth: 36,
+                                                                  minHeight: 36,
+                                                                ),
+                                                                padding: EdgeInsets.zero,
+                                                              ),
+                                                            );
+                                                          },
                                                         ),
                                                       ],
                                                     ),

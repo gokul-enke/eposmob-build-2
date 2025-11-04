@@ -20,8 +20,7 @@ import 'package:intl/intl.dart';
 
 // Add this import for the new print functionality
 import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print.dart';
-// Add this import for the CustomerAutocomplete widget
-import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 // Add this import for CalendarPickerTableCell component
 import 'package:pos_machine/components/build_calendar_selection.dart';
 // Add this import for the CustomBackButton component
@@ -105,6 +104,14 @@ class _SimpleTransactionDetailsScreenState
       _setInitialDateFilters();
       loadInitData(); // This will now work properly
     });
+    // Preload customers for dropdown (listAll)
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+        await Provider.of<CustomerProvider>(context, listen: false)
+            .fetchCustomers(accessToken: accessToken ?? '', listAll: true);
+      } catch (_) {}
+    });
   }
 
   // Add the missing loadInitData method
@@ -161,21 +168,12 @@ class _SimpleTransactionDetailsScreenState
     }
   }
 
-  // Set default date values: 1 month before current date for from_date, current date for to_date
+  // Set default date values: empty (no date filter)
   void _setInitialDateFilters() {
-    final now = DateTime.now();
-    final oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
-
-    final formatter = DateFormat('yyyy-MM-dd');
-    final fromDateStr = formatter.format(oneMonthAgo);
-    final toDateStr = formatter.format(now);
-
     setState(() {
-      _fromDateController.text = fromDateStr;
-      _toDateController.text = toDateStr;
+      _fromDateController.text = '';
+      _toDateController.text = '';
     });
-
-    // Apply filters immediately after setting default dates
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyFilters();
     });
@@ -192,8 +190,14 @@ class _SimpleTransactionDetailsScreenState
     // Apply filters
     List<ListTransaction> filteredList = [...allTransactions!];
 
-    // Customer filter (always applied as it's pre-filled)
-    if (searchCustomer.isNotEmpty) {
+    // Customer filter: prefer selectedCustomerId from provider; fallback to name
+    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+    final selectedIdStr = customerProvider.selectedCustomerId;
+    if (selectedIdStr != null && selectedIdStr.isNotEmpty) {
+      filteredList = filteredList
+          .where((t) => (t.customerId?.toString() ?? '') == selectedIdStr)
+          .toList();
+    } else if (searchCustomer.isNotEmpty) {
       filteredList = filteredList
           .where((transaction) => (transaction.customerName ?? '')
               .toLowerCase()
@@ -1093,6 +1097,20 @@ class _SimpleTransactionDetailsScreenState
   }
 
   Widget _buildCustomerAutocompleteField() {
+    final customerProvider = Provider.of<CustomerProvider>(context);
+    final allCustomers = customerProvider.allCustomers ?? const <CustomerListModelData>[];
+
+    CustomerListModelData? currentSelected;
+    final selectedIdStr = customerProvider.selectedCustomerId;
+    if ((selectedIdStr ?? '').isNotEmpty && allCustomers.isNotEmpty) {
+      try {
+        currentSelected = allCustomers.firstWhere(
+            (c) => (c.id?.toString() ?? '') == selectedIdStr);
+      } catch (_) {
+        currentSelected = null;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -1111,19 +1129,26 @@ class _SimpleTransactionDetailsScreenState
             ),
           ),
           const SizedBox(height: 8),
-          CustomerAutocomplete(
-            size: MediaQuery.of(context).size,
-            customerList: customerSuggestions,
-            controller: _customerController,
-            onSelected: (String selectedCustomer) {
-              // Cancel any pending search
+          BuildDropDownWithSearch<CustomerListModelData>(
+            title: null,
+            hintText: "Search Customer",
+            value: currentSelected,
+            items: allCustomers,
+            displayText: (c) => c.name ?? '',
+            height: 45,
+            margin: EdgeInsets.zero,
+            onChanged: (CustomerListModelData? c) {
+              customerProvider.setSelectedCustomerId(c?.id?.toString());
+              customerProvider.setSelectedCustomerName(c?.name);
+              _customerController.clear();
               _customerSearchTimer?.cancel();
-
               setState(() {
-                searchCustomer = selectedCustomer;
+                searchCustomer = '';
               });
               _applyFilters();
             },
+            searchHintText: 'Type to search customer...',
+            width: double.infinity,
           ),
         ],
       ),

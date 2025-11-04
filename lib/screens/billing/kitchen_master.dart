@@ -17,7 +17,7 @@ enum ItemStatus { pending, preparing, ready, served }
 Color _getStatusColor(OrderStatus status) {
   switch (status) {
     case OrderStatus.pending:
-      return const Color(0xFFD97706); // Amber
+      return const Color(0xFF2563EB); // Blue (Ready To Cook)
     case OrderStatus.preparing:
       return const Color(0xFFD97706); // Orange
     case OrderStatus.ready:
@@ -30,7 +30,7 @@ Color _getStatusColor(OrderStatus status) {
 Color _getItemStatusColor(ItemStatus status) {
   switch (status) {
     case ItemStatus.pending:
-      return const Color(0xFFD97706); // Amber
+      return const Color(0xFF2563EB); // Blue (Ready To Cook)
     case ItemStatus.preparing:
       return const Color(0xFF2563EB); // Blue
     case ItemStatus.ready:
@@ -2251,7 +2251,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
   Color _getStatusButtonColor(String statusValue) {
     switch (statusValue.toUpperCase()) {
       case 'START':
-        return const Color(0xFFD97706); // Orange - actionable pending state
+        return const Color(0xFF2563EB); // Blue - Start Cooking (Ready To Cook)
       case 'READY':
         return const Color(0xFFD97706); // Orange - actionable preparing state
       case 'SERVED':

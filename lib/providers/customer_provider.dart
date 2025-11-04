@@ -14,6 +14,9 @@ class CustomerProvider extends ChangeNotifier {
   List<CustomerListModelData>? _allCustomers =
       []; // Store all customers for local filtering
   CustomerListModelData? selectedCustomer;
+  // For report dropdown bindings
+  String? selectedCustomerId;
+  String? selectedCustomerName;
 
   // Pagination properties
   int _currentPage = 1;
@@ -27,6 +30,7 @@ class CustomerProvider extends ChangeNotifier {
 
   // Getters
   List<CustomerListModelData>? get getCustomerList => customerList;
+  List<CustomerListModelData>? get allCustomers => _allCustomers;
   CustomerListModelData? get getSelectedCustomer => selectedCustomer;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
@@ -36,6 +40,19 @@ class CustomerProvider extends ChangeNotifier {
   // Select a customer
   void selectCustomer(CustomerListModelData customer) {
     selectedCustomer = customer;
+    selectedCustomerId = customer.id?.toString();
+    selectedCustomerName = customer.name;
+    notifyListeners();
+  }
+
+  // Setters used by report dropdowns
+  void setSelectedCustomerId(String? id) {
+    selectedCustomerId = id;
+    notifyListeners();
+  }
+
+  void setSelectedCustomerName(String? name) {
+    selectedCustomerName = name;
     notifyListeners();
   }
 
@@ -141,6 +158,28 @@ class CustomerProvider extends ChangeNotifier {
 
     if (_allCustomers != null && _allCustomers!.isNotEmpty) {
       applyFiltersLocally(page: 1);
+    }
+  }
+
+  // Lightweight fetch for dropdown usage (similar to SupplierProvider.fetchSuppliers)
+  Future<void> fetchCustomers({
+    required String accessToken,
+    String? customerName,
+    bool listAll = true,
+  }) async {
+    try {
+      await listCustomer(
+        accessToken: accessToken,
+        filterName: customerName,
+        page: 1,
+        loadAll: listAll,
+      );
+      // When loadAll=true, listCustomer populates _allCustomers and paginates locally
+      // Notify listeners so dropdowns can rebuild with latest data
+      notifyListeners();
+    } catch (e) {
+      debugPrint('fetchCustomers error: $e');
+      rethrow;
     }
   }
 

@@ -566,7 +566,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 70;
                     },
                     onTapTitle4: () {
-                      sideBarController.index.value = 72;
+                      sideBarController.index.value = 75;
                     },
                     listTitle1: "Invoice",
                     listTitle2: "Receipts",
@@ -589,8 +589,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 48 ||
                         sideBarController.index.value == 70 ||
                         sideBarController.index.value == 71 ||
-                        sideBarController.index.value == 72 ||
-                        sideBarController.index.value == 73 ||
+                        sideBarController.index.value == 75 ||
+                        sideBarController.index.value == 76 ||
                         sideBarController.index.value == 30),
               );
             },
@@ -616,7 +616,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 23;
                     },
                     onTapTitle2: () {
-                      sideBarController.index.value = 4;
+                      sideBarController.index.value = 74; // alias index
                     },
                     listTitle1: "Customer Transactions",
                     listTitle2: "Supplier Transactions",
@@ -629,7 +629,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 23;
                     },
                     selected: sideBarController.index.value == 23 ||
-                        sideBarController.index.value == 4),
+                        sideBarController.index.value == 74),
               );
             },
           ),

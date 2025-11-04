@@ -255,7 +255,7 @@ class CustomerVoucherProvider extends ChangeNotifier {
     required String voucherDate,
     required String dueDate,
     required String status,
-    required int paymentMethod,
+    required String paymentMethod,
     required int customerId,
     required List<Map<String, dynamic>> voucherItems,
     required String accessToken,

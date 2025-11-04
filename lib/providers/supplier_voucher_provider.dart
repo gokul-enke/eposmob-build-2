@@ -252,7 +252,7 @@ class SupplierVoucherProvider extends ChangeNotifier {
     required String voucherDate,
     required String dueDate,
     required String status,
-    required int paymentMethod,
+    required String paymentMethod,
     required List<Map<String, dynamic>> voucherItems,
     required String accessToken,
   }) async {

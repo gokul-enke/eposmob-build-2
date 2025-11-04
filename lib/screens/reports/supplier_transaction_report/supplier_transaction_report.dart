@@ -35,7 +35,7 @@ class _SupplierTransactionReportScreenState
   // For storing API response data
   List<dynamic>? _transactionData = [];
   
-  // For grouping supplier transactions
+  // For grouping supplier transactions (keyed by supplierId)
   Map<String, SupplierTransactionSummary> supplierSummary = {};
 
   // Controllers for filters
@@ -72,16 +72,10 @@ class _SupplierTransactionReportScreenState
 
   // Set default date values: 1 month before current date for from_date, current date for to_date
   void _setInitialDateFilters() {
-    final now = DateTime.now();
-    final oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
-
-    final formatter = DateFormat('yyyy-MM-dd');
-    final fromDateStr = formatter.format(oneMonthAgo);
-    final toDateStr = formatter.format(now);
-
+    // Default to no date filter: leave both fields empty
     setState(() {
-      _fromDateController.text = fromDateStr;
-      _toDateController.text = toDateStr;
+      _fromDateController.text = '';
+      _toDateController.text = '';
     });
   }
 
@@ -260,6 +254,7 @@ class _SupplierTransactionReportScreenState
     
     debugPrint('📊 [SUPPLIER_TX_REPORT] Processing ${_transactionData!.length} transactions');
 
+    // Keyed by supplierId
     Map<String, SupplierTransactionSummary> processedSummary = {};
     int processedCount = 0;
     int skippedCount = 0;
@@ -271,40 +266,55 @@ class _SupplierTransactionReportScreenState
         debugPrint('⚠️ [SUPPLIER_TX_REPORT] Transaction ${processedCount + skippedCount} has no supplier data, skipping');
         continue;
       }
-
-      // Supplier name can be either at supplier.name or supplier.user.name based on API
-      String supplierName = (supplierData['name'] as String?) ??
+      // Supplier identity and display
+      String supplierIdKey = (supplierData['id']?.toString() ?? '').trim();
+      if (supplierIdKey.isEmpty) {
+        skippedCount++;
+        debugPrint('⚠️ [SUPPLIER_TX_REPORT] Supplier has no valid id, skipping');
+        continue;
+      }
+      // Supplier display name can be at supplier.name or supplier.user.name
+      String displayName = (supplierData['name'] as String?) ??
           ((supplierData['user'] is Map && (supplierData['user'] as Map)['name'] is String)
               ? ((supplierData['user'] as Map)['name'] as String)
               : 'Unknown');
       double amount = double.tryParse(transaction['amount'].toString()) ?? 0.0;
       String type = transaction['type'] ?? '';
       
-      debugPrint('📝 [SUPPLIER_TX_REPORT] Processing transaction ${processedCount + 1}: Supplier="$supplierName", Amount=$amount, Type="$type"');
+      debugPrint('📝 [SUPPLIER_TX_REPORT] Processing transaction ${processedCount + 1}: SupplierID="$supplierIdKey", Name="$displayName", Amount=$amount, Type="$type"');
 
       // Initialize summary if not exists
-      if (!processedSummary.containsKey(supplierName)) {
-        debugPrint('➕ [SUPPLIER_TX_REPORT] Creating new summary for supplier: "$supplierName"');
-        processedSummary[supplierName] = SupplierTransactionSummary(
-          supplierName: supplierName,
+      if (!processedSummary.containsKey(supplierIdKey)) {
+        debugPrint('➕ [SUPPLIER_TX_REPORT] Creating new summary for supplierId: "$supplierIdKey"');
+        // Initialize balance from the FIRST transaction object's balance field
+        double initialBalance = 0.0;
+        final dynamic balValue = transaction['balance'];
+        if (balValue != null) {
+          initialBalance = double.tryParse(balValue.toString()) ?? 0.0;
+        }
+        debugPrint('🏁 [SUPPLIER_TX_REPORT] Initial balance for "$displayName" from first transaction: '+ initialBalance.toString());
+
+        processedSummary[supplierIdKey] = SupplierTransactionSummary(
+          supplierId: supplierIdKey,
+          displayName: displayName,
           totalDebit: 0.0,
           totalCredit: 0.0,
-          balance: 0.0,
+          balance: initialBalance,
           transactionCount: 0,
         );
       }
 
-      final summary = processedSummary[supplierName]!;
+      final summary = processedSummary[supplierIdKey]!;
 
       // Update totals based on transaction type
       if (type.toLowerCase() == 'credit') {
         summary.totalCredit += amount;
-        debugPrint('💰 [SUPPLIER_TX_REPORT] Added $amount to credit for "$supplierName" (total: ${summary.totalCredit})');
+        debugPrint('💰 [SUPPLIER_TX_REPORT] Added $amount to credit for "$displayName" (total: ${summary.totalCredit})');
       } else if (type.toLowerCase() == 'debit') {
         summary.totalDebit += amount;
-        debugPrint('💸 [SUPPLIER_TX_REPORT] Added $amount to debit for "$supplierName" (total: ${summary.totalDebit})');
+        debugPrint('💸 [SUPPLIER_TX_REPORT] Added $amount to debit for "$displayName" (total: ${summary.totalDebit})');
       } else {
-        debugPrint('❓ [SUPPLIER_TX_REPORT] Unknown transaction type: "$type" for "$supplierName"');
+        debugPrint('❓ [SUPPLIER_TX_REPORT] Unknown transaction type: "$type" for "$displayName"');
       }
 
       summary.transactionCount++;
@@ -313,11 +323,10 @@ class _SupplierTransactionReportScreenState
     
     debugPrint('📈 [SUPPLIER_TX_REPORT] Processed $processedCount transactions, skipped $skippedCount');
 
-    // Calculate final balance for each supplier
-    debugPrint('🧮 [SUPPLIER_TX_REPORT] Calculating final balances');
-    processedSummary.forEach((supplierName, summary) {
-      summary.balance = summary.totalCredit - summary.totalDebit;
-      debugPrint('🏪 [SUPPLIER_TX_REPORT] "$supplierName": Credit=${summary.totalCredit}, Debit=${summary.totalDebit}, Balance=${summary.balance}, Count=${summary.transactionCount}');
+    // Do NOT recompute balance; keep the first transaction's balance per supplier
+    debugPrint('🧮 [SUPPLIER_TX_REPORT] Using first transaction balance per supplier (no recompute)');
+    processedSummary.forEach((_, summary) {
+      debugPrint('🏪 [SUPPLIER_TX_REPORT] "${summary.displayName}": Credit=${summary.totalCredit}, Debit=${summary.totalDebit}, Balance(first)=${summary.balance}, Count=${summary.transactionCount}');
     });
 
     setState(() {
@@ -716,14 +725,14 @@ class _SupplierTransactionReportScreenState
       SupplierTransactionSummary summary, BuildContext context) {
     // Alternate row colors for better readability
     final int index =
-        supplierSummary.keys.toList().indexOf(summary.supplierName);
+        supplierSummary.keys.toList().indexOf(summary.supplierId);
 
     return TableRow(
       decoration: BoxDecoration(
         color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
       ),
       children: [
-        _buildTableCell(summary.supplierName),
+        _buildTableCell(summary.displayName),
         _buildTableCell(
           summary.totalDebit.toStringAsFixed(2),
         ),
@@ -753,7 +762,7 @@ class _SupplierTransactionReportScreenState
                 onPressed: () {
                   // Set the selected supplier and navigate to details
                   Provider.of<SupplierProvider>(context, listen: false)
-                      .setSelectedSupplierName(summary.supplierName);
+                      .setSelectedSupplierName(summary.displayName);
                   sideBarController.index.value =
                       68; // Navigate to SupplierTransactionDetailsScreen
                 },
@@ -794,14 +803,16 @@ class _SupplierTransactionReportScreenState
 }
 
 class SupplierTransactionSummary {
-  final String supplierName;
+  final String supplierId;
+  final String displayName;
   double totalDebit;
   double totalCredit;
   double balance;
   int transactionCount;
 
   SupplierTransactionSummary({
-    required this.supplierName,
+    required this.supplierId,
+    required this.displayName,
     required this.totalDebit,
     required this.totalCredit,
     required this.balance,

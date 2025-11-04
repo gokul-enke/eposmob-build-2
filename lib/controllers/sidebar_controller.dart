@@ -166,5 +166,8 @@ class SideBarController extends GetxController {
     CreateCustomerVoucherScreen(), // 71 Create Customer Voucher
     SupplierVoucherListScreen(), // 72 Supplier Voucher List
     CreateSupplierVoucherScreen(), // 73 Create Supplier Voucher
+    TransactionScreen(), // 74 Supplier Transactions (alias for Party Accounts)
+    SupplierVoucherListScreen(), // 75 Supplier Voucher List (alias for Transactions)
+    CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
   ];
 }

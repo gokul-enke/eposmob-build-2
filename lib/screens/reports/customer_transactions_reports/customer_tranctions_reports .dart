@@ -18,8 +18,8 @@ import 'package:intl/intl.dart';
 // Import the new simple transaction details screen
 import 'customer_transaction_details_screen.dart';
 // Add imports for customer autocomplete and date filtering
-import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
+import 'package:pos_machine/providers/customer_provider.dart';
 // Import CalendarPickerTableCell component
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'dart:async';
@@ -38,7 +38,7 @@ class _CustomerTransactionsReportScreenState
   bool initLoading = false;
   List<ListTransaction>? allTransactions = [];
 
-  // For grouping customer transactions
+  // For grouping customer transactions (keyed by customerId when available)
   Map<String, CustomerTransactionSummary> customerSummary = {};
 
   // Controllers for filters
@@ -61,6 +61,16 @@ class _CustomerTransactionsReportScreenState
     // Set default date values
     _setInitialDateFilters();
     loadInitData();
+    // Preload customers for dropdown (listAll)
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+        await Provider.of<CustomerProvider>(context, listen: false)
+            .fetchCustomers(accessToken: accessToken ?? '', listAll: true);
+      } catch (e) {
+        debugPrint('Error preloading customers for dropdown: $e');
+      }
+    });
   }
 
   @override
@@ -74,16 +84,10 @@ class _CustomerTransactionsReportScreenState
 
   // Set default date values: 1 month before current date for from_date, current date for to_date
   void _setInitialDateFilters() {
-    final now = DateTime.now();
-    final oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
-
-    final formatter = DateFormat('yyyy-MM-dd');
-    final fromDateStr = formatter.format(oneMonthAgo);
-    final toDateStr = formatter.format(now);
-
+    // Default to no date filter: leave both fields empty (align with supplier report)
     setState(() {
-      _fromDateController.text = fromDateStr;
-      _toDateController.text = toDateStr;
+      _fromDateController.text = '';
+      _toDateController.text = '';
     });
   }
 
@@ -185,8 +189,15 @@ class _CustomerTransactionsReportScreenState
 
   void _applyFilters() {
     // Use API filtering instead of client-side filtering
+    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
     loadInitDataWithFilters(
-      customerName: searchCustomer.isNotEmpty ? searchCustomer : null,
+      customerId: (customerProvider.selectedCustomerId != null && customerProvider.selectedCustomerId!.isNotEmpty)
+          ? customerProvider.selectedCustomerId
+          : null,
+      // Fallback by name if needed
+      customerName: (customerProvider.selectedCustomerId == null || customerProvider.selectedCustomerId!.isEmpty)
+          ? (searchCustomer.isNotEmpty ? searchCustomer : null)
+          : null,
       dateFrom: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
       dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
     );
@@ -203,29 +214,34 @@ class _CustomerTransactionsReportScreenState
     Map<String, CustomerTransactionSummary> filteredCustomerSummary = {};
 
     for (var transaction in allTransactions!) {
-      String customerName = transaction.customerName ?? 'Unknown Customer';
-      double amount = double.tryParse(transaction.amount ?? '0') ?? 0.0;
-      String type = transaction.type ?? 'unknown';
-      double transactionBalance = double.tryParse(transaction.balance ?? '0') ?? 0.0;
+      final String displayName = transaction.customerName ?? 'Unknown Customer';
+      final String idStr = (transaction.customerId?.toString() ?? '').trim();
+      final String key = idStr.isNotEmpty ? idStr : displayName; // Fallback to name if ID missing
 
-      if (!filteredCustomerSummary.containsKey(customerName)) {
-        filteredCustomerSummary[customerName] = CustomerTransactionSummary(
-          customerName: customerName,
+      final double amount = double.tryParse(transaction.amount ?? '0') ?? 0.0;
+      final String type = transaction.type ?? 'unknown';
+      final double transactionBalance = double.tryParse(transaction.balance ?? '0') ?? 0.0;
+
+      if (!filteredCustomerSummary.containsKey(key)) {
+        filteredCustomerSummary[key] = CustomerTransactionSummary(
+          customerId: idStr.isNotEmpty ? idStr : null,
+          displayName: displayName,
           totalDebit: 0.0,
           totalCredit: 0.0,
+          balance: transactionBalance,
+          transactionCount: 0,
         );
       }
 
       // Calculate totals for display purposes
-      if (transaction.type?.toLowerCase() == 'credit') {
-        filteredCustomerSummary[customerName]!.totalCredit += amount;
-      } else if (transaction.type?.toLowerCase() == 'debit') {
-        filteredCustomerSummary[customerName]!.totalDebit += amount;
+      if (type.toLowerCase() == 'credit') {
+        filteredCustomerSummary[key]!.totalCredit += amount;
+      } else if (type.toLowerCase() == 'debit') {
+        filteredCustomerSummary[key]!.totalDebit += amount;
       }
 
-      // Use the API-provided balance for the last transaction of each customer
-      // This gives us the running balance from the server
-      filteredCustomerSummary[customerName]!.balance = transactionBalance;
+      // Increment transaction count
+      filteredCustomerSummary[key]!.transactionCount++;
     }
 
     setState(() {
@@ -369,6 +385,22 @@ class _CustomerTransactionsReportScreenState
   }
 
   Widget _buildCustomerAutocompleteField() {
+    // Replace autocomplete with dropdown bound to IDs (parity with supplier report)
+    final customerProvider = Provider.of<CustomerProvider>(context);
+    final allCustomers = customerProvider.allCustomers ?? const <dynamic>[];
+
+    // Derive selected value from selectedCustomerId
+    dynamic currentSelected;
+    if ((customerProvider.selectedCustomerId ?? '').isNotEmpty && allCustomers.isNotEmpty) {
+      try {
+        currentSelected = allCustomers.firstWhere(
+          (c) => (c.id?.toString() ?? '') == customerProvider.selectedCustomerId,
+        );
+      } catch (_) {
+        currentSelected = null;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -387,19 +419,29 @@ class _CustomerTransactionsReportScreenState
             ),
           ),
           const SizedBox(height: 8),
-          CustomerAutocomplete(
-            size: MediaQuery.of(context).size,
-            customerList: customerSuggestions, // This will now update properly
-            controller: _customerController,
-            onSelected: (String selectedCustomer) {
-              // Cancel any pending search
+          BuildDropDownWithSearch<dynamic>(
+            title: null,
+            hintText: "Search Customer",
+            value: currentSelected,
+            items: allCustomers,
+            displayText: (c) => (c.name ?? '').toString(),
+            height: 45,
+            margin: EdgeInsets.zero,
+            onChanged: (dynamic c) {
+              // Update provider selection, then refetch
+              final idStr = c?.id?.toString();
+              customerProvider.setSelectedCustomerId(idStr);
+              customerProvider.setSelectedCustomerName(c?.name ?? '');
+              // Clear legacy text controller and search string
+              _customerController.clear();
               _customerSearchTimer?.cancel();
-
               setState(() {
-                searchCustomer = selectedCustomer;
+                searchCustomer = '';
               });
               _applyFilters();
             },
+            searchHintText: 'Type to search customer...',
+            width: double.infinity,
           ),
         ],
       ),
@@ -487,7 +529,8 @@ class _CustomerTransactionsReportScreenState
                         1: FlexColumnWidth(1.5), // Total Debit
                         2: FlexColumnWidth(1.5), // Total Credit
                         3: FlexColumnWidth(1.5), // Balance
-                        4: FlexColumnWidth(1.0), // Action
+                        4: FlexColumnWidth(1.2), // Transactions
+                        5: FlexColumnWidth(1.0), // Action
                       },
                       border: null,
                       defaultVerticalAlignment:
@@ -499,6 +542,7 @@ class _CustomerTransactionsReportScreenState
                             _buildTableHeader("Total Debit"),
                             _buildTableHeader("Total Credit"),
                             _buildTableHeader("Balance"),
+                            _buildTableHeader("Transactions"),
                             _buildTableHeader("Action"),
                           ],
                         ),
@@ -529,7 +573,8 @@ class _CustomerTransactionsReportScreenState
                                     1: FlexColumnWidth(1.5), // Total Debit
                                     2: FlexColumnWidth(1.5), // Total Credit
                                     3: FlexColumnWidth(1.5), // Balance
-                                    4: FlexColumnWidth(1.0), // Action
+                                    4: FlexColumnWidth(1.2), // Transactions
+                                    5: FlexColumnWidth(1.0), // Action
                                   },
                                   border: null,
                                   defaultVerticalAlignment:
@@ -607,15 +652,16 @@ class _CustomerTransactionsReportScreenState
   TableRow _buildCustomerRow(
       CustomerTransactionSummary summary, BuildContext context) {
     // Alternate row colors for better readability
-    final int index =
-        customerSummary.keys.toList().indexOf(summary.customerName);
+    final List<String> keys = customerSummary.keys.toList();
+    final String lookupKey = summary.customerId ?? summary.displayName;
+    final int index = keys.indexOf(lookupKey);
 
     return TableRow(
       decoration: BoxDecoration(
         color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
       ),
       children: [
-        _buildTableCell(summary.customerName),
+        _buildTableCell(summary.displayName),
         _buildTableCell(
           summary.totalDebit.toStringAsFixed(2),
         ),
@@ -626,6 +672,9 @@ class _CustomerTransactionsReportScreenState
           summary.balance.toStringAsFixed(2),
           isBalance: true,
           balance: summary.balance,
+        ),
+        _buildTableCell(
+          summary.transactionCount.toString(),
         ),
         Center(
           child: Padding(
@@ -642,7 +691,7 @@ class _CustomerTransactionsReportScreenState
                 onPressed: () {
                   // Use the TransactionProvider instead of the CustomerTransactionProvider
                   Provider.of<TransactionProvider>(context, listen: false)
-                      .setCustomerName(summary.customerName);
+                      .setCustomerName(summary.displayName);
                   sideBarController.index.value =
                       66; // Navigate to SimpleTransactionDetailsScreen
                 },
@@ -683,15 +732,19 @@ class _CustomerTransactionsReportScreenState
 }
 
 class CustomerTransactionSummary {
-  final String customerName;
+  final String? customerId; // string form of ID; can be null if API didn't provide
+  final String displayName;
   double totalDebit;
   double totalCredit;
   double balance;
+  int transactionCount;
 
   CustomerTransactionSummary({
-    required this.customerName,
+    required this.customerId,
+    required this.displayName,
     required this.totalDebit,
     required this.totalCredit,
     this.balance = 0.0,
+    this.transactionCount = 0,
   });
 }
