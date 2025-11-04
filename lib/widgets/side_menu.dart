@@ -72,7 +72,10 @@ class CollapsibleSidebarState extends State<CollapsibleSidebar> {
                   ),
                 ],
               ),
-              child: widget.sidebarContent,
+              child: KeyedSubtree(
+                key: ValueKey(_isExpanded),
+                child: widget.sidebarContent,
+              ),
             ),
             // Wrap child in a stateful widget to preserve its state
             Expanded(
