@@ -14,6 +14,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_pagination_control.dart';
 
 // Import the new simple transaction details screen
 import 'customer_transaction_details_screen.dart';
@@ -54,6 +55,10 @@ class _CustomerTransactionsReportScreenState
 
   // Timer for debouncing customer search
   Timer? _customerSearchTimer;
+
+  // Pagination state
+  int _currentPage = 1;
+  int _lastPage = 1;
 
   @override
   void initState() {
@@ -130,20 +135,72 @@ class _CustomerTransactionsReportScreenState
       );
 
       if (value['status'] == 'success') {
-        ListTransactionModel listTransactionModel =
-            ListTransactionModel.fromJson(value);
-        allTransactions = listTransactionModel.data?.transactions ?? [];
+        // Update pagination state from response
+        try {
+          final data = value['data'];
+          if (data is Map) {
+            _currentPage = (data['current_page'] ?? 1) is num
+                ? (data['current_page'] as num).toInt()
+                : int.tryParse((data['current_page'] ?? '1').toString()) ?? 1;
+            _lastPage = (data['last_page'] ?? 1) is num
+                ? (data['last_page'] as num).toInt()
+                : int.tryParse((data['last_page'] ?? '1').toString()) ?? 1;
+          }
+        } catch (_) {}
+        // Detect new grouped response: value.data.data is a list of customer groups
+        final data = value['data'];
+        if (data is Map && data['data'] is List) {
+          final groups = (data['data'] as List).cast<dynamic>();
+          final Map<String, CustomerTransactionSummary> summaries = {};
 
-        // Populate customer suggestions
-        final suggestions = getCustomerSuggestions();
+          for (final g in groups) {
+            if (g is! Map) continue;
+            final String displayName = (g['customer_name'] ?? 'Unknown Customer').toString();
+            final String idStr = (g['customer_id']?.toString() ?? '').trim();
+            final String key = idStr.isNotEmpty ? idStr : displayName;
 
-        // Apply filters immediately (data is already filtered from API)
-        _calculateCustomerSummary();
+            final double totalDebit = (g['total_debit'] is num)
+                ? (g['total_debit'] as num).toDouble()
+                : double.tryParse((g['total_debit'] ?? '0').toString()) ?? 0.0;
+            final double totalCredit = (g['total_credit'] is num)
+                ? (g['total_credit'] as num).toDouble()
+                : double.tryParse((g['total_credit'] ?? '0').toString()) ?? 0.0;
+            final double balanceVal = (g['balance'] is num)
+                ? (g['balance'] as num).toDouble()
+                : double.tryParse((g['balance'] ?? '0').toString()) ?? 0.0;
+            final int txnCount = (g['transactions'] is List) ? (g['transactions'] as List).length : 0;
 
-        // Update the customer suggestions and trigger a rebuild
-        setState(() {
-          customerSuggestions = suggestions;
-        });
+            summaries[key] = CustomerTransactionSummary(
+              customerId: idStr.isNotEmpty ? idStr : null,
+              displayName: displayName,
+              totalDebit: totalDebit,
+              totalCredit: totalCredit,
+              balance: balanceVal,
+              transactionCount: txnCount,
+            );
+          }
+
+          // Update state from grouped response
+          setState(() {
+            customerSummary = summaries;
+            // Suggestions from grouped names
+            customerSuggestions = groups
+                .map((e) => (e is Map ? (e['customer_name'] ?? '').toString() : ''))
+                .where((s) => s.isNotEmpty)
+                .cast<String>()
+                .toList();
+          });
+        } else {
+          // Fallback to old flat response
+          ListTransactionModel listTransactionModel =
+              ListTransactionModel.fromJson(value);
+          allTransactions = listTransactionModel.data?.transactions ?? [];
+          final suggestions = getCustomerSuggestions();
+          _calculateCustomerSummary();
+          setState(() {
+            customerSuggestions = suggestions;
+          });
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -169,6 +226,21 @@ class _CustomerTransactionsReportScreenState
         initLoading = false;
       });
     }
+  }
+
+  void _loadPage(int page) {
+    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+    loadInitDataWithFilters(
+      customerId: (customerProvider.selectedCustomerId != null && customerProvider.selectedCustomerId!.isNotEmpty)
+          ? customerProvider.selectedCustomerId
+          : null,
+      customerName: (customerProvider.selectedCustomerId == null || customerProvider.selectedCustomerId!.isEmpty)
+          ? (searchCustomer.isNotEmpty ? searchCustomer : null)
+          : null,
+      dateFrom: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+      dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
+      page: page,
+    );
   }
 
   List<String> getCustomerSuggestions() {
@@ -309,6 +381,8 @@ class _CustomerTransactionsReportScreenState
                 _buildFilters(),
                 const SizedBox(height: 20),
                 _buildReportTable(),
+                const SizedBox(height: 10),
+                _buildPagination(),
               ],
             ),
           ),
@@ -591,6 +665,18 @@ class _CustomerTransactionsReportScreenState
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildPagination() {
+    return PaginationControl(
+      currentPage: _currentPage,
+      totalPages: _lastPage,
+      onPageChanged: (int page) {
+        if (!initLoading && page >= 1 && page <= _lastPage) {
+          _loadPage(page);
+        }
+      },
     );
   }
 

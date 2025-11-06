@@ -14,6 +14,7 @@ import '../../providers/auth_model.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'add_customer_modal.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -35,6 +36,30 @@ class _CustomersScreenState extends State<CustomersScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadCustomers();
     });
+  }
+
+  Widget _buildCustomerTypeBadge(String? type) {
+    final t = (type ?? 'B2C').toUpperCase();
+    final isB2B = t == 'B2B';
+    final bg = isB2B ? Colors.green.shade50 : Colors.blue.shade50;
+    final fg = isB2B ? Colors.green.shade700 : Colors.blue.shade700;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: fg.withOpacity(0.3)),
+      ),
+      child: Text(
+        t,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s11,
+          0.18,
+          fg,
+        ),
+      ),
+    );
   }
 
   Future<void> loadCustomers() async {
@@ -176,7 +201,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         CustomRoundButton(
                           title: "Add New Customer",
                           fct: () {
-                            sideBarController.index.value = 9;
+                            showAddCustomerModal(context, size, mobileNumber: '');
                           },
                           fontSize: 12,
                           height: 45,
@@ -437,15 +462,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                               ),
                                               child: Table(
                                                 columnWidths: const {
-                                                  0: FlexColumnWidth(0.5), // No
-                                                  1: FlexColumnWidth(
-                                                      2.0), // Name
-                                                  2: FlexColumnWidth(
-                                                      2.0), // Email
-                                                  3: FlexColumnWidth(
-                                                      1.5), // Phone
-                                                  4: FlexColumnWidth(
-                                                      1.0), // Action
+                                                  0: FlexColumnWidth(0.5),
+                                                  1: FlexColumnWidth(2.0),
+                                                  2: FlexColumnWidth(2.0),
+                                                  3: FlexColumnWidth(1.5),
+                                                  4: FlexColumnWidth(1.2),
+                                                  5: FlexColumnWidth(1.0),
                                                 },
                                                 border: null,
                                                 defaultVerticalAlignment:
@@ -460,6 +482,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                                           'Balance'),
                                                       _buildTableHeader(
                                                           'Phone No.'),
+                                                      _buildTableHeader(
+                                                          'Customer Type'),
                                                       _buildTableHeader(
                                                           'Action'),
                                                     ],
@@ -554,16 +578,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                                               )
                                                             : Table(
                                                                 columnWidths: const {
-                                                                  0: FlexColumnWidth(
-                                                                      0.5), // No
-                                                                  1: FlexColumnWidth(
-                                                                      2.0), // Name
-                                                                  2: FlexColumnWidth(
-                                                                      2.0), // Email
-                                                                  3: FlexColumnWidth(
-                                                                      1.5), // Phone
-                                                                  4: FlexColumnWidth(
-                                                                      1.0), // Action
+                                                                  0: FlexColumnWidth(0.5),
+                                                                  1: FlexColumnWidth(2.0),
+                                                                  2: FlexColumnWidth(2.0),
+                                                                  3: FlexColumnWidth(1.5),
+                                                                  4: FlexColumnWidth(1.2),
+                                                                  5: FlexColumnWidth(1.0),
                                                                 },
                                                                 border: null,
                                                                 defaultVerticalAlignment:
@@ -608,6 +628,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                                                       _buildTableCell(
                                                                           customer.phone ??
                                                                               ''),
+                                                                      Center(
+                                                                        child: _buildCustomerTypeBadge(customer.customerType),
+                                                                      ),
                                                                       Center(
                                                                         child:
                                                                             Padding(

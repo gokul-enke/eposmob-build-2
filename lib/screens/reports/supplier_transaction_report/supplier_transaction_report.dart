@@ -12,6 +12,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_pagination_control.dart';
 
 // Import the supplier autocomplete and date filtering components
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
@@ -33,7 +34,7 @@ class _SupplierTransactionReportScreenState
   List<Supplier>? allSuppliers = [];
 
   // For storing API response data
-  List<dynamic>? _transactionData = [];
+  List<dynamic>? _groupedData = [];
   
   // For grouping supplier transactions (keyed by supplierId)
   Map<String, SupplierTransactionSummary> supplierSummary = {};
@@ -52,6 +53,10 @@ class _SupplierTransactionReportScreenState
 
   // Timer for debouncing supplier search
   Timer? _supplierSearchTimer;
+
+  // Pagination
+  int _currentPage = 1;
+  int _lastPage = 1;
 
   @override
   void initState() {
@@ -140,8 +145,8 @@ class _SupplierTransactionReportScreenState
     return suggestions;
   }
 
-  // Load filtered transaction data from API
-  Future<void> _loadFilteredTransactionData() async {
+  // Load filtered supplier grouped data from API
+  Future<void> _loadFilteredTransactionData({int? page}) async {
     debugPrint('🔄 [SUPPLIER_TX_REPORT] Starting _loadFilteredTransactionData');
     debugPrint('📋 [SUPPLIER_TX_REPORT] Search supplier: "${searchSupplier}"');
     debugPrint('📅 [SUPPLIER_TX_REPORT] From date: "${_fromDateController.text}"');
@@ -181,70 +186,65 @@ class _SupplierTransactionReportScreenState
         fromDate: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
         toDate: _toDateController.text.isNotEmpty ? _toDateController.text : null,
         listAll: true,
+        page: page ?? _currentPage,
       );
       
       debugPrint('📥 [SUPPLIER_TX_REPORT] API Response received');
       debugPrint('📊 [SUPPLIER_TX_REPORT] Response keys: ${response.keys.toList()}');
       final dataNode = response['data'];
       debugPrint('🧪 [SUPPLIER_TX_REPORT] data node type: ${dataNode.runtimeType}');
+      // New grouped response: data is Map with pagination and data list
+      if (dataNode is Map && dataNode['data'] is List) {
+        // Update pagination
+        try {
+          _currentPage = (dataNode['current_page'] ?? 1) is num
+              ? (dataNode['current_page'] as num).toInt()
+              : int.tryParse((dataNode['current_page'] ?? '1').toString()) ?? 1;
+          _lastPage = (dataNode['last_page'] ?? 1) is num
+              ? (dataNode['last_page'] as num).toInt()
+              : int.tryParse((dataNode['last_page'] ?? '1').toString()) ?? 1;
+        } catch (_) {}
 
-      List<dynamic> transactionList = const [];
-      bool extracted = false;
-
-      if (dataNode is List) {
-        // API returned data as a top-level list
-        transactionList = List<dynamic>.from(dataNode);
-        extracted = true;
-        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed transactions from List at data (count=${transactionList.length})');
-      } else if (dataNode is Map) {
-        // Common patterns: data: { data: [...]} or data: { transactions: [...] }
-        if (dataNode['data'] is List) {
-          transactionList = List<dynamic>.from(dataNode['data']);
-          extracted = true;
-          debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed transactions from data["data"] (count=${transactionList.length})');
-        } else if (dataNode['transactions'] is List) {
-          transactionList = List<dynamic>.from(dataNode['transactions']);
-          extracted = true;
-          debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed transactions from data["transactions"] (count=${transactionList.length})');
-        } else {
-          debugPrint('⚠️ [SUPPLIER_TX_REPORT] Unknown Map structure for data node: keys=${dataNode.keys.toList()}');
-        }
-      } else {
-        debugPrint('⚠️ [SUPPLIER_TX_REPORT] data node is null or unsupported');
-      }
-
-      if (extracted) {
+        final groups = List<dynamic>.from(dataNode['data']);
+        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed groups from data["data"] (count=${groups.length})');
         setState(() {
-          _transactionData = transactionList;
+          _groupedData = groups;
         });
-        debugPrint('💾 [SUPPLIER_TX_REPORT] Transaction data saved to state');
-      } else {
-        debugPrint('⚠️ [SUPPLIER_TX_REPORT] No transaction data in response');
+        _processGroupedData();
+      } else if (dataNode is List) {
+        // Legacy/alternate response: data is a top-level list of groups
+        final groups = List<dynamic>.from(dataNode);
+        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed groups from top-level List (count=${groups.length})');
         setState(() {
-          _transactionData = [];
+          _groupedData = groups;
+          _currentPage = 1;
+          _lastPage = 1;
+        });
+        _processGroupedData();
+      } else {
+        // Fallback to empty
+        setState(() {
+          _groupedData = [];
+          supplierSummary.clear();
         });
       }
-
-      // Process the API response to create supplier summary
-      debugPrint('⚙️ [SUPPLIER_TX_REPORT] Starting to process API transaction data');
-      _processApiTransactionData();
       debugPrint('✅ [SUPPLIER_TX_REPORT] _loadFilteredTransactionData completed successfully');
 
     } catch (error) {
       debugPrint('💥 [SUPPLIER_TX_REPORT] ERROR in _loadFilteredTransactionData: $error');
       debugPrint('📍 [SUPPLIER_TX_REPORT] Error stack trace: ${StackTrace.current}');
       setState(() {
-        _transactionData = [];
+        _groupedData = [];
         supplierSummary.clear();
       });
     }
   }
 
-  // Process API transaction data to create supplier summary
-  void _processApiTransactionData() {
+  // Process grouped API data to create supplier summary
+  void _processGroupedData() {
     debugPrint('⚙️ [SUPPLIER_TX_REPORT] Starting _processApiTransactionData');
     
-    if (_transactionData == null || _transactionData!.isEmpty) {
+    if (_groupedData == null || _groupedData!.isEmpty) {
       debugPrint('📭 [SUPPLIER_TX_REPORT] No transaction data to process');
       setState(() {
         supplierSummary.clear();
@@ -252,82 +252,36 @@ class _SupplierTransactionReportScreenState
       return;
     }
     
-    debugPrint('📊 [SUPPLIER_TX_REPORT] Processing ${_transactionData!.length} transactions');
+    debugPrint('📊 [SUPPLIER_TX_REPORT] Processing ${_groupedData!.length} supplier groups');
 
     // Keyed by supplierId
     Map<String, SupplierTransactionSummary> processedSummary = {};
-    int processedCount = 0;
-    int skippedCount = 0;
+    for (final g in _groupedData!) {
+      if (g is! Map) continue;
+      final String supplierIdKey = (g['supplier_id']?.toString() ?? '').trim();
+      final String displayName = (g['supplier_name'] ?? 'Unknown').toString();
+      final double totalDebit = (g['total_debit'] is num)
+          ? (g['total_debit'] as num).toDouble()
+          : double.tryParse((g['total_debit'] ?? '0').toString()) ?? 0.0;
+      final double totalCredit = (g['total_credit'] is num)
+          ? (g['total_credit'] as num).toDouble()
+          : double.tryParse((g['total_credit'] ?? '0').toString()) ?? 0.0;
+      final double balance = (g['balance'] is num)
+          ? (g['balance'] as num).toDouble()
+          : double.tryParse((g['balance'] ?? '0').toString()) ?? 0.0;
+      final int txnCount = (g['transactions'] is List) ? (g['transactions'] as List).length : 0;
 
-    for (var transaction in _transactionData!) {
-      final supplierData = transaction['supplier'];
-      if (supplierData == null) {
-        skippedCount++;
-        debugPrint('⚠️ [SUPPLIER_TX_REPORT] Transaction ${processedCount + skippedCount} has no supplier data, skipping');
-        continue;
-      }
-      // Supplier identity and display
-      String supplierIdKey = (supplierData['id']?.toString() ?? '').trim();
-      if (supplierIdKey.isEmpty) {
-        skippedCount++;
-        debugPrint('⚠️ [SUPPLIER_TX_REPORT] Supplier has no valid id, skipping');
-        continue;
-      }
-      // Supplier display name can be at supplier.name or supplier.user.name
-      String displayName = (supplierData['name'] as String?) ??
-          ((supplierData['user'] is Map && (supplierData['user'] as Map)['name'] is String)
-              ? ((supplierData['user'] as Map)['name'] as String)
-              : 'Unknown');
-      double amount = double.tryParse(transaction['amount'].toString()) ?? 0.0;
-      String type = transaction['type'] ?? '';
-      
-      debugPrint('📝 [SUPPLIER_TX_REPORT] Processing transaction ${processedCount + 1}: SupplierID="$supplierIdKey", Name="$displayName", Amount=$amount, Type="$type"');
+      if (supplierIdKey.isEmpty) continue;
 
-      // Initialize summary if not exists
-      if (!processedSummary.containsKey(supplierIdKey)) {
-        debugPrint('➕ [SUPPLIER_TX_REPORT] Creating new summary for supplierId: "$supplierIdKey"');
-        // Initialize balance from the FIRST transaction object's balance field
-        double initialBalance = 0.0;
-        final dynamic balValue = transaction['balance'];
-        if (balValue != null) {
-          initialBalance = double.tryParse(balValue.toString()) ?? 0.0;
-        }
-        debugPrint('🏁 [SUPPLIER_TX_REPORT] Initial balance for "$displayName" from first transaction: '+ initialBalance.toString());
-
-        processedSummary[supplierIdKey] = SupplierTransactionSummary(
-          supplierId: supplierIdKey,
-          displayName: displayName,
-          totalDebit: 0.0,
-          totalCredit: 0.0,
-          balance: initialBalance,
-          transactionCount: 0,
-        );
-      }
-
-      final summary = processedSummary[supplierIdKey]!;
-
-      // Update totals based on transaction type
-      if (type.toLowerCase() == 'credit') {
-        summary.totalCredit += amount;
-        debugPrint('💰 [SUPPLIER_TX_REPORT] Added $amount to credit for "$displayName" (total: ${summary.totalCredit})');
-      } else if (type.toLowerCase() == 'debit') {
-        summary.totalDebit += amount;
-        debugPrint('💸 [SUPPLIER_TX_REPORT] Added $amount to debit for "$displayName" (total: ${summary.totalDebit})');
-      } else {
-        debugPrint('❓ [SUPPLIER_TX_REPORT] Unknown transaction type: "$type" for "$displayName"');
-      }
-
-      summary.transactionCount++;
-      processedCount++;
+      processedSummary[supplierIdKey] = SupplierTransactionSummary(
+        supplierId: supplierIdKey,
+        displayName: displayName,
+        totalDebit: totalDebit,
+        totalCredit: totalCredit,
+        balance: balance,
+        transactionCount: txnCount,
+      );
     }
-    
-    debugPrint('📈 [SUPPLIER_TX_REPORT] Processed $processedCount transactions, skipped $skippedCount');
-
-    // Do NOT recompute balance; keep the first transaction's balance per supplier
-    debugPrint('🧮 [SUPPLIER_TX_REPORT] Using first transaction balance per supplier (no recompute)');
-    processedSummary.forEach((_, summary) {
-      debugPrint('🏪 [SUPPLIER_TX_REPORT] "${summary.displayName}": Credit=${summary.totalCredit}, Debit=${summary.totalDebit}, Balance(first)=${summary.balance}, Count=${summary.transactionCount}');
-    });
 
     setState(() {
       supplierSummary = processedSummary;
@@ -349,7 +303,7 @@ class _SupplierTransactionReportScreenState
     setState(() {
       searchSupplier = '';
       selectedSupplierId = null;
-      _transactionData = [];
+      _groupedData = [];
       supplierSummary.clear();
     });
 
@@ -392,6 +346,8 @@ class _SupplierTransactionReportScreenState
                 _buildFilters(),
                 const SizedBox(height: 20),
                 _buildReportTable(),
+                const SizedBox(height: 10),
+                _buildPagination(),
               ],
             ),
           ),
@@ -762,7 +718,9 @@ class _SupplierTransactionReportScreenState
                 onPressed: () {
                   // Set the selected supplier and navigate to details
                   Provider.of<SupplierProvider>(context, listen: false)
-                      .setSelectedSupplierName(summary.displayName);
+                      ..setSelectedSupplierName(summary.displayName)
+                      ..setSelectedSupplierId(summary.supplierId);
+                  debugPrint('👁️ [SUPPLIER_TX_REPORT] View clicked for supplierId=${summary.supplierId}, name="${summary.displayName}"');
                   sideBarController.index.value =
                       68; // Navigate to SupplierTransactionDetailsScreen
                 },
@@ -798,6 +756,18 @@ class _SupplierTransactionReportScreenState
           textColor,
         ),
       ),
+    );
+  }
+
+  Widget _buildPagination() {
+    return PaginationControl(
+      currentPage: _currentPage,
+      totalPages: _lastPage,
+      onPageChanged: (int page) {
+        if (!initLoading && page >= 1 && page <= _lastPage) {
+          _loadFilteredTransactionData(page: page);
+        }
+      },
     );
   }
 }

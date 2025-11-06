@@ -13,6 +13,7 @@ class SupplierProvider with ChangeNotifier {
   bool _isLoading = false;
   Supplier? _selectedSupplier;
   String? _selectedSupplierName; // For supplier transaction report
+  String? _selectedSupplierId; // String id for report/details linkage
 
   // Pagination properties
   int _currentPage = 1;
@@ -28,6 +29,7 @@ class SupplierProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   Supplier? get selectedSupplier => _selectedSupplier;
   String? get selectedSupplierName => _selectedSupplierName;
+  String? get selectedSupplierId => _selectedSupplierId;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get itemsPerPage => _itemsPerPage;
@@ -59,6 +61,17 @@ class SupplierProvider with ChangeNotifier {
   // Clear selected supplier name
   void clearSelectedSupplierName() {
     _selectedSupplierName = null;
+    notifyListeners();
+  }
+
+  // Set selected supplier id for transaction report/details
+  void setSelectedSupplierId(String? supplierId) {
+    _selectedSupplierId = supplierId;
+    notifyListeners();
+  }
+
+  void clearSelectedSupplierId() {
+    _selectedSupplierId = null;
     notifyListeners();
   }
 
@@ -269,6 +282,7 @@ class SupplierProvider with ChangeNotifier {
     String? fromDate,
     String? toDate,
     bool listAll = true,
+    int? page,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -293,6 +307,9 @@ class SupplierProvider with ChangeNotifier {
       queryParams.add('to_date=$toDate');
     }
     queryParams.add('list_all=${listAll.toString()}');
+    if (page != null && page > 0) {
+      queryParams.add('page=$page');
+    }
 
     if (queryParams.isNotEmpty) {
       urlString += '?${queryParams.join('&')}';

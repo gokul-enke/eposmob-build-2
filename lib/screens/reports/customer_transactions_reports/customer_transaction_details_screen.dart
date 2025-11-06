@@ -20,7 +20,6 @@ import 'package:intl/intl.dart';
 
 // Add this import for the new print functionality
 import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print.dart';
-import 'package:pos_machine/components/build_dropdown_with_search.dart';
 // Add this import for CalendarPickerTableCell component
 import 'package:pos_machine/components/build_calendar_selection.dart';
 // Add this import for the CustomBackButton component
@@ -104,14 +103,6 @@ class _SimpleTransactionDetailsScreenState
       _setInitialDateFilters();
       loadInitData(); // This will now work properly
     });
-    // Preload customers for dropdown (listAll)
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-        await Provider.of<CustomerProvider>(context, listen: false)
-            .fetchCustomers(accessToken: accessToken ?? '', listAll: true);
-      } catch (_) {}
-    });
   }
 
   // Add the missing loadInitData method
@@ -132,15 +123,92 @@ class _SimpleTransactionDetailsScreenState
       );
 
       if (value['status'] == 'success') {
-        ListTransactionModel listTransactionModel =
-            ListTransactionModel.fromJson(value);
-        allTransactions = listTransactionModel.data?.transactions ?? [];
+        final data = value['data'];
+        // If new grouped response, extract the selected customer's transactions
+        if (data is Map && data['data'] is List) {
+          final groups = (data['data'] as List).cast<dynamic>();
+          final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+          final selectedIdStr = customerProvider.selectedCustomerId;
+          final selectedName = searchCustomer;
 
-        // Populate customer suggestions
-        customerSuggestions = getCustomerSuggestions();
+          Map? matchedGroup;
+          for (final g in groups) {
+            if (g is! Map) continue;
+            final idStr = (g['customer_id']?.toString() ?? '').trim();
+            final nameStr = (g['customer_name'] ?? '').toString();
+            final idMatches = (selectedIdStr != null && selectedIdStr.isNotEmpty && idStr == selectedIdStr);
+            final nameMatches = (selectedIdStr == null || selectedIdStr.isEmpty) &&
+                selectedName.isNotEmpty &&
+                nameStr.toLowerCase() == selectedName.toLowerCase();
+            if (idMatches || nameMatches) {
+              matchedGroup = g;
+              break;
+            }
+          }
 
-        // Apply filters immediately to show only transactions for the selected customer
-        _applyFilters();
+          // Map group's transactions into ListTransaction model for UI reuse
+          final List<ListTransaction> txns = [];
+          if (matchedGroup != null && matchedGroup['transactions'] is List) {
+            for (final t in (matchedGroup['transactions'] as List)) {
+              if (t is Map<String, dynamic>) {
+                // Coerce numeric fields that the model expects as String
+                final coerced = Map<String, dynamic>.from(t);
+                if (coerced.containsKey('amount') && coerced['amount'] != null) {
+                  coerced['amount'] = coerced['amount'].toString();
+                }
+                if (coerced.containsKey('balance') && coerced['balance'] != null) {
+                  coerced['balance'] = coerced['balance'].toString();
+                }
+                txns.add(ListTransaction.fromJson({
+                  ...coerced,
+                  'order_number': coerced['order_number'],
+                  'reference_id': coerced['reference_id'] ?? coerced['reference'],
+                  'transaction_type': coerced['transaction_type'],
+                  'customer_name': matchedGroup['customer_name'],
+                  'customer_id': matchedGroup['customer_id'],
+                }));
+              } else if (t is Map) {
+                final m = Map<String, dynamic>.from(t);
+                if (m.containsKey('amount') && m['amount'] != null) {
+                  m['amount'] = m['amount'].toString();
+                }
+                if (m.containsKey('balance') && m['balance'] != null) {
+                  m['balance'] = m['balance'].toString();
+                }
+                txns.add(ListTransaction.fromJson({
+                  ...m,
+                  'order_number': m['order_number'],
+                  'reference_id': m['reference_id'] ?? m['reference'],
+                  'transaction_type': m['transaction_type'],
+                  'customer_name': matchedGroup['customer_name'],
+                  'customer_id': matchedGroup['customer_id'],
+                }));
+              }
+            }
+          }
+
+          allTransactions = txns;
+          // Populate suggestions (optional from groups)
+          customerSuggestions = groups
+              .map((e) => (e is Map ? (e['customer_name'] ?? '').toString() : ''))
+              .where((s) => s.isNotEmpty)
+              .cast<String>()
+              .toList();
+
+          // Apply filters on the newly built transactions
+          _applyFilters();
+        } else {
+          // Fallback to old flat response
+          ListTransactionModel listTransactionModel =
+              ListTransactionModel.fromJson(value);
+          allTransactions = listTransactionModel.data?.transactions ?? [];
+
+          // Populate customer suggestions
+          customerSuggestions = getCustomerSuggestions();
+
+          // Apply filters immediately to show only transactions for the selected customer
+          _applyFilters();
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -190,20 +258,7 @@ class _SimpleTransactionDetailsScreenState
     // Apply filters
     List<ListTransaction> filteredList = [...allTransactions!];
 
-    // Customer filter: prefer selectedCustomerId from provider; fallback to name
-    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
-    final selectedIdStr = customerProvider.selectedCustomerId;
-    if (selectedIdStr != null && selectedIdStr.isNotEmpty) {
-      filteredList = filteredList
-          .where((t) => (t.customerId?.toString() ?? '') == selectedIdStr)
-          .toList();
-    } else if (searchCustomer.isNotEmpty) {
-      filteredList = filteredList
-          .where((transaction) => (transaction.customerName ?? '')
-              .toLowerCase()
-              .contains(searchCustomer.toLowerCase()))
-          .toList();
-    }
+    // Customer filter not needed on details page; transactions already for the selected customer
 
     // Transaction type filter - use contains matching instead of exact match
     if (searchTransactionType.isNotEmpty && searchTransactionType != 'All') {
@@ -1000,10 +1055,7 @@ class _SimpleTransactionDetailsScreenState
           height: 90,
           child: Row(
             children: [
-              Expanded(
-                flex: 1,
-                child: _buildCustomerAutocompleteField(),
-              ),
+              // Customer filter removed as per request
               Expanded(
                 flex: 1,
                 child: _buildDropdownField(
@@ -1096,64 +1148,7 @@ class _SimpleTransactionDetailsScreenState
     );
   }
 
-  Widget _buildCustomerAutocompleteField() {
-    final customerProvider = Provider.of<CustomerProvider>(context);
-    final allCustomers = customerProvider.allCustomers ?? const <CustomerListModelData>[];
-
-    CustomerListModelData? currentSelected;
-    final selectedIdStr = customerProvider.selectedCustomerId;
-    if ((selectedIdStr ?? '').isNotEmpty && allCustomers.isNotEmpty) {
-      try {
-        currentSelected = allCustomers.firstWhere(
-            (c) => (c.id?.toString() ?? '') == selectedIdStr);
-      } catch (_) {
-        currentSelected = null;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Customer",
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.27,
-                Colors.black.withOpacity(0.6),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          BuildDropDownWithSearch<CustomerListModelData>(
-            title: null,
-            hintText: "Search Customer",
-            value: currentSelected,
-            items: allCustomers,
-            displayText: (c) => c.name ?? '',
-            height: 45,
-            margin: EdgeInsets.zero,
-            onChanged: (CustomerListModelData? c) {
-              customerProvider.setSelectedCustomerId(c?.id?.toString());
-              customerProvider.setSelectedCustomerName(c?.name);
-              _customerController.clear();
-              _customerSearchTimer?.cancel();
-              setState(() {
-                searchCustomer = '';
-              });
-              _applyFilters();
-            },
-            searchHintText: 'Type to search customer...',
-            width: double.infinity,
-          ),
-        ],
-      ),
-    );
-  }
+  // Customer filter UI removed as per request
 
   @override
   void dispose() {

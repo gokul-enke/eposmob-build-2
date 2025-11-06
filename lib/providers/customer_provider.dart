@@ -310,12 +310,18 @@ class CustomerProvider extends ChangeNotifier {
       String email,
       String address,
       String pincode,
-      String city,
-      String state,
+      String city, // send ID string when available
+      String state, // send ID string when available
       String country,
       BuildContext context,
       {String? balance,
-      String? paymentType}) async {
+      String? paymentType,
+      String? altPhone,
+      String? gender,
+      String? dob,
+      String? customerType,
+      String? crNumber,
+      String? vatNumber}) async {
     debugPrint("addCustomer API called");
     final Map<String, dynamic> apiBodyData = {
       'phone': phone,
@@ -335,6 +341,24 @@ class CustomerProvider extends ChangeNotifier {
     }
     if (paymentType != null && paymentType.isNotEmpty) {
       apiBodyData['payment_type'] = paymentType;
+    }
+    if (altPhone != null && altPhone.isNotEmpty) {
+      apiBodyData['alt_phone'] = altPhone;
+    }
+    if (gender != null && gender.isNotEmpty) {
+      apiBodyData['gender'] = gender;
+    }
+    if (dob != null && dob.isNotEmpty) {
+      apiBodyData['dob'] = dob;
+    }
+    if (customerType != null && customerType.isNotEmpty) {
+      apiBodyData['customer_type'] = customerType;
+    }
+    if (crNumber != null && crNumber.isNotEmpty) {
+      apiBodyData['cr_number'] = crNumber;
+    }
+    if (vatNumber != null && vatNumber.isNotEmpty) {
+      apiBodyData['vat_number'] = vatNumber;
     }
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addCustomerUrl);

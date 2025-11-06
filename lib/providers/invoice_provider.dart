@@ -932,14 +932,31 @@ class InvoiceProvider extends ChangeNotifier {
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
+
+        // Detect new grouped structure: data.data is a List of customer groups each having 'transactions'
+        try {
+          final data = jsonData['data'];
+          if (data is Map && data['data'] is List &&
+              (data['data'] as List).isNotEmpty &&
+              (data['data'][0] is Map) &&
+              (data['data'][0] as Map).containsKey('transactions')) {
+            // New grouped response detected. Do not parse into old model here.
+            // Optionally, we could flatten transactions if needed by legacy callers.
+            // For safety, leave transactionListDetails unchanged and just return json.
+            notifyListeners();
+            return jsonData;
+          }
+        } catch (_) {
+          // Fallback to old behavior
+        }
+
+        // Old flat transactions response: parse into model for backward compatibility
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(jsonData);
-
         transactionListDetails = listTransactionModel.data?.transactions;
         notifyListeners();
-        return json.decode(response.body);
+        return jsonData;
       } else {}
     } finally {
       // _isLoading = false;

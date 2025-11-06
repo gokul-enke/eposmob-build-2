@@ -651,7 +651,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                     _buildDetailRow(
                         'Customer Name', receipt.customer.user.name),
                     _buildDetailRow(
-                        'Customer Name', receipt.customer.user.phone),
+                        'Customer Phone', receipt.customer.user.phone),
                     _buildDetailRow('Amount', receipt.amount),
                     _buildDetailRow('Payment Method', receipt.paymentMethod),
                     _buildDetailRow('Status', receipt.receiptStatus),
