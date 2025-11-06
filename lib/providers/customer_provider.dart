@@ -342,6 +342,15 @@ class CustomerProvider extends ChangeNotifier {
     if (paymentType != null && paymentType.isNotEmpty) {
       apiBodyData['payment_type'] = paymentType;
     }
+    if (customerType != null && customerType.isNotEmpty) {
+      apiBodyData['customer_type'] = customerType;
+    }
+    if (crNumber != null && crNumber.isNotEmpty) {
+      apiBodyData['cr_number'] = crNumber;
+    }
+    if (vatNumber != null && vatNumber.isNotEmpty) {
+      apiBodyData['vat_number'] = vatNumber;
+    }
     if (altPhone != null && altPhone.isNotEmpty) {
       apiBodyData['alt_phone'] = altPhone;
     }
@@ -442,6 +451,9 @@ class CustomerProvider extends ChangeNotifier {
     int? storeId,
     String? balance,
     String? paymentType,
+    String? customerType,
+    String? crNumber,
+    String? vatNumber,
   }) async {
     debugPrint("updateCustomer API called");
     final Map<String, dynamic> apiBodyData = {

@@ -123,31 +123,14 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       ),
       builder: (ctx) {
         final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-        final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
         final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
 
         final List<Widget> dynamicItems = [];
-        // Show Phase 1 Print and generic Send when any of the phases is enabled
-        if (phase1 || phase2) {
-          dynamicItems.addAll([
-            ListTile(
-              leading: CircleAvatar(
-                radius: 18,
-                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
-                child: Icon(Icons.send, color: ColorManager.kPrimaryColor),
-              ),
-              title: const Text('Send to ZATCA'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _performZatcaPhase2Send(voucher);
-              },
-            ),
-          ]);
-        }
 
-        // Show Phase 2 specific actions only when Phase 2 is enabled
+        // Only render ZATCA options when Phase 2 is enabled in settings
         if (phase2) {
           dynamicItems.addAll([
+            // ZATCA Phase 2 (with PDF download/open)
             ListTile(
               leading: CircleAvatar(
                 radius: 18,
@@ -160,16 +143,17 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                 await _performZatcaPhase2SendWithPdf(voucher);
               },
             ),
+            // Send Credit Note to ZATCA (no PDF open)
             ListTile(
               leading: CircleAvatar(
                 radius: 18,
-                backgroundColor: Colors.purple.withOpacity(0.12),
-                child: const Icon(Icons.sync, color: Colors.purple),
+                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+                child: Icon(Icons.send, color: ColorManager.kPrimaryColor),
               ),
-              title: const Text('Resync Voucher'),
+              title: const Text('Send Credit Note to ZATCA'),
               onTap: () async {
                 Navigator.pop(ctx);
-                await _performZatcaPhase2Resync(voucher);
+                await _performZatcaPhase2Send(voucher);
               },
             ),
           ]);
@@ -244,57 +228,6 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: '+e.toString());
-      showScaffoldError(context: context, message: 'Error: '+e.toString());
-    } finally {
-      hideLoadingOverlay();
-    }
-  }
-
-  Future<void> _performZatcaPhase2Resync(CustomerVoucher voucher) async {
-    try {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Resync] Start for voucher '+voucher.voucherNumber+' (ID: '+voucher.id.toString()+')');
-      if (token == null || token.isEmpty) {
-        debugPrint('[ZATCA][Phase2 Resync] ERROR: Missing authentication token');
-        showScaffoldError(context: context, message: 'Missing authentication token');
-        return;
-      }
-
-      showScaffold(context: context, message: 'Resyncing voucher with ZATCA...');
-      showLoadingOverlay(context, message: 'Resyncing...');
-
-      final provider = Provider.of<CustomerVoucherProvider>(context, listen: false);
-      final result = await provider.zatcaPhase2VoucherResync(
-        id: voucher.id,
-        accessToken: token,
-      );
-
-      debugPrint('[ZATCA][Phase2 Resync] Response: '+result.toString());
-      if (result is Map) {
-        final bool ok = (result['status'] == 'success') || (result['success'] == true) || (result['status'] == true);
-        final data = (result['data'] is Map) ? result['data'] as Map : null;
-        final String voucherNumber = data?['voucher_number']?.toString() ?? voucher.voucherNumber;
-        final String resyncStatus = data?['resync_status']?.toString() ?? (ok ? 'success' : 'failed');
-        final String? rawError = data?['error']?.toString();
-        if (ok) {
-          showScaffold(
-            context: context,
-            message: 'Voucher '+voucherNumber+' resynced with status: '+resyncStatus,
-          );
-        } else {
-          String detail = rawError != null
-              ? rawError.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim()
-              : (result['message']?.toString() ?? 'Failed to resync voucher');
-          if (detail.length > 220) detail = detail.substring(0, 220)+'...';
-          final errMsg = 'Resync failed for '+voucherNumber+' (status: '+resyncStatus+'). '+detail;
-          debugPrint('[ZATCA][Phase2 Resync] ERROR: '+errMsg);
-          showScaffoldError(context: context, message: errMsg);
-        }
-      } else {
-        showScaffoldError(context: context, message: 'Failed to resync voucher');
-      }
-    } catch (e) {
-      debugPrint('[ZATCA][Phase2 Resync] EXCEPTION: '+e.toString());
       showScaffoldError(context: context, message: 'Error: '+e.toString());
     } finally {
       hideLoadingOverlay();

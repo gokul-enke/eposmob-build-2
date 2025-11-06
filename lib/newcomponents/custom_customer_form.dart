@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import '../newcomponents/custom_container_box.dart';
 import '../newcomponents/custom_round_button.dart';
 import '../providers/auth_model.dart';
+import '../providers/app_settings_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
@@ -84,6 +85,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
     Size size = MediaQuery.of(context).size;
     final locationProvider = Provider.of<LocationProvider>(context);
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
 
     return Form(
       key: _formKey,
@@ -206,43 +209,44 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           ),
           const SizedBox(height: 20),
 
-          // Row 5: Customer Type, CR Number, VAT Number
-          Row(
-            children: [
-              Expanded(
-                child: CustomRadioGroup<String>(
-                  title: "Customer Type",
-                  value: selectedCustomerType,
-                  options: const ['B2C', 'B2B'],
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedCustomerType = newValue ?? 'B2C';
-                    });
-                  },
-                  displayText: (String value) => value,
-                  isRequired: true,
+          // Row 5: Customer Type, CR Number, VAT Number (shown only when ZATCA Phase 1 is enabled)
+          if (isZatcaPhase1Enabled)
+            Row(
+              children: [
+                Expanded(
+                  child: CustomRadioGroup<String>(
+                    title: "Customer Type",
+                    value: selectedCustomerType,
+                    options: const ['B2C', 'B2B'],
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedCustomerType = newValue ?? 'B2C';
+                      });
+                    },
+                    displayText: (String value) => value,
+                    isRequired: true,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  "CR Number",
-                  crNumberController,
-                  TextInputType.text,
-                  size,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildTextField(
+                    "CR Number",
+                    crNumberController,
+                    TextInputType.text,
+                    size,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  "VAT Number",
-                  vatNumberController,
-                  TextInputType.text,
-                  size,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildTextField(
+                    "VAT Number",
+                    vatNumberController,
+                    TextInputType.text,
+                    size,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 20),
 
           // Row 6: Balance and Payment Type
@@ -797,6 +801,13 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         final String storeId =
             (storeProvider.activeStore?.storeId ?? 1).toString();
 
+        // ZATCA Phase 1 handling: if disabled, force B2C and clear CR/VAT
+        final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+        final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
+        final String customerTypeToSend = isZatcaPhase1Enabled ? selectedCustomerType : 'B2C';
+        final String crToSend = isZatcaPhase1Enabled ? crNumberController.text.trim() : '';
+        final String vatToSend = isZatcaPhase1Enabled ? vatNumberController.text.trim() : '';
+
         await CustomerProvider()
             .addCustomer(
           accessToken ?? "",
@@ -815,9 +826,9 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           altPhone: altPhoneTextController.text.trim(),
           gender: selectedGender ?? '',
           dob: dobTextController.text.trim(),
-          customerType: selectedCustomerType,
-          crNumber: crNumberController.text.trim(),
-          vatNumber: vatNumberController.text.trim(),
+          customerType: customerTypeToSend,
+          crNumber: crToSend,
+          vatNumber: vatToSend,
         )
             .then((value) {
           if (value["status"] == "success") {

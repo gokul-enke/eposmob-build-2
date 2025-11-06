@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/app_settings_provider.dart';
 import '../../../components/build_container_box.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
@@ -32,6 +34,8 @@ class _CustomerInformationViewWidgetState
   @override
   Widget build(BuildContext context) {
     Size size = widget.size;
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
     return Expanded(
       child: BuildBoxShadowContainer(
         margin: const EdgeInsets.all(24),
@@ -233,8 +237,8 @@ class _CustomerInformationViewWidgetState
                       
                       const SizedBox(height: 24),
                       
-                      // KYC Information Card
-                      if (widget.customer?.kyc != null && widget.customer!.kyc!.isNotEmpty)
+                      // KYC Information Card (only when ZATCA Phase 1 is enabled)
+                      if (isZatcaPhase1Enabled && widget.customer?.kyc != null && widget.customer!.kyc!.isNotEmpty)
                         Column(
                           children: [
                             _buildKycInfoCard(),

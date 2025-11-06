@@ -118,22 +118,21 @@ class InvoiceProvider extends ChangeNotifier {
 
     try {
       final maskedHeaders = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $maskedHeaders');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -142,7 +141,8 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -175,22 +175,21 @@ class InvoiceProvider extends ChangeNotifier {
 
     try {
       final headers = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $headers');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -199,7 +198,8 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -637,6 +637,73 @@ class InvoiceProvider extends ChangeNotifier {
 
   InvoiceProvider();
 
+  // Update a single invoice's ZATCA status locally (both paginated view and cache)
+  void updateInvoiceZatcaStatus(int id, String status) {
+    // Helper to clone invoice with new status
+    Invoice _cloneWithStatus(Invoice inv, String s) {
+      return Invoice(
+        id: inv.id,
+        userId: inv.userId,
+        customerId: inv.customerId,
+        invoiceNumber: inv.invoiceNumber,
+        type: inv.type,
+        companyId: inv.companyId,
+        amount: inv.amount,
+        invoiceDate: inv.invoiceDate,
+        dueDate: inv.dueDate,
+        status: inv.status,
+        createdBy: inv.createdBy,
+        createdAt: inv.createdAt,
+        updatedAt: inv.updatedAt,
+        customer: inv.customer,
+        zatcaStatus: s,
+      );
+    }
+
+    bool updated = false;
+
+    if (invoiceListDetails != null && invoiceListDetails!.isNotEmpty) {
+      for (var i = 0; i < invoiceListDetails!.length; i++) {
+        if (invoiceListDetails![i].id == id) {
+          invoiceListDetails![i] =
+              _cloneWithStatus(invoiceListDetails![i], status);
+          updated = true;
+          break;
+        }
+      }
+    }
+
+    if (_allInvoices != null && _allInvoices!.isNotEmpty) {
+      for (var i = 0; i < _allInvoices!.length; i++) {
+        if (_allInvoices![i].id == id) {
+          _allInvoices![i] = _cloneWithStatus(_allInvoices![i], status);
+          updated = true;
+          break;
+        }
+      }
+    }
+
+    if (updated) {
+      notifyListeners();
+    }
+  }
+
+  // Re-apply current filters and page using in-memory cache only.
+  // This triggers UI update without fetching from network or resetting pagination.
+  void reapplyCurrentFilters() {
+    applyFiltersLocally(
+      filterName: _filterName,
+      filterInvoiceNumber: _filterInvoiceNumber,
+      filterFromDate: _filterFromDate,
+      filterToDate: _filterToDate,
+      filterStatus: _filterStatus,
+      filterOrderNumber: _filterOrderNumber,
+      filterPhone: _filterPhone,
+      filterEmail: _filterEmail,
+      page: _currentPage,
+    );
+  }
+
   //          *********************** LIST ALL PAYMENT LIST  API ***************************************************
 
   Future<void> listAllPaymentList(
@@ -689,22 +756,21 @@ class InvoiceProvider extends ChangeNotifier {
 
     try {
       final headers = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $headers');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -713,7 +779,8 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -903,19 +970,21 @@ class InvoiceProvider extends ChangeNotifier {
   }) async {
     // Build query parameters
     Map<String, String> queryParams = {};
-    
+
     if (type != null) queryParams['type'] = type;
     if (customerId != null) queryParams['customer_id'] = customerId;
     if (customerName != null) queryParams['customer_name'] = customerName;
-    if (transactionType != null) queryParams['transaction_type'] = transactionType;
+    if (transactionType != null)
+      queryParams['transaction_type'] = transactionType;
     if (dateFrom != null) queryParams['date_from'] = dateFrom;
     if (dateTo != null) queryParams['date_to'] = dateTo;
     if (page != null) queryParams['page'] = page.toString();
-    
+
     // Build URL with query parameters
     Uri url = Uri.parse(APPUrl.listAllTransaction);
     if (queryParams.isNotEmpty) {
-      url = Uri.parse(APPUrl.listAllTransaction).replace(queryParameters: queryParams);
+      url = Uri.parse(APPUrl.listAllTransaction)
+          .replace(queryParameters: queryParams);
     }
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -937,7 +1006,8 @@ class InvoiceProvider extends ChangeNotifier {
         // Detect new grouped structure: data.data is a List of customer groups each having 'transactions'
         try {
           final data = jsonData['data'];
-          if (data is Map && data['data'] is List &&
+          if (data is Map &&
+              data['data'] is List &&
               (data['data'] as List).isNotEmpty &&
               (data['data'][0] is Map) &&
               (data['data'][0] as Map).containsKey('transactions')) {

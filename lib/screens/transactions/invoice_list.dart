@@ -81,6 +81,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           context: context,
           message: 'Invoice '+invoiceNumber+' processed under ZATCA Phase 2.',
         );
+        // Flip row UI immediately
+        Provider.of<InvoiceProvider>(context, listen: false)
+            .updateInvoiceZatcaStatus(invoice.id, 'success');
+        // Soft refresh: reapply current filters/pagination from cache (no loader / no scroll jump)
+        Provider.of<InvoiceProvider>(context, listen: false).reapplyCurrentFilters();
       } else {
         final msg = (result is Map ? result['message'] : null) ?? 'Failed to process ZATCA Phase 2';
         debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: '+msg.toString());
@@ -125,6 +130,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             context: context,
             message: 'Invoice '+invoiceNumber+' resynced with status: '+resyncStatus,
           );
+          // Flip row UI immediately if resync is successful
+          Provider.of<InvoiceProvider>(context, listen: false)
+              .updateInvoiceZatcaStatus(invoice.id, 'success');
+          // Soft refresh from cache only
+          Provider.of<InvoiceProvider>(context, listen: false).reapplyCurrentFilters();
         } else {
           String detail = rawError != null
               ? rawError.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim()
@@ -286,6 +296,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           context: context,
           message: 'Invoice '+invoiceNumber+' submitted to ZATCA successfully.',
         );
+        // Flip row UI immediately
+        Provider.of<InvoiceProvider>(context, listen: false)
+            .updateInvoiceZatcaStatus(invoice.id, 'success');
+        // Soft refresh from cache only
+        Provider.of<InvoiceProvider>(context, listen: false).reapplyCurrentFilters();
       } else {
         final msg = (result is Map ? result['message'] : null) ?? 'Failed to send to ZATCA';
         debugPrint('[ZATCA][Phase2 Send] ERROR: '+msg.toString());
