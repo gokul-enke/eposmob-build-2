@@ -596,43 +596,43 @@ class _SideMenuState extends State<SideMenu> {
             },
           ),
           // 10. PARTY ACCOUNTS (Index: 4) [EXPANDABLE]
-          // Consumer<RoleProvider>(
-          //   builder: (context, roleProvider, child) {
-          //     // Check permissions for each sub-item
-          //     final hasCustomerTransactionsPermission = roleProvider
-          //         .currentUserHasPermissionSync('page_CustomerTransactions');
-          //     final hasSupplierTransactionsPermission = roleProvider
-          //         .currentUserHasPermissionSync('page_SupplierTransactions');
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              // Check permissions for each sub-item
+              final hasCustomerTransactionsPermission = roleProvider
+                  .currentUserHasPermissionSync('page_CustomerTransactions');
+              final hasSupplierTransactionsPermission = roleProvider
+                  .currentUserHasPermissionSync('page_SupplierTransactions');
 
-          //     // Only show the expandable menu if user has at least one permission
-          //     if (!hasCustomerTransactionsPermission &&
-          //         !hasSupplierTransactionsPermission) {
-          //       return const SizedBox.shrink();
-          //     }
+              // Only show the expandable menu if user has at least one permission
+              if (!hasCustomerTransactionsPermission &&
+                  !hasSupplierTransactionsPermission) {
+                return const SizedBox.shrink();
+              }
 
-          //     return Obx(
-          //       () => DrawerListTileExpandableColumn(
-          //           onTapTitle1: () {
-          //             sideBarController.index.value = 23;
-          //           },
-          //           onTapTitle2: () {
-          //             sideBarController.index.value = 74; // alias index
-          //           },
-          //           listTitle1: "Customer Transactions",
-          //           listTitle2: "Supplier Transactions",
-          //           // Permission-based visibility
-          //           showTitle1: hasCustomerTransactionsPermission,
-          //           showTitle2: hasSupplierTransactionsPermission,
-          //           icon: fa.FontAwesomeIcons.users,
-          //           title: 'Party Accounts',
-          //           onTap: () {
-          //             sideBarController.index.value = 23;
-          //           },
-          //           selected: sideBarController.index.value == 23 ||
-          //               sideBarController.index.value == 74),
-          //     );
-          //   },
-          // ),
+              return Obx(
+                () => DrawerListTileExpandableColumn(
+                    onTapTitle1: () {
+                      sideBarController.index.value = 23;
+                    },
+                    onTapTitle2: () {
+                      sideBarController.index.value = 74; // alias index
+                    },
+                    listTitle1: "Customer Transactions",
+                    listTitle2: "Supplier Transactions",
+                    // Permission-based visibility
+                    showTitle1: hasCustomerTransactionsPermission,
+                    showTitle2: hasSupplierTransactionsPermission,
+                    icon: fa.FontAwesomeIcons.users,
+                    title: 'Party Accounts',
+                    onTap: () {
+                      sideBarController.index.value = 23;
+                    },
+                    selected: sideBarController.index.value == 23 ||
+                        sideBarController.index.value == 74),
+              );
+            },
+          ),
           // 11. CUSTOMERS (Index: 5)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
@@ -730,7 +730,7 @@ class _SideMenuState extends State<SideMenu> {
                     sideBarController.index.value = 72;
                   },
                   listTitle1: "Suppliers",
-                  // listTitle2: "Supplier Transactions",
+                  listTitle2: "Supplier Transactions",
                   listTitle3: "Supplier Voucher",
                   // Permission-based visibility
                   showTitle1: hasSuppliersPermission,

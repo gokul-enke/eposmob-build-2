@@ -100,6 +100,67 @@ class InvoiceProvider extends ChangeNotifier {
     applyFiltersLocally(filterName: _filterName, page: page);
   }
 
+  //          *********************** CUSTOMER TRANSACTIONS API ***************************************************
+  Future<dynamic> listCustomerTransactions({
+    required String accessToken,
+    String? customerId,
+    String? dateFrom,
+    String? dateTo,
+    String? transactionType, // invoice, voucher, receipt, sales return
+    String? type, // credit | debit
+    int? perPage,
+    int? page,
+  }) async {
+    // Build query parameters
+    final queryParams = <String, String>{
+      if (customerId != null && customerId.isNotEmpty) 'customer_id': customerId,
+      if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+      if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
+      if (transactionType != null && transactionType.isNotEmpty)
+        'transaction_type': transactionType,
+      if (type != null && type.isNotEmpty) 'type': type,
+      'per_page': (perPage ?? 20).toString(),
+      'page': (page ?? 1).toString(),
+    };
+
+    final uri = Uri.parse(APPUrl.customerTransactions)
+        .replace(queryParameters: queryParams);
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        // Parse into existing model for UI consumption
+        try {
+          final listModel = ListTransactionModel.fromJson(jsonData);
+          transactionListDetails = listModel.data?.transactions;
+          notifyListeners();
+        } catch (e) {
+          debugPrint('Error parsing customer transactions: $e');
+        }
+        return jsonData;
+      } else {
+        throw Exception('Failed to load customer transactions: ${response.statusCode}');
+      }
+    } on TimeoutException {
+      throw Exception('Request timed out');
+    }
+  }
+
   //          *********************** ZATCA PHASE 2 INVOICE RESYNC ***************************************************
   Future<dynamic> zatcaPhase2InvoiceResync({
     required int id,

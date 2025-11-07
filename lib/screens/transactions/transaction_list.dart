@@ -44,6 +44,7 @@ class _CustomerTransactionListScreenState
   String searchCustomer = '';
   // String searchCustomerPhone = ''; // Commented out - no backend API field yet
   String searchType = '';
+  String searchTransactionType = '';
   List<String> customerSuggestions =
       []; // This should be populated with your customer names
   List<String> filteredSuggestions = [];
@@ -57,6 +58,7 @@ class _CustomerTransactionListScreenState
   int totalPages = 1;
   int _calendarKey = 0;
   final int itemsPerPage = 20;
+  String? selectedCustomerId; // for API param
 
   List<String> getCustomerSuggestions() {
     if (allTransactions == null) return [];
@@ -79,24 +81,7 @@ class _CustomerTransactionListScreenState
     });
 
     try {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
-
-      final value = await invoiceProvider.listAllTransaction(
-        type: null,
-        accessToken: accessToken ?? "",
-      );
-
-      if (value['status'] == 'success') {
-        ListTransactionModel listTransactionModel =
-            ListTransactionModel.fromJson(value);
-        allTransactions = listTransactionModel.data?.transactions ?? [];
-        applyFilters();
-      } else {
-        showScaffold(context: context, message: "Data Not Found");
-      }
+      await _fetchServer(page: 1);
     } catch (error) {
       // debugPrint(error.toString());
     } finally {
@@ -106,11 +91,57 @@ class _CustomerTransactionListScreenState
     }
   }
 
+  Future<void> _fetchServer({int? page}) async {
+    final String? accessToken =
+        Provider.of<AuthModel>(context, listen: false).token;
+    final invoiceProvider =
+        Provider.of<InvoiceProvider>(context, listen: false);
+
+    final String? dateStr = selectedDate != null
+        ? DateFormat('yyyy-MM-dd').format(selectedDate!)
+        : null;
+
+    final String? typeParam =
+        (searchType.isNotEmpty && searchType != 'All') ? searchType.toLowerCase() : null;
+
+    String? transactionTypeParam;
+    if (searchTransactionType.isNotEmpty && searchTransactionType != 'All') {
+      // API expects lowercase with underscores
+      transactionTypeParam = searchTransactionType.toLowerCase().replaceAll(' ', '_');
+    }
+
+    final value = await invoiceProvider.listCustomerTransactions(
+      accessToken: accessToken ?? '',
+      customerId: selectedCustomerId,
+      dateFrom: dateStr,
+      dateTo: dateStr,
+      transactionType: transactionTypeParam,
+      type: typeParam,
+      perPage: itemsPerPage,
+      page: page ?? currentPage,
+    );
+
+    if (value != null && value['status'] == 'success') {
+      final model = ListTransactionModel.fromJson(value);
+      currentPage = model.data?.currentPage ?? 1;
+      totalPages = model.data?.lastPage ?? 1;
+      allTransactions = model.data?.transactions ?? [];
+      applyFilters(); // apply local amount/reference filters
+    } else {
+      setState(() {
+        allTransactions = [];
+        listTransaction = [];
+        totalPages = 1;
+      });
+      showScaffold(context: context, message: 'Data Not Found');
+    }
+  }
+
   void applyFilters() {
     if (allTransactions == null || allTransactions!.isEmpty) {
       setState(() {
         listTransaction = [];
-        totalPages = 1;
+        // totalPages managed by server
       });
       return;
     }
@@ -185,26 +216,8 @@ class _CustomerTransactionListScreenState
       }).toList();
     }
 
-    // Calculate pagination
-    totalPages = (filteredList.length / itemsPerPage).ceil();
-    totalPages = totalPages == 0 ? 1 : totalPages;
-
-    // Ensure current page is valid
-    if (currentPage > totalPages) {
-      currentPage = totalPages;
-    }
-
-    // Apply pagination
-    int startIndex = (currentPage - 1) * itemsPerPage;
-    int endIndex = startIndex + itemsPerPage;
-
-    if (startIndex >= filteredList.length) {
-      listTransaction = [];
-    } else {
-      endIndex =
-          endIndex > filteredList.length ? filteredList.length : endIndex;
-      listTransaction = filteredList.sublist(startIndex, endIndex);
-    }
+    // Server already paginates. Just set the filtered list for current page.
+    listTransaction = filteredList;
 
     setState(() {});
   }
@@ -220,6 +233,7 @@ class _CustomerTransactionListScreenState
     setState(() {
       searchAmount = '';
       searchCustomer = '';
+      selectedCustomerId = null;
       // searchCustomerPhone = ''; // Commented out - no backend API field
       searchReference = '';
       searchType = '';
@@ -228,8 +242,8 @@ class _CustomerTransactionListScreenState
       _calendarKey++;
     });
 
-    // Force a refresh of the filters
-    applyFilters();
+    // Reload from server
+    _fetchServer(page: 1);
   }
 
   Future<void> refreshData() async {
@@ -566,9 +580,18 @@ class _CustomerTransactionListScreenState
                                 onSelected: (String selectedCustomer) {
                                   setState(() {
                                     searchCustomer = selectedCustomer;
+                                    // try to derive customer_id from current page data
+                                    final match = allTransactions?.firstWhere(
+                                      (t) => (t.customerName ?? '').toLowerCase() ==
+                                          selectedCustomer.toLowerCase(),
+                                      orElse: () => ListTransaction(),
+                                    );
+                                    if (match != null && match.customerId != null) {
+                                      selectedCustomerId = match.customerId.toString();
+                                    }
                                     currentPage = 1;
                                   });
-                                  applyFilters();
+                                  _fetchServer(page: 1);
                                 },
                               ),
                             ],
@@ -577,7 +600,7 @@ class _CustomerTransactionListScreenState
 
                         const SizedBox(width: 15),
 
-                        // Type Filter
+                        // Type Filter (Credit/Debit)
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -640,7 +663,7 @@ class _CustomerTransactionListScreenState
                                       searchType = value ?? '';
                                       currentPage = 1;
                                     });
-                                    applyFilters();
+                                    _fetchServer(page: 1);
                                   },
                                 ),
                               ),
@@ -721,7 +744,7 @@ class _CustomerTransactionListScreenState
                                         selectedDate = date;
                                         currentPage = 1;
                                       });
-                                      applyFilters();
+                                      _fetchServer(page: 1);
                                     },
                                   ),
                                 ),
@@ -1018,7 +1041,7 @@ class _CustomerTransactionListScreenState
                           setState(() {
                             currentPage = page;
                           });
-                          applyFilters();
+                          _fetchServer(page: page);
                         },
                       ),
                     ],

@@ -23,6 +23,7 @@ class TransactionScreen extends StatefulWidget {
 class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController searchController = TextEditingController();
   final TextEditingController typeController = TextEditingController();
+  final TextEditingController transactionTypeController = TextEditingController();
   final TextEditingController statusController = TextEditingController();
   final TextEditingController paymentModeController = TextEditingController();
   final TextEditingController supplierController = TextEditingController();
@@ -47,6 +48,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
     // Initialize controllers with default values
     typeController.text = "All Types";
+    transactionTypeController.text = "All";
     statusController.text = "All Status";
     paymentModeController.text = "All Payment Modes";
     supplierController.text = "All Suppliers";
@@ -56,8 +58,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
     try {
       debugPrint('TransactionScreen:loadInitData start');
       setState(() => initLoading = true);
+      // Initial server-side fetch (no filters)
       await Provider.of<TransactionProvider>(context, listen: false)
-          .fetchAllTransactionsBatch();
+          .fetchTransactionsFromServerV2(page: 1, perPage: 50);
       setState(() {
         isInitialized = true;
         initLoading = false;
@@ -74,22 +77,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void searchTransactions() {
-    final supplierFilter = supplierSearchController.text.isEmpty
-        ? null
-        : supplierSearchController.text;
+    final txProvider = Provider.of<TransactionProvider>(context, listen: false);
+    String? supplierId;
+    if (supplierSearchController.text.isNotEmpty) {
+      supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
+    }
 
-    Provider.of<TransactionProvider>(context, listen: false)
-        .applyTransactionFiltersLocally(
-      filterName: searchController.text,
-      filterType:
-          typeController.text == "All Types" ? null : typeController.text,
-      filterStatus:
-          statusController.text == "All Status" ? null : statusController.text,
-      filterPaymentMode: paymentModeController.text == "All Payment Modes"
+    txProvider.fetchTransactionsFromServerV2(
+      supplierId: supplierId,
+      transactionType: transactionTypeController.text == "All"
           ? null
-          : paymentModeController.text,
-      filterSupplier: supplierFilter,
+          : transactionTypeController.text,
+      type: typeController.text == "All Types" ? null : typeController.text,
+      // date filters not present in this UI
       page: 1,
+      perPage: 50,
     );
   }
 
@@ -97,17 +99,31 @@ class _TransactionScreenState extends State<TransactionScreen> {
     setState(() {
       searchController.clear();
       typeController.text = "All Types";
+      transactionTypeController.text = "All";
       statusController.text = "All Status";
       paymentModeController.text = "All Payment Modes";
-      supplierSearchController.clear(); // Clear the supplier search
+      supplierSearchController.clear();
     });
+    // Refetch from server with defaults
     Provider.of<TransactionProvider>(context, listen: false)
-        .resetTransactionFilters();
+        .fetchTransactionsFromServerV2(page: 1, perPage: 50);
   }
 
   Future<void> _onRefresh() async {
-    await Provider.of<TransactionProvider>(context, listen: false)
-        .refreshAllTransactions();
+    final txProvider = Provider.of<TransactionProvider>(context, listen: false);
+    String? supplierId;
+    if (supplierSearchController.text.isNotEmpty) {
+      supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
+    }
+    await txProvider.fetchTransactionsFromServerV2(
+      supplierId: supplierId,
+      transactionType: transactionTypeController.text == "All"
+          ? null
+          : transactionTypeController.text,
+      type: typeController.text == "All Types" ? null : typeController.text,
+      page: txProvider.transactionCurrentPage,
+      perPage: 50,
+    );
   }
 
   Widget _buildDetailRow(String label, String value) {
@@ -503,9 +519,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildFilterDropdown(
+                        title: "Trans. Type",
+                        controller: transactionTypeController,
+                        options: const ["All", "Invoice", "Voucher"],
+                        width: size.width,
+                        isSmallScreen: isSmallScreen,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildFilterDropdown(
                         title: "Type",
                         controller: typeController,
-                        options: transactionProvider.getTypeOptions(),
+                        options: const ["All Types", "Credit", "Debit"],
                         width: size.width,
                         isSmallScreen: isSmallScreen,
                       ),
@@ -577,7 +603,20 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         currentPage: transactionProvider.transactionCurrentPage,
                         totalPages: transactionProvider.transactionTotalPages,
                         onPageChanged: (int page) {
-                          transactionProvider.goToTransactionPage(page);
+                          final txProvider = Provider.of<TransactionProvider>(context, listen: false);
+                          String? supplierId;
+                          if (supplierSearchController.text.isNotEmpty) {
+                            supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
+                          }
+                          txProvider.fetchTransactionsFromServerV2(
+                            supplierId: supplierId,
+                            transactionType: transactionTypeController.text == "All"
+                                ? null
+                                : transactionTypeController.text,
+                            type: typeController.text == "All Types" ? null : typeController.text,
+                            page: page,
+                            perPage: 50,
+                          );
                         },
                       ),
                     ],

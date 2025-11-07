@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -31,9 +32,12 @@ class TransactionProvider extends ChangeNotifier {
 
   // Loading state
   bool _transactionIsLoading = false;
+  static const Duration _requestTimeout = Duration(seconds: 30);
 
   // Store access token for batch fetch
   String? _accessToken;
+  // Supplier name to id mapping (built from fetched data)
+  final Map<String, int> _supplierNameToId = {};
 
   /* ---------- GETTERS ---------- */
   List<TransactionModel>? get listTransactionModelDataList =>
@@ -50,6 +54,10 @@ class TransactionProvider extends ChangeNotifier {
   String? get transactionFilterPaymentMode => _transactionFilterPaymentMode;
   String? get transactionFilterSupplier => _transactionFilterSupplier;
   bool get transactionIsLoading => _transactionIsLoading;
+  int? lookupSupplierIdByName(String name) {
+    if (name.isEmpty) return null;
+    return _supplierNameToId[name];
+  }
 
   // Getter for customer name
   String get customerName => _customerName;
@@ -84,14 +92,14 @@ class TransactionProvider extends ChangeNotifier {
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
-      final response = await http.get(
+      final response = await _getWithRetry(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
-      ).timeout(const Duration(seconds: 15));
+      );
 
       if (response.statusCode == 200) {
         final jsonMap = jsonDecode(response.body);
@@ -106,6 +114,12 @@ class TransactionProvider extends ChangeNotifier {
               final tx = transactions[i];
               try {
                 transactionList.add(_createTransactionFromJson(tx, i));
+                // build supplier name->id map
+                final supplierName = transactionList.last.supplier.user.name;
+                final supplierId = transactionList.last.supplier.id;
+                if (supplierName.isNotEmpty && supplierId != 0) {
+                  _supplierNameToId[supplierName] = supplierId;
+                }
               } catch (e) {
                 debugPrint('Error parsing transaction: $e');
               }
@@ -128,6 +142,91 @@ class TransactionProvider extends ChangeNotifier {
       }
     } catch (error) {
       debugPrint('Error in fetchTransactionsAPI: $error');
+      rethrow;
+    } finally {
+      _transactionIsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // New: Fetch using supplier-transactions V2 with server-side filters
+  Future<void> fetchTransactionsFromServerV2({
+    String? supplierId,
+    String? transactionType, // Invoice | Voucher
+    String? type, // Credit | Debit
+    String? dateFrom, // yyyy-MM-dd
+    String? dateTo, // yyyy-MM-dd
+    int? perPage, // default 20
+    int? page,
+  }) async {
+    if (_accessToken == null) throw Exception('Access token not set');
+    _transactionIsLoading = true;
+    notifyListeners();
+
+    try {
+      final queryParams = <String, String>{
+        if (supplierId != null && supplierId.isNotEmpty) 'supplier_id': supplierId,
+        if (transactionType != null && transactionType.isNotEmpty)
+          'transaction_type': transactionType,
+        if (type != null && type.isNotEmpty) 'type': type,
+        if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+        if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
+        'per_page': (perPage ?? _transactionItemsPerPage).toString(),
+        'page': (page ?? 1).toString(),
+      };
+
+      final uri = Uri.parse(APPUrl.supplierTransactionsV2)
+          .replace(queryParameters: queryParams);
+
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
+
+      final response = await _getWithRetry(
+        uri,
+        headers: {
+          'Authorization': 'Bearer ${_accessToken!}',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonMap = jsonDecode(response.body);
+        if (jsonMap['status'] == 'success' && jsonMap['data'] != null) {
+          final data = jsonMap['data'];
+          if (data['data'] != null && data['data'] is List) {
+            final transactions = data['data'] as List<dynamic>;
+            List<TransactionModel> transactionList = [];
+            _supplierNameToId.clear();
+            for (var i = 0; i < transactions.length; i++) {
+              final tx = transactions[i];
+              try {
+                final model = _createTransactionFromJson(tx, i);
+                transactionList.add(model);
+                final name = model.supplier.user.name;
+                final id = model.supplier.id;
+                if (name.isNotEmpty && id != 0) {
+                  _supplierNameToId[name] = id;
+                }
+              } catch (e) {
+                debugPrint('Error parsing transaction (v2): $e');
+              }
+            }
+            _listTransactionModelDataList = transactionList;
+            _filteredTransactionsList = List.from(_listTransactionModelDataList!);
+            _transactionCurrentPage = data['current_page'] ?? 1;
+            _transactionTotalPages = data['last_page'] ?? 1;
+          }
+        }
+      } else {
+        throw Exception('Failed to load transactions v2: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error in fetchTransactionsFromServerV2: $e');
       rethrow;
     } finally {
       _transactionIsLoading = false;
@@ -279,11 +378,12 @@ class TransactionProvider extends ChangeNotifier {
   }
 
   List<String> getSupplierOptions() {
-    if (_allTransactions == null || _allTransactions!.isEmpty) {
-      return ["All Suppliers"];
-    }
+    final source = (_allTransactions != null && _allTransactions!.isNotEmpty)
+        ? _allTransactions!
+        : (_listTransactionModelDataList ?? const <TransactionModel>[]);
+    if (source.isEmpty) return ["All Suppliers"];
 
-    final uniqueSuppliers = _allTransactions!
+    final uniqueSuppliers = source
         .map((tx) => tx.supplier.user.name)
         .where((name) => name.isNotEmpty)
         .toSet()
@@ -420,7 +520,8 @@ class TransactionProvider extends ChangeNotifier {
           ? _safeParseInt(json['reference_id'])
           : null,
       transactionType: json['transaction_type'] ?? '',
-      paymentMode: json['payment_mode'] ?? '',
+      // API may use payment_mode or payment_method
+      paymentMode: (json['payment_mode'] ?? json['payment_method'] ?? '').toString(),
       amount: json['amount'] ?? '0',
       taxAmount: json['tax_amount']?.toString(),
       currency: json['currency'] ?? 'INR',
@@ -443,6 +544,40 @@ class TransactionProvider extends ChangeNotifier {
       return defaultValue;
     } catch (e) {
       return defaultValue;
+    }
+  }
+
+  Future<http.Response> _getWithRetry(
+    Uri uri, {
+    required Map<String, String> headers,
+    int retries = 2,
+  }) async {
+    int attempt = 0;
+    late Object lastError;
+    while (true) {
+      try {
+        return await http
+            .get(uri, headers: headers)
+            .timeout(_requestTimeout);
+      } on SocketException catch (e) {
+        lastError = e;
+      } on HandshakeException catch (e) {
+        lastError = e;
+      } on TimeoutException catch (e) {
+        lastError = e;
+      } on http.ClientException catch (e) {
+        lastError = e;
+      } catch (e) {
+        lastError = e;
+      }
+
+      if (attempt >= retries) {
+        throw lastError;
+      }
+      // Exponential backoff: 600ms, 1200ms, ...
+      final delayMs = 600 * (1 << attempt);
+      await Future.delayed(Duration(milliseconds: delayMs));
+      attempt++;
     }
   }
 }
