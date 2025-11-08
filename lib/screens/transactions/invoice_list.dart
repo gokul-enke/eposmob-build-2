@@ -13,6 +13,7 @@ import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../components/build_container_box.dart';
+import '../transactions/create_invoice_modal.dart';
 import '../../components/build_dropdown_with_search.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
@@ -51,11 +52,18 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   Future<void> _performZatcaPhase2SendWithPdf(Invoice invoice) async {
     try {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Send With PDF] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      final String? token =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Send With PDF] Start for invoice ' +
+          invoice.invoiceNumber +
+          ' (ID: ' +
+          invoice.id.toString() +
+          ')');
       if (token == null || token.isEmpty) {
-        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
-        showScaffoldError(context: context, message: 'Missing authentication token');
+        debugPrint(
+            '[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
+        showScaffoldError(
+            context: context, message: 'Missing authentication token');
         return;
       }
 
@@ -68,10 +76,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         accessToken: token,
       );
 
-      debugPrint('[ZATCA][Phase2 Send With PDF] Response: '+result.toString());
-      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+      debugPrint(
+          '[ZATCA][Phase2 Send With PDF] Response: ' + result.toString());
+      if (result is Map &&
+          ((result['status'] == 'success') ||
+              (result['success'] == true) ||
+              (result['status'] == true))) {
         final data = result['data'] ?? {};
-        final String invoiceNumber = (data['invoice_number']?.toString() ?? invoice.invoiceNumber);
+        final String invoiceNumber =
+            (data['invoice_number']?.toString() ?? invoice.invoiceNumber);
         final String? downloadUrl = data['download_url']?.toString();
         final String? fileName = data['filename']?.toString();
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
@@ -79,21 +92,24 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         }
         showScaffold(
           context: context,
-          message: 'Invoice '+invoiceNumber+' processed under ZATCA Phase 2.',
+          message:
+              'Invoice ' + invoiceNumber + ' processed under ZATCA Phase 2.',
         );
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
             .updateInvoiceZatcaStatus(invoice.id, 'success');
         // Soft refresh: reapply current filters/pagination from cache (no loader / no scroll jump)
-        Provider.of<InvoiceProvider>(context, listen: false).reapplyCurrentFilters();
+        Provider.of<InvoiceProvider>(context, listen: false)
+            .reapplyCurrentFilters();
       } else {
-        final msg = (result is Map ? result['message'] : null) ?? 'Failed to process ZATCA Phase 2';
-        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: '+msg.toString());
+        final msg = (result is Map ? result['message'] : null) ??
+            'Failed to process ZATCA Phase 2';
+        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: ' + msg.toString());
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: '+e.toString());
-      showScaffoldError(context: context, message: 'Error: '+e.toString());
+      debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: ' + e.toString());
+      showScaffoldError(context: context, message: 'Error: ' + e.toString());
     } finally {
       hideLoadingOverlay();
     }
@@ -101,15 +117,23 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   Future<void> _performZatcaPhase2Resync(Invoice invoice) async {
     try {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Resync] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      final String? token =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Resync] Start for invoice ' +
+          invoice.invoiceNumber +
+          ' (ID: ' +
+          invoice.id.toString() +
+          ')');
       if (token == null || token.isEmpty) {
-        debugPrint('[ZATCA][Phase2 Resync] ERROR: Missing authentication token');
-        showScaffoldError(context: context, message: 'Missing authentication token');
+        debugPrint(
+            '[ZATCA][Phase2 Resync] ERROR: Missing authentication token');
+        showScaffoldError(
+            context: context, message: 'Missing authentication token');
         return;
       }
 
-      showScaffold(context: context, message: 'Resyncing invoice with ZATCA...');
+      showScaffold(
+          context: context, message: 'Resyncing invoice with ZATCA...');
       showLoadingOverlay(context, message: 'Resyncing...');
 
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
@@ -118,38 +142,55 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         accessToken: token,
       );
 
-      debugPrint('[ZATCA][Phase2 Resync] Response: '+result.toString());
+      debugPrint('[ZATCA][Phase2 Resync] Response: ' + result.toString());
       if (result is Map) {
-        final bool ok = (result['status'] == 'success') || (result['success'] == true) || (result['status'] == true);
+        final bool ok = (result['status'] == 'success') ||
+            (result['success'] == true) ||
+            (result['status'] == true);
         final data = (result['data'] is Map) ? result['data'] as Map : null;
-        final String invoiceNumber = data?['invoice_number']?.toString() ?? invoice.invoiceNumber;
-        final String resyncStatus = data?['resync_status']?.toString() ?? (ok ? 'success' : 'failed');
+        final String invoiceNumber =
+            data?['invoice_number']?.toString() ?? invoice.invoiceNumber;
+        final String resyncStatus =
+            data?['resync_status']?.toString() ?? (ok ? 'success' : 'failed');
         final String? rawError = data?['error']?.toString();
         if (ok) {
           showScaffold(
             context: context,
-            message: 'Invoice '+invoiceNumber+' resynced with status: '+resyncStatus,
+            message: 'Invoice ' +
+                invoiceNumber +
+                ' resynced with status: ' +
+                resyncStatus,
           );
           // Flip row UI immediately if resync is successful
           Provider.of<InvoiceProvider>(context, listen: false)
               .updateInvoiceZatcaStatus(invoice.id, 'success');
           // Soft refresh from cache only
-          Provider.of<InvoiceProvider>(context, listen: false).reapplyCurrentFilters();
+          Provider.of<InvoiceProvider>(context, listen: false)
+              .reapplyCurrentFilters();
         } else {
           String detail = rawError != null
-              ? rawError.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim()
+              ? rawError
+                  .replaceAll(RegExp(r'<[^>]*>'), ' ')
+                  .replaceAll(RegExp(r'\s+'), ' ')
+                  .trim()
               : (result['message']?.toString() ?? 'Failed to resync invoice');
-          if (detail.length > 220) detail = detail.substring(0, 220)+'...';
-          final errMsg = 'Resync failed for '+invoiceNumber+' (status: '+resyncStatus+'). '+detail;
-          debugPrint('[ZATCA][Phase2 Resync] ERROR: '+errMsg);
+          if (detail.length > 220) detail = detail.substring(0, 220) + '...';
+          final errMsg = 'Resync failed for ' +
+              invoiceNumber +
+              ' (status: ' +
+              resyncStatus +
+              '). ' +
+              detail;
+          debugPrint('[ZATCA][Phase2 Resync] ERROR: ' + errMsg);
           showScaffoldError(context: context, message: errMsg);
         }
       } else {
-        showScaffoldError(context: context, message: 'Failed to resync invoice');
+        showScaffoldError(
+            context: context, message: 'Failed to resync invoice');
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase2 Resync] EXCEPTION: '+e.toString());
-      showScaffoldError(context: context, message: 'Error: '+e.toString());
+      debugPrint('[ZATCA][Phase2 Resync] EXCEPTION: ' + e.toString());
+      showScaffoldError(context: context, message: 'Error: ' + e.toString());
     } finally {
       hideLoadingOverlay();
     }
@@ -164,10 +205,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+        final appSettings =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings;
         final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
         final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
-        final bool isZatcaSuccess = (invoice.zatcaStatus?.toLowerCase() == 'success');
+        final bool isZatcaSuccess =
+            (invoice.zatcaStatus?.toLowerCase() == 'success');
 
         final List<Widget> dynamicItems = [];
         // If ZATCA is already success for this invoice, only show Phase 2 button
@@ -270,11 +314,17 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   Future<void> _performZatcaPhase2Send(Invoice invoice) async {
     try {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Send] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      final String? token =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Send] Start for invoice ' +
+          invoice.invoiceNumber +
+          ' (ID: ' +
+          invoice.id.toString() +
+          ')');
       if (token == null || token.isEmpty) {
         debugPrint('[ZATCA][Phase2 Send] ERROR: Missing authentication token');
-        showScaffoldError(context: context, message: 'Missing authentication token');
+        showScaffoldError(
+            context: context, message: 'Missing authentication token');
         return;
       }
 
@@ -287,34 +337,39 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         accessToken: token,
       );
 
-      debugPrint('[ZATCA][Phase2 Send] Response: '+result.toString());
-      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+      debugPrint('[ZATCA][Phase2 Send] Response: ' + result.toString());
+      if (result is Map &&
+          ((result['status'] == 'success') ||
+              (result['success'] == true) ||
+              (result['status'] == true))) {
         final data = result['data'] ?? {};
-        final String invoiceNumber = (data['invoice_number']?.toString() ?? invoice.invoiceNumber);
+        final String invoiceNumber =
+            (data['invoice_number']?.toString() ?? invoice.invoiceNumber);
         // Do NOT open PDF here per requirement. Just inform the user.
         showScaffold(
           context: context,
-          message: 'Invoice '+invoiceNumber+' submitted to ZATCA successfully.',
+          message:
+              'Invoice ' + invoiceNumber + ' submitted to ZATCA successfully.',
         );
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
             .updateInvoiceZatcaStatus(invoice.id, 'success');
         // Soft refresh from cache only
-        Provider.of<InvoiceProvider>(context, listen: false).reapplyCurrentFilters();
+        Provider.of<InvoiceProvider>(context, listen: false)
+            .reapplyCurrentFilters();
       } else {
-        final msg = (result is Map ? result['message'] : null) ?? 'Failed to send to ZATCA';
-        debugPrint('[ZATCA][Phase2 Send] ERROR: '+msg.toString());
+        final msg = (result is Map ? result['message'] : null) ??
+            'Failed to send to ZATCA';
+        debugPrint('[ZATCA][Phase2 Send] ERROR: ' + msg.toString());
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase2 Send] EXCEPTION: '+e.toString());
-      showScaffoldError(context: context, message: 'Error: '+e.toString());
+      debugPrint('[ZATCA][Phase2 Send] EXCEPTION: ' + e.toString());
+      showScaffoldError(context: context, message: 'Error: ' + e.toString());
     } finally {
       hideLoadingOverlay();
     }
   }
-
-  
 
   Future<void> loadInvoices() async {
     if (isInitialized) return;
@@ -477,15 +532,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        // CustomRoundButton(
-        //   title: "Create New Invoice",
-        //   fct: () {
-        //     sideBarController.index.value = 24;
-        //   },
-        //   fontSize: 12,
-        //   height: 45,
-        //   width: 200,
-        // ),
+        CustomRoundButton(
+          title: "Create invoice",
+          fct: () {
+            showCreateInvoiceModal(context, size);
+          },
+          fontSize: 12,
+          height: 45,
+          width: 120,
+        ),
       ],
     );
   }
@@ -1135,12 +1190,17 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                 0: const FlexColumnWidth(1.4), // Invoice Number
                                 1: const FlexColumnWidth(0.9), // Amount
                                 2: const FlexColumnWidth(1.6), // Name (reduced)
-                                3: const FlexColumnWidth(1.3), // Invoice Date (reduced)
+                                3: const FlexColumnWidth(
+                                    1.3), // Invoice Date (reduced)
                                 4: const FlexColumnWidth(0.9), // Type
-                                5: const FlexColumnWidth(1.3), // Due Date (reduced)
+                                5: const FlexColumnWidth(
+                                    1.3), // Due Date (reduced)
                                 6: const FlexColumnWidth(0.9), // Status
                                 // Make action column wider on small screens
-                                7: FlexColumnWidth(MediaQuery.of(context).size.width < 900 ? 2.2 : 1.5),
+                                7: FlexColumnWidth(
+                                    MediaQuery.of(context).size.width < 900
+                                        ? 2.2
+                                        : 1.5),
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -1183,14 +1243,27 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                         scrollDirection: Axis.vertical,
                                         child: Table(
                                           columnWidths: {
-                                            0: const FlexColumnWidth(1.4), // Invoice Number
-                                            1: const FlexColumnWidth(0.9), // Amount
-                                            2: const FlexColumnWidth(1.6), // Name (reduced)
-                                            3: const FlexColumnWidth(1.3), // Invoice Date (reduced)
-                                            4: const FlexColumnWidth(0.9), // Type
-                                            5: const FlexColumnWidth(1.3), // Due Date (reduced)
-                                            6: const FlexColumnWidth(0.9), // Status
-                                            7: FlexColumnWidth(MediaQuery.of(context).size.width < 900 ? 2.2 : 1.5),
+                                            0: const FlexColumnWidth(
+                                                1.4), // Invoice Number
+                                            1: const FlexColumnWidth(
+                                                0.9), // Amount
+                                            2: const FlexColumnWidth(
+                                                1.6), // Name (reduced)
+                                            3: const FlexColumnWidth(
+                                                1.3), // Invoice Date (reduced)
+                                            4: const FlexColumnWidth(
+                                                0.9), // Type
+                                            5: const FlexColumnWidth(
+                                                1.3), // Due Date (reduced)
+                                            6: const FlexColumnWidth(
+                                                0.9), // Status
+                                            7: FlexColumnWidth(
+                                                MediaQuery.of(context)
+                                                            .size
+                                                            .width <
+                                                        900
+                                                    ? 2.2
+                                                    : 1.5),
                                           },
                                           border: null,
                                           defaultVerticalAlignment:
@@ -1230,9 +1303,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                         const EdgeInsets.all(
                                                             8.0),
                                                     child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
                                                       children: [
-                                                        const SizedBox(width: 8),
+                                                        const SizedBox(
+                                                            width: 8),
                                                         BuildBoxShadowContainer(
                                                           margin:
                                                               const EdgeInsets
@@ -1242,8 +1317,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                           circleRadius: 5,
                                                           child: IconButton(
                                                             icon: Icon(
-                                                              Icons
-                                                                  .visibility,
+                                                              Icons.visibility,
                                                               size: 18,
                                                               color: ColorManager
                                                                   .kPrimaryColor
@@ -1259,34 +1333,61 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                               minHeight: 36,
                                                             ),
                                                             padding:
-                                                                EdgeInsets
-                                                                    .zero,
+                                                                EdgeInsets.zero,
                                                           ),
                                                         ),
                                                         Builder(
                                                           builder: (context) {
-                                                            final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-                                                            final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
-                                                            final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
-                                                            final bool showZatcaMenu = phase1 || phase2;
+                                                            final appSettings =
+                                                                Provider.of<AppSettingsProvider>(
+                                                                        context,
+                                                                        listen:
+                                                                            false)
+                                                                    .appSettings;
+                                                            final bool phase1 =
+                                                                appSettings
+                                                                        ?.zatcaPhase1Enabled ??
+                                                                    false;
+                                                            final bool phase2 =
+                                                                appSettings
+                                                                        ?.zatcaPhase2Enabled ??
+                                                                    false;
+                                                            final bool
+                                                                showZatcaMenu =
+                                                                phase1 ||
+                                                                    phase2;
                                                             if (!showZatcaMenu) {
-                                                              return const SizedBox.shrink();
+                                                              return const SizedBox
+                                                                  .shrink();
                                                             }
                                                             return BuildBoxShadowContainer(
-                                                              margin: const EdgeInsets.only(left: 5, right: 5),
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      left: 5,
+                                                                      right: 5),
                                                               circleRadius: 5,
                                                               child: IconButton(
                                                                 icon: Icon(
-                                                                  Icons.more_vert,
+                                                                  Icons
+                                                                      .more_vert,
                                                                   size: 18,
-                                                                  color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                                  color: ColorManager
+                                                                      .kPrimaryColor
+                                                                      .withOpacity(
+                                                                          0.9),
                                                                 ),
-                                                                onPressed: () => _showInvoiceActionsSheet(invoice),
-                                                                constraints: const BoxConstraints(
+                                                                onPressed: () =>
+                                                                    _showInvoiceActionsSheet(
+                                                                        invoice),
+                                                                constraints:
+                                                                    const BoxConstraints(
                                                                   minWidth: 36,
                                                                   minHeight: 36,
                                                                 ),
-                                                                padding: EdgeInsets.zero,
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
                                                               ),
                                                             );
                                                           },
@@ -1313,15 +1414,19 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  
-
   Future<void> _performZatcaPhase1Print(Invoice invoice) async {
     try {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase1 Print] Start for invoice '+invoice.invoiceNumber+' (ID: '+invoice.id.toString()+')');
+      final String? token =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase1 Print] Start for invoice ' +
+          invoice.invoiceNumber +
+          ' (ID: ' +
+          invoice.id.toString() +
+          ')');
       if (token == null || token.isEmpty) {
         debugPrint('[ZATCA][Phase1 Print] ERROR: Missing authentication token');
-        showScaffoldError(context: context, message: 'Missing authentication token');
+        showScaffoldError(
+            context: context, message: 'Missing authentication token');
         return;
       }
 
@@ -1334,8 +1439,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         accessToken: token,
       );
 
-      debugPrint('[ZATCA][Phase1 Print] Response: '+result.toString());
-      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+      debugPrint('[ZATCA][Phase1 Print] Response: ' + result.toString());
+      if (result is Map &&
+          ((result['status'] == 'success') ||
+              (result['success'] == true) ||
+              (result['status'] == true))) {
         final data = result['data'] ?? {};
         final String? downloadUrl = data['download_url']?.toString();
         final String? fileName = data['filename']?.toString();
@@ -1348,19 +1456,21 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           );
         }
       } else {
-        final msg = (result is Map ? result['message'] : null) ?? 'Failed to trigger ZATCA Print';
-        debugPrint('[ZATCA][Phase1 Print] ERROR: '+msg.toString());
+        final msg = (result is Map ? result['message'] : null) ??
+            'Failed to trigger ZATCA Print';
+        debugPrint('[ZATCA][Phase1 Print] ERROR: ' + msg.toString());
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase1 Print] EXCEPTION: '+e.toString());
-      showScaffoldError(context: context, message: 'Error: '+e.toString());
+      debugPrint('[ZATCA][Phase1 Print] EXCEPTION: ' + e.toString());
+      showScaffoldError(context: context, message: 'Error: ' + e.toString());
     } finally {
       hideLoadingOverlay();
     }
   }
 
-  Future<void> _downloadAndOpenPdf(String url, {String? suggestedFileName}) async {
+  Future<void> _downloadAndOpenPdf(String url,
+      {String? suggestedFileName}) async {
     try {
       if (kIsWeb) {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
@@ -1369,9 +1479,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
 
       final dir = await getApplicationDocumentsDirectory();
-      final String fileName = (suggestedFileName != null && suggestedFileName.trim().isNotEmpty)
-          ? suggestedFileName
-          : 'invoice_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final String fileName =
+          (suggestedFileName != null && suggestedFileName.trim().isNotEmpty)
+              ? suggestedFileName
+              : 'invoice_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final String savePath = '${dir.path}/$fileName';
 
       final dio = Dio();
@@ -1388,7 +1499,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       await OpenFile.open(savePath);
       showScaffold(context: context, message: 'PDF downloaded');
     } catch (e) {
-      debugPrint('[ZATCA][PDF] ERROR while downloading/opening: '+e.toString());
+      debugPrint(
+          '[ZATCA][PDF] ERROR while downloading/opening: ' + e.toString());
       try {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
       } catch (_) {}

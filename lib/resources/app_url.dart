@@ -128,12 +128,16 @@ class APPUrl {
       '$baseURL/api/v1/transaction/list-transactions';
   static String listAllInvoices = '$baseURL/api/v1/invoice/list-invoices';
   static String listAllReceipts = '$baseURL/api/v1/receipt/list-receipts';
+  static String createReceipt = '$baseURL/api/v1/receipt/create-receipt';
   static String detailsOfReceipt = '$baseURL/api/v1/receipt/receipt-details';
   static String detailsOfInvoice = '$baseURL/api/v1/invoice/invoice-details';
   static String listCustomerVouchers = '$baseURL/api/v1/voucher/vouchers-list';
-  static String createCustomerVoucher = '$baseURL/api/v1/voucher/vouchers-create';
-  static String listSupplierVouchers = '$baseURL/api/v1/suppliers/list-supplier-voucher';
-  static String createSupplierVoucher = '$baseURL/api/v1/suppliers/create-supplier-voucher';
+  static String createCustomerVoucher =
+      '$baseURL/api/v1/voucher/vouchers-create';
+  static String listSupplierVouchers =
+      '$baseURL/api/v1/suppliers/list-supplier-voucher';
+  static String createSupplierVoucher =
+      '$baseURL/api/v1/suppliers/create-supplier-voucher';
   static String listStates = '$baseURL/api/v1/location/get-states';
   static String listDistricts = '$baseURL/api/v1/location/get-district';
   static String listPincodes = '$baseURL/api/v1/location/list-pincodes';
