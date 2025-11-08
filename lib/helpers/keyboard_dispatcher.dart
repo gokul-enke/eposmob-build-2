@@ -37,13 +37,15 @@ class _KeyboardDispatcherState extends State<KeyboardDispatcher> {
       debugPrint("🔵 [KeyboardDispatcher] Key ID: ${event.logicalKey.keyId}");
 
       // Check if any text field has focus - if so, don't intercept keyboard events
-      final currentFocus = FocusScope.of(context);
-      debugPrint("🔵 [KeyboardDispatcher] FocusScope.hasFocus: ${currentFocus.hasFocus}");
-      debugPrint("🔵 [KeyboardDispatcher] FocusScope.hasPrimaryFocus: ${currentFocus.hasPrimaryFocus}");
-      
-      if (currentFocus.hasFocus && currentFocus.hasPrimaryFocus == false) {
-        // A text field has focus, let it handle the keyboard events
-        debugPrint("⚠️ [KeyboardDispatcher] Text field has focus, passing through event");
+      final primaryFocus = FocusManager.instance.primaryFocus;
+      debugPrint("🔵 [KeyboardDispatcher] primaryFocus: ${primaryFocus?.debugLabel}");
+
+      final focusedWidget = primaryFocus?.context?.widget;
+      final isEditable = focusedWidget is EditableText;
+
+      debugPrint("🔵 [KeyboardDispatcher] Focus is editable: $isEditable");
+      if (isEditable) {
+        debugPrint("⚠️ [KeyboardDispatcher] EditableText has focus, passing through event");
         debugPrint("🔵 [KeyboardDispatcher] ========== KEY EVENT END (SKIPPED) ==========\n");
         return;
       }

@@ -10,7 +10,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/cart.dart';
+import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/customer_voucher_provider.dart';
@@ -45,6 +45,7 @@ import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
+import 'providers/cart.dart';
 import 'providers/carousel_provider.dart';
 import 'providers/purchase_provider.dart';
 import 'screens/login/login.dart';
@@ -130,6 +131,31 @@ Future<void> _initializeHiveBoxes() async {
   const maxRetries = 3;
   const retryDelay = Duration(seconds: 2);
 
+  const boxesToResetBeforeInit = ['products', 'categories'];
+
+  for (final boxName in boxesToResetBeforeInit) {
+    try {
+      if (Hive.isBoxOpen(boxName)) {
+        final box = Hive.box(boxName);
+        debugPrint('⚠️ Box $boxName was open during initialization. Clearing and closing before reset.');
+        await box.clear();
+        await box.close();
+      }
+
+      final exists = await Hive.boxExists(boxName);
+
+      if (exists) {
+        debugPrint('🧹 Clearing existing data for $boxName box before initialization');
+        await Hive.deleteBoxFromDisk(boxName);
+        debugPrint('✅ Cleared $boxName box from disk');
+      } else {
+        debugPrint('ℹ️ No existing data found for $boxName box to clear');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Unable to clear $boxName box before initialization: $e');
+    }
+  }
+
   final boxNames = [
     'products',
     'cart_items',
@@ -195,6 +221,9 @@ Future<void> _initializeHiveBoxes() async {
               case 'confirmed_orders':
                 await Hive.openBox<HiveSavedOrder>(boxName);
                 break;
+              case 'categories':
+                await Hive.openBox<HiveCategory>(boxName);
+                break;
             }
             debugPrint('✅ Successfully opened $boxName box after cleanup');
             success = true;
@@ -248,6 +277,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => GridSelectionProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => StockProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => Cart()),
