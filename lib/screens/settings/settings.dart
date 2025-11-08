@@ -7,6 +7,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/resources/localization_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -37,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Settings',
+                'settings.title'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s20,
@@ -57,12 +58,12 @@ class SettingsScreen extends StatelessWidget {
                         crossAxisSpacing: 14,
                         childAspectRatio: 1.08,
                       ),
-                      itemCount: 3, // Updated count
+                      itemCount: 3, // Added Language Settings
                       itemBuilder: (context, index) {
                         switch (index) {
                           case 0:
                             return _SettingsCard(
-                              title: 'WhatsApp Settings',
+                              title: 'settings.whatsapp'.tr,
                               iconPath: ImageAssets.whatsappIcon,
                               onTap: () {
                                 Get.find<SideBarController>().index.value =
@@ -71,7 +72,7 @@ class SettingsScreen extends StatelessWidget {
                             );
                           case 1:
                             return _SettingsCard(
-                              title: 'Company Info',
+                              title: 'settings.company_info'.tr,
                               iconPath: ImageAssets
                                   .reportIcon, // Using existing report icon
                               iconColor: Colors.green,
@@ -79,6 +80,13 @@ class SettingsScreen extends StatelessWidget {
                                 Get.find<SideBarController>().index.value =
                                     64; // Navigate to Company Info screen
                               },
+                            );
+                          case 2:
+                            return _SettingsCard(
+                              title: 'settings.language'.tr,
+                              iconPath: ImageAssets.reportIcon,
+                              iconColor: Colors.blue,
+                              onTap: () => _showLanguagePicker(context),
                             );
                           default:
                             return const SizedBox
@@ -93,6 +101,55 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showLanguagePicker(BuildContext context) {
+    final currentCode = LocalizationService.locale.languageCode;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        String selected = currentCode;
+        return AlertDialog(
+          title: Text('settings.language.select'.tr),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('English'),
+                    value: 'en',
+                    groupValue: selected,
+                    onChanged: (v) => setState(() => selected = v!),
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('हिन्दी'),
+                    value: 'hi',
+                    groupValue: selected,
+                    onChanged: (v) => setState(() => selected = v!),
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text('general.cancel'.tr),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newLocale = Locale(selected);
+                await LocalizationService.updateLocale(newLocale);
+                Get.updateLocale(newLocale);
+                Get.back();
+              },
+              child: Text('general.ok'.tr),
+            ),
+          ],
+        );
+      },
     );
   }
 }

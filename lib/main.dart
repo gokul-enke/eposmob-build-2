@@ -52,6 +52,8 @@ import 'screens/login/base_url_wrapper.dart';
 import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'resources/localization_service.dart';
+import 'resources/app_translations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,6 +89,8 @@ void main() async {
 
   // Open boxes with error handling and retry logic
   await _initializeHiveBoxes();
+
+  await LocalizationService.init();
 
   Get.put(SideBarController());
 
@@ -290,6 +294,9 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'CLOUD POS',
           theme: ThemeData(),
+          translations: AppTranslations(LocalizationService.translations),
+          locale: LocalizationService.locale,
+          fallbackLocale: LocalizationService.fallbackLocale,
           builder: (context, child) {
             return Stack(
               children: [
