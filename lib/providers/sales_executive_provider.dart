@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/sales_executive.dart';
 import 'package:pos_machine/models/sales_executive_report.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -207,14 +208,43 @@ class SalesExecutiveProvider extends ChangeNotifier {
         };
       }
 
-      // Build query parameters
+      // Build query parameters according to new format
       final queryParameters = <String, String>{};
 
-      if (fromDate != null && fromDate.isNotEmpty) {
-        queryParameters['from_date'] = fromDate;
+      // Determine dateFilter mode
+      final bool hasCustomDates =
+          (fromDate != null && fromDate.isNotEmpty) ||
+          (toDate != null && toDate.isNotEmpty);
+
+      if (hasCustomDates) {
+        queryParameters['dateFilter'] = 'custom';
+        if (fromDate != null && fromDate.isNotEmpty) {
+          queryParameters['dateFrom'] = fromDate; // YYYY-MM-DD
+        }
+        if (toDate != null && toDate.isNotEmpty) {
+          queryParameters['dateTo'] = toDate; // YYYY-MM-DD
+        }
+      } else {
+        // default filter
+        queryParameters['dateFilter'] = 'today';
       }
-      if (toDate != null && toDate.isNotEmpty) {
-        queryParameters['to_date'] = toDate;
+
+      // Attach active store_id if available
+      try {
+        final storeProvider = Provider.of<StoreSessionProvider>(context, listen: false);
+        final storeId = storeProvider.activeStore?.storeId;
+        if (storeId != null) {
+          queryParameters['store_id'] = storeId.toString();
+        } else {
+          // fallback to saved active_store_id
+          final prefs = await SharedPreferences.getInstance();
+          final int? savedStoreId = prefs.getInt('active_store_id');
+          if (savedStoreId != null) {
+            queryParameters['store_id'] = savedStoreId.toString();
+          }
+        }
+      } catch (_) {
+        // ignore if store provider not available
       }
 
       // Get API key from SharedPreferences

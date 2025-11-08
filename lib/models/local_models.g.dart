@@ -123,13 +123,14 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       flatDiscount: fields[20] as double?,
       percentageDiscount: fields[21] as double?,
       toCustomerCredit: fields[22] as bool?,
+      tableId: fields[23] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveSavedOrder obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -175,7 +176,9 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       ..writeByte(21)
       ..write(obj.percentageDiscount)
       ..writeByte(22)
-      ..write(obj.toCustomerCredit);
+      ..write(obj.toCustomerCredit)
+      ..writeByte(23)
+      ..write(obj.tableId);
   }
 
   @override
@@ -469,6 +472,95 @@ class HiveAttachmentAdapter extends TypeAdapter<HiveAttachment> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is HiveAttachmentAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class HiveCategoryAdapter extends TypeAdapter<HiveCategory> {
+  @override
+  final int typeId = 8;
+
+  @override
+  HiveCategory read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return HiveCategory(
+      categoryId: fields[0] as int?,
+      categoryName: fields[1] as String?,
+      categorySlug: fields[2] as String?,
+      productsCount: fields[3] as int?,
+      categoryImage: fields[4] as String?,
+      categoryIcon: fields[5] as String?,
+      parent: fields[6] as HiveParentCategory?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, HiveCategory obj) {
+    writer
+      ..writeByte(7)
+      ..writeByte(0)
+      ..write(obj.categoryId)
+      ..writeByte(1)
+      ..write(obj.categoryName)
+      ..writeByte(2)
+      ..write(obj.categorySlug)
+      ..writeByte(3)
+      ..write(obj.productsCount)
+      ..writeByte(4)
+      ..write(obj.categoryImage)
+      ..writeByte(5)
+      ..write(obj.categoryIcon)
+      ..writeByte(6)
+      ..write(obj.parent);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HiveCategoryAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class HiveParentCategoryAdapter extends TypeAdapter<HiveParentCategory> {
+  @override
+  final int typeId = 9;
+
+  @override
+  HiveParentCategory read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return HiveParentCategory(
+      id: fields[0] as int?,
+      name: fields[1] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, HiveParentCategory obj) {
+    writer
+      ..writeByte(2)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.name);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HiveParentCategoryAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

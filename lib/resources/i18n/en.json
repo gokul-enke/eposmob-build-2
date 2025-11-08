@@ -1,0 +1,21 @@
+{
+  "app.title": "CLOUD POS",
+  "general.ok": "OK",
+  "general.cancel": "Cancel",
+  "general.save": "Save",
+  "general.print": "Print",
+  "general.more": "More",
+  "settings.title": "Settings",
+  "settings.language": "Language",
+  "settings.language.select": "Select Language",
+  "settings.whatsapp": "WhatsApp Settings",
+  "settings.company_info": "Company Info",
+  "billing.title": "Billing",
+  "billing.add_to_cart": "Add to Cart",
+  "billing.confirm_order": "Confirm Order",
+  "billing.save_and_print": "Save and Print",
+  "billing.discount": "Discount",
+  "billing.total": "Total",
+  "customers.title": "Customers",
+  "suppliers.title": "Suppliers"
+}

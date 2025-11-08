@@ -56,6 +56,7 @@ class SavedOrder {
   final double? flatDiscount;
   final double? percentageDiscount;
   final bool? toCustomerCredit;
+  final String? tableId;
 
   SavedOrder({
     required this.id,
@@ -82,6 +83,7 @@ class SavedOrder {
     this.flatDiscount,
     this.percentageDiscount,
     this.toCustomerCredit,
+    this.tableId,
   });
 }
 
@@ -389,7 +391,10 @@ class LocalProductProvider extends ChangeNotifier {
   // Load saved orders from Hive
   void _loadSavedOrdersFromHive() {
     _savedOrders.clear();
+    debugPrint("📥 [Hive] Loading saved orders from 'saved_orders' box (len=${_savedOrdersBox.length})...");
+    int idx = 0;
     for (var hiveSavedOrder in _savedOrdersBox.values) {
+      idx++;
       List<LocalCartItem> orderItems = hiveSavedOrder.items.map((hiveCartItem) {
         final productJson = json.decode(hiveCartItem.serializedProduct.value);
         final product = GetProduct.fromJson(productJson);
@@ -412,7 +417,7 @@ class LocalProductProvider extends ChangeNotifier {
         );
       }).toList();
 
-      _savedOrders.add(SavedOrder(
+      final savedOrder = SavedOrder(
         id: hiveSavedOrder.id,
         orderNumber: hiveSavedOrder.orderNumber,
         items: orderItems,
@@ -437,7 +442,11 @@ class LocalProductProvider extends ChangeNotifier {
         flatDiscount: hiveSavedOrder.flatDiscount,
         percentageDiscount: hiveSavedOrder.percentageDiscount,
         toCustomerCredit: hiveSavedOrder.toCustomerCredit,
-      ));
+        tableId: hiveSavedOrder.tableId,
+      );
+      _savedOrders.add(savedOrder);
+      debugPrint(
+          "  #$idx ↪️ Loaded SavedOrder id=${savedOrder.id}, num=${savedOrder.orderNumber}, status=${savedOrder.status}, tableId=${savedOrder.tableId}, items=${savedOrder.items.length}");
     }
     notifyListeners();
   }
@@ -494,8 +503,11 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save orders to Hive
   void _saveSavedOrdersToHive() {
+    debugPrint("💾 [Hive] Persisting ${_savedOrders.length} saved orders to 'saved_orders' box...");
     _savedOrdersBox.clear();
+    int idx = 0;
     for (var order in _savedOrders) {
+      idx++;
       List<HiveLocalCartItem> hiveItems = order.items.map((item) {
         // Serialize selected stock if it exists
         HiveStringValue? serializedStock;
@@ -540,9 +552,12 @@ class LocalProductProvider extends ChangeNotifier {
         flatDiscount: order.flatDiscount,
         percentageDiscount: order.percentageDiscount,
         toCustomerCredit: order.toCustomerCredit,
+        tableId: order.tableId,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
+      debugPrint(
+          "  #$idx ✅ Saved order id=${order.id}, num=${order.orderNumber}, status=${order.status}, tableId=${order.tableId}, items=${order.items.length}");
     }
   }
 
@@ -1723,11 +1738,14 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
+    String? tableId,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
     debugPrint("  - Customer Name parameter: '$customerName'");
     debugPrint("  - Customer ID parameter: $customerId");
+    debugPrint("  - Requested status: ${status ?? 'saved'}");
+    debugPrint("  - TableId: $tableId");
 
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as order");
@@ -1779,6 +1797,7 @@ class LocalProductProvider extends ChangeNotifier {
       flatDiscount: _flatDiscount,
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
+      tableId: tableId,
     );
 
     // Add to saved orders list
@@ -1790,6 +1809,8 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("  - Saved order phone: '${order.customerPhone}'");
     debugPrint("  - Saved order name: '${order.customerName}'");
     debugPrint("  - Saved order customer ID: ${order.customerId}");
+    debugPrint("  - Saved order status: ${order.status}");
+    debugPrint("  - Saved order tableId: ${order.tableId}");
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder completed");
 
     return order;
@@ -1877,12 +1898,15 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
+    String? tableId,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
     debugPrint("  - Customer Name parameter: '$customerName'");
     debugPrint("  - Customer ID parameter: $customerId");
+    debugPrint("  - TableId parameter: $tableId");
+    debugPrint("  - Status parameter: $status");
 
     int index = _savedOrders.indexWhere((o) => o.id == orderId);
 
@@ -1935,6 +1959,7 @@ class LocalProductProvider extends ChangeNotifier {
         percentageDiscount: _percentageDiscount,
         toCustomerCredit:
             toCustomerCredit ?? _savedOrders[index].toCustomerCredit,
+        tableId: tableId ?? _savedOrders[index].tableId,
       );
 
       // Update in list
@@ -1943,6 +1968,8 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("  - Updated order phone: '${updatedOrder.customerPhone}'");
       debugPrint("  - Updated order name: '${updatedOrder.customerName}'");
       debugPrint("  - Updated order customer ID: ${updatedOrder.customerId}");
+      debugPrint("  - Updated order status: ${updatedOrder.status}");
+      debugPrint("  - Updated order tableId: ${updatedOrder.tableId}");
 
       // Clear current order reference
       _currentOrder = null;
@@ -1958,7 +1985,10 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Deletes a saved order
   void deleteSavedOrder(String orderId) {
+    final before = _savedOrders.length;
     _savedOrders.removeWhere((o) => o.id == orderId);
+    final after = _savedOrders.length;
+    debugPrint("🗑️ LOCAL PROVIDER - deleteSavedOrder id=$orderId (before=$before, after=$after)");
 
     // If current order is deleted, clear reference
     if (_currentOrder != null && _currentOrder!.id == orderId) {

@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/cart.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/customer_voucher_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -26,12 +27,14 @@ import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
@@ -49,6 +52,8 @@ import 'screens/login/base_url_wrapper.dart';
 import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'resources/localization_service.dart';
+import 'resources/app_translations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,9 +83,14 @@ void main() async {
   Hive.registerAdapter(HiveProductCategoryAdapter());
   Hive.registerAdapter(HiveProductPriceAdapter());
   Hive.registerAdapter(HiveAttachmentAdapter());
+  // Register category adapters
+  Hive.registerAdapter(HiveCategoryAdapter());
+  Hive.registerAdapter(HiveParentCategoryAdapter());
 
   // Open boxes with error handling and retry logic
   await _initializeHiveBoxes();
+
+  await LocalizationService.init();
 
   Get.put(SideBarController());
 
@@ -124,7 +134,8 @@ Future<void> _initializeHiveBoxes() async {
     'products',
     'cart_items',
     'saved_orders',
-    'confirmed_orders'
+    'confirmed_orders',
+    'categories'
   ];
 
   for (String boxName in boxNames) {
@@ -155,6 +166,9 @@ Future<void> _initializeHiveBoxes() async {
           case 'saved_orders':
           case 'confirmed_orders':
             await Hive.openBox<HiveSavedOrder>(boxName);
+            break;
+          case 'categories':
+            await Hive.openBox<HiveCategory>(boxName);
             break;
         }
 
@@ -243,6 +257,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PurchaseProvider()),
         ChangeNotifierProvider(create: (_) => InvoiceProvider()),
         ChangeNotifierProvider(create: (_) => LocationProvider()),
+        ChangeNotifierProvider(create: (_) => MasterDataProvider()),
         ChangeNotifierProvider(create: (_) => CustomerProvider()),
         ChangeNotifierProvider(create: (_) => CustomerSelectionProvider()),
         ChangeNotifierProvider(create: (_) => ReportsProvider()),
@@ -271,12 +286,17 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WhatsappProvider()),
         ChangeNotifierProvider(create: (_) => PineLabsTerminalProvider()),
         ChangeNotifierProvider(create: (_) => RoleProvider()),
+        ChangeNotifierProvider(create: (_) => CustomerVoucherProvider()),
+        ChangeNotifierProvider(create: (_) => SupplierVoucherProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'CLOUD POS',
           theme: ThemeData(),
+          translations: AppTranslations(LocalizationService.translations),
+          locale: LocalizationService.locale,
+          fallbackLocale: LocalizationService.fallbackLocale,
           builder: (context, child) {
             return Stack(
               children: [

@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/view_category.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/models/local_models.dart';
 
 import '../resources/app_url.dart';
 
@@ -116,6 +118,20 @@ class CategoryProvider extends ChangeNotifier {
       // Don't reset the loaded flag for filtered results, just make the call
     } else {
       debugPrint("🏷️ [CategoryProvider] Making initial API call for categories");
+      
+      // Try to load from Hive first for non-filtered requests
+      if (categoryList == null || categoryList!.isEmpty) {
+        final cachedCategories = await loadCategoriesFromHive();
+        if (cachedCategories.isNotEmpty) {
+          categoryList = cachedCategories;
+          _originalCategoryList = List.from(categoryList!);
+          _isCategoriesLoaded = true;
+          isLoading = false;
+          notifyListeners();
+          debugPrint("🏷️ [CategoryProvider] Using categories from Hive cache");
+          return;
+        }
+      }
     }
 
     isLoading = true;
@@ -165,6 +181,11 @@ class CategoryProvider extends ChangeNotifier {
         if (filterName == null && filterParent == null) {
           _originalCategoryList = List.from(categoryList!);
           _isCategoriesLoaded = true;
+          
+          // Save to Hive for future offline use
+          if (categoryList != null && categoryList!.isNotEmpty) {
+            await saveCategoriesToHive(categoryList!);
+          }
         }
 
         isLoading = false;
@@ -188,6 +209,10 @@ class CategoryProvider extends ChangeNotifier {
     _isCategoriesLoaded = false;
     categoryList?.clear();
     _originalCategoryList?.clear();
+    
+    // Clear Hive cache for fresh data
+    await clearCategoriesFromHive();
+    
     await listAllCategory();
   }
 
@@ -531,6 +556,57 @@ class CategoryProvider extends ChangeNotifier {
       }
     } catch (e) {
       // debugPrint('Error fetching prop values: ${e.toString()}');
+    }
+  }
+
+  // Hive storage methods for categories
+  Future<void> saveCategoriesToHive(List<Category> categories) async {
+    try {
+      final categoriesBox = await Hive.openBox<HiveCategory>('categories');
+      
+      // Clear existing categories
+      await categoriesBox.clear();
+      
+      // Save new categories
+      for (Category category in categories) {
+        final hiveCategory = HiveCategory.fromCategory(category);
+        await categoriesBox.put(category.categoryId, hiveCategory);
+      }
+      
+      debugPrint("🏷️ [CategoryProvider] Saved ${categories.length} categories to Hive");
+    } catch (e) {
+      debugPrint("🏷️ [CategoryProvider] Error saving categories to Hive: $e");
+    }
+  }
+
+  Future<List<Category>> loadCategoriesFromHive() async {
+    try {
+      if (!Hive.isBoxOpen('categories')) {
+        await Hive.openBox<HiveCategory>('categories');
+      }
+      
+      final categoriesBox = Hive.box<HiveCategory>('categories');
+      final hiveCategories = categoriesBox.values.toList();
+      
+      // Convert Hive categories back to app model
+      final categories = hiveCategories.map((hiveCategory) => hiveCategory.toCategory()).toList();
+      
+      debugPrint("🏷️ [CategoryProvider] Loaded ${categories.length} categories from Hive");
+      return categories;
+    } catch (e) {
+      debugPrint("🏷️ [CategoryProvider] Error loading categories from Hive: $e");
+      return [];
+    }
+  }
+
+  Future<void> clearCategoriesFromHive() async {
+    try {
+      if (Hive.isBoxOpen('categories')) {
+        await Hive.box<HiveCategory>('categories').clear();
+        debugPrint("🏷️ [CategoryProvider] Cleared categories from Hive");
+      }
+    } catch (e) {
+      debugPrint("🏷️ [CategoryProvider] Error clearing categories from Hive: $e");
     }
   }
 }

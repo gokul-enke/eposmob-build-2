@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 
-import '../../components/add_customer_form.dart';
+import '../../newcomponents/custom_customer_form.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -72,7 +72,7 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
             ),
           ),
           // Use the unified form
-          AddCustomerForm(
+          CustomCustomerForm(
             initialMobileNumber: widget.mobileNumber,
             isModal: true,
             onSuccess: () {

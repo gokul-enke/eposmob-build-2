@@ -585,6 +585,10 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                       '${value["message"]}',
                                                 );
 
+                                                // Refresh category cache to include updated category
+                                                final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+                                                categoryProvider.refreshCategories();
+
                                                 Navigator.pop(context);
                                                 clearText();
                                                 sideBarController.index.value =

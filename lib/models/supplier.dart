@@ -51,7 +51,7 @@ class SupplierTransaction {
       paymentMethod: json['payment_method'] ?? '',
       type: json['type'] ?? '',
       transactionType: json['transaction_type'] ?? '',
-      amount: json['amount'] ?? '0.000',
+      amount: json['amount']?.toString() ?? '0.000',
       currency: json['currency'] ?? 'INR',
       reference: json['reference'] ?? '',
       status: json['status'] ?? '',

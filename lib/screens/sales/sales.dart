@@ -43,6 +43,8 @@ import '../../resources/color_manager.dart';
 
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/mobile_order_card.dart';
+import 'widgets/mobile_filters.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -98,6 +100,12 @@ class _SalesScreenState extends State<SalesScreen> {
   void initState() {
     loadInitData();
     super.initState();
+    // Ensure filters are shown by default on desktop
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isMobile = MediaQuery.of(context).size.width < 768;
+      Provider.of<SalesProvider>(context, listen: false)
+          .setFiltersVisibility(!isMobile);
+    });
   }
 
   @override
@@ -265,7 +273,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final billDocumentConfig = (orderData.orderReturns != null && 
           orderData.orderReturns!.returnItems != null && 
           orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales Return Bill") ?? 
+          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ?? 
              docConfigProvider.getDocumentConfig("Bill"))
           : docConfigProvider.getDocumentConfig("Bill");
 
@@ -678,7 +686,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final billDocumentConfig = (orderData.orderReturns != null && 
           orderData.orderReturns!.returnItems != null && 
           orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales Return Bill") ?? 
+          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ?? 
              docConfigProvider.getDocumentConfig("Bill"))
           : docConfigProvider.getDocumentConfig("Bill");
 
@@ -1122,10 +1130,20 @@ Powered by CloudPOS''',
       calendarPickerKey = UniqueKey();
     });
     searchOrders(1); // Trigger fresh search after reset
+    
+    // Optionally hide filters after reset on mobile
+    if (_isMobile(context)) {
+      Provider.of<SalesProvider>(context, listen: false).setFiltersVisibility(false);
+    }
   }
 
   Future<void> refreshData() async {
     resetSearch();
+  }
+
+  // Helper method to check if device is mobile
+  bool _isMobile(BuildContext context) {
+    return MediaQuery.of(context).size.width < 768;
   }
 
   Widget _buildTableHeader(String text) {
@@ -1875,10 +1893,13 @@ Powered by CloudPOS''',
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: _isMobile(context) ? 5 : 10,
+            vertical: _isMobile(context) ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(_isMobile(context) ? 12 : 22),
             boxShadow: const [
               BoxShadow(
                 color: ColorManager.boxShadowColor,
@@ -1889,13 +1910,15 @@ Powered by CloudPOS''',
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: EdgeInsets.symmetric(
+              vertical: _isMobile(context) ? 12.0 : 20.0,
+              horizontal: _isMobile(context) ? 12.0 : 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       "Orders List",
@@ -1906,12 +1929,117 @@ Powered by CloudPOS''',
                         ColorManager.textColor,
                       ),
                     ),
+                    Consumer<SalesProvider>(
+                      builder: (context, salesProvider, child) {
+                        final hasFilters = orderNumberController.text.isNotEmpty ||
+                            customerNameController.text.isNotEmpty ||
+                            amountController.text.isNotEmpty ||
+                            emailController.text.isNotEmpty ||
+                            phoneController.text.isNotEmpty ||
+                            storeController.text.isNotEmpty ||
+                            statusController.text.isNotEmpty ||
+                            selectedDate != null;
+
+                        return Stack(
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                salesProvider.showFilters
+                                    ? Icons.filter_alt
+                                    : Icons.filter_alt_outlined,
+                                color: ColorManager.kPrimaryColor,
+                              ),
+                              onPressed: () {
+                                salesProvider.toggleFilters();
+                              },
+                              tooltip: salesProvider.showFilters
+                                  ? 'Hide Filters'
+                                  : 'Show Filters',
+                            ),
+                            if (hasFilters)
+                              Positioned(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 15),
 
-                // Search and Filter Section
-                Column(
+                // Search and Filter Section - Responsive (conditionally shown)
+                Consumer<SalesProvider>(
+                  builder: (context, salesProvider, child) {
+                    if (!salesProvider.showFilters) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    return _isMobile(context)
+                        ? MobileFilters(
+                        orderNumberController: orderNumberController,
+                        customerNameController: customerNameController,
+                        phoneController: phoneController,
+                        amountController: amountController,
+                        storeController: storeController,
+                        storeSearchController: storeSearchController,
+                        statusController: statusController,
+                        selectedStatus: selectedStatus,
+                        storeSelected: storeSelected,
+                        selectedDate: selectedDate,
+                        calendarPickerKey: calendarPickerKey,
+                        storeList: storeList ?? [],
+                        statusOptions: statusOptions,
+                        onSearch: (value) {
+                          if (value == null || value.isEmpty || value.length > 2) {
+                            searchOrders(1);
+                          }
+                        },
+                        onStoreChanged: (GetStoreModelData? storeModelData) {
+                          setState(() {
+                            if (storeModelData?.id == 0) {
+                              storeSelected = null;
+                              storeController.clear();
+                            } else {
+                              storeSelected = storeModelData;
+                              if (storeModelData != null) {
+                                storeController.text = storeModelData.id.toString();
+                              } else {
+                                storeController.clear();
+                              }
+                            }
+                          });
+                          searchOrders(1);
+                        },
+                        onStatusChanged: (String? status) {
+                          setState(() {
+                            selectedStatus = status;
+                            if (status != null) {
+                              statusController.text = status;
+                            } else {
+                              statusController.clear();
+                            }
+                          });
+                          searchOrders(1);
+                        },
+                        onDateSelected: (DateTime date) {
+                          setState(() {
+                            selectedDate = date;
+                          });
+                          searchOrders(1);
+                        },
+                        onReset: resetSearch,
+                      )
+                    : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // First row of filters with equal width
@@ -2274,8 +2402,17 @@ Powered by CloudPOS''',
                       ],
                     ),
                   ],
+                );
+                  },
                 ),
-                const SizedBox(height: 20),
+                
+                Consumer<SalesProvider>(
+                  builder: (context, salesProvider, child) {
+                    return salesProvider.showFilters 
+                        ? const SizedBox(height: 20) 
+                        : const SizedBox.shrink();
+                  },
+                ),
                 Expanded(
                   child: Consumer<SalesProvider>(
                     builder: (context, orderProvider, child) {
@@ -2289,7 +2426,22 @@ Powered by CloudPOS''',
 
                       return Column(
                         children: [
-                          Expanded(child: _buildOrderTable(orderProvider)),
+                          Expanded(
+                            child: _isMobile(context)
+                                ? ListView.builder(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    itemCount: orderProvider.orders.length,
+                                    itemBuilder: (context, index) {
+                                      return MobileOrderCard(
+                                        order: orderProvider.orders[index],
+                                        index: index,
+                                        onSharePDF: _sharePDFInvoice,
+                                        onShareWhatsApp: _shareViaWhatsAppBot,
+                                      );
+                                    },
+                                  )
+                                : _buildOrderTable(orderProvider),
+                          ),
                           PaginationControl(
                             currentPage: orderProvider.currentPage,
                             totalPages: orderProvider.totalPages,

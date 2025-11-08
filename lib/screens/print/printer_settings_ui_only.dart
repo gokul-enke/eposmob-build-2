@@ -559,7 +559,33 @@ class _PrinterSettingsState extends State<PrinterSettings>
   }
 
   Future<void> clearAllHiveData() async {
-    // Keep existing implementation
+    try {
+      // Close all open boxes
+      if (Hive.isBoxOpen('products')) {
+        await Hive.box<HiveProduct>('products').close();
+      }
+      if (Hive.isBoxOpen('cart_items')) {
+        await Hive.box<HiveLocalCartItem>('cart_items').close();
+      }
+      if (Hive.isBoxOpen('saved_orders')) {
+        await Hive.box<HiveSavedOrder>('saved_orders').close();
+      }
+      if (Hive.isBoxOpen('confirmed_orders')) {
+        await Hive.box<HiveSavedOrder>('confirmed_orders').close();
+      }
+      if (Hive.isBoxOpen('categories')) {
+        await Hive.box<HiveCategory>('categories').close();
+      }
+
+      // Delete all Hive files
+      final appDir = await getApplicationDocumentsDirectory();
+      final hiveDir = Directory('${appDir.path}/hive');
+      if (await hiveDir.exists()) {
+        await hiveDir.delete(recursive: true);
+      }
+    } catch (e) {
+      debugPrint('Error clearing Hive data: $e');
+    }
   }
 
   @override

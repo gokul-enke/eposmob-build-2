@@ -68,6 +68,10 @@ import 'package:pos_machine/screens/transactions/widgets/view_receipt_details.da
 import 'package:pos_machine/screens/transactions/widgets/view_transaction_details.dart';
 import 'package:pos_machine/screens/transactions/widgets/view_voucher_details.dart';
 import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_transactions.dart';
+import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
+import 'package:pos_machine/screens/transactions/widgets/create_customer_voucher.dart';
+import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
+import 'package:pos_machine/screens/transactions/widgets/create_supplier_voucher.dart';
 
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
@@ -158,5 +162,12 @@ class SideBarController extends GetxController {
     SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
     OpenSupplierProfileScreen(), // 69 Open Supplier Profile Screen
+    CustomerVoucherListScreen(), // 70 Customer Voucher List
+    CreateCustomerVoucherScreen(), // 71 Create Customer Voucher
+    SupplierVoucherListScreen(), // 72 Supplier Voucher List
+    CreateSupplierVoucherScreen(), // 73 Create Supplier Voucher
+    TransactionScreen(), // 74 Supplier Transactions (alias for Party Accounts)
+    SupplierVoucherListScreen(), // 75 Supplier Voucher List (alias for Transactions)
+    CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
   ];
 }

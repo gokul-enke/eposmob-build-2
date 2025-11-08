@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:pos_machine/models/category_list.dart';
 import '../models/get_product.dart';
 
 part 'local_models.g.dart';
@@ -116,6 +117,10 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(22)
   final bool? toCustomerCredit;
 
+  // Table association for restaurant drafts (optional)
+  @HiveField(23)
+  final String? tableId;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -141,6 +146,7 @@ class HiveSavedOrder extends HiveObject {
     this.flatDiscount,
     this.percentageDiscount,
     this.toCustomerCredit,
+    this.tableId,
   });
 }
 
@@ -467,6 +473,97 @@ class HiveAttachment extends HiveObject {
       createdAt: createdAt,
       updatedAt: updatedAt,
       file: file,
+    );
+  }
+}
+
+// Category Storage model for Hive
+@HiveType(typeId: 8)
+class HiveCategory extends HiveObject {
+  @HiveField(0)
+  final int? categoryId;
+
+  @HiveField(1)
+  final String? categoryName;
+
+  @HiveField(2)
+  final String? categorySlug;
+
+  @HiveField(3)
+  final int? productsCount;
+
+  @HiveField(4)
+  final String? categoryImage;
+
+  @HiveField(5)
+  final String? categoryIcon;
+
+  @HiveField(6)
+  final HiveParentCategory? parent;
+
+  HiveCategory({
+    this.categoryId,
+    this.categoryName,
+    this.categorySlug,
+    this.productsCount,
+    this.categoryImage,
+    this.categoryIcon,
+    this.parent,
+  });
+
+  // Convert from app model to Hive model
+  factory HiveCategory.fromCategory(Category category) {
+    return HiveCategory(
+      categoryId: category.categoryId,
+      categoryName: category.categoryName,
+      categorySlug: category.categorySlug,
+      productsCount: category.productsCount,
+      categoryImage: category.categoryImage,
+      categoryIcon: category.categoryIcon,
+      parent: category.parent != null
+          ? HiveParentCategory.fromParentCategory(category.parent!)
+          : null,
+    );
+  }
+
+  // Convert back to app model
+  Category toCategory() {
+    return Category(
+      categoryId: categoryId,
+      categoryName: categoryName,
+      categorySlug: categorySlug,
+      productsCount: productsCount,
+      categoryImage: categoryImage,
+      categoryIcon: categoryIcon,
+      parent: parent?.toParentCategory(),
+    );
+  }
+}
+
+@HiveType(typeId: 9)
+class HiveParentCategory extends HiveObject {
+  @HiveField(0)
+  final int? id;
+
+  @HiveField(1)
+  final String? name;
+
+  HiveParentCategory({
+    this.id,
+    this.name,
+  });
+
+  factory HiveParentCategory.fromParentCategory(ParentCategory parentCategory) {
+    return HiveParentCategory(
+      id: parentCategory.id,
+      name: parentCategory.name,
+    );
+  }
+
+  ParentCategory toParentCategory() {
+    return ParentCategory(
+      id: id,
+      name: name,
     );
   }
 }

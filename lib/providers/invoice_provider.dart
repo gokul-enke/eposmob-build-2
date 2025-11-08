@@ -100,6 +100,67 @@ class InvoiceProvider extends ChangeNotifier {
     applyFiltersLocally(filterName: _filterName, page: page);
   }
 
+  //          *********************** CUSTOMER TRANSACTIONS API ***************************************************
+  Future<dynamic> listCustomerTransactions({
+    required String accessToken,
+    String? customerId,
+    String? dateFrom,
+    String? dateTo,
+    String? transactionType, // invoice, voucher, receipt, sales return
+    String? type, // credit | debit
+    int? perPage,
+    int? page,
+  }) async {
+    // Build query parameters
+    final queryParams = <String, String>{
+      if (customerId != null && customerId.isNotEmpty) 'customer_id': customerId,
+      if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+      if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
+      if (transactionType != null && transactionType.isNotEmpty)
+        'transaction_type': transactionType,
+      if (type != null && type.isNotEmpty) 'type': type,
+      'per_page': (perPage ?? 20).toString(),
+      'page': (page ?? 1).toString(),
+    };
+
+    final uri = Uri.parse(APPUrl.customerTransactions)
+        .replace(queryParameters: queryParams);
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        // Parse into existing model for UI consumption
+        try {
+          final listModel = ListTransactionModel.fromJson(jsonData);
+          transactionListDetails = listModel.data?.transactions;
+          notifyListeners();
+        } catch (e) {
+          debugPrint('Error parsing customer transactions: $e');
+        }
+        return jsonData;
+      } else {
+        throw Exception('Failed to load customer transactions: ${response.statusCode}');
+      }
+    } on TimeoutException {
+      throw Exception('Request timed out');
+    }
+  }
+
   //          *********************** ZATCA PHASE 2 INVOICE RESYNC ***************************************************
   Future<dynamic> zatcaPhase2InvoiceResync({
     required int id,
@@ -118,22 +179,21 @@ class InvoiceProvider extends ChangeNotifier {
 
     try {
       final maskedHeaders = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $maskedHeaders');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -142,7 +202,8 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -175,22 +236,21 @@ class InvoiceProvider extends ChangeNotifier {
 
     try {
       final headers = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $headers');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -199,7 +259,8 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -637,6 +698,73 @@ class InvoiceProvider extends ChangeNotifier {
 
   InvoiceProvider();
 
+  // Update a single invoice's ZATCA status locally (both paginated view and cache)
+  void updateInvoiceZatcaStatus(int id, String status) {
+    // Helper to clone invoice with new status
+    Invoice _cloneWithStatus(Invoice inv, String s) {
+      return Invoice(
+        id: inv.id,
+        userId: inv.userId,
+        customerId: inv.customerId,
+        invoiceNumber: inv.invoiceNumber,
+        type: inv.type,
+        companyId: inv.companyId,
+        amount: inv.amount,
+        invoiceDate: inv.invoiceDate,
+        dueDate: inv.dueDate,
+        status: inv.status,
+        createdBy: inv.createdBy,
+        createdAt: inv.createdAt,
+        updatedAt: inv.updatedAt,
+        customer: inv.customer,
+        zatcaStatus: s,
+      );
+    }
+
+    bool updated = false;
+
+    if (invoiceListDetails != null && invoiceListDetails!.isNotEmpty) {
+      for (var i = 0; i < invoiceListDetails!.length; i++) {
+        if (invoiceListDetails![i].id == id) {
+          invoiceListDetails![i] =
+              _cloneWithStatus(invoiceListDetails![i], status);
+          updated = true;
+          break;
+        }
+      }
+    }
+
+    if (_allInvoices != null && _allInvoices!.isNotEmpty) {
+      for (var i = 0; i < _allInvoices!.length; i++) {
+        if (_allInvoices![i].id == id) {
+          _allInvoices![i] = _cloneWithStatus(_allInvoices![i], status);
+          updated = true;
+          break;
+        }
+      }
+    }
+
+    if (updated) {
+      notifyListeners();
+    }
+  }
+
+  // Re-apply current filters and page using in-memory cache only.
+  // This triggers UI update without fetching from network or resetting pagination.
+  void reapplyCurrentFilters() {
+    applyFiltersLocally(
+      filterName: _filterName,
+      filterInvoiceNumber: _filterInvoiceNumber,
+      filterFromDate: _filterFromDate,
+      filterToDate: _filterToDate,
+      filterStatus: _filterStatus,
+      filterOrderNumber: _filterOrderNumber,
+      filterPhone: _filterPhone,
+      filterEmail: _filterEmail,
+      page: _currentPage,
+    );
+  }
+
   //          *********************** LIST ALL PAYMENT LIST  API ***************************************************
 
   Future<void> listAllPaymentList(
@@ -689,22 +817,21 @@ class InvoiceProvider extends ChangeNotifier {
 
     try {
       final headers = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $headers');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -713,7 +840,8 @@ class InvoiceProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -894,16 +1022,31 @@ class InvoiceProvider extends ChangeNotifier {
   Future<dynamic> listAllTransaction({
     String? type,
     required String accessToken,
+    String? customerId,
+    String? customerName,
+    String? transactionType,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
   }) async {
-    final Map<String, dynamic> apiBodyData = {
-      'type': type,
-    };
-    // debugPrint(apiBodyData.toString());
-    final url = type == null
-        ? Uri.parse(APPUrl.listAllTransaction)
-        : type == "Cr"
-            ? Uri.parse("${APPUrl.listAllTransaction}?type=Cr")
-            : Uri.parse("${APPUrl.listAllTransaction}?type=Dr");
+    // Build query parameters
+    Map<String, String> queryParams = {};
+
+    if (type != null) queryParams['type'] = type;
+    if (customerId != null) queryParams['customer_id'] = customerId;
+    if (customerName != null) queryParams['customer_name'] = customerName;
+    if (transactionType != null)
+      queryParams['transaction_type'] = transactionType;
+    if (dateFrom != null) queryParams['date_from'] = dateFrom;
+    if (dateTo != null) queryParams['date_to'] = dateTo;
+    if (page != null) queryParams['page'] = page.toString();
+
+    // Build URL with query parameters
+    Uri url = Uri.parse(APPUrl.listAllTransaction);
+    if (queryParams.isNotEmpty) {
+      url = Uri.parse(APPUrl.listAllTransaction)
+          .replace(queryParameters: queryParams);
+    }
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -919,14 +1062,32 @@ class InvoiceProvider extends ChangeNotifier {
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
+
+        // Detect new grouped structure: data.data is a List of customer groups each having 'transactions'
+        try {
+          final data = jsonData['data'];
+          if (data is Map &&
+              data['data'] is List &&
+              (data['data'] as List).isNotEmpty &&
+              (data['data'][0] is Map) &&
+              (data['data'][0] as Map).containsKey('transactions')) {
+            // New grouped response detected. Do not parse into old model here.
+            // Optionally, we could flatten transactions if needed by legacy callers.
+            // For safety, leave transactionListDetails unchanged and just return json.
+            notifyListeners();
+            return jsonData;
+          }
+        } catch (_) {
+          // Fallback to old behavior
+        }
+
+        // Old flat transactions response: parse into model for backward compatibility
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(jsonData);
-
         transactionListDetails = listTransactionModel.data?.transactions;
         notifyListeners();
-        return json.decode(response.body);
+        return jsonData;
       } else {}
     } finally {
       // _isLoading = false;

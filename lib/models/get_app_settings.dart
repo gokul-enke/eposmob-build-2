@@ -11,6 +11,8 @@ class AppSettings {
   final bool discountAndCoupon;
   final bool autoAssignDefaultCustomer;
   final String currency;
+  final bool zatcaPhase1Enabled;
+  final bool zatcaPhase2Enabled;
 
   AppSettings({
     required this.barcodeSales,
@@ -23,6 +25,8 @@ class AppSettings {
     required this.discountAndCoupon,
     required this.autoAssignDefaultCustomer,
     required this.currency,
+    required this.zatcaPhase1Enabled,
+    required this.zatcaPhase2Enabled,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -80,6 +84,8 @@ class AppSettings {
       autoAssignDefaultCustomer:
           settingsMap['AUTO_ASSIGN_DEFAULT_CUSTOMER']?['status'] ?? false,
       currency: settingsMap['CURRENCY']?['value'] ?? "",
+      zatcaPhase1Enabled: settingsMap['ZATCA_PHASE_1']?['status'] ?? false,
+      zatcaPhase2Enabled: settingsMap['ZATCA_PHASE_2']?['status'] ?? false,
     );
   }
 
@@ -145,6 +151,18 @@ class AppSettings {
           "code": "CURRENCY",
           "value": currency,
           "status": currency.toString(),
+        },
+        {
+          "name": "Zatca Phase 1",
+          "code": "ZATCA_PHASE_1",
+          "value": zatcaPhase1Enabled.toString(),
+          "status": zatcaPhase1Enabled.toString(),
+        },
+        {
+          "name": "Zatca Phase 2",
+          "code": "ZATCA_PHASE_2",
+          "value": zatcaPhase2Enabled.toString(),
+          "status": zatcaPhase2Enabled.toString(),
         },
       ],
     };

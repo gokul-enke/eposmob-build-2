@@ -65,6 +65,7 @@ class CustomerListModelData {
   // Financial fields
   final double? balance;
   final String? paymentType;
+  final String? customerType;
 
   // Address fields
   final String? address;
@@ -73,6 +74,11 @@ class CustomerListModelData {
   final String? state;
   final String? country;
   final String? district;
+
+  // Additional fields from API
+  final int? companyId;
+  final String? storeName;
+  final List<Kyc>? kyc;
 
   // Related data
   final List<CustomerTransaction>? transactions;
@@ -103,12 +109,16 @@ class CustomerListModelData {
     this.pricePerPoint,
     this.balance,
     this.paymentType,
+    this.customerType,
     this.address,
     this.pincode,
     this.city,
     this.state,
     this.country,
     this.district,
+    this.companyId,
+    this.storeName,
+    this.kyc,
     this.transactions,
     this.orders,
   });
@@ -145,12 +155,18 @@ class CustomerListModelData {
         pricePerPoint: json["price_per_point"]?.toDouble(),
         balance: json["balance"]?.toDouble(),
         paymentType: json["payment_type"],
+        customerType: json["customer_type"],
         address: json["address"],
         pincode: json["pin_code"] ?? json["pincode"],
         city: json["city"],
         state: json["state"],
         country: json["country"],
         district: json["district"],
+        companyId: json["company_id"],
+        storeName: json["store_name"],
+        kyc: json["kyc"] == null
+            ? []
+            : List<Kyc>.from(json["kyc"].map((x) => Kyc.fromJson(x))),
         transactions: json["transactions"] == null
             ? []
             : List<CustomerTransaction>.from(json["transactions"]
@@ -186,12 +202,18 @@ class CustomerListModelData {
         "price_per_point": pricePerPoint,
         "balance": balance,
         "payment_type": paymentType,
+        "customer_type": customerType,
         "address": address,
         "pin_code": pincode,
         "city": city,
         "state": state,
         "country": country,
         "district": district,
+        "company_id": companyId,
+        "store_name": storeName,
+        "kyc": kyc == null
+            ? []
+            : List<dynamic>.from(kyc!.map((x) => x.toJson())),
         "transactions": transactions == null
             ? []
             : List<dynamic>.from(transactions!.map((x) => x.toJson())),
@@ -356,6 +378,50 @@ class CustomerOrder {
             ? []
             : List<dynamic>.from(items!.map((x) => x.toJson())),
         // "delivery_method": deliveryMethod?.toJson(),
+      };
+}
+
+class Kyc {
+  final int? id;
+  final int? userId;
+  final String? key;
+  final String? value;
+  final String? expiryDate;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  Kyc({
+    this.id,
+    this.userId,
+    this.key,
+    this.value,
+    this.expiryDate,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory Kyc.fromJson(Map<String, dynamic> json) => Kyc(
+        id: json["id"],
+        userId: json["user_id"],
+        key: json["key"],
+        value: json["value"],
+        expiryDate: json["expiry_date"]?.toString(),
+        createdAt: json["created_at"] == null
+            ? null
+            : DateTime.parse(json["created_at"]),
+        updatedAt: json["updated_at"] == null
+            ? null
+            : DateTime.parse(json["updated_at"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "user_id": userId,
+        "key": key,
+        "value": value,
+        "expiry_date": expiryDate,
+        "created_at": createdAt?.toIso8601String(),
+        "updated_at": updatedAt?.toIso8601String(),
       };
 }
 

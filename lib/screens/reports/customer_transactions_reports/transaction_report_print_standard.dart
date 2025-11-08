@@ -592,6 +592,7 @@ class TransactionReportStandardPrinter {
       String transactionType = '';
       String type = '';
       double amount = 0.0;
+      double transactionBalance = 0.0;
       String tax = '0.00';
       String status = '';
       String date = '';
@@ -602,6 +603,7 @@ class TransactionReportStandardPrinter {
         transactionType = item['transactionType'] ?? 'N/A';
         type = item['type'] ?? 'N/A';
         amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+        transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
         status = item['status'] ?? 'N/A';
         date = item['date'] ?? 'N/A';
       } else {
@@ -618,6 +620,7 @@ class TransactionReportStandardPrinter {
               'N/A';
           type = item['type']?.toString() ?? 'N/A';
           amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+          transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
           status = item['status']?.toString() ?? 'N/A';
           date = item['date']?.toString() ?? 'N/A';
         } else {
@@ -636,6 +639,7 @@ class TransactionReportStandardPrinter {
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
             amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
+            transactionBalance = double.tryParse(item.balance?.toString() ?? '0') ?? 0.0;
             status = item.status?.toString() ?? 'N/A';
             date = item.date?.toString() ?? 'N/A';
 
@@ -650,6 +654,7 @@ class TransactionReportStandardPrinter {
             transactionType = 'N/A';
             type = 'N/A';
             amount = 0.0;
+            transactionBalance = 0.0;
             status = 'N/A';
             date = 'N/A';
           }
@@ -673,11 +678,8 @@ class TransactionReportStandardPrinter {
       String creditAmount =
           (type.toLowerCase() == 'credit') ? formattedAmount : '-';
 
-      if (type.toLowerCase() == 'debit') {
-        runningBalance -= amount;
-      } else if (type.toLowerCase() == 'credit') {
-        runningBalance += amount;
-      }
+      // Use API-provided balance instead of calculating
+      runningBalance = transactionBalance;
 
       // Format date to show only date (no time)
       String formattedDate = date;

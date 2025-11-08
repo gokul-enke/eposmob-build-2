@@ -1,0 +1,21 @@
+{
+  "app.title": "क्लाउड पीओएस",
+  "general.ok": "ठीक",
+  "general.cancel": "रद्द करें",
+  "general.save": "सहेजें",
+  "general.print": "प्रिंट",
+  "general.more": "और",
+  "settings.title": "सेटिंग्स",
+  "settings.language": "भाषा",
+  "settings.language.select": "भाषा चुनें",
+  "settings.whatsapp": "व्हाट्सएप सेटिंग्स",
+  "settings.company_info": "कंपनी जानकारी",
+  "billing.title": "बिलिंग",
+  "billing.add_to_cart": "कार्ट में जोड़ें",
+  "billing.confirm_order": "ऑर्डर की पुष्टि करें",
+  "billing.save_and_print": "सहेजें और प्रिंट करें",
+  "billing.discount": "छूट",
+  "billing.total": "कुल",
+  "customers.title": "ग्राहक",
+  "suppliers.title": "आपूर्तिकर्ता"
+}

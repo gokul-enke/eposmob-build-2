@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/auth_model.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../components/build_dialog_box.dart';
+import '../../../providers/app_settings_provider.dart';
 
 enum PaymentType { none, toPay, toReceive }
 
@@ -40,6 +41,10 @@ class _CustomerInformationEditWidgetState
   late TextEditingController phoneController;
   late TextEditingController altPhoneController;
   late TextEditingController balanceController;
+  // ZATCA related controllers
+  late TextEditingController crNumberController;
+  late TextEditingController vatNumberController;
+  String _selectedCustomerType = 'B2C';
   String? selectedGender;
   DateTime? selectedDate;
   PaymentType selectedPaymentType = PaymentType.none;
@@ -56,6 +61,23 @@ class _CustomerInformationEditWidgetState
     phoneController = TextEditingController(text: widget.customer?.phone ?? '');
     altPhoneController = TextEditingController(text: widget.customer?.altPhone ?? '');
     balanceController = TextEditingController(text: widget.customer?.balance?.toString() ?? '0.00');
+    // Initialize ZATCA related
+    _selectedCustomerType = (widget.customer?.customerType ?? 'B2C');
+    // Extract CR/VAT from KYC list if present
+    String crExisting = '';
+    String vatExisting = '';
+    if (widget.customer?.kyc != null) {
+      for (final item in widget.customer!.kyc!) {
+        final key = (item.key ?? '').toUpperCase();
+        if (key == 'CR NUMBER' && (item.value != null)) {
+          crExisting = item.value!;
+        } else if (key == 'VAT NUMBER' && (item.value != null)) {
+          vatExisting = item.value!;
+        }
+      }
+    }
+    crNumberController = TextEditingController(text: crExisting);
+    vatNumberController = TextEditingController(text: vatExisting);
     
     // Initialize gender and date
     selectedGender = widget.customer?.gender;
@@ -92,11 +114,15 @@ class _CustomerInformationEditWidgetState
     phoneController.dispose();
     altPhoneController.dispose();
     balanceController.dispose();
+    crNumberController.dispose();
+    vatNumberController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
     return Expanded(
       child: BuildBoxShadowContainer(
         margin: const EdgeInsets.all(24),
@@ -156,6 +182,12 @@ class _CustomerInformationEditWidgetState
                       const SizedBox(height: 20),
                       _buildDateOfBirthField(),
                       const SizedBox(height: 20),
+                      if (isZatcaPhase1Enabled) ...[
+                        _buildCustomerTypeField(),
+                        const SizedBox(height: 20),
+                        _buildCrVatFields(),
+                        const SizedBox(height: 20),
+                      ],
                       _buildBalanceAndPaymentTypeFields(),
                       const SizedBox(height: 30),
                       _buildActionButtons(),
@@ -288,13 +320,12 @@ class _CustomerInformationEditWidgetState
       final customerId = widget.customer?.id;
       if (customerId == null) throw Exception("Invalid customer ID");
 
-      // Prepare payment status string
-      String paymentStatus = '';
-      if (selectedPaymentType == PaymentType.toPay) {
-        paymentStatus = 'to_pay';
-      } else if (selectedPaymentType == PaymentType.toReceive) {
-        paymentStatus = 'to_receive';
-      }
+      // ZATCA Phase 1 handling
+      final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+      final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
+      final String customerTypeToSend = isZatcaPhase1Enabled ? _selectedCustomerType : 'B2C';
+      final String crToSend = isZatcaPhase1Enabled ? crNumberController.text.trim() : '';
+      final String vatToSend = isZatcaPhase1Enabled ? vatNumberController.text.trim() : '';
 
       final response = await customerProvider.updateCustomer(
         accessToken,
@@ -310,7 +341,9 @@ class _CustomerInformationEditWidgetState
         dob: selectedDate?.toIso8601String().split('T')[0], // Format as YYYY-MM-DD
         storeId: widget.customer?.storeId ?? 1,
         balance: balanceController.text.trim(),
-        paymentType: paymentStatus.isNotEmpty ? paymentStatus : null,
+        customerType: customerTypeToSend,
+        crNumber: crToSend,
+        vatNumber: vatToSend,
       );
 
       Navigator.pop(context); // Close loading dialog
@@ -348,7 +381,8 @@ class _CustomerInformationEditWidgetState
             minRedeemablePoints: widget.customer!.minRedeemablePoints,
             pricePerPoint: widget.customer!.pricePerPoint,
             balance: double.tryParse(balanceController.text.trim()) ?? widget.customer!.balance,
-            paymentType: paymentStatus.isNotEmpty ? paymentStatus : widget.customer!.paymentType,
+            paymentType: widget.customer!.paymentType,
+            customerType: customerTypeToSend,
             address: widget.customer!.address,
             pincode: widget.customer!.pincode,
             city: widget.customer!.city,
@@ -469,59 +503,33 @@ class _CustomerInformationEditWidgetState
   }
 
   Widget _buildBalanceAndPaymentTypeFields() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 1,
-          child: buildColumnWidgetForTextFields(
-            controller: balanceController,
-            hintText: 'Balance',
-            title: 'Balance',
-            size: widget.size,
-            width: double.infinity,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-            ],
-            validator: (value) {
-              if (value != null && value.isNotEmpty) {
-                final balance = double.tryParse(value);
-                if (balance == null) {
-                  return 'Please enter a valid balance';
-                }
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          flex: 1,
-          child: _buildPaymentTypeField(),
-        ),
+    return buildColumnWidgetForTextFields(
+      controller: balanceController,
+      hintText: 'Balance',
+      title: 'Balance',
+      size: widget.size,
+      width: double.infinity,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
       ],
+      validator: (value) {
+        if (value != null && value.isNotEmpty) {
+          final balance = double.tryParse(value);
+          if (balance == null) {
+            return 'Please enter a valid balance';
+          }
+        }
+        return null;
+      },
     );
   }
 
-  Widget _buildPaymentTypeField() {
-    String displayText = '';
-    switch (selectedPaymentType) {
-      case PaymentType.toPay:
-        displayText = 'To Pay';
-        break;
-      case PaymentType.toReceive:
-        displayText = 'To Receive';
-        break;
-      case PaymentType.none:
-        displayText = '';
-        break;
-    }
-
+  Widget _buildCustomerTypeField() {
     return buildColumnWidgetForTextFields(
-      controller: TextEditingController(text: displayText),
-      hintText: 'Select Payment Type',
-      title: 'Payment Type',
+      controller: TextEditingController(text: _selectedCustomerType),
+      hintText: 'Select Customer Type',
+      title: 'Customer Type',
       size: widget.size,
       width: double.infinity,
       readOnly: true,
@@ -529,34 +537,21 @@ class _CustomerInformationEditWidgetState
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Select Payment Type'),
+            title: const Text('Select Customer Type'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  title: const Text('To Pay'),
+                  title: const Text('B2C'),
                   onTap: () {
-                    setState(() {
-                      selectedPaymentType = PaymentType.toPay;
-                    });
+                    setState(() => _selectedCustomerType = 'B2C');
                     Navigator.pop(context);
                   },
                 ),
                 ListTile(
-                  title: const Text('To Receive'),
+                  title: const Text('B2B'),
                   onTap: () {
-                    setState(() {
-                      selectedPaymentType = PaymentType.toReceive;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('None'),
-                  onTap: () {
-                    setState(() {
-                      selectedPaymentType = PaymentType.none;
-                    });
+                    setState(() => _selectedCustomerType = 'B2B');
                     Navigator.pop(context);
                   },
                 ),
@@ -565,6 +560,32 @@ class _CustomerInformationEditWidgetState
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCrVatFields() {
+    return Row(
+      children: [
+        Expanded(
+          child: buildColumnWidgetForTextFields(
+            controller: crNumberController,
+            hintText: 'CR Number',
+            title: 'CR Number',
+            size: widget.size,
+            width: double.infinity,
+          ),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: buildColumnWidgetForTextFields(
+            controller: vatNumberController,
+            hintText: 'VAT Number',
+            title: 'VAT Number',
+            size: widget.size,
+            width: double.infinity,
+          ),
+        ),
+      ],
     );
   }
 

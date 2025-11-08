@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -6,6 +7,9 @@ import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/providers/supplier_provider.dart';
 
 class SupplierInformationEditWidget extends StatefulWidget {
   final Size size;
@@ -34,7 +38,6 @@ class _SupplierInformationEditWidgetState
   late TextEditingController _addressController;
   late TextEditingController _balanceController;
   late TextEditingController _currentBalanceController;
-  late TextEditingController _paymentTypeController;
   late TextEditingController _productCategoriesController;
 
   @override
@@ -52,8 +55,6 @@ class _SupplierInformationEditWidgetState
     _balanceController = TextEditingController(text: widget.supplier.balance.toStringAsFixed(2));
     _currentBalanceController = TextEditingController(
         text: widget.supplier.currentBalance?.toStringAsFixed(2));
-    _paymentTypeController =
-        TextEditingController(text: widget.supplier.paymentType);
     _productCategoriesController =
         TextEditingController(text: widget.supplier.productCategories);
   }
@@ -67,7 +68,6 @@ class _SupplierInformationEditWidgetState
     _addressController.dispose();
     _balanceController.dispose();
     _currentBalanceController.dispose();
-    _paymentTypeController.dispose();
     _productCategoriesController.dispose();
     super.dispose();
   }
@@ -148,6 +148,7 @@ class _SupplierInformationEditWidgetState
                   rightLabel: 'Phone Number',
                   rightHint: 'Enter phone number',
                   rightKeyboardType: TextInputType.phone,
+                  rightRequired: true,
                 ),
                 const SizedBox(height: 20),
                 _buildTextField(
@@ -187,19 +188,23 @@ class _SupplierInformationEditWidgetState
                   leftLabel: 'Balance',
                   leftHint: 'Enter balance amount',
                   leftKeyboardType: TextInputType.number,
+                  leftRequired: true,
+                  leftInputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+                  ],
                   rightController: _currentBalanceController,
                   rightLabel: 'Current Balance',
                   rightHint: 'Enter current balance',
                   rightKeyboardType: TextInputType.number,
+                  rightInputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+                  ],
                 ),
                 const SizedBox(height: 20),
-                _buildTwoFieldRow(
-                  leftController: _paymentTypeController,
-                  leftLabel: 'Payment Type',
-                  leftHint: 'e.g., Credit, Cash, Bank Transfer',
-                  rightController: _productCategoriesController,
-                  rightLabel: 'Product Categories',
-                  rightHint: 'e.g., Electronics, Furniture',
+                _buildTextField(
+                  controller: _productCategoriesController,
+                  label: 'Product Categories',
+                  hintText: 'e.g., Electronics, Furniture',
                 ),
               ],
             ),
@@ -283,6 +288,7 @@ class _SupplierInformationEditWidgetState
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
     bool isRequired = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,6 +315,7 @@ class _SupplierInformationEditWidgetState
           keyboardType: keyboardType,
           size: widget.size,
           width: double.infinity,
+          inputFormatters: inputFormatters,
           validator: isRequired ? (value) {
             if (value == null || value.isEmpty) {
               return '$label is required';
@@ -326,11 +333,13 @@ class _SupplierInformationEditWidgetState
     required String leftHint,
     TextInputType leftKeyboardType = TextInputType.text,
     bool leftRequired = false,
+    List<TextInputFormatter>? leftInputFormatters,
     required TextEditingController rightController,
     required String rightLabel,
     required String rightHint,
     TextInputType rightKeyboardType = TextInputType.text,
     bool rightRequired = false,
+    List<TextInputFormatter>? rightInputFormatters,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,6 +351,7 @@ class _SupplierInformationEditWidgetState
             hintText: leftHint,
             keyboardType: leftKeyboardType,
             isRequired: leftRequired,
+            inputFormatters: leftInputFormatters,
           ),
         ),
         const SizedBox(width: 20),
@@ -352,6 +362,7 @@ class _SupplierInformationEditWidgetState
             hintText: rightHint,
             keyboardType: rightKeyboardType,
             isRequired: rightRequired,
+            inputFormatters: rightInputFormatters,
           ),
         ),
       ],
@@ -391,41 +402,76 @@ class _SupplierInformationEditWidgetState
     );
   }
 
-  void _saveChanges() {
-    if (_formKey.currentState!.validate()) {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            color: ColorManager.kPrimaryColor,
+  Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token') ?? '';
+
+      final provider = context.read<SupplierProvider>();
+
+      final result = await provider.updateSupplier(
+        id: widget.supplier.id,
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        accessToken: accessToken,
+        balance: double.tryParse(_balanceController.text.trim()) ?? 0.0,
+        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+        altPhone: _altPhoneController.text.trim().isEmpty ? null : _altPhoneController.text.trim(),
+        productCategories: _productCategoriesController.text.trim().isEmpty ? null : _productCategoriesController.text.trim(),
+      );
+
+      Navigator.pop(context);
+
+      final isSuccess = (result['status']?.toString().toLowerCase() == 'success');
+      final message = result['message']?.toString() ?? 'Updated';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(isSuccess ? Icons.check_circle : Icons.error, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(isSuccess ? 'Supplier information updated successfully' : message),
+            ],
+          ),
+          backgroundColor: isSuccess ? ColorManager.kSuccessColor : ColorManager.kRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
       );
-
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 1), () {
-        Navigator.pop(context); // Close loading dialog
-        
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('Supplier information updated successfully'),
-              ],
-            ),
-            backgroundColor: ColorManager.kSuccessColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Failed to update supplier'),
+            ],
           ),
-        );
-      });
+          backgroundColor: ColorManager.kRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
     }
   }
 }

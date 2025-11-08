@@ -313,7 +313,7 @@ class _PrintPageState extends State<PrintPage> {
           widget.orderReturns!.returnItems != null && 
           widget.orderReturns!.returnItems!.isNotEmpty) {
         debugPrint("Order has returns, trying to load 'Sales Return Bill' configuration...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales Return Bill");
+        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales and Return Bill");
         
         if (_billDocumentConfig != null) {
           debugPrint("SUCCESS: Sales Return Bill configuration loaded");
@@ -366,7 +366,7 @@ class _PrintPageState extends State<PrintPage> {
           widget.orderReturns!.returnItems != null && 
           widget.orderReturns!.returnItems!.isNotEmpty) {
         debugPrint("Order has returns, loading 'Sales Return Bill' configuration from API...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales Return Bill");
+        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales and Return Bill");
         
         if (_billDocumentConfig != null) {
           debugPrint("SUCCESS: Sales Return Bill configuration loaded from API");

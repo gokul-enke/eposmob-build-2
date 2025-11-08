@@ -42,13 +42,22 @@ class CheckoutService {
       List<String> selectedPaymentMethods =
           Provider.of<BillingProvider>(context, listen: false)
               .getSelectedPaymentMethodsExcludingEmpty();
+      
+      debugPrint('🔍 [CheckoutService] Validating payment methods...');
+      debugPrint('🔍 [CheckoutService] Selected methods (excluding empty): $selectedPaymentMethods');
+      debugPrint('🔍 [CheckoutService] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
+      debugPrint('🔍 [CheckoutService] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+      
       if (!billingProvider.hasAnyPaymentSelected()) {
+        debugPrint('❌ [CheckoutService] No payment method selected - showing error');
         showScaffoldError(
           context: context,
           message: "Please select a payment method",
         );
         return;
       }
+      
+      debugPrint('✅ [CheckoutService] Payment method validation passed');
 
       if (!billingProvider.validateCarNumberIfNeeded()) {
         showScaffoldError(
@@ -70,6 +79,8 @@ class CheckoutService {
         paymentMethod = "CARD";
       } else if (selectedPaymentMethods.contains("UPI")) {
         paymentMethod = "UPI";
+      } else if (selectedPaymentMethods.contains("ONLINE")) {
+        paymentMethod = "ONLINE";
       } else if (selectedPaymentMethods.contains("DEBIT")) {
         paymentMethod = "DEBIT";
       } else if (selectedPaymentMethods.contains("BALANCE")) {
@@ -129,6 +140,10 @@ class CheckoutService {
       debugPrint(
           "🚚 Delivery Method: ${billingProvider.deliveryMethod} (ID: ${billingProvider.deliveryMethodId})");
 
+      final paidMethods = Provider.of<BillingProvider>(context, listen: false).getPaidMethods();
+      debugPrint("💰 [ConfirmOrder] Payment Methods: $selectedPaymentMethods");
+      debugPrint("💰 [ConfirmOrder] Paid Methods (with amounts): $paidMethods");
+
       await Provider.of<CartProvider>(context, listen: false).addToOrderAPI(
         items: items,
         cartIds: cartId ?? 0,
@@ -142,8 +157,7 @@ class CheckoutService {
         paymentMethod: null,
         paidAmount: null,
         paymentMethods: selectedPaymentMethods,
-        paidMethods: Provider.of<BillingProvider>(context, listen: false)
-            .getPaidMethods(),
+        paidMethods: paidMethods,
         balanceAmount: Provider.of<BillingProvider>(context, listen: false)
             .balanceAmount
             .toString(),
@@ -194,6 +208,11 @@ class CheckoutService {
           billingProvider.commentController.clear();
           billingProvider.setDeliveryDate(null);
           billingProvider.setDeliveryTime(null);
+          
+          // Clear all payment methods including Pine Labs ONLINE
+          debugPrint('🔄 [CheckoutService] Clearing all payment methods after order confirmation');
+          billingProvider.clearAllPaymentMethods();
+          billingProvider.setPineLabsPaymentSuccess(false);
 
           // Notify UI hooks that depend on resets (optional)
         } else {
@@ -240,7 +259,14 @@ class CheckoutService {
       // Guard: require at least one payment method (provider-level helper)
       final selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsExcludingEmpty();
+      
+      debugPrint('🔍 [CreateOrderAndPrint] Validating payment methods...');
+      debugPrint('🔍 [CreateOrderAndPrint] Selected methods: $selectedPaymentMethods');
+      debugPrint('🔍 [CreateOrderAndPrint] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
+      debugPrint('🔍 [CreateOrderAndPrint] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+      
       if (!billingProvider.hasAnyPaymentSelected()) {
+        debugPrint('❌ [CreateOrderAndPrint] No payment method selected - showing error');
         showScaffoldError(
           context: context,
           message: "Please select a payment method",

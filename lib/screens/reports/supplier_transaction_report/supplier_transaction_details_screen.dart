@@ -83,44 +83,95 @@ class _SupplierTransactionDetailsScreenState
     });
 
     try {
-      SupplierProvider supplierProvider =
-          Provider.of<SupplierProvider>(context, listen: false);
-      
+      final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
+
+      final String? supplierId = supplierProvider.selectedSupplierId;
       selectedSupplierName = supplierProvider.selectedSupplierName ?? '';
-      
-      if (selectedSupplierName.isEmpty) {
-        // If no supplier selected, go back to report screen
+
+      debugPrint('🔎 [SUPP_TX_DETAILS] loadInitData start');
+      debugPrint('🔖 [SUPP_TX_DETAILS] selectedSupplierId: ${supplierId ?? 'null'}');
+      debugPrint('🔖 [SUPP_TX_DETAILS] selectedSupplierName: ${selectedSupplierName.isEmpty ? '(empty)' : selectedSupplierName}');
+
+      if ((supplierId == null || supplierId.isEmpty) && selectedSupplierName.isEmpty) {
+        // No context, go back to report
         sideBarController.index.value = 67; // Supplier Transaction Report
         return;
       }
 
-      // Find the supplier and get their transactions
-      final supplier = supplierProvider.supplierList?.firstWhere(
-        (s) => s.name == selectedSupplierName,
-        orElse: () => Supplier(
-          id: 0,
-          name: '',
-          email: '',
-          phone: '',
-          productCategories: '',
-          address: '',
-          balance: 0.0,
-          paymentType: '',
-          companyId: 0,
-          currentBalance: 0.0,
-          balanceStatus: '',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          userId: 0,
-          transactions: [],
-          purchases: [],
-        ),
+      // Fetch grouped transactions from API filtered by supplierId and date range
+      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('🌐 [SUPP_TX_DETAILS] Calling fetchSupplierTransactions with:');
+      debugPrint('    supplierId=${supplierId ?? 'null'} fromDate=${_fromDateController.text} toDate=${_toDateController.text}');
+      final response = await supplierProvider.fetchSupplierTransactions(
+        accessToken: accessToken ?? '',
+        supplierId: supplierId,
+        fromDate: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+        toDate: _toDateController.text.isNotEmpty ? _toDateController.text : null,
+        listAll: true,
       );
 
-      if (supplier != null && supplier.name.isNotEmpty) {
-        // Apply initial filters
-        _applyFilters(supplier.transactions);
+      final dataNode = response['data'];
+      debugPrint('📬 [SUPP_TX_DETAILS] Response received. data node type: ${dataNode.runtimeType}');
+      List<SupplierTransaction> txns = [];
+      if (dataNode is Map && dataNode['data'] is List) {
+        final groups = (dataNode['data'] as List).cast<dynamic>();
+        debugPrint('🧾 [SUPP_TX_DETAILS] Parsed groups from data["data"], count=${groups.length}');
+        // Find the group for our supplier
+        Map? group;
+        if (supplierId != null && supplierId.isNotEmpty) {
+          group = groups.cast<Map?>().firstWhere(
+            (g) => (g?['supplier_id']?.toString() ?? '') == supplierId,
+            orElse: () => null,
+          );
+          debugPrint('🔗 [SUPP_TX_DETAILS] Group lookup by supplierId ${group == null ? 'failed' : 'succeeded'}');
+        }
+        group ??= groups.cast<Map?>().firstWhere(
+          (g) => (g?['supplier_name'] ?? '') == selectedSupplierName,
+          orElse: () => null,
+        );
+        if (group == null) debugPrint('❗ [SUPP_TX_DETAILS] Group lookup by name also failed');
+
+        if (group != null) {
+          // Update title name if needed
+          if (selectedSupplierName.isEmpty) {
+            selectedSupplierName = (group['supplier_name'] ?? '').toString();
+          }
+          final List<dynamic> list = (group['transactions'] as List?) ?? const [];
+          debugPrint('🧮 [SUPP_TX_DETAILS] Transactions in group: ${list.length}');
+          txns = list
+              .whereType<Map<String, dynamic>>()
+              .map((m) => SupplierTransaction.fromJson(m))
+              .toList();
+        }
+      } else if (dataNode is List) {
+        // Rare case: top-level list; try to find group similarly
+        final groups = dataNode.cast<Map?>();
+        debugPrint('🧾 [SUPP_TX_DETAILS] Parsed groups from top-level List, count=${groups.length}');
+        Map? group;
+        if (supplierId != null && supplierId.isNotEmpty) {
+          group = groups.firstWhere(
+            (g) => (g?['supplier_id']?.toString() ?? '') == supplierId,
+            orElse: () => null,
+          );
+        }
+        group ??= groups.firstWhere(
+          (g) => (g?['supplier_name'] ?? '') == selectedSupplierName,
+          orElse: () => null,
+        );
+        if (group != null) {
+          final List<dynamic> list = (group['transactions'] as List?) ?? const [];
+          debugPrint('🧮 [SUPP_TX_DETAILS] Transactions in group (top-level): ${list.length}');
+          txns = list
+              .whereType<Map<String, dynamic>>()
+              .map((m) => SupplierTransaction.fromJson(m))
+              .toList();
+        } else {
+          debugPrint('❗ [SUPP_TX_DETAILS] No matching group found in top-level list');
+        }
       }
+
+      debugPrint('✅ [SUPP_TX_DETAILS] Parsed transactions count: ${txns.length}');
+      _applyFilters(txns);
     } catch (error) {
       debugPrint('Error loading supplier transaction data: $error');
       if (mounted) {
@@ -139,6 +190,9 @@ class _SupplierTransactionDetailsScreenState
   }
 
   void _applyFilters(List<SupplierTransaction> allTransactions) {
+    debugPrint('🔧 [SUPP_TX_DETAILS] Applying filters:');
+    debugPrint('    type=$selectedTransactionType payment=$selectedPaymentMethod search="$searchQuery"');
+    debugPrint('    from=${_fromDateController.text} to=${_toDateController.text}');
     List<SupplierTransaction> filtered = [...allTransactions];
 
     // Date range filter
@@ -210,6 +264,7 @@ class _SupplierTransactionDetailsScreenState
           .toList();
     }
 
+    debugPrint('📊 [SUPP_TX_DETAILS] Filtered transactions count: ${filtered.length}');
     setState(() {
       filteredTransactions = filtered;
     });
