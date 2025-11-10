@@ -113,7 +113,8 @@ class InvoiceProvider extends ChangeNotifier {
   }) async {
     // Build query parameters
     final queryParams = <String, String>{
-      if (customerId != null && customerId.isNotEmpty) 'customer_id': customerId,
+      if (customerId != null && customerId.isNotEmpty)
+        'customer_id': customerId,
       if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
       if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
       if (transactionType != null && transactionType.isNotEmpty)
@@ -154,7 +155,8 @@ class InvoiceProvider extends ChangeNotifier {
         }
         return jsonData;
       } else {
-        throw Exception('Failed to load customer transactions: ${response.statusCode}');
+        throw Exception(
+            'Failed to load customer transactions: ${response.statusCode}');
       }
     } on TimeoutException {
       throw Exception('Request timed out');
@@ -1364,6 +1366,44 @@ class InvoiceProvider extends ChangeNotifier {
     } catch (e) {
       // debugPrint("Exception occurred: $e");
       // Handle exceptions accordingly
+    }
+  }
+
+  //          *********************** ADD RECEIPT API ***************************************************
+  Future<dynamic> addReceipt({
+    required String customerId,
+    required String receiptStatus,
+    required List<Map<String, dynamic>> receiptItems,
+    required String accessToken,
+  }) async {
+    final Map<String, dynamic> apiBodyData = {
+      'customer_id': customerId,
+      'receipt_status': receiptStatus,
+      'receipt_items': receiptItems,
+    };
+
+    final url = Uri.parse(APPUrl.createReceipt);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(url, body: apiBodyData, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to create receipt: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error creating receipt: $e');
     }
   }
 
