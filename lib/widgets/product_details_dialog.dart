@@ -16,6 +16,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class _DropdownOption {
   final String id;
@@ -524,6 +525,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }
 
   Widget _buildViewTab(GetProduct product) {
+    final currency = Provider.of<AppSettingsProvider>(context, listen: true)
+            .appSettings
+            ?.currency ??
+        'INR';
     return ListView(
       shrinkWrap: true,
       physics: const BouncingScrollPhysics(),
@@ -546,17 +551,20 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             Expanded(
               child: Column(
                 children: [
-                  _buildDetailRow('Price', product.price?.price?.toString() ?? 'N/A'),
-                  _buildDetailRow('MRP', product.mrp?.toString() ?? 'N/A'),
+                  _buildDetailRow('Price', product.price?.price != null ? '$currency ${product.price!.price}' : 'N/A'),
+                  _buildDetailRow('MRP', product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
                   _buildDetailRow(
                     'Purchase Price',
-                    product.purchasePrice ??
+                    (product.purchasePrice != null && product.purchasePrice!.isNotEmpty
+                        ? '$currency ${product.purchasePrice}'
+                        :
                         (product.stock != null && product.stock!.isNotEmpty
-                            ? product.stock!.first.purchasePrice
-                            : null) ??
-                        'N/A',
+                            ? (product.stock!.first.purchasePrice != null && product.stock!.first.purchasePrice!.isNotEmpty
+                                ? '$currency ${product.stock!.first.purchasePrice}'
+                                : 'N/A')
+                            : 'N/A')),
                   ),
-                  _buildDetailRow('Offer Price', product.offerPrice?.toString() ?? 'N/A'),
+                  _buildDetailRow('Offer Price', product.offerPrice != null ? '$currency ${product.offerPrice}' : 'N/A'),
                   _buildDetailRow('Currency', product.currency ?? 'N/A'),
                   _buildDetailRow('SKU', product.sku ?? 'Not Available'),
                 ],
@@ -753,9 +761,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           children: [
                             _buildStockTableCell('${index + 1}'),
                             _buildStockTableCell(stock.quantity?.toString() ?? 'N/A'),
-                            _buildStockTableCell(stock.price ?? 'N/A'),
-                            _buildStockTableCell(stock.mrp ?? 'N/A'),
-                            _buildStockTableCell(stock.purchasePrice ?? 'N/A'),
+                            _buildStockTableCell(stock.price != null && stock.price!.isNotEmpty ? '$currency ${stock.price}' : 'N/A'),
+                            _buildStockTableCell(stock.mrp != null && stock.mrp!.isNotEmpty ? '$currency ${stock.mrp}' : 'N/A'),
+                            _buildStockTableCell(stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty ? '$currency ${stock.purchasePrice}' : 'N/A'),
                             _buildStockTableCell(stock.supplier ?? 'N/A'),
                             _buildStockTableCell(stock.sku ?? 'N/A'),
                             _buildStockTableCell(stock.date ?? 'N/A'),

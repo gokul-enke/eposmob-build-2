@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class ProductCardWidget extends StatelessWidget {
   final GetProduct product;
@@ -103,12 +105,18 @@ class ProductCardWidget extends StatelessWidget {
                           topLeft: Radius.circular(4),
                         ),
                       ),
-                      child: Text(
-                        '${product.price?.price ?? '0.00'} ${product.currency ?? ''}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                        ),
+                      child: Consumer<AppSettingsProvider>(
+                        builder: (context, appSettingsProvider, _) {
+                          final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+                          final amount = (product.price?.price ?? 0).toString();
+                          return Text(
+                            '$currency $amount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),

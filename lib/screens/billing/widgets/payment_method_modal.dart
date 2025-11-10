@@ -10,6 +10,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class PaymentMethodModal extends StatefulWidget {
   final bool initialIsCashSelected;
@@ -479,6 +480,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final currency = context.watch<AppSettingsProvider>().appSettings?.currency ?? 'INR';
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: BuildBoxShadowContainer(
@@ -583,7 +585,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
             // Extended Summary
             BuildPaymentRow(
-              amount: 'INR ${_getTotalPaidAmount().toStringAsFixed(2)}',
+              amount: '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
               title: 'Total Paid',
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.semiBold,
@@ -601,7 +603,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ),
 
             BuildPaymentRow(
-              amount: 'INR ${widget.cartTotal.toStringAsFixed(2)}',
+              amount: '$currency ${widget.cartTotal.toStringAsFixed(2)}',
               title: 'Purchase Total',
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
@@ -619,7 +621,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ),
 
             BuildPaymentRow(
-              amount: _formatSigned(widget.customerPrevBalance),
+              amount: _formatSignedWithCurrency(widget.customerPrevBalance),
               title: 'Customer Prev Balance',
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
@@ -800,7 +802,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ],
 
             BuildPaymentRow(
-              amount: 'INR ${balanceAmount.toStringAsFixed(2)}',
+              amount: '$currency ${balanceAmount.toStringAsFixed(2)}',
               title: 'Cash Balance',
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
@@ -1017,6 +1019,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   Widget _buildPostingRow(String label, double amount, {Color? color}) {
+    final currency = Provider.of<AppSettingsProvider>(context, listen: true)
+            .appSettings
+            ?.currency ??
+        'INR';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -1032,7 +1038,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ),
           ),
           Text(
-            'INR ${amount.toStringAsFixed(2)}',
+            '$currency ${amount.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s12,
@@ -1048,6 +1054,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   Widget _buildNetDueRow() {
     // Net due display is always based on current purchase
     final double netDue = widget.cartTotal;
+    final currency = Provider.of<AppSettingsProvider>(context, listen: true)
+            .appSettings
+            ?.currency ??
+        'INR';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -1064,7 +1074,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ),
           ),
           Text(
-            'INR ${netDue.toStringAsFixed(2)}',
+            '$currency ${netDue.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s12,
@@ -1082,6 +1092,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     final totalCollected = cashAmount + cardAmount + upiAmount;
+    final currency = Provider.of<AppSettingsProvider>(context, listen: true)
+            .appSettings
+            ?.currency ??
+        'INR';
 
     // Calculate different credit scenarios
     final currentTransactionExcess = totalCollected - widget.cartTotal;
@@ -1153,7 +1167,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                             ),
                           ),
                           Text(
-                            '₹${maxPossibleCredit.toStringAsFixed(2)}',
+                            '$currency ${maxPossibleCredit.toStringAsFixed(2)}',
                             style: buildCustomStyle(
                               FontWeightManager.bold,
                               FontSize.s11,
@@ -1191,7 +1205,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         ),
                       ),
                       Text(
-                        '₹${balanceAmount.toStringAsFixed(2)}',
+                        '$currency ${balanceAmount.toStringAsFixed(2)}',
                         style: buildCustomStyle(
                           FontWeightManager.bold,
                           FontSize.s11,
@@ -1211,10 +1225,13 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       ),
     );
   }
-
-  String _formatSigned(double value) {
+  String _formatSignedWithCurrency(double value) {
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'INR';
     final sign = value >= 0 ? '+' : '-';
     final absVal = value.abs().toStringAsFixed(2);
-    return '$sign$absVal';
+    return '$sign$currency $absVal';
   }
 }

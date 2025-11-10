@@ -5,6 +5,8 @@ import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/screens/print/return_bill_print.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class SalesReturnDetailModal extends StatelessWidget {
   final SalesReturnOrder order;
@@ -73,7 +75,15 @@ class SalesReturnDetailModal extends StatelessWidget {
                     const SizedBox(height: 8),
                     _buildInfoRow("Customer", order.order?.customer?.user?.name ?? "N/A"),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Grand Total", order.order?.grandTotal ?? "N/A"),
+                    Consumer<AppSettingsProvider>(
+                      builder: (context, settings, _) {
+                        final currency = settings.appSettings?.currency ?? 'INR';
+                        final raw = order.order?.grandTotal ?? '0.00';
+                        final parsed = double.tryParse(raw);
+                        final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                        return _buildInfoRow("Grand Total", "$currency $amount");
+                      },
+                    ),
                     const SizedBox(height: 8),
                     _buildInfoRow("Payment Method", order.order?.paymentMethod?.join(", ") ?? "N/A"),
                     const SizedBox(height: 8),
@@ -136,10 +146,20 @@ class SalesReturnDetailModal extends StatelessWidget {
                             item.quantity.toString(),
                             style: const TextStyle(color: Colors.black),
                           )),
-                          DataCell(Text(
-                            item.price,
-                            style: const TextStyle(color: Colors.black),
-                          )),
+                          DataCell(
+                            Consumer<AppSettingsProvider>(
+                              builder: (context, settings, _) {
+                                final currency = settings.appSettings?.currency ?? 'INR';
+                                final raw = item.price; // string
+                                final parsed = double.tryParse(raw);
+                                final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                                return Text(
+                                  '$currency $amount',
+                                  style: const TextStyle(color: Colors.black),
+                                );
+                              },
+                            ),
+                          ),
                           DataCell(
                             Container(
                               padding: const EdgeInsets.symmetric(

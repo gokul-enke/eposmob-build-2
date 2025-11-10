@@ -222,11 +222,6 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     debugPrint("SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
     debugPrint("SavedOrder ${order.orderNumber} formatted date: $date | formatted time: $time");
 
-    // Get currency from AppSettingsProvider
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? '';
-
     return ConstrainedBox(
       constraints: const BoxConstraints(
         minWidth: 200, // Minimum card width
@@ -283,13 +278,18 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "$currency ${order.total.toStringAsFixed(2)}",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.green,
-                      ),
+                    Consumer<AppSettingsProvider>(
+                      builder: (context, settings, _) {
+                        final currency = settings.appSettings?.currency ?? 'INR';
+                        return Text(
+                          "$currency ${order.total.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.green,
+                          ),
+                        );
+                      },
                     ),
                     Text(
                       "${order.items.length} items",
