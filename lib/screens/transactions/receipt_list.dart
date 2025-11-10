@@ -16,6 +16,7 @@ import '../../providers/invoice_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'create_receipt_modal.dart';
 
 class ReceiptListScreen extends StatefulWidget {
   const ReceiptListScreen({super.key});
@@ -137,7 +138,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
             child: ListView(
               children: [
-                _buildHeader(),
+                _buildHeader(size),
                 const SizedBox(height: 15),
                 _buildSearchBar(size),
                 const SizedBox(height: 15),
@@ -155,7 +156,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Size size) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -164,16 +165,16 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        // CustomRoundButton(
-        //   title: "Create New Receipt",
-        //   fct: () {
-        //     sideBarController.index.value =
-        //         25; // Navigate to create receipt screen
-        //   },
-        //   fontSize: 12,
-        //   height: 45,
-        //   width: 200,
-        // ),
+        CustomRoundButton(
+          title: "Create Receipt",
+          fct: () {
+            showCreateReceiptModal(context, size);
+          },
+          width: 200,
+          height: 45,
+          fontSize: 12,
+          radius: 5,
+        ),
       ],
     );
   }
