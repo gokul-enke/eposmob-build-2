@@ -13,13 +13,14 @@ git push build1 v0.1.0-dev.259
 
 # eposenke demo
 https://eposdemo.hypersouq.in
-EPOSENKE_84BFT1haKrbIJeosgyPH0OES1Y6DNkLx
+EPOSENKE_p5Ut9BRLYnlxu7UZsGjR6RmTt6X4Dhuf
 attender@eposenke.in
 123456
 kitchenmaster@eposenke.in
 123456
 salesexecutive@eposenke.in
 123456
+
 
 # epos souqpoint
 SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
