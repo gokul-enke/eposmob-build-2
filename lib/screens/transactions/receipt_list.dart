@@ -248,6 +248,36 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
+  Widget _buildTypeChip(String paymentMethod) {
+    // Check if multiple payment methods (contains comma or multiple methods)
+    bool isMixed = paymentMethod.contains(',') || 
+                   paymentMethod.contains('CASH') && paymentMethod.contains('CARD') ||
+                   paymentMethod.contains('CASH') && paymentMethod.contains('UPI') ||
+                   paymentMethod.contains('CARD') && paymentMethod.contains('UPI');
+    
+    String displayText = isMixed ? 'Mixed' : 'Invoice Payment';
+    Color backgroundColor = isMixed 
+        ? Colors.orange.withOpacity(0.1) 
+        : Colors.blue.withOpacity(0.1);
+    Color textColor = isMixed ? Colors.orange : Colors.blue;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        displayText,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchBar(Size size) {
     return Column(
       children: [
@@ -636,81 +666,380 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(12),
         ),
         elevation: 8,
         backgroundColor: Colors.white,
         child: Container(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width / 2,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            maxWidth: MediaQuery.of(context).size.width * 0.6,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header with title and close button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Receipt Details',
+                    'Receipt Payment Details',
                     style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s24,
-                      0.36,
+                      FontWeightManager.semiBold,
+                      FontSize.s20,
+                      0.30,
                       Colors.black,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
+                    icon: const Icon(Icons.close, color: Colors.grey, size: 24),
                     onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
+              
+              // Two-column layout for main details
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left column
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildInfoField('Receipt Number:', receipt.receiptNumber),
+                        const SizedBox(height: 24),
+                        _buildInfoField('Amount:', receipt.amount),
+                        const SizedBox(height: 24),
+                        _buildInfoField('Status:', receipt.receiptStatus),
+                        const SizedBox(height: 24),
+                        _buildInfoField('Payment Reference:', receipt.paymentReference),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 40),
+                  // Right column
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildInfoField('Customer:', receipt.customer.user.name),
+                        const SizedBox(height: 24),
+                        _buildInfoField('Company:', receipt.company?.name ?? 'N/A'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 40),
+              
+              // Payment details table
               Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildDetailRow('Receipt Number', receipt.receiptNumber),
-                    _buildDetailRow(
-                        'Customer Name', receipt.customer.user.name),
-                    _buildDetailRow(
-                        'Customer Phone', receipt.customer.user.phone),
-                    _buildDetailRow('Amount', receipt.amount),
-                    _buildDetailRow('Payment Method', receipt.paymentMethod),
-                    _buildDetailRow('Status', receipt.receiptStatus),
-                    _buildDetailRow(
-                        'Payment Reference', receipt.paymentReference),
-                    _buildDetailRow(
-                        'Date', DateHelper.formatDate(receipt.createdAt)),
-                    if (receipt.company?.name != null)
-                      _buildDetailRow('Company', receipt.company!.name),
-                  ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Table header
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            topRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'DATE',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s12,
+                                  0.18,
+                                  Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'INVOICE',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s12,
+                                  0.18,
+                                  Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'PAYMENT METHOD',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s12,
+                                  0.18,
+                                  Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                'STATUS',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s12,
+                                  0.18,
+                                  Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'PAID AMOUNT',
+                                textAlign: TextAlign.right,
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s12,
+                                  0.18,
+                                  Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Table rows
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade200),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildPaymentRow(
+                              DateHelper.formatDate(receipt.createdAt),
+                              receipt.paymentReference.isNotEmpty 
+                                  ? receipt.paymentReference 
+                                  : 'General Payment',
+                              receipt.paymentMethod,
+                              receipt.receiptStatus,
+                              receipt.amount,
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Summary section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Balance:',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.21,
+                                      Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 40),
+                                  Text(
+                                    receipt.customer.balance ?? '0',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.21,
+                                      Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Grand Total:',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      FontSize.s14,
+                                      0.21,
+                                      Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 40),
+                                  Text(
+                                    receipt.amount,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      FontSize.s14,
+                                      0.21,
+                                      Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Close",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
+              
+              const SizedBox(height: 24),
+              
+              // Close button
+              Align(
+                alignment: Alignment.centerLeft,
+                child: CustomRoundButton(
+                  title: "Close",
+                  boxColor: Colors.white,
+                  textColor: Colors.black87,
+                  borderColor: Colors.grey.shade300,
+                  fct: () => Navigator.pop(context),
+                  height: 40,
+                  width: 100,
+                  fontSize: FontSize.s12,
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+  
+  Widget _buildInfoField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.21,
+            Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value.isNotEmpty ? value : 'N/A',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.21,
+            Colors.grey.shade700,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildPaymentRow(
+    String date,
+    String invoice,
+    String paymentMethod,
+    String status,
+    String amount,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              date,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s13,
+                0.19,
+                Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              invoice,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s13,
+                0.19,
+                Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              paymentMethod,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s13,
+                0.19,
+                Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Text(
+              status,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s13,
+                0.19,
+                Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              amount,
+              textAlign: TextAlign.right,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s13,
+                0.19,
+                Colors.black87,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -812,12 +1141,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                       ),
                       child: Table(
                         columnWidths: const {
-                          0: FlexColumnWidth(2.0), // Customer Name
-                          1: FlexColumnWidth(1.0), // Receipt Number
+                          0: FlexColumnWidth(1.5), // Receipt Number
+                          1: FlexColumnWidth(2.0), // Customer Name
                           2: FlexColumnWidth(1.5), // Amount
-                          3: FlexColumnWidth(2.0), // Payment Reference
+                          3: FlexColumnWidth(1.5), // Type
                           4: FlexColumnWidth(1.5), // Status
-                          5: FlexColumnWidth(1.0), // Payment Method
+                          5: FlexColumnWidth(2.0), // Payment Reference
                           6: FlexColumnWidth(1.0), // Action
                         },
                         border: null,
@@ -826,12 +1155,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                         children: [
                           TableRow(
                             children: [
-                              _buildTableHeader("Customer Name"),
                               _buildTableHeader("Receipt Number"),
+                              _buildTableHeader("Customer Name"),
                               _buildTableHeader("Amount"),
-                              _buildTableHeader("Payment Reference"),
+                              _buildTableHeader("Type"),
                               _buildTableHeader("Status"),
-                              _buildTableHeader("Payment Method"),
+                              _buildTableHeader("Payment Reference"),
                               _buildTableHeader("Action"),
                             ],
                           ),
@@ -892,13 +1221,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                   scrollDirection: Axis.vertical,
                                   child: Table(
                                     columnWidths: const {
-                                      0: FlexColumnWidth(2.0), // Customer Name
-                                      1: FlexColumnWidth(1.0), // Receipt Number
+                                      0: FlexColumnWidth(1.5), // Receipt Number
+                                      1: FlexColumnWidth(2.0), // Customer Name
                                       2: FlexColumnWidth(1.5), // Amount
-                                      3: FlexColumnWidth(
-                                          2.0), // Payment Reference
+                                      3: FlexColumnWidth(1.5), // Type
                                       4: FlexColumnWidth(1.5), // Status
-                                      5: FlexColumnWidth(1.0), // Payment Method
+                                      5: FlexColumnWidth(2.0), // Payment Reference
                                       6: FlexColumnWidth(1.0), // Action
                                     },
                                     border: null,
@@ -918,19 +1246,20 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                                 : Colors.grey.withOpacity(0.1),
                                           ),
                                           children: [
+                                            _buildTableCell(
+                                                receipt.receiptNumber),
                                             _buildTableCell(receipt
                                                 .customer.user.name
                                                 .toString()),
-                                            _buildTableCell(
-                                                receipt.receiptNumber),
                                             _buildTableCell(receipt.amount),
-                                            _buildTableCell(
-                                                receipt.paymentReference),
+                                            Center(
+                                                child: _buildTypeChip(
+                                                    receipt.paymentMethod)),
                                             Center(
                                                 child: _buildStatusChip(
                                                     receipt.receiptStatus)),
                                             _buildTableCell(
-                                                receipt.paymentMethod),
+                                                receipt.paymentReference),
                                             Center(
                                               child: Padding(
                                                 padding:

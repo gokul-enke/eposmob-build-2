@@ -196,7 +196,11 @@ class Customer {
   int? userId;
   dynamic altPhone;
   dynamic profileImage;
+  String? balance;
+  String? paymentType;
+  String? customerType;
   int? storeId;
+  int? companyId;
   dynamic deletedAt;
   DateTime createdAt;
   DateTime updatedAt;
@@ -209,7 +213,11 @@ class Customer {
     this.userId,
     this.altPhone,
     this.profileImage,
+    this.balance,
+    this.paymentType,
+    this.customerType,
     this.storeId,
+    this.companyId,
     this.deletedAt,
     required this.createdAt,
     required this.updatedAt,
@@ -225,7 +233,11 @@ class Customer {
       userId: json['user_id'],
       altPhone: json['alt_phone'],
       profileImage: json['profile_image'],
+      balance: json['balance'],
+      paymentType: json['payment_type'],
+      customerType: json['customer_type'],
       storeId: json['store_id'],
+      companyId: json['company_id'],
       deletedAt: json['deleted_at'],
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),

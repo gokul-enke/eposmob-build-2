@@ -120,6 +120,8 @@ class Customer {
   final String? gender;
   final String? altPhone;
   final String? profileImage;
+  final String? balance;
+  final String? paymentType;
   final int? storeId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -132,6 +134,8 @@ class Customer {
     this.gender,
     this.altPhone,
     this.profileImage,
+    this.balance,
+    this.paymentType,
     this.storeId,
     required this.createdAt,
     required this.updatedAt,
@@ -146,6 +150,8 @@ class Customer {
       gender: json['gender'] ?? '', // Default to empty string
       altPhone: json['alt_phone'] ?? '', // Default to empty string
       profileImage: json['profile_image'] ?? '', // Default to empty string
+      balance: json['balance']?.toString(), // Parse balance from API
+      paymentType: json['payment_type']?.toString(), // Parse payment type from API
       storeId: json['store_id'] ?? 0, // Default to 0 if null
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
