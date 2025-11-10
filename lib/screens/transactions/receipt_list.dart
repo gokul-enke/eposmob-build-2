@@ -73,6 +73,29 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     }
   }
 
+  Future<void> refreshReceipts() async {
+    try {
+      final String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+
+      if (accessToken == null || accessToken.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Authentication token is missing")),
+        );
+        return;
+      }
+
+      // Reload all receipts
+      await Provider.of<InvoiceProvider>(context, listen: false)
+          .loadAllReceipts(accessToken);
+      setState(() {});
+    } catch (error) {
+      debugPrint("Error refreshing receipts: $error");
+      showScaffold(
+          context: context, message: "Error refreshing receipts: $error");
+    }
+  }
+
   void searchReceipts() {
     final String searchText = searchTextController.text.trim();
     debugPrint("Searching for receipts with name: '$searchText'");
@@ -167,8 +190,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         ),
         CustomRoundButton(
           title: "Create Receipt",
-          fct: () {
-            showCreateReceiptModal(context, size);
+          fct: () async {
+            final result = await showCreateReceiptModal(context, size);
+            if (result == true) {
+              // Refresh the list if receipt was created successfully
+              await refreshReceipts();
+            }
           },
           width: 200,
           height: 45,

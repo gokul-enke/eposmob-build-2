@@ -1375,12 +1375,18 @@ class InvoiceProvider extends ChangeNotifier {
     required String receiptStatus,
     required List<Map<String, dynamic>> receiptItems,
     required String accessToken,
+    String? paymentReference,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'customer_id': customerId,
       'receipt_status': receiptStatus,
       'receipt_items': receiptItems,
     };
+
+    // Add payment_reference if provided
+    if (paymentReference != null && paymentReference.isNotEmpty) {
+      apiBodyData['payment_reference'] = paymentReference;
+    }
 
     final url = Uri.parse(APPUrl.createReceipt);
     // Get API key from SharedPreferences
@@ -1392,10 +1398,24 @@ class InvoiceProvider extends ChangeNotifier {
     }
 
     try {
-      final response = await http.post(url, body: apiBodyData, headers: {
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
+      debugPrint(
+          '📨 [InvoiceProvider] Sending receipt request to ${url.toString()}');
+      debugPrint(
+          '📨 [InvoiceProvider] Request body: ${json.encode(apiBodyData)}');
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint(
+          '📥 [InvoiceProvider] Response status: ${response.statusCode}');
+      debugPrint(
+          '📥 [InvoiceProvider] Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         return json.decode(response.body);

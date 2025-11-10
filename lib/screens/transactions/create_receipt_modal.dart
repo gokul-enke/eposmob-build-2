@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/newcomponents/custom_text_fields.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
@@ -37,7 +38,7 @@ Future<dynamic> showCreateReceiptModal(BuildContext context, Size size) {
               ),
             ],
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: CreateReceiptModal(size: size),
         ),
       );
@@ -61,6 +62,7 @@ class ReceiptItemCard {
   final TextEditingController balanceAmountController = TextEditingController();
   final TextEditingController paymentDateController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
 
   String? selectedItemType;
   String? selectedInvoice;
@@ -70,19 +72,18 @@ class ReceiptItemCard {
     balanceAmountController.text = "0.00";
     paymentDateController.text = DateTime.now().toString().split(' ')[0];
     amountController.text = "0.00";
+    descriptionController.text = "General Payment";
+    selectedItemType = "Invoice Payment";
   }
 }
 
 class _CreateReceiptModalState extends State<CreateReceiptModal> {
-  final TextEditingController _receiptNumberController =
-      TextEditingController();
   final TextEditingController _totalAmountController = TextEditingController();
   final TextEditingController _paymentReferenceController =
       TextEditingController();
 
   String? _selectedPaymentMethod;
   String? _selectedCustomer;
-  String? _selectedStatus;
 
   List<ReceiptItemCard> _receiptItemCards = [ReceiptItemCard()];
 
@@ -98,11 +99,8 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
   void initState() {
     super.initState();
     // Set default values
-    _receiptNumberController.text =
-        "RCT-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}";
     _totalAmountController.text = "0.00";
     _selectedPaymentMethod = "Cash";
-    _selectedStatus = "Paid";
 
     // Load customers and invoices
     _loadCustomers();
@@ -132,14 +130,15 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       print('Error loading customers: $e');
       setState(() {
         _isLoadingCustomers = false;
       });
 
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading customers: $e')),
+      showScaffoldError(
+        context: context,
+        message: 'Error loading customers: $e',
       );
     }
   }
@@ -166,14 +165,15 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       print('Error loading invoices: $e');
       setState(() {
         _isLoadingInvoices = false;
       });
 
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading invoices: $e')),
+      showScaffoldError(
+        context: context,
+        message: 'Error loading invoices: $e',
       );
     }
   }
@@ -202,25 +202,23 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
 
     // Check if we have an access token
     if (accessToken == null || accessToken.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Not authenticated. Please log in again.')),
-      );
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Not authenticated. Please log in again.',
+        );
+      }
       return;
     }
 
     // Validate required fields
     if (_selectedCustomer == null || _selectedCustomer!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a customer')),
-      );
-      return;
-    }
-
-    if (_selectedStatus == null || _selectedStatus!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a status')),
-      );
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Please select a customer',
+        );
+      }
       return;
     }
 
@@ -229,47 +227,84 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     for (var card in _receiptItemCards) {
       // Validate item fields
       if (card.selectedItemType == null || card.selectedItemType!.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Please select an item type for all items')),
-        );
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Please select an item type for all items',
+          );
+        }
         return;
       }
 
-      receiptItems.add({
-        'item_type': card.selectedItemType?.toLowerCase() ?? 'general',
+      final itemType = card.selectedItemType?.toLowerCase() ?? 'general';
+
+      // Map dropdown values to backend expected values
+      String apiItemType;
+      if (itemType.contains('invoice')) {
+        apiItemType = 'invoice';
+      } else {
+        apiItemType = 'general';
+      }
+
+      final Map<String, dynamic> receiptItem = {
+        'item_type': apiItemType,
         'paid_amount': double.tryParse(card.amountController.text) ?? 0.0,
-        'status': _selectedStatus?.toLowerCase() ?? 'paid',
+        'status': 'paid',
         'payment_date': card.paymentDateController.text,
         'payment_method': _selectedPaymentMethod?.toUpperCase() ?? 'CASH',
-        'description': 'General Payment', // Default description
-      });
+        'description': card.descriptionController.text.isNotEmpty
+            ? card.descriptionController.text
+            : 'General Payment',
+      };
+
+      // Add invoice_id if item type is invoice payment
+      if (apiItemType == 'invoice' &&
+          card.selectedInvoice != null &&
+          card.selectedInvoice!.isNotEmpty) {
+        receiptItem['invoice_id'] = card.selectedInvoice;
+      }
+
+      receiptItems.add(receiptItem);
     }
 
     try {
+      debugPrint(
+          '🧾 Submitting receipt for customer $_selectedCustomer with ${receiptItems.length} item(s) and status paid');
+      debugPrint(
+          '📦 Receipt payload preview: ${receiptItems.map((item) => '{type: ${item['item_type']}, paid_amount: ${item['paid_amount']}, payment_date: ${item['payment_date']}}').toList()}');
+      if (_paymentReferenceController.text.isNotEmpty) {
+        debugPrint('💳 Payment Reference: ${_paymentReferenceController.text}');
+      }
+
       // Call the addReceipt method
       final result = await invoiceProvider.addReceipt(
         customerId: _selectedCustomer!,
-        receiptStatus: _selectedStatus!.toLowerCase(),
+        receiptStatus: 'paid',
         receiptItems: receiptItems,
         accessToken: accessToken,
+        paymentReference: _paymentReferenceController.text.isNotEmpty
+            ? _paymentReferenceController.text
+            : null,
       );
 
       // Handle success
-      print('Receipt created successfully: $result');
-      Navigator.pop(context); // Close the modal
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Receipt created successfully')),
-      );
+      debugPrint('✅ Receipt created successfully: $result');
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: 'Receipt created successfully',
+        );
+        Navigator.pop(context, true); // Close the modal and return success
+      }
     } catch (e) {
       // Handle error
-      print('Error creating receipt: $e');
-      // Show error message to user
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error creating receipt: $e')),
-      );
+      debugPrint('❌ Error creating receipt: $e');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error creating receipt: $e',
+        );
+      }
     }
   }
 
@@ -282,7 +317,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 10.0, bottom: 20.0),
+            padding: const EdgeInsets.only(left: 0, bottom: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -312,22 +347,13 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(15),
+            padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                // 1st row: Receipt Number | Payment Method | Total Receipt Amount
+                // 1st row: Payment Method | Total Receipt Amount
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: CustomTextFieldColumn(
-                        size: widget.size,
-                        controller: _receiptNumberController,
-                        hintText: "Receipt Number",
-                        title: "Receipt Number",
-                        isLeft: false,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: CustomDropDownWithSearch<String>(
                         hintText: "Payment Method",
@@ -347,28 +373,27 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         },
                         displayText: (item) => item,
                         isRequired: true,
-                        height: widget.size.height *
-                            0.07, // Match text field height
+                        height: widget.size.height * 0.048,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: CustomTextFieldColumn(
+                      child: CustomMinimalTextField(
                         size: widget.size,
                         controller: _totalAmountController,
-                        hintText: "Total Receipt Amount",
                         title: "Total Receipt Amount",
-                        isLeft: false,
+                        hintText: "Total Receipt Amount",
                         textInputType: TextInputType.number,
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 15),
+                const SizedBox(height: 20),
 
                 // 2nd row: Customer | Status | Payment Reference
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: CustomDropDownWithSearch<String>(
@@ -397,36 +422,16 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                           return customer.name ?? "Unnamed customer";
                         },
                         isRequired: true,
-                        height: widget.size.height *
-                            0.07, // Match text field height
+                        height: widget.size.height * 0.048,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: CustomDropDownWithSearch<String>(
-                        hintText: "Status",
-                        title: "Status",
-                        value: _selectedStatus,
-                        items: const ["Paid", "Pending"],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedStatus = value;
-                          });
-                        },
-                        displayText: (item) => item,
-                        isRequired: true,
-                        height: widget.size.height *
-                            0.07, // Match text field height
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CustomTextFieldColumn(
+                      child: CustomMinimalTextField(
                         size: widget.size,
                         controller: _paymentReferenceController,
-                        hintText: "Payment Reference",
                         title: "Payment Reference",
-                        isLeft: false,
+                        hintText: "Payment Reference",
                       ),
                     ),
                   ],
@@ -435,7 +440,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
             ),
           ),
 
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
 
           // Receipt items cards
           ..._receiptItemCards.asMap().entries.map((entry) {
@@ -461,8 +466,8 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(15),
-                  margin: const EdgeInsets.only(bottom: 15),
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -482,10 +487,11 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         ],
                       ),
 
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 20),
 
-                      // 1st row: Item Type | Invoice | Invoice Amount
+                      // 1st row: Item Type | Description (for general) OR Invoice | Invoice Amount (for invoice)
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: CustomDropDownWithSearch<String>(
@@ -503,154 +509,186 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                               },
                               displayText: (item) => item,
                               isRequired: true,
-                              height: widget.size.height *
-                                  0.07, // Match text field height
+                              height: widget.size.height * 0.048,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: CustomDropDownWithSearch<String>(
-                              hintText: _isLoadingInvoices
-                                  ? "Loading invoices..."
-                                  : "Select an invoice",
-                              title: "Invoice",
-                              value: card.selectedInvoice,
-                              items: _invoiceList
-                                  .map(
-                                      (invoice) => invoice.id?.toString() ?? "")
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  card.selectedInvoice = value;
+                          const SizedBox(width: 8),
+                          // Show Description field for General Payment
+                          if (card.selectedItemType == "General Payment")
+                            Expanded(
+                              child: CustomMinimalTextField(
+                                size: widget.size,
+                                controller: card.descriptionController,
+                                title: "Description",
+                                hintText: "Enter payment description",
+                              ),
+                            ),
+                          // Show Invoice dropdown for Invoice Payment
+                          if (card.selectedItemType == "Invoice Payment")
+                            Expanded(
+                              child: CustomDropDownWithSearch<String>(
+                                hintText: _isLoadingInvoices
+                                    ? "Loading invoices..."
+                                    : "Select an invoice",
+                                title: "Invoice",
+                                value: card.selectedInvoice,
+                                items: _invoiceList
+                                    .map((invoice) =>
+                                        invoice.id?.toString() ?? "")
+                                    .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    card.selectedInvoice = value;
 
-                                  // Auto-fill invoice amount when invoice is selected
-                                  if (value != null && value.isNotEmpty) {
-                                    final selectedInvoice =
-                                        _invoiceList.firstWhere(
-                                      (inv) => inv.id?.toString() == value,
-                                      orElse: () => Invoice(
-                                        id: 0,
-                                        customerId: 0,
-                                        invoiceNumber: "",
-                                        type: "",
-                                        companyId: 0,
-                                        amount: "0.00",
-                                        invoiceDate: "",
-                                        dueDate: "",
-                                        status: "",
-                                        createdBy: 0,
-                                        createdAt: DateTime.now(),
-                                        updatedAt: DateTime.now(),
-                                        customer: Customer(
+                                    // Auto-fill invoice amount when invoice is selected
+                                    if (value != null && value.isNotEmpty) {
+                                      final selectedInvoice =
+                                          _invoiceList.firstWhere(
+                                        (inv) => inv.id?.toString() == value,
+                                        orElse: () => Invoice(
                                           id: 0,
+                                          customerId: 0,
+                                          invoiceNumber: "",
+                                          type: "",
+                                          companyId: 0,
+                                          amount: "0.00",
+                                          invoiceDate: "",
+                                          dueDate: "",
+                                          status: "",
+                                          createdBy: 0,
                                           createdAt: DateTime.now(),
                                           updatedAt: DateTime.now(),
-                                          user: User(
+                                          customer: Customer(
                                             id: 0,
-                                            name: "",
-                                            email: "",
-                                            phone: "",
-                                            phoneVerified: 0,
                                             createdAt: DateTime.now(),
                                             updatedAt: DateTime.now(),
+                                            user: User(
+                                              id: 0,
+                                              name: "",
+                                              email: "",
+                                              phone: "",
+                                              phoneVerified: 0,
+                                              createdAt: DateTime.now(),
+                                              updatedAt: DateTime.now(),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                    card.invoiceAmountController.text =
-                                        selectedInvoice.amount ?? "0.00";
-                                  }
-                                });
-                              },
-                              displayText: (item) {
-                                if (_isLoadingInvoices) return "Loading...";
-                                // Find the invoice by ID
-                                final invoice = _invoiceList.firstWhere(
-                                  (inv) => inv.id?.toString() == item,
-                                  orElse: () => Invoice(
-                                    id: 0,
-                                    customerId: 0,
-                                    invoiceNumber: "Select invoice",
-                                    type: "",
-                                    companyId: 0,
-                                    amount: "0.00",
-                                    invoiceDate: "",
-                                    dueDate: "",
-                                    status: "",
-                                    createdBy: 0,
-                                    createdAt: DateTime.now(),
-                                    updatedAt: DateTime.now(),
-                                    customer: Customer(
+                                      );
+                                      card.invoiceAmountController.text =
+                                          selectedInvoice.amount ?? "0.00";
+                                    }
+                                  });
+                                },
+                                displayText: (item) {
+                                  if (_isLoadingInvoices) return "Loading...";
+                                  // Find the invoice by ID
+                                  final invoice = _invoiceList.firstWhere(
+                                    (inv) => inv.id?.toString() == item,
+                                    orElse: () => Invoice(
                                       id: 0,
+                                      customerId: 0,
+                                      invoiceNumber: "Select invoice",
+                                      type: "",
+                                      companyId: 0,
+                                      amount: "0.00",
+                                      invoiceDate: "",
+                                      dueDate: "",
+                                      status: "",
+                                      createdBy: 0,
                                       createdAt: DateTime.now(),
                                       updatedAt: DateTime.now(),
-                                      user: User(
+                                      customer: Customer(
                                         id: 0,
-                                        name: "",
-                                        email: "",
-                                        phone: "",
-                                        phoneVerified: 0,
                                         createdAt: DateTime.now(),
                                         updatedAt: DateTime.now(),
+                                        user: User(
+                                          id: 0,
+                                          name: "",
+                                          email: "",
+                                          phone: "",
+                                          phoneVerified: 0,
+                                          createdAt: DateTime.now(),
+                                          updatedAt: DateTime.now(),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                );
-                                return "${invoice.invoiceNumber ?? 'Unknown'} (${invoice.amount ?? '0.00'})";
-                              },
-                              isRequired: true,
-                              height: widget.size.height *
-                                  0.07, // Match text field height
+                                  );
+                                  return "${invoice.invoiceNumber ?? 'Unknown'} (${invoice.amount ?? '0.00'})";
+                                },
+                                isRequired: true,
+                                height: widget.size.height * 0.048,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: CustomTextFieldColumn(
-                              size: widget.size,
-                              controller: card.invoiceAmountController,
-                              hintText: "Invoice Amount",
-                              title: "Invoice Amount",
-                              isLeft: false,
-                              textInputType: TextInputType.number,
+                          // Show Invoice Amount only for Invoice Payment (with proper spacing)
+                          if (card.selectedItemType == "Invoice Payment") ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: CustomMinimalTextField(
+                                size: widget.size,
+                                controller: card.invoiceAmountController,
+                                title: "Invoice Amount",
+                                hintText: "Invoice Amount",
+                                textInputType: TextInputType.number,
+                                readOnly: true,
+                              ),
                             ),
-                          ),
+                          ],
+                          // Show Payment Date for General Payment (in first row)
+                          if (card.selectedItemType == "General Payment") ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: CustomMinimalTextField(
+                                size: widget.size,
+                                controller: card.paymentDateController,
+                                title: "Payment Date",
+                                hintText: "Payment Date",
+                              ),
+                            ),
+                          ],
                         ],
                       ),
 
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 20),
 
-                      // 2nd row: Balance Amount | Payment Date | Amount
+                      // 2nd row: Amount (for general) OR Balance Amount | Payment Date | Amount (for invoice)
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: CustomTextFieldColumn(
-                              size: widget.size,
-                              controller: card.balanceAmountController,
-                              hintText: "Balance Amount",
-                              title: "Balance Amount",
-                              isLeft: false,
-                              textInputType: TextInputType.number,
+                          // For Invoice Payment: show Balance Amount
+                          if (card.selectedItemType == "Invoice Payment")
+                            Expanded(
+                              child: CustomMinimalTextField(
+                                size: widget.size,
+                                controller: card.balanceAmountController,
+                                title: "Balance Amount",
+                                hintText: "Balance Amount",
+                                textInputType: TextInputType.number,
+                                readOnly: true,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: CustomTextFieldColumn(
-                              size: widget.size,
-                              controller: card.paymentDateController,
-                              hintText: "Payment Date",
-                              title: "Payment Date",
-                              isLeft: false,
+                          if (card.selectedItemType == "Invoice Payment")
+                            const SizedBox(width: 8),
+                          // For Invoice Payment: show Payment Date
+                          if (card.selectedItemType == "Invoice Payment")
+                            Expanded(
+                              child: CustomMinimalTextField(
+                                size: widget.size,
+                                controller: card.paymentDateController,
+                                title: "Payment Date",
+                                hintText: "Payment Date",
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
+                          if (card.selectedItemType == "Invoice Payment")
+                            const SizedBox(width: 8),
+                          // Amount field for both types
                           Expanded(
-                            child: CustomTextFieldColumn(
+                            child: CustomMinimalTextField(
                               size: widget.size,
                               controller: card.amountController,
-                              hintText: "Amount",
                               title: "Amount",
-                              isLeft: false,
+                              hintText: "Amount",
                               textInputType: TextInputType.number,
+                              isRequired: true,
                             ),
                           ),
                         ],
@@ -667,13 +705,13 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
             child: CustomRoundButtonAdvanced(
               title: "Add to receipt items",
               fct: _addNewReceiptItemCard,
-              width: 200,
-              height: 40,
+              width: 180,
+              height: 45,
               fontSize: 14,
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Action buttons
           Row(
@@ -685,18 +723,18 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                   Navigator.pop(context);
                 },
                 width: 100,
-                height: 40,
+                height: 45,
                 fontSize: 14,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 borderColor: ColorManager.kPrimaryColor,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               CustomRoundButtonAdvanced(
                 title: "Submit",
                 fct: _submitReceipt, // Updated to call the submit function
                 width: 100,
-                height: 40,
+                height: 45,
                 fontSize: 14,
               ),
             ],

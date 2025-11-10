@@ -635,3 +635,108 @@ Widget buildColumnWidgetForTextFields({
         ),
       ],
     );
+
+/// Minimal text field component matching customer form styling
+/// - Minimal vertical spacing (4px between label and field)
+/// - No extra margins (horizontal: 0, vertical: 0)
+/// - Field height: size.height * 0.048
+/// - Label font size: FontSize.s12
+class CustomMinimalTextField extends StatelessWidget {
+  final Size size;
+  final TextEditingController controller;
+  final String title;
+  final String? hintText;
+  final TextInputType? textInputType;
+  final bool isRequired;
+  final bool readOnly;
+  final int? maxLines;
+  final TextInputFormatter? inputFormatter;
+  final String? Function(String?)? validator;
+  final VoidCallback? onTap;
+
+  const CustomMinimalTextField({
+    Key? key,
+    required this.size,
+    required this.controller,
+    required this.title,
+    this.hintText,
+    this.textInputType,
+    this.isRequired = false,
+    this.readOnly = false,
+    this.maxLines,
+    this.inputFormatter,
+    this.validator,
+    this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label with optional red asterisk
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: title,
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              if (isRequired)
+                TextSpan(
+                  text: ' *',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.27,
+                    Colors.red,
+                  ),
+                ),
+            ],
+          ),
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4), // Minimal spacing
+        
+        // Text field container
+        CustomBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+          padding: const EdgeInsets.only(left: 12),
+          height: maxLines != null && maxLines! > 1
+              ? size.height * 0.1
+              : size.height * 0.048, // Minimal height
+          width: size.width,
+          child: TextFormField(
+            controller: controller,
+            keyboardType: textInputType ?? TextInputType.text,
+            readOnly: readOnly,
+            maxLines: maxLines ?? 1,
+            inputFormatters: inputFormatter != null ? [inputFormatter!] : null,
+            cursorColor: ColorManager.kPrimaryColor,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: hintText,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            validator: validator,
+            onTap: onTap,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s11,
+              0.27,
+              ColorManager.textColor.withOpacity(.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
