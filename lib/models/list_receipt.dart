@@ -26,6 +26,53 @@ class ReceiptResponse {
   }
 }
 
+class ReceiptPayment {
+  int id;
+  int receiptId;
+  int? invoiceId;
+  int? transactionId;
+  String paymentMethod;
+  String paidAmount;
+  String status;
+  String paymentDate;
+  String? description;
+  int? updatedBy;
+  DateTime createdAt;
+  DateTime updatedAt;
+
+  ReceiptPayment({
+    required this.id,
+    required this.receiptId,
+    this.invoiceId,
+    this.transactionId,
+    required this.paymentMethod,
+    required this.paidAmount,
+    required this.status,
+    required this.paymentDate,
+    this.description,
+    this.updatedBy,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ReceiptPayment.fromJson(Map<String, dynamic> json) {
+    return ReceiptPayment(
+      id: json['id'] ?? 0,
+      receiptId: json['receipt_id'] ?? 0,
+      invoiceId: json['invoice_id'],
+      transactionId: json['transaction_id'],
+      paymentMethod: json['payment_method']?.toString() ?? '',
+      paidAmount: json['paid_amount']?.toString() ?? '0',
+      status: json['status']?.toString() ?? '',
+      paymentDate: json['payment_date']?.toString() ?? '',
+      description: json['description']?.toString(),
+      updatedBy: json['updated_by'],
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+    );
+  }
+}
+
 // Data Class for Pagination and Receipts
 class ReceiptData {
   int currentPage;
@@ -101,6 +148,7 @@ class Receipt {
   DateTime updatedAt;
   Company company;
   Customer customer;
+  List<ReceiptPayment> receiptPayments;
 
   Receipt({
     required this.id,
@@ -116,10 +164,15 @@ class Receipt {
     required this.updatedAt,
     required this.company,
     required this.customer,
+    required this.receiptPayments,
   });
 
   factory Receipt.fromJson(Map<String, dynamic> json) {
     debugPrint("🔍 Receipt.fromJson called with: ${json.toString()}");
+    final paymentsJson = (json['receipt_payments'] as List?) ?? [];
+    final payments = paymentsJson
+        .map((e) => ReceiptPayment.fromJson(e as Map<String, dynamic>))
+        .toList();
     return Receipt(
       id: json['id'] ?? 0,
       receiptNumber: json['receipt_number'] ?? '',
@@ -134,6 +187,7 @@ class Receipt {
       updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
       company: Company.fromJson(json['company'] ?? {}),
       customer: Customer.fromJson(json['customer'] ?? {}),
+      receiptPayments: payments,
     );
   }
 

@@ -248,18 +248,28 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-  Widget _buildTypeChip(String paymentMethod) {
-    // Check if multiple payment methods (contains comma or multiple methods)
-    bool isMixed = paymentMethod.contains(',') || 
-                   paymentMethod.contains('CASH') && paymentMethod.contains('CARD') ||
-                   paymentMethod.contains('CASH') && paymentMethod.contains('UPI') ||
-                   paymentMethod.contains('CARD') && paymentMethod.contains('UPI');
-    
-    String displayText = isMixed ? 'Mixed' : 'Invoice Payment';
-    Color backgroundColor = isMixed 
-        ? Colors.orange.withOpacity(0.1) 
-        : Colors.blue.withOpacity(0.1);
-    Color textColor = isMixed ? Colors.orange : Colors.blue;
+  Widget _buildTypeChip(Receipt receipt) {
+    final payments = receipt.receiptPayments;
+    final int invoiceCount = payments.where((p) => p.invoiceId != null).length;
+    final int generalCount = payments.where((p) => p.invoiceId == null).length;
+
+    String displayText;
+    Color backgroundColor;
+    Color textColor;
+
+    if (invoiceCount > 0 && generalCount > 0) {
+      displayText = 'Mixed';
+      backgroundColor = Colors.orange.withOpacity(0.1);
+      textColor = Colors.orange;
+    } else if (invoiceCount > 0) {
+      displayText = 'Invoice Payment';
+      backgroundColor = Colors.blue.withOpacity(0.1);
+      textColor = Colors.blue;
+    } else {
+      displayText = 'General Payment';
+      backgroundColor = Colors.green.withOpacity(0.1);
+      textColor = Colors.green;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -731,7 +741,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                       children: [
                         _buildInfoField('Customer:', receipt.customer.user.name),
                         const SizedBox(height: 24),
-                        _buildInfoField('Company:', receipt.company?.name ?? 'N/A'),
+                        _buildInfoField('Company:', receipt.company.name),
                       ],
                     ),
                   ),
@@ -834,52 +844,31 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                         ),
                         child: Column(
                           children: [
-                            _buildPaymentRow(
-                              DateHelper.formatDate(receipt.createdAt),
-                              receipt.paymentReference.isNotEmpty 
-                                  ? receipt.paymentReference 
-                                  : 'General Payment',
-                              receipt.paymentMethod,
-                              receipt.receiptStatus,
-                              receipt.amount,
-                            ),
+                            ...receipt.receiptPayments.map((p) => _buildPaymentRow(
+                                  DateHelper.formatDate(
+                                      DateTime.tryParse(p.paymentDate) ?? receipt.createdAt),
+                                  p.invoiceId != null
+                                      ? 'INV-${p.invoiceId}'
+                                      : (p.description?.isNotEmpty == true
+                                          ? p.description!
+                                          : 'General Payment'),
+                                  p.paymentMethod,
+                                  p.status,
+                                  p.paidAmount,
+                                )),
                           ],
                         ),
                       ),
                       
                       const SizedBox(height: 24),
                       
-                      // Summary section
+                      // Summary section (hide Balance as requested)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Balance:',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s14,
-                                      0.21,
-                                      Colors.grey.shade700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 40),
-                                  Text(
-                                    receipt.customer.balance ?? '0',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s14,
-                                      0.21,
-                                      Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Text(
@@ -1254,7 +1243,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                             _buildTableCell(receipt.amount),
                                             Center(
                                                 child: _buildTypeChip(
-                                                    receipt.paymentMethod)),
+                                                    receipt)),
                                             Center(
                                                 child: _buildStatusChip(
                                                     receipt.receiptStatus)),
