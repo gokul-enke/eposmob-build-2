@@ -15,6 +15,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:get/get.dart';
 
 class SideBarProductList extends StatefulWidget {
   /// Function to call when a product is selected
@@ -159,7 +160,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                 child: buildColumnWidgetForTextFields(
                   controller: _searchCategoryController,
                   size: MediaQuery.of(context).size,
-                  hintText: 'Search category',
+                  hintText: 'common.search_category'.tr,
                   readOnly: false,
                   focusNode: _categoryFocusNode,
                   width: double.infinity, // Take full width
@@ -437,7 +438,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           child: buildColumnWidgetForTextFields(
                             controller: _searchProductController,
                             size: MediaQuery.of(context).size,
-                            hintText: 'Search product',
+                            hintText: 'common.search_product'.tr,
                             readOnly: false,
                             focusNode: _productFocusNode,
                             width: double.infinity, // Take full width

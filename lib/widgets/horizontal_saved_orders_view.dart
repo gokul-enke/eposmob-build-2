@@ -11,6 +11,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 /// A widget to display saved orders in a grid layout with new order button at top
 class HorizontalSavedOrdersView extends StatefulWidget {
@@ -186,20 +187,20 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
 
             debugPrint("===== NEW ORDER (+) BUTTON COMPLETE =====");
           },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.add_circle,
                   size: 24,
                   color: ColorManager.kPrimaryColor,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Text(
-                  "Create New Order",
-                  style: TextStyle(
+                  'common.create_new_order'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: ColorManager.kPrimaryColor,
@@ -292,7 +293,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                       },
                     ),
                     Text(
-                      "${order.items.length} items",
+                      "${order.items.length} ${'common.items'.tr}",
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
@@ -345,7 +346,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
           ),
           const SizedBox(height: 12),
           Text(
-            "No saved orders yet",
+            'common.no_saved_orders'.tr,
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey.withOpacity(0.7),
@@ -354,7 +355,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
           ),
           const SizedBox(height: 4),
           Text(
-            "Create your first order above",
+            'common.create_first_order'.tr,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.withOpacity(0.6),

@@ -10,6 +10,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
+import 'package:get/get.dart';
 
 class DeliveryMethodModal extends StatefulWidget {
   final String initialDeliveryMethod;
@@ -22,7 +23,7 @@ class DeliveryMethodModal extends StatefulWidget {
       onDeliveryMethodSelected;
 
   const DeliveryMethodModal({
-    Key? key,
+    super.key,
     required this.initialDeliveryMethod,
     required this.initialDeliveryMethodId,
     required this.initialCarNumber,
@@ -30,7 +31,7 @@ class DeliveryMethodModal extends StatefulWidget {
     this.initialDeliveryDate,
     this.initialDeliveryTime,
     required this.onDeliveryMethodSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<DeliveryMethodModal> createState() => _DeliveryMethodModalState();
@@ -72,6 +73,21 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
     super.dispose();
   }
 
+  String _getDeliveryMethodTranslation(String methodName) {
+    switch (methodName) {
+      case "Store Takeaway":
+        return 'common.store_takeaway'.tr;
+      case "Car Delivery":
+        return 'common.car_delivery'.tr;
+      case "Door Delivery":
+        return 'common.door_delivery'.tr;
+      case "Third Party Logistics":
+        return 'common.third_party_logistics'.tr;
+      default:
+        return methodName.tr;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -92,7 +108,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Delivery Method',
+                      'delivery.delivery_methods'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s16,
@@ -140,7 +156,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              method.name,
+                              _getDeliveryMethodTranslation(method.name),
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -159,7 +175,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     .askDeliveryDate) ...[
                   const SizedBox(height: 20),
                   // Delivery Date (optional)
-                  Text('Delivery Date (optional)',
+                  Text('billing.enter_car_number'.tr,
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s12, 0.12, Colors.black)),
                   CalendarPickerTableCell(
@@ -172,7 +188,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   ),
                   const SizedBox(height: 10),
                   // Delivery Time (optional)
-                  Text('Delivery Time (optional)',
+                  Text('common.select'.tr,
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s12, 0.12, Colors.black)),
                   TimePickerTableCell(
@@ -214,7 +230,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                 ),
                 const SizedBox(height: 20),
                 CustomRoundButton(
-                  title: "Apply",
+                  title: 'common.select'.tr,
                   fct: () {
                     widget.onDeliveryMethodSelected(
                       deliveryMethod,

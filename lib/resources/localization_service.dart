@@ -10,6 +10,8 @@ class LocalizationService {
   static final List<Locale> supportedLocales = <Locale>[
     const Locale('en'),
     const Locale('hi'),
+    const Locale('ml'),
+    const Locale('ar'),
   ];
 
   static Locale _locale = fallbackLocale;

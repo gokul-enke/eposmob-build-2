@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:get/get.dart';
 
 class PaymentMethodModal extends StatefulWidget {
   final bool initialIsCashSelected;
@@ -497,7 +498,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Payment Methods',
+                  'billing.payment_methods'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s16,
@@ -517,7 +518,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             _buildModalPaymentRow(
               isSelected: isCashSelected,
               icon: ImageAssets.cashIcon,
-              label: 'Cash',
+              label: 'billing.cash'.tr,
               controller: cashAmountController,
               focusNode: cashAmountFocusNode,
               size: size,
@@ -530,7 +531,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             _buildModalPaymentRow(
               isSelected: isCardSelected,
               icon: ImageAssets.creditCardIcon,
-              label: 'Card',
+              label: 'billing.card'.tr,
               controller: cardAmountController,
               focusNode: cardAmountFocusNode,
               size: size,
@@ -543,7 +544,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             _buildModalPaymentRow(
               isSelected: isUpiSelected,
               icon: ImageAssets.creditCardIcon,
-              label: 'UPI',
+              label: 'billing.upi'.tr,
               controller: upiAmountController,
               focusNode: upiAmountFocusNode,
               size: size,
@@ -555,7 +556,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             // Transaction Reference Field - Show only if Card or UPI is selected
             if (isCardSelected || isUpiSelected) ...[
               Text(
-                'Transaction Reference',
+                'billing.transaction_reference'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s13,
@@ -586,7 +587,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             // Extended Summary
             BuildPaymentRow(
               amount: '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
-              title: 'Total Paid',
+              title: 'billing.total_paid'.tr,
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s15,
@@ -604,7 +605,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
             BuildPaymentRow(
               amount: '$currency ${widget.cartTotal.toStringAsFixed(2)}',
-              title: 'Purchase Total',
+              title: 'billing.purchase_total'.tr,
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s15,
@@ -622,7 +623,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
             BuildPaymentRow(
               amount: _formatSignedWithCurrency(widget.customerPrevBalance),
-              title: 'Customer Prev Balance',
+              title: 'billing.customer_prev_balance'.tr,
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s15,
@@ -652,7 +653,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             Row(
               children: [
                 Text(
-                  'To Customer Credit',
+                  'billing.to_customer_credit'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s14,
@@ -803,7 +804,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
             BuildPaymentRow(
               amount: '$currency ${balanceAmount.toStringAsFixed(2)}',
-              title: 'Cash Balance',
+              title: 'billing.cash_balance'.tr,
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s15,
@@ -827,7 +828,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
             const SizedBox(height: 20),
             CustomRoundButton(
-              title: widget.customButtonTitle ?? "Apply Payment Methods",
+              title: widget.customButtonTitle ?? 'billing.apply_payment_methods'.tr,
               fct: () {
                 // Map To Customer Credit to legacy debit params for callback compatibility
                 final double mappedCredit =
@@ -976,7 +977,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Posting Preview',
+            'billing.posting_preview'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -1065,7 +1066,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Net Due:',
+            'billing.net_due'.tr + ':',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -1122,7 +1123,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Quick Credit Options:',
+            'billing.quick_credit_options'.tr + ':',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s12,
@@ -1158,7 +1159,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       child: Column(
                         children: [
                           Text(
-                            'All Available',
+                            'billing.all_available'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s9,
@@ -1196,7 +1197,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   child: Column(
                     children: [
                       Text(
-                        'Cash Balance',
+                        'billing.cash_balance'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s9,

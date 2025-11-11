@@ -8,6 +8,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -71,21 +72,22 @@ class SettingsScreen extends StatelessWidget {
                               },
                             );
                           case 1:
-                            return _SettingsCard(
+                            return _SettingsCardWithIcon(
                               title: 'settings.company_info'.tr,
-                              iconPath: ImageAssets
-                                  .reportIcon, // Using existing report icon
-                              iconColor: Colors.green,
+                              icon: FontAwesomeIcons.building,
+                              backgroundColor: const Color(0xFFE8F5E9),
+                              iconColor: const Color(0xFF2E7D32),
                               onTap: () {
                                 Get.find<SideBarController>().index.value =
                                     64; // Navigate to Company Info screen
                               },
                             );
                           case 2:
-                            return _SettingsCard(
+                            return _SettingsCardWithIcon(
                               title: 'settings.language'.tr,
-                              iconPath: ImageAssets.reportIcon,
-                              iconColor: Colors.blue,
+                              icon: FontAwesomeIcons.globe,
+                              backgroundColor: const Color(0xFFE3F2FD),
+                              iconColor: const Color(0xFF1565C0),
                               onTap: () => _showLanguagePicker(context),
                             );
                           default:
@@ -126,6 +128,18 @@ class SettingsScreen extends StatelessWidget {
                   RadioListTile<String>(
                     title: const Text('हिन्दी'),
                     value: 'hi',
+                    groupValue: selected,
+                    onChanged: (v) => setState(() => selected = v!),
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('മലയാളം'), 
+                    value: 'ml',
+                    groupValue: selected,
+                    onChanged: (v) => setState(() => selected = v!),
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('العربية'),
+                    value: 'ar',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),
                   ),
@@ -216,6 +230,95 @@ class _SettingsCard extends StatelessWidget {
                 ],
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsCardWithIcon extends StatefulWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color backgroundColor;
+  final Color iconColor;
+
+  const _SettingsCardWithIcon({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.onTap,
+    required this.backgroundColor,
+    required this.iconColor,
+  });
+
+  @override
+  State<_SettingsCardWithIcon> createState() => _SettingsCardWithIconState();
+}
+
+class _SettingsCardWithIconState extends State<_SettingsCardWithIcon> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: BuildBoxShadowContainer(
+          circleRadius: 14,
+          offsetValue: _isHovered ? const Offset(2, 3) : const Offset(1, 1),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: widget.iconColor.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final side = constraints.biggest.shortestSide;
+                final iconSize = side * 0.35;
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Icon container with background
+                    Container(
+                      height: iconSize,
+                      width: iconSize,
+                      decoration: BoxDecoration(
+                        color: widget.backgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: FaIcon(
+                          widget.icon,
+                          color: widget.iconColor,
+                          size: iconSize * 0.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.21,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
