@@ -59,55 +59,84 @@ class Invoice {
   final int id;
   final int? userId;
   final int customerId;
+  final int? transactionId;
   final String invoiceNumber;
   final String type;
   final int companyId;
   final String amount;
   final String invoiceDate;
   final String dueDate;
+  final String? totalDiscount;
+  final String? discountType;
+  final String? discountRemarks;
+  final String? paymentMethod;
+  final String? totalTax;
   final String status;
   final int createdBy;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final Customer customer;
+  final String? zatcaRequestStatus;
   final String? zatcaStatus;
+  final String? paidAmount;
+  final dynamic balanceAmount;
+  final Customer customer;
+  final List<dynamic>? zatcaInvoices;
 
   Invoice({
     required this.id,
     this.userId,
     required this.customerId,
+    this.transactionId,
     required this.invoiceNumber,
     required this.type,
     required this.companyId,
     required this.amount,
     required this.invoiceDate,
     required this.dueDate,
+    this.totalDiscount,
+    this.discountType,
+    this.discountRemarks,
+    this.paymentMethod,
+    this.totalTax,
     required this.status,
     required this.createdBy,
     required this.createdAt,
     required this.updatedAt,
-    required this.customer,
+    this.zatcaRequestStatus,
     this.zatcaStatus,
+    this.paidAmount,
+    this.balanceAmount,
+    required this.customer,
+    this.zatcaInvoices,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
     return Invoice(
-      id: json['id'] ?? 0, // Default to 0 if null
-      userId: json['user_id'], // This can remain nullable
-      customerId: json['customer_id'] ?? 0, // Default to 0 if null
+      id: json['id'] ?? 0,
+      userId: json['user_id'],
+      customerId: json['customer_id'] ?? 0,
+      transactionId: json['transaction_id'],
       invoiceNumber: json['invoice_number'] ?? '',
       type: json['type'] ?? '',
-      companyId: json['company_id'] ?? 0, // Default to 0 if null
-      amount: json['amount'] ?? '0.00', // Default to '0.00' if null
+      companyId: json['company_id'] ?? 0,
+      amount: json['amount'] ?? '0.00',
       invoiceDate: json['invoice_date'] ?? '',
       dueDate: json['due_date'] ?? '',
+      totalDiscount: json['total_discount']?.toString(),
+      discountType: json['discount_type']?.toString(),
+      discountRemarks: json['discount_remarks']?.toString(),
+      paymentMethod: json['payment_method']?.toString(),
+      totalTax: json['total_tax']?.toString(),
       status: json['status'] ?? '',
-      createdBy: json['created_by'] ?? 0, // Default to 0 if null
+      createdBy: json['created_by'] ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
-      customer:
-          Customer.fromJson(json['customer'] ?? {}), // Handle null customer
+      zatcaRequestStatus: json['zatca_request_status']?.toString(),
       zatcaStatus: json['zatca_status']?.toString(),
+      paidAmount: json['paid_amount']?.toString(),
+      balanceAmount: json['balance_amount'],
+      customer: Customer.fromJson(json['customer'] ?? {}),
+      zatcaInvoices: json['zatca_invoices'] as List<dynamic>?,
     );
   }
 }

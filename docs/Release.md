@@ -1,10 +1,10 @@
 demo build
-git tag v0.1.0-dev.266
-git push build v0.1.0-dev.266
+git tag v0.1.0-dev.271
+git push build v0.1.0-dev.271
 
 souq build
-git tag v0.1.0-dev.270
-git push origin v0.1.0-dev.270
+git tag v0.1.0-dev.271
+git push origin v0.1.0-dev.271
 
 yougoit build
 git tag v0.1.0-dev.259
@@ -33,13 +33,9 @@ salesexecutive1@eposenke.in
 123456
 
 # yougoit
-RESTOPOS_oidkN1BDC0Fl6ti5sFtkVpTg0gultasn
-salesexecutive@restopos.com
+EEEZEE_4QI9tz5mhh35L9r262HGA5HnxEymxgai
+salesexecutive1eeezee@gmail.com
 123456
-
-
-
-
 
 
 
