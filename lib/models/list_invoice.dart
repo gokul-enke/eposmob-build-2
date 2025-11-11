@@ -151,7 +151,9 @@ class Customer {
   final String? profileImage;
   final String? balance;
   final String? paymentType;
+  final String? customerType;
   final int? storeId;
+  final int? companyId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final User user;
@@ -165,7 +167,9 @@ class Customer {
     this.profileImage,
     this.balance,
     this.paymentType,
+    this.customerType,
     this.storeId,
+    this.companyId,
     required this.createdAt,
     required this.updatedAt,
     required this.user,
@@ -173,18 +177,20 @@ class Customer {
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     return Customer(
-      id: json['id'] ?? 0, // Default to 0 if null
-      userId: json['user_id'], // This can remain nullable
-      dob: json['dob'] ?? '', // Default to empty string
-      gender: json['gender'] ?? '', // Default to empty string
-      altPhone: json['alt_phone'] ?? '', // Default to empty string
-      profileImage: json['profile_image'] ?? '', // Default to empty string
-      balance: json['balance']?.toString(), // Parse balance from API
-      paymentType: json['payment_type']?.toString(), // Parse payment type from API
-      storeId: json['store_id'] ?? 0, // Default to 0 if null
+      id: json['id'] ?? 0,
+      userId: json['user_id'],
+      dob: json['dob']?.toString(),
+      gender: json['gender']?.toString(),
+      altPhone: json['alt_phone']?.toString(),
+      profileImage: json['profile_image']?.toString(),
+      balance: json['balance']?.toString(),
+      paymentType: json['payment_type']?.toString(),
+      customerType: json['customer_type']?.toString(),
+      storeId: json['store_id'],
+      companyId: json['company_id'],
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
-      user: User.fromJson(json['user'] ?? {}), // Handle null user
+      user: User.fromJson(json['user'] ?? {}),
     );
   }
 }
@@ -195,7 +201,9 @@ class User {
   final String name;
   final String email;
   final String phone;
+  final String? emailVerifiedAt;
   final int phoneVerified;
+  final bool isAdmin;
   final int? companyId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -205,7 +213,9 @@ class User {
     required this.name,
     required this.email,
     required this.phone,
+    this.emailVerifiedAt,
     required this.phoneVerified,
+    required this.isAdmin,
     this.companyId,
     required this.createdAt,
     required this.updatedAt,
@@ -213,12 +223,14 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? 0, // Default to 0 if null
-      name: json['name'] ?? '', // Default to empty string
-      email: json['email'] ?? '', // Default to empty string
-      phone: json['phone'] ?? '', // Default to empty string
-      phoneVerified: json['phone_verified'] ?? 0, // Default to 0 if null
-      companyId: json['company_id'], // This can remain nullable
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      emailVerifiedAt: json['email_verified_at']?.toString(),
+      phoneVerified: json['phone_verified'] ?? 0,
+      isAdmin: json['is_admin'] ?? false,
+      companyId: json['company_id'],
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
     );
