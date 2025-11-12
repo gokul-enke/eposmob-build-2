@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -373,12 +374,12 @@ class BillingPageState extends State<BillingPage>
           if (!isConnected) {
             showScaffoldError(
               context: context,
-              message: 'No internet connection',
+              message: 'billing.internet_lost'.tr,
             );
           } else {
             showScaffold(
               context: context,
-              message: 'Internet connection restored',
+              message: 'billing.internet_restored'.tr,
             );
           }
         }
@@ -557,7 +558,7 @@ class BillingPageState extends State<BillingPage>
 
         // 4. Restore Transaction, Delivery, and Other Details
         _transactionNumberController.text = currentOrder.transactionId ?? "";
-        deliveryMethod = currentOrder.deliveryMethod ?? "Store Takeaway";
+        deliveryMethod = currentOrder.deliveryMethod ?? "billing.store_takeaway".tr;
         deliveryMethodId =
             currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
         _commentController.text = currentOrder.comment ?? "";
@@ -899,7 +900,7 @@ class BillingPageState extends State<BillingPage>
       debugPrint("❌ [BillingPage.processBarcode] Stack trace: ${StackTrace.current}");
       showScaffoldError(
         context: context,
-        message: "Invalid Barcode. Please try again.",
+        message: "billing.invalid_barcode".tr,
       );
       // Clear barcode on error too
       setState(() {
@@ -1131,7 +1132,7 @@ class BillingPageState extends State<BillingPage>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Products',
+                                'billing.products'.tr,
                                 style: TextStyle(
                                   color: _selectedSidebarTab == 0
                                       ? Colors.white
@@ -1167,7 +1168,7 @@ class BillingPageState extends State<BillingPage>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Orders',
+                                'billing.orders'.tr,
                                 style: TextStyle(
                                   color: _selectedSidebarTab == 1
                                       ? Colors.white
@@ -1277,7 +1278,7 @@ class BillingPageState extends State<BillingPage>
                     // Show quick feedback
                     showScaffold(
                       context: context,
-                      message: "Current order updated before switching",
+                      message: "billing.order_updated".tr,
                     );
                   } catch (e) {
                     debugPrint("Error updating current order: $e");
@@ -1291,7 +1292,7 @@ class BillingPageState extends State<BillingPage>
                     );
                     showScaffold(
                       context: context,
-                      message: "Order Saved Successfully",
+                      message: "billing.order_saved".tr,
                     );
                   } catch (e) {
                     // Swallow exception if cart is empty
@@ -1345,7 +1346,7 @@ class BillingPageState extends State<BillingPage>
         Row(
           children: [
             Text(
-              isEditingOrder ? 'Edit Order - ' : 'New Order - ',
+              isEditingOrder ? '${'billing.edit_order'.tr} - ' : '${'billing.new_order'.tr} - ',
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
@@ -1373,8 +1374,8 @@ class BillingPageState extends State<BillingPage>
               ),
               tooltip:
                   Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                      ? 'Hide Keyboard'
-                      : 'Show Keyboard',
+                      ? 'billing.keyboard_hide'.tr
+                      : 'billing.keyboard_show'.tr,
               onPressed: () {
                 final keyboardProvider =
                     Provider.of<KeyboardProvider>(context, listen: false);
@@ -1495,7 +1496,7 @@ class BillingPageState extends State<BillingPage>
                                 }
                               },
                               size: size,
-                              hintText: 'Barcode',
+                              hintText: 'billing.barcode_hint'.tr,
                             ),
                           ),
                         )
@@ -1512,7 +1513,7 @@ class BillingPageState extends State<BillingPage>
                               controller: selectedProductNameController,
                               onchanged: (query) {},
                               size: size,
-                              hintText: 'Product Name',
+                              hintText: 'billing.product_name_hint'.tr,
                             ),
                           ),
                         )
@@ -1571,7 +1572,7 @@ class BillingPageState extends State<BillingPage>
                         controller: quantityController,
                         onchanged: (query) {},
                         size: size,
-                        hintText: 'Quantity',
+                        hintText: 'billing.quantity_hint'.tr,
                         focusNode: _quantityFocusNode,
                         keyboardType: TextInputType.number,
                         onTap: () {
@@ -1594,7 +1595,7 @@ class BillingPageState extends State<BillingPage>
                         onchanged: (query) {},
                         size: size,
                         focusNode: _unitPriceFocusNode,
-                        hintText: 'Unit Price',
+                        hintText: 'billing.unit_price_hint'.tr,
                         keyboardType: TextInputType.number,
                         onTap: () {
                           Provider.of<KeyboardProvider>(context, listen: false)
@@ -1616,7 +1617,7 @@ class BillingPageState extends State<BillingPage>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CustomRoundButton(
-                              title: "Add Item",
+                              title: "billing.add_item".tr,
                               boxColor: ColorManager.kButtonGreen,
                               borderColor: ColorManager.kButtonGreen,
                               isLoading: isLoadingAddItem,
@@ -1677,7 +1678,7 @@ class BillingPageState extends State<BillingPage>
 
                                       showScaffold(
                                         context: context,
-                                        message: 'Added To Cart',
+                                        message: 'billing.added_to_cart'.tr,
                                       );
 
                                       // Clear input fields if necessary
@@ -1763,7 +1764,7 @@ class BillingPageState extends State<BillingPage>
 
                                       showScaffold(
                                         context: context,
-                                        message: 'Added To Cart',
+                                        message: 'billing.added_to_cart'.tr,
                                       );
                                     } else {
                                       debugPrint(
@@ -1780,7 +1781,7 @@ class BillingPageState extends State<BillingPage>
 
                                       showScaffold(
                                         context: context,
-                                        message: 'Added To Cart',
+                                        message: 'billing.added_to_cart'.tr,
                                       );
                                     }
 
@@ -1797,7 +1798,7 @@ class BillingPageState extends State<BillingPage>
                                   } else {
                                     showScaffoldError(
                                       context: context,
-                                      message: "No product selected!",
+                                      message: "billing.no_product_selected".tr,
                                     );
                                   }
                                 } catch (e) {
@@ -1805,7 +1806,7 @@ class BillingPageState extends State<BillingPage>
                                   showScaffoldError(
                                     context: context,
                                     message:
-                                        "Failed to add item. Please try again.",
+                                        "billing.failed_add_item".tr,
                                   );
                                 } finally {
                                   debugPrint('Finally adding item');
@@ -1846,7 +1847,7 @@ class BillingPageState extends State<BillingPage>
                               _focusTextField(),
                               showScaffold(
                                 context: context,
-                                message: 'Product Details Cleared Successfully',
+                                message: 'billing.product_cleared'.tr,
                               )
                             },
                             child: Center(
@@ -1899,21 +1900,21 @@ class BillingPageState extends State<BillingPage>
                     color: ColorManager.kPrimaryColor.withOpacity(0.1),
                     child: Row(
                       children: [
-                        _buildHeaderCell('#',
+                        _buildHeaderCell('billing.table_serial'.tr,
                             flex: 1, alignment: Alignment.center),
-                        _buildHeaderCell('Item Name',
+                        _buildHeaderCell('billing.table_item_name'.tr,
                             flex: 3, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Unit',
+                        _buildHeaderCell('billing.table_unit'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Qty',
+                        _buildHeaderCell('billing.table_qty'.tr,
                             flex: 2, alignment: Alignment.center),
-                        _buildHeaderCell('MRP',
+                        _buildHeaderCell('billing.table_mrp'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Price',
+                        _buildHeaderCell('billing.table_price'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Total',
+                        _buildHeaderCell('billing.table_total'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Actions',
+                        _buildHeaderCell('billing.table_actions'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
                       ],
                     ),
@@ -1979,7 +1980,7 @@ class BillingPageState extends State<BillingPage>
                                                       vertical: 2),
                                               child: Text(
                                                 item.product.productName ??
-                                                    'Unknown',
+                                                    'general.unknown'.tr,
                                                 style: buildCustomStyle(
                                                   FontWeightManager.regular,
                                                   11,
@@ -1993,7 +1994,7 @@ class BillingPageState extends State<BillingPage>
                                           ),
                                           const SizedBox(width: 6),
                                           Tooltip(
-                                            message: 'View details',
+                                            message: 'billing.view_details'.tr,
                                             waitDuration: const Duration(
                                                 milliseconds: 400),
                                             child: InkWell(
@@ -2226,7 +2227,7 @@ class BillingPageState extends State<BillingPage>
         children: [
           BuildPaymentRow(
             amount: "",
-            title: "Payment Summary",
+            title: "billing.payment_summary".tr,
             firstRowTextStyle: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -2239,7 +2240,7 @@ class BillingPageState extends State<BillingPage>
           BuildPaymentRow(
             amount:
                 "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
-            title: "Net amount",
+            title: "billing.net_amount".tr,
             color: ColorManager.textColor,
             firstRowTextStyle: buildCustomStyle(
               FontWeightManager.medium,
@@ -2261,7 +2262,7 @@ class BillingPageState extends State<BillingPage>
               ? BuildPaymentRow(
                   amount:
                       "$currency ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-                  title: "Discount",
+                  title: "billing.discount".tr,
                   color: ColorManager.kButtonGreen,
                   firstRowTextStyle: buildCustomStyle(
                     FontWeightManager.medium,
@@ -2279,7 +2280,7 @@ class BillingPageState extends State<BillingPage>
               : BuildPaymentRow(
                   amount:
                       "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-                  title: "Discount",
+                  title: "billing.discount".tr,
                   color: ColorManager.kButtonGreen,
                   firstRowTextStyle: buildCustomStyle(
                     FontWeightManager.medium,
@@ -2298,7 +2299,7 @@ class BillingPageState extends State<BillingPage>
           BuildPaymentRow(
             amount:
                 "$currency ${AmountHelper.roundOffAmount(localProductProvider.cartTotal)}",
-            title: "Total Payable",
+            title: "billing.total_payable".tr,
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
               FontSize.s15,
@@ -2324,7 +2325,7 @@ class BillingPageState extends State<BillingPage>
       children: [
         BuildPaymentRow(
           amount: "",
-          title: "Payment Summary",
+          title: "billing.payment_summary".tr,
           firstRowTextStyle: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s14,
@@ -2339,7 +2340,7 @@ class BillingPageState extends State<BillingPage>
         BuildPaymentRow(
           amount:
               "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
-          title: "Net amount",
+          title: "billing.net_amount".tr,
           color: ColorManager.textColor,
           firstRowTextStyle: buildCustomStyle(
             FontWeightManager.medium,
@@ -2356,13 +2357,13 @@ class BillingPageState extends State<BillingPage>
         ),
         BuildPaymentRow(
           amount: "$currency 0.00",
-          title: "Shipping",
+          title: "billing.shipping".tr,
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
           amount:
               "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-          title: "Discount",
+          title: "billing.discount".tr,
           color: ColorManager.textColor,
           firstRowTextStyle: buildCustomStyle(
             FontWeightManager.medium,
@@ -2381,7 +2382,7 @@ class BillingPageState extends State<BillingPage>
           child: BuildPaymentRow(
             amount:
                 "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
-            title: "GST",
+            title: "billing.gst".tr,
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
@@ -2400,7 +2401,7 @@ class BillingPageState extends State<BillingPage>
         const Divider(thickness: 2),
         BuildPaymentRow(
           amount: "$currency ${_getFormattedTotal()}", // Use helper method
-          title: "Total Payable",
+          title: "billing.total_payable".tr,
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
             FontSize.s15,
@@ -2466,7 +2467,7 @@ class BillingPageState extends State<BillingPage>
                       controller: mobileNumberTextController,
                       readOnly: true,
                       size: size,
-                      hintText: 'Phone Number',
+                      hintText: 'billing.phone_number_hint'.tr,
                     ),
                   )
                 : Expanded(
@@ -2774,7 +2775,7 @@ class BillingPageState extends State<BillingPage>
                               controller: autoCompleteController,
                               focusNode: focusNode,
                               decoration: InputDecoration(
-                                hintText: 'Enter mobile number',
+                                hintText: 'billing.enter_mobile_hint'.tr,
                                 hintStyle: buildCustomStyle(
                                   FontWeight.w500,
                                   12,
@@ -3059,7 +3060,7 @@ class BillingPageState extends State<BillingPage>
 
                       showScaffold(
                         context: context,
-                        message: 'Customer Details Cleared Successfully',
+                        message: 'billing.customer_cleared'.tr,
                       ),
 
                       // Focus on customer autocomplete field after clearing
@@ -3157,7 +3158,7 @@ class BillingPageState extends State<BillingPage>
     return Row(
       children: [
         Text(
-          'Customer Balance: ',
+          '${'billing.balance'.tr}: ',
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -3185,26 +3186,26 @@ class BillingPageState extends State<BillingPage>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildActionButton(
-            text: 'Clear Cart',
+            text: 'billing.clear_cart'.tr,
             color: ColorManager.kButtonRed,
             onPressed: _clearCart,
             isLoading: isLoadingClearCart,
           ),
           _buildActionButton(
-            text: 'Save Order',
+            text: 'billing.save_order'.tr,
             color: ColorManager.kButtonYellow,
             onPressed: _saveOrder,
             isLoading: isLoadingSaveOrder,
           ),
           if (_hasInternet) ...[
             _buildActionButton(
-              text: 'Confirm and Print',
+              text: 'billing.confirm_and_print'.tr,
               color: ColorManager.kButtonBlue,
               onPressed: _createOrderAndPrint,
               isLoading: isLoadingCreateOrder,
             ),
             _buildActionButton(
-              text: 'Confirm Order',
+              text: 'billing.confirm_order'.tr,
               color: ColorManager.kButtonGreen,
               onPressed: _confirmOrder,
               isLoading: isLoadingConfirmOrder,
@@ -3212,7 +3213,7 @@ class BillingPageState extends State<BillingPage>
           ],
           if (!_hasInternet) ...[
             _buildActionButton(
-              text: 'Save and Print',
+              text: 'billing.save_and_print'.tr,
               color: ColorManager.kButtonYellow,
               onPressed: _saveOrderAndPrint,
               isLoading: isLoadingSaveOrderAndPrint,
@@ -3318,7 +3319,7 @@ class BillingPageState extends State<BillingPage>
       });
       showScaffold(
         context: context,
-        message: "Cart Cleared Succesfully",
+        message: "billing.cart_cleared".tr,
       );
       resetAutocomplete(
           shouldFetchCustomers:
@@ -3333,7 +3334,7 @@ class BillingPageState extends State<BillingPage>
       // );
       showScaffoldError(
         context: context,
-        message: "Failed to clear cart. Please try again.",
+        message: "billing.failed_clear_cart".tr,
       );
     } finally {
       setState(() {
@@ -3353,7 +3354,7 @@ class BillingPageState extends State<BillingPage>
           .isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please add items to cart",
+          message: "billing.add_items_to_cart".tr,
         );
         return;
       }
@@ -3362,7 +3363,7 @@ class BillingPageState extends State<BillingPage>
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: "billing.select_customer".tr,
         );
         // Auto-focus on customer field
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3395,7 +3396,7 @@ class BillingPageState extends State<BillingPage>
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
-          message: "Please ensure all items have valid prices before saving",
+          message: "billing.valid_prices".tr,
         );
         return;
       }
@@ -3449,7 +3450,7 @@ class BillingPageState extends State<BillingPage>
 
         showScaffold(
           context: context,
-          message: "Order Updated Successfully",
+          message: "billing.order_updated_success".tr,
         );
         // Centralized clear
         _clearCart();
@@ -3498,7 +3499,7 @@ class BillingPageState extends State<BillingPage>
 
         showScaffold(
           context: context,
-          message: "Order Saved Successfully",
+          message: "billing.order_saved_success".tr,
         );
         resetAutocomplete();
         _fetchCustomers();
@@ -3509,7 +3510,7 @@ class BillingPageState extends State<BillingPage>
       debugPrint("Error saving order: $e");
       showScaffoldError(
         context: context,
-        message: "Failed to save order. Please try again.",
+        message: "billing.failed_save_order".tr,
       );
     } finally {
       setState(() {
@@ -3529,7 +3530,7 @@ class BillingPageState extends State<BillingPage>
           .isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please add items to cart",
+          message: "billing.add_items_to_cart".tr,
         );
         return;
       }
@@ -3538,7 +3539,7 @@ class BillingPageState extends State<BillingPage>
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: "billing.select_customer".tr,
         );
         // Auto-focus on customer field
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3556,7 +3557,7 @@ class BillingPageState extends State<BillingPage>
       if (selectedPaymentMethods.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please select a payment method",
+          message: "billing.select_payment_method".tr,
         );
         // Show the payment method modal for user to select payment methods and auto-apply save & print
         setState(() {
@@ -3564,7 +3565,7 @@ class BillingPageState extends State<BillingPage>
         });
         _showPaymentMethodModal(
           onAfterApply: _saveOrderAndPrint,
-          customButtonTitle: "Apply & Save and Print",
+          customButtonTitle: "billing.apply_save_print".tr,
         );
         return;
       }
@@ -3589,7 +3590,7 @@ class BillingPageState extends State<BillingPage>
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
-          message: "Please ensure all items have valid prices before saving",
+          message: "billing.valid_prices".tr,
         );
         return;
       }
@@ -3608,7 +3609,7 @@ class BillingPageState extends State<BillingPage>
         if (orderToUse != null) {
           showScaffold(
             context: context,
-            message: "Order moved to confirmed orders",
+            message: "billing.order_moved_confirmed".tr,
           );
         } else {
           // If the order couldn't be moved (shouldn't happen), create a new confirmed order
@@ -3658,7 +3659,7 @@ class BillingPageState extends State<BillingPage>
 
           showScaffold(
             context: context,
-            message: "Order saved to confirmed orders",
+            message: "billing.order_saved_confirmed".tr,
           );
         }
       } else {
@@ -3708,7 +3709,7 @@ class BillingPageState extends State<BillingPage>
 
         showScaffold(
           context: context,
-          message: "Order saved to confirmed orders",
+          message: "billing.order_saved_confirmed_alt".tr,
         );
       }
 
@@ -3726,7 +3727,7 @@ class BillingPageState extends State<BillingPage>
       debugPrint(error.toString());
       showScaffoldError(
         context: context,
-        message: "Failed to save order. Please try again.",
+        message: "billing.failed_save_order".tr,
       );
     } finally {
       setState(() {
@@ -3749,12 +3750,12 @@ class BillingPageState extends State<BillingPage>
 
       showScaffold(
         context: context,
-        message: "Order loaded for editing",
+        message: "billing.order_loaded_editing".tr,
       );
     } catch (error) {
       debugPrint("Error loading order: $error");
       showScaffoldError(
-          context: context, message: "Failed to load order. Please try again.");
+          context: context, message: "billing.failed_load_order".tr);
     }
   }
 
@@ -3763,7 +3764,7 @@ class BillingPageState extends State<BillingPage>
     if (!_hasInternet) {
       showScaffoldError(
         context: context,
-        message: "No internet connection. Cannot create order online.",
+        message: "billing.no_internet_create".tr,
       );
       return; // Stop execution if no internet
     }
@@ -3777,7 +3778,7 @@ class BillingPageState extends State<BillingPage>
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: "billing.select_customer".tr,
         );
         // Auto-focus on customer field
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3795,7 +3796,7 @@ class BillingPageState extends State<BillingPage>
       if (selectedPaymentMethods.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please select a payment method",
+          message: "billing.select_payment_method".tr,
         );
         // Show the payment method modal for user to select payment methods
         setState(() {
@@ -3811,7 +3812,7 @@ class BillingPageState extends State<BillingPage>
       if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
         showScaffoldError(
           context: context,
-          message: "Please enter Car Number",
+          message: "billing.enter_car_number".tr,
         );
         return;
       }
@@ -3845,7 +3846,7 @@ class BillingPageState extends State<BillingPage>
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please add items to cart",
+          message: "billing.add_items_to_cart".tr,
         );
         return;
       }
@@ -3934,7 +3935,7 @@ class BillingPageState extends State<BillingPage>
         if (response["order_id"] != null) {
           showScaffold(
             context: context,
-            message: "Order Saved Successfully",
+            message: "billing.order_saved_successfully".tr,
           );
 
           // Delete the current order if it exists in local storage
@@ -4036,7 +4037,7 @@ class BillingPageState extends State<BillingPage>
           debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
             context: context,
-            message: "Failed to Save Order",
+            message: "billing.failed_save_order_api".tr,
             // message: "${addToOrderModel.message}",
           );
         }
@@ -4057,7 +4058,7 @@ class BillingPageState extends State<BillingPage>
     if (!_hasInternet) {
       showScaffoldError(
         context: context,
-        message: "No internet connection. Cannot confirm order online.",
+        message: "billing.no_internet".tr,
       );
       return; // Stop execution if no internet
     }
@@ -4071,7 +4072,7 @@ class BillingPageState extends State<BillingPage>
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: "billing.select_customer".tr,
         );
         // Auto-focus on customer field
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -4089,7 +4090,7 @@ class BillingPageState extends State<BillingPage>
       if (selectedPaymentMethods.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please select a payment method",
+          message: "billing.select_payment_method".tr,
         );
         // Show the payment method modal for user to select payment methods
         setState(() {
@@ -4097,7 +4098,7 @@ class BillingPageState extends State<BillingPage>
         });
         _showPaymentMethodModal(
           onAfterApply: _confirmOrder,
-          customButtonTitle: "Apply & Confirm Order",
+          customButtonTitle: "billing.apply_confirm".tr,
         );
         return;
       }
@@ -4105,7 +4106,7 @@ class BillingPageState extends State<BillingPage>
       if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
         showScaffoldError(
           context: context,
-          message: "Please enter Car Number",
+          message: "billing.enter_car_number".tr,
         );
         return;
       }
@@ -4139,7 +4140,7 @@ class BillingPageState extends State<BillingPage>
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please add items to cart",
+          message: "billing.add_items_to_cart".tr,
         );
         return;
       }
@@ -4223,7 +4224,7 @@ class BillingPageState extends State<BillingPage>
         if (response["order_id"] != null) {
           showScaffold(
             context: context,
-            message: "Order Confirmed Successfully",
+            message: "billing.order_confirmed_successfully".tr,
           );
 
           // Delete the current order if it exists in local storage
@@ -4268,7 +4269,7 @@ class BillingPageState extends State<BillingPage>
           debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
             context: context,
-            message: "Failed to Confirm Order",
+            message: "billing.order_failed".tr,
           );
         }
       });
@@ -4561,7 +4562,7 @@ class BillingPageState extends State<BillingPage>
                           : deliveryMethod == "Door Delivery"
                               ? Icons.doorbell_outlined
                               : Icons.local_shipping,
-                  label: deliveryMethod.split(' ').first,
+                  label: _getDeliveryMethodLabel(),
                   color: ColorManager.kButtonBlue,
                   onTap: () => _showDeliveryMethodModal(),
                 ),
@@ -4612,7 +4613,7 @@ class BillingPageState extends State<BillingPage>
                     icon: isCouponApplied
                         ? Icons.discount
                         : Icons.local_offer_outlined,
-                    label: isCouponApplied ? 'Applied' : 'Discount',
+                    label: isCouponApplied ? 'billing.applied_label'.tr : 'billing.discount_label'.tr,
                     color: isCouponApplied
                         ? ColorManager.kButtonGreen
                         : ColorManager.kButtonYellow,
@@ -4631,7 +4632,7 @@ class BillingPageState extends State<BillingPage>
                   Row(
                     children: [
                       Text(
-                        'Total Paid: ',
+                        '${'billing.total_paid'.tr}: ',
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s15,
@@ -4654,7 +4655,7 @@ class BillingPageState extends State<BillingPage>
                   Row(
                     children: [
                       Text(
-                        'Balance: ',
+                        '${'billing.balance'.tr}: ',
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s15,
@@ -4713,23 +4714,39 @@ class BillingPageState extends State<BillingPage>
   String _getPaymentLabel() {
     List<String> activeMethods = [];
     if (_isCashSelected) {
-      activeMethods.add('Cash');
+      activeMethods.add('billing.cash'.tr);
     }
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
-      activeMethods.add('Card');
+      activeMethods.add('billing.card'.tr);
     }
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
-      activeMethods.add('UPI');
+      activeMethods.add('billing.upi'.tr);
     }
 
     if (activeMethods.length > 1) {
-      return 'Multi'; // Multiple payment methods
+      return 'billing.multi'.tr; // Multiple payment methods
     } else if (activeMethods.length == 1) {
       return activeMethods.first;
     }
-    return 'Payment'; // Default
+    return 'billing.payment_tab'.tr; // Default
+  }
+
+  String _getDeliveryMethodLabel() {
+    // Map delivery method names to translation keys
+    switch (deliveryMethod) {
+      case "Store Takeaway":
+        return 'common.store_takeaway'.tr;
+      case "Car Delivery":
+        return 'common.car_delivery'.tr;
+      case "Door Delivery":
+        return 'common.door_delivery'.tr;
+      case "Third Party Logistics":
+        return 'common.third_party_logistics'.tr;
+      default:
+        return deliveryMethod.tr;
+    }
   }
 
   Widget _buildQuickAccessIcon({
@@ -4966,12 +4983,12 @@ class BillingPageState extends State<BillingPage>
         // Handle case where result is null
         showScaffoldError(
           context: context,
-          message: 'Error Occurred! Try Again',
+          message: 'billing.error_occurred'.tr,
         );
       }
     } else {
       // Handle unauthenticated state
-      showScaffoldError(context: context, message: 'Not Authenticated');
+      showScaffoldError(context: context, message: 'billing.not_authenticated'.tr);
     }
   }
 
@@ -5075,7 +5092,7 @@ class BillingPageState extends State<BillingPage>
       debugPrint("Error printing saved order: ${error.toString()}");
       showScaffoldError(
         context: context,
-        message: "Failed to print saved order. Please try again.",
+        message: "billing.failed_print_order".tr,
       );
     }
   }

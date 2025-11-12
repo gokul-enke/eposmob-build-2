@@ -1,10 +1,10 @@
 demo build
-git tag v0.1.0-dev.262
-git push build v0.1.0-dev.262
+git tag v0.1.0-dev.274
+git push build v0.1.0-dev.274
 
 souq build
-git tag v0.1.0-dev.264
-git push origin v0.1.0-dev.264
+git tag v0.1.0-dev.272
+git push origin v0.1.0-dev.272
 
 yougoit build
 git tag v0.1.0-dev.259
@@ -13,13 +13,14 @@ git push build1 v0.1.0-dev.259
 
 # eposenke demo
 https://eposdemo.hypersouq.in
-EPOSENKE_84BFT1haKrbIJeosgyPH0OES1Y6DNkLx
+EPOSENKE_p5Ut9BRLYnlxu7UZsGjR6RmTt6X4Dhuf
 attender@eposenke.in
 123456
 kitchenmaster@eposenke.in
 123456
 salesexecutive@eposenke.in
 123456
+
 
 # epos souqpoint
 SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
@@ -32,13 +33,9 @@ salesexecutive1@eposenke.in
 123456
 
 # yougoit
-RESTOPOS_oidkN1BDC0Fl6ti5sFtkVpTg0gultasn
-salesexecutive@restopos.com
+EEEZEE_4QI9tz5mhh35L9r262HGA5HnxEymxgai
+salesexecutive1eeezee@gmail.com
 123456
-
-
-
-
 
 
 

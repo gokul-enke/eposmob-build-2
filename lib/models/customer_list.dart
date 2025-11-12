@@ -153,7 +153,7 @@ class CustomerListModelData {
         membershipCode: json["membership_code"]?.toString(),
         minRedeemablePoints: json["min_redeemable_points"],
         pricePerPoint: json["price_per_point"]?.toDouble(),
-        balance: json["balance"]?.toDouble(),
+        balance: json["balance"] != null ? double.tryParse(json["balance"].toString()) : null,
         paymentType: json["payment_type"],
         customerType: json["customer_type"],
         address: json["address"],

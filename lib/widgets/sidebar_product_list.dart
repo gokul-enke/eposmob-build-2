@@ -14,6 +14,8 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:get/get.dart';
 
 class SideBarProductList extends StatefulWidget {
   /// Function to call when a product is selected
@@ -158,7 +160,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                 child: buildColumnWidgetForTextFields(
                   controller: _searchCategoryController,
                   size: MediaQuery.of(context).size,
-                  hintText: 'Search category',
+                  hintText: 'common.search_category'.tr,
                   readOnly: false,
                   focusNode: _categoryFocusNode,
                   width: double.infinity, // Take full width
@@ -436,7 +438,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           child: buildColumnWidgetForTextFields(
                             controller: _searchProductController,
                             size: MediaQuery.of(context).size,
-                            hintText: 'Search product',
+                            hintText: 'common.search_product'.tr,
                             readOnly: false,
                             focusNode: _productFocusNode,
                             width: double.infinity, // Take full width
@@ -652,12 +654,27 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                           Radius.circular(4),
                                                     ),
                                                   ),
-                                                  child: Text(
-                                                    '${product.price?.price ?? '0.00'} ${product.currency ?? ''}',
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 8,
-                                                    ),
+                                                  child: Consumer<AppSettingsProvider>(
+                                                    builder: (context, appSettingsProvider, _) {
+                                                      final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+                                                      final raw = product.price?.price; // can be String or num
+                                                      String amount;
+                                                      if (raw is num) {
+                                                        amount = raw.toStringAsFixed(2);
+                                                      } else if (raw is String) {
+                                                        final parsed = double.tryParse(raw);
+                                                        amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                                                      } else {
+                                                        amount = '0.00';
+                                                      }
+                                                      return Text(
+                                                        '$currency $amount',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 8,
+                                                        ),
+                                                      );
+                                                    },
                                                   ),
                                                 ),
                                               ),

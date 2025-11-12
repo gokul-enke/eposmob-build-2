@@ -155,7 +155,7 @@ class OrderDetailWidget extends StatelessWidget {
                                         children: <TextSpan>[
                                           TextSpan(
                                             text:
-                                                '${cartItem?[index]?.quantity ?? 0} * ${cartItem?[index]?.unitPrice ?? 0}',
+                                                '${cartItem?[index]?.quantity ?? 0} * $currency ${_fmt(cartItem?[index]?.unitPrice)}',
                                             style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s9,
@@ -174,7 +174,7 @@ class OrderDetailWidget extends StatelessWidget {
                                           CrossAxisAlignment.end,
                                       children: [
                                         Text(
-                                          'MRP: ${cartItem?[index]?.currency ?? ''} ${cartItem?[index]?.mrp ?? ''}',
+                                          'MRP: $currency ${_fmt(cartItem?[index]?.mrp)}',
                                           style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s11,
@@ -182,7 +182,7 @@ class OrderDetailWidget extends StatelessWidget {
                                               ColorManager.blackWithOpacity50),
                                         ),
                                         Text(
-                                          '${cartItem?[index]?.currency ?? ''} ${cartItem?[index]?.totalPrice ?? ''}',
+                                          '$currency ${_fmt(cartItem?[index]?.totalPrice)}',
                                           style: buildCustomStyle(
                                               FontWeightManager.semiBold,
                                               FontSize.s14,
@@ -701,5 +701,15 @@ class OrderDetailWidget extends StatelessWidget {
   double _calculateTotalPayments(Map<String, dynamic> payments) {
     return payments.values.fold(
         0.0, (sum, value) => sum + (double.tryParse(value.toString()) ?? 0.0));
+  }
+
+  String _fmt(dynamic val) {
+    if (val == null) return '0.00';
+    if (val is num) return val.toStringAsFixed(2);
+    if (val is String) {
+      final parsed = double.tryParse(val);
+      return parsed != null ? parsed.toStringAsFixed(2) : val;
+    }
+    return val.toString();
   }
 }

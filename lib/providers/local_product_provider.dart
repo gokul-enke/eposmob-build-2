@@ -1236,6 +1236,39 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  void updateProductPricingInCart(
+      int productId, double newPrice, double newMrp) {
+    bool cartUpdated = false;
+    for (var item in _cartItems) {
+      if (item.product.productId == productId) {
+        item.price = newPrice;
+        item.mrp = newMrp;
+        cartUpdated = true;
+      }
+    }
+
+    bool savedOrdersUpdated = false;
+    for (var order in _savedOrders) {
+      for (var orderItem in order.items) {
+        if (orderItem.product.productId == productId) {
+          orderItem.price = newPrice;
+          orderItem.mrp = newMrp;
+          savedOrdersUpdated = true;
+        }
+      }
+    }
+
+    if (cartUpdated) {
+      _saveCartToHive();
+    }
+    if (savedOrdersUpdated) {
+      _saveSavedOrdersToHive();
+    }
+    if (cartUpdated || savedOrdersUpdated) {
+      notifyListeners();
+    }
+  }
+
   /// Decrements the quantity of the product in the cart.
   /// If the quantity becomes less than 1, the product is removed from the cart.
   /// Also handles stock restoration when stock management is enabled.

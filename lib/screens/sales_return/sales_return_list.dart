@@ -15,6 +15,7 @@ import '../../components/build_pagination_control.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class SalesReturnPage extends StatefulWidget {
   const SalesReturnPage({super.key});
@@ -265,7 +266,32 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       children: [
         _buildTableCell(order.order?.orderNumber ?? order.orderId.toString()),
         _buildTableCell(totalQuantity.toString()),
-        _buildTableCell(order.totalAmount),
+        // Total Return Amount with currency
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.all(15.0),
+            child: Center(
+              child: Consumer<AppSettingsProvider>(
+                builder: (context, settings, _) {
+                  final currency = settings.appSettings?.currency ?? 'INR';
+                  final raw = order.totalAmount; // string
+                  final parsed = double.tryParse(raw);
+                  final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                  return Text(
+                    '$currency $amount',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.13,
+                      Colors.black,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(order.status.toString(), isStatusCell: true),
         _buildTableCell(DateHelper.formatISODate(order.createdAt.toString())),
         TableCell(

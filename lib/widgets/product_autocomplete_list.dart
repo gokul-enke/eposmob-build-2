@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -17,13 +18,13 @@ class ProductAutocomplete extends StatefulWidget {
   final bool autofocus;
 
   const ProductAutocomplete({
-    Key? key,
+    super.key,
     required this.size,
     required this.onSelected,
     required this.productList,
     this.autocompleteProductKey,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   State<ProductAutocomplete> createState() => _ProductAutocompleteState();
@@ -229,7 +230,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               autofocus: widget.autofocus,
               size: widget.size,
               width: double.infinity,
-              hintText: 'Search Product',
+              hintText: 'common.search_product'.tr,
               onSubmitted: (_) => onFieldSubmitted(),
               onTap: () {
                 // Show alphanumeric virtual keyboard connected to this controller
