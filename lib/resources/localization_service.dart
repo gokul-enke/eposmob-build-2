@@ -58,9 +58,31 @@ class LocalizationService {
     try {
       final data = await rootBundle.loadString(assetPath);
       final Map<String, dynamic> jsonMap = json.decode(data) as Map<String, dynamic>;
-      return jsonMap.map((key, value) => MapEntry(key, value.toString()));
+      
+      // Flatten nested JSON to dot notation
+      return _flattenJson(jsonMap);
     } catch (_) {
       return <String, String>{};
     }
+  }
+
+  /// Flattens nested JSON to dot notation keys
+  /// Example: {"billing": {"title": "Billing"}} -> {"billing.title": "Billing"}
+  static Map<String, String> _flattenJson(Map<String, dynamic> json, [String prefix = '']) {
+    final Map<String, String> result = {};
+    
+    json.forEach((key, value) {
+      final newKey = prefix.isEmpty ? key : '$prefix.$key';
+      
+      if (value is Map<String, dynamic>) {
+        // Recursively flatten nested objects
+        result.addAll(_flattenJson(value, newKey));
+      } else {
+        // Convert value to string and store
+        result[newKey] = value.toString();
+      }
+    });
+    
+    return result;
   }
 }
