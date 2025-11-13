@@ -74,7 +74,7 @@ class ReceiptItemCard {
     balanceAmountController.text = "0.00";
     // Set default date as today in yyyy-MM-dd format
     paymentDateController.text = DateTime.now().toIso8601String().split('T')[0];
-    amountController.text = "0.00";
+    amountController.text = "";
     descriptionController.text = "";
     selectedItemType = "Invoice Payment";
   }
@@ -312,6 +312,21 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         apiItemType = 'invoice';
       } else {
         apiItemType = 'general';
+      }
+
+      // Validation: For invoice payments, paid amount cannot exceed balance amount
+      if (apiItemType == 'invoice') {
+        final paid = double.tryParse(card.amountController.text.trim().isEmpty ? '0' : card.amountController.text.trim()) ?? 0.0;
+        final balance = double.tryParse(card.balanceAmountController.text.trim().isEmpty ? '0' : card.balanceAmountController.text.trim()) ?? 0.0;
+        if (paid > balance) {
+          if (mounted) {
+            showScaffoldError(
+              context: context,
+              message: 'Paid amount (\u20B9${paid.toStringAsFixed(2)}) cannot exceed balance (\u20B9${balance.toStringAsFixed(2)}).',
+            );
+          }
+          return;
+        }
       }
 
       final Map<String, dynamic> receiptItem = {
@@ -793,11 +808,17 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                                 selectedInvoice.amount ??
                                                     "0.00";
                                             
-                                            // Set customer balance
-                                            final customerBalance = selectedInvoice.customer.balance ?? "0.00";
-                                            card.balanceAmountController.text = customerBalance;
-                                            
-                                            debugPrint('💰 [Receipt Modal] Customer Balance: $customerBalance');
+                                            // Set invoice balance (use invoice's balance_amount, not customer's global balance)
+                                            final invoiceBalance = selectedInvoice.balanceAmount;
+                                            if (invoiceBalance is num) {
+                                              card.balanceAmountController.text = invoiceBalance.toStringAsFixed(2);
+                                            } else if (invoiceBalance != null) {
+                                              card.balanceAmountController.text = invoiceBalance.toString();
+                                            } else {
+                                              card.balanceAmountController.text = "0.00";
+                                            }
+
+                                            debugPrint('💰 [Receipt Modal] Invoice Balance: ${card.balanceAmountController.text}');
                                             debugPrint('📄 [Receipt Modal] Invoice Amount: ${selectedInvoice.amount}');
                                           }
                                         });
@@ -822,7 +843,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                             invoiceNumber: "Select invoice",
                                             type: "",
                                             companyId: 0,
-                                            amount: "0.00",
+                                            amount: "",
                                             invoiceDate: "",
                                             dueDate: "",
                                             status: "",
