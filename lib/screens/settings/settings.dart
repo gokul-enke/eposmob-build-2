@@ -113,7 +113,7 @@ class SettingsScreen extends StatelessWidget {
       builder: (ctx) {
         String selected = currentCode;
         return AlertDialog(
-          title: Text('settings.language.select'.tr),
+          title: Text('settings.language_select'.tr),
           content: StatefulBuilder(
             builder: (context, setState) {
               return Column(

@@ -1339,6 +1339,23 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("✅ CLEAR CART COMPLETED");
   }
 
+  /// Clears cart after order confirmation WITHOUT restoring stock.
+  /// This maintains the stock reduction from the cart so the sale is recorded.
+  /// Use this method when confirming/saving orders.
+  void clearCartAfterOrder() {
+    debugPrint("🧹 CLEAR CART AFTER ORDER STARTED");
+    debugPrint("Cart items count: ${_cartItems.length}");
+    debugPrint("📦 Stock quantities will NOT be restored (order confirmed)");
+
+    // Do NOT restore stock - the items are sold
+    _cartItems.clear();
+    _cartItemsBox.clear();
+    clearDiscount(); // Also clear discounts when cart is cleared
+    notifyListeners();
+
+    debugPrint("✅ CLEAR CART AFTER ORDER COMPLETED");
+  }
+
   /// Clears the current order being edited
   void clearCurrentOrder() {
     debugPrint("🧹 CLEARING CURRENT ORDER REFERENCE");

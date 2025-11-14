@@ -659,7 +659,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                       _buildTableHeader("Voucher Date"),
                                       _buildTableHeader("Due Date"),
                                       _buildTableHeader("Payment Method"),
-                                      _buildTableHeader("Amount"),
+                                      _buildTableHeader("Paid Amount"),
                                       _buildTableHeader("Status"),
                                       _buildTableHeader("Action"),
                                     ],

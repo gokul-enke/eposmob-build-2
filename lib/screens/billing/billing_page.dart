@@ -3722,7 +3722,9 @@ class BillingPageState extends State<BillingPage>
       resetAutocomplete();
       // Centralized clear
       _fetchCustomers();
-      _clearCart();
+      // Clear cart without restoring stock (order is confirmed)
+      localProductProvider.clearCartAfterOrder();
+      localProductProvider.clearCurrentOrder();
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -3944,7 +3946,8 @@ class BillingPageState extends State<BillingPage>
                 .deleteSavedOrder(localProductProvider.currentOrder!.id);
           }
 
-          localProductProvider.clearCart();
+          // Clear cart without restoring stock (order is confirmed)
+          localProductProvider.clearCartAfterOrder();
 
           try {
             String ordersId = response["order_number"].toString();
@@ -4233,7 +4236,8 @@ class BillingPageState extends State<BillingPage>
                 .deleteSavedOrder(localProductProvider.currentOrder!.id);
           }
 
-          localProductProvider.clearCart();
+          // Clear cart without restoring stock (order is confirmed)
+          localProductProvider.clearCartAfterOrder();
 
           // Clear the mobile number after successful save
           setState(() {
