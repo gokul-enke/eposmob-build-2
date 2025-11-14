@@ -138,7 +138,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     );
   }
 
-  Widget _buildTableCell(String text) {
+  Widget _buildTableCell(String text, {Color? textColor}) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Text(
@@ -148,7 +148,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           FontWeightManager.medium,
           FontSize.s9,
           0.13,
-          Colors.black,
+          textColor ?? Colors.black,
         ),
       ),
     );
@@ -619,12 +619,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                                                       _buildTableCell(
                                                                           customer.name ??
                                                                               ''),
-                                                                      _buildTableCell(customer.balance !=
-                                                                              null
-                                                                          ? customer
-                                                                              .balance!
-                                                                              .toStringAsFixed(2)
-                                                                          : '0.00'),
+                                                                      _buildTableCell(
+                                                                        customer.balance != null
+                                                                            ? customer.balance!.toStringAsFixed(2)
+                                                                            : '0.00',
+                                                                        textColor: (customer.balance ?? 0) >= 0
+                                                                            ? ColorManager.kSuccessColor
+                                                                            : Colors.red,
+                                                                      ),
                                                                       _buildTableCell(
                                                                           customer.phone ??
                                                                               ''),

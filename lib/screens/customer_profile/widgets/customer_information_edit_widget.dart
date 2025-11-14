@@ -3,8 +3,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import '../../../components/build_container_box.dart';
 import '../../../resources/color_manager.dart';
@@ -15,8 +17,9 @@ import '../../../providers/auth_model.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../components/build_dialog_box.dart';
 import '../../../providers/app_settings_provider.dart';
+import '../../../controllers/sidebar_controller.dart';
 
-enum PaymentType { none, toPay, toReceive }
+enum PaymentType { none, to_pay, to_receive }
 
 class CustomerInformationEditWidget extends StatefulWidget {
   final Size size;
@@ -47,7 +50,7 @@ class _CustomerInformationEditWidgetState
   String _selectedCustomerType = 'B2C';
   String? selectedGender;
   DateTime? selectedDate;
-  PaymentType selectedPaymentType = PaymentType.none;
+  PaymentType selectedPaymentType = PaymentType.to_pay;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -59,8 +62,12 @@ class _CustomerInformationEditWidgetState
         text: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '');
     emailController = TextEditingController(text: widget.customer?.email ?? '');
     phoneController = TextEditingController(text: widget.customer?.phone ?? '');
-    altPhoneController = TextEditingController(text: widget.customer?.altPhone ?? '');
-    balanceController = TextEditingController(text: widget.customer?.balance?.toString() ?? '0.00');
+    altPhoneController =
+        TextEditingController(text: widget.customer?.altPhone ?? '');
+    // Show balance as absolute value (remove negative sign)
+    final balanceValue = widget.customer?.balance?.abs() ?? 0.0;
+    balanceController =
+        TextEditingController(text: balanceValue.toStringAsFixed(2));
     // Initialize ZATCA related
     _selectedCustomerType = (widget.customer?.customerType ?? 'B2C');
     // Extract CR/VAT from KYC list if present
@@ -78,31 +85,34 @@ class _CustomerInformationEditWidgetState
     }
     crNumberController = TextEditingController(text: crExisting);
     vatNumberController = TextEditingController(text: vatExisting);
-    
+
     // Initialize gender and date
     selectedGender = widget.customer?.gender;
-    selectedDate = widget.customer?.dob != null ? DateTime.tryParse(widget.customer!.dob!) : null;
-    
+    selectedDate = widget.customer?.dob != null
+        ? DateTime.tryParse(widget.customer!.dob!)
+        : null;
+
     // Initialize payment type based on customer data
     debugPrint("Customer balance: ${widget.customer?.balance}");
     debugPrint("Customer payment type: ${widget.customer?.paymentType}");
-    
+
     if (widget.customer?.paymentType != null) {
       switch (widget.customer!.paymentType!.toLowerCase()) {
         case 'to_pay':
-          selectedPaymentType = PaymentType.toPay;
+          selectedPaymentType = PaymentType.to_pay;
           debugPrint("Set payment type to: To Pay");
           break;
         case 'to_receive':
-          selectedPaymentType = PaymentType.toReceive;
+          selectedPaymentType = PaymentType.to_receive;
           debugPrint("Set payment type to: To Receive");
           break;
         default:
-          selectedPaymentType = PaymentType.none;
-          debugPrint("Set payment type to: None (default)");
+          selectedPaymentType = PaymentType.to_pay;
+          debugPrint("Set payment type to: To Pay (default)");
       }
     } else {
-      debugPrint("Payment type is null, setting to None");
+      selectedPaymentType = PaymentType.to_pay;
+      debugPrint("Payment type is null, setting to To Pay");
     }
   }
 
@@ -121,7 +131,8 @@ class _CustomerInformationEditWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
     return Expanded(
       child: BuildBoxShadowContainer(
@@ -204,9 +215,9 @@ class _CustomerInformationEditWidgetState
 
   Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
         ),
@@ -321,11 +332,23 @@ class _CustomerInformationEditWidgetState
       if (customerId == null) throw Exception("Invalid customer ID");
 
       // ZATCA Phase 1 handling
-      final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-      final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
-      final String customerTypeToSend = isZatcaPhase1Enabled ? _selectedCustomerType : 'B2C';
-      final String crToSend = isZatcaPhase1Enabled ? crNumberController.text.trim() : '';
-      final String vatToSend = isZatcaPhase1Enabled ? vatNumberController.text.trim() : '';
+      final appSettings =
+          Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+      final bool isZatcaPhase1Enabled =
+          appSettings?.zatcaPhase1Enabled ?? false;
+      final String customerTypeToSend =
+          isZatcaPhase1Enabled ? _selectedCustomerType : 'B2C';
+      final String crToSend =
+          isZatcaPhase1Enabled ? crNumberController.text.trim() : '';
+      final String vatToSend =
+          isZatcaPhase1Enabled ? vatNumberController.text.trim() : '';
+
+      // Prepare payment type value
+      String? paymentTypeValue;
+      if (selectedPaymentType != PaymentType.none) {
+        paymentTypeValue =
+            selectedPaymentType == PaymentType.to_pay ? 'to_pay' : 'to_receive';
+      }
 
       final response = await customerProvider.updateCustomer(
         accessToken,
@@ -338,22 +361,29 @@ class _CustomerInformationEditWidgetState
         context,
         altPhone: altPhoneController.text,
         gender: selectedGender,
-        dob: selectedDate?.toIso8601String().split('T')[0], // Format as YYYY-MM-DD
+        dob: selectedDate
+            ?.toIso8601String()
+            .split('T')[0], // Format as YYYY-MM-DD
         storeId: widget.customer?.storeId ?? 1,
         balance: balanceController.text.trim(),
+        paymentType: paymentTypeValue,
         customerType: customerTypeToSend,
         crNumber: crToSend,
         vatNumber: vatToSend,
       );
 
-      Navigator.pop(context); // Close loading dialog
+      // Close loading dialog - ensure it's properly closed
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
 
       if (response["status"] == "success") {
-        debugPrint("Customer update successful, updating local customer data...");
+        debugPrint(
+            "Customer update successful, updating local customer data...");
         showScaffold(
             context: context,
             message: response["message"] ?? "Customer updated successfully");
-        
+
         // Update the local customer data with the new information
         if (widget.customer != null) {
           // Create a new customer object with updated data
@@ -362,9 +392,12 @@ class _CustomerInformationEditWidgetState
             name: "${firstNameController.text} ${lastNameController.text}",
             email: emailController.text,
             phone: phoneController.text,
-            altPhone: altPhoneController.text.isNotEmpty ? altPhoneController.text : widget.customer!.altPhone,
+            altPhone: altPhoneController.text.isNotEmpty
+                ? altPhoneController.text
+                : widget.customer!.altPhone,
             gender: selectedGender ?? widget.customer!.gender,
-            dob: selectedDate?.toIso8601String().split('T')[0] ?? widget.customer!.dob,
+            dob: selectedDate?.toIso8601String().split('T')[0] ??
+                widget.customer!.dob,
             profileImage: widget.customer!.profileImage,
             storeId: widget.customer!.storeId,
             userId: widget.customer!.userId,
@@ -380,8 +413,9 @@ class _CustomerInformationEditWidgetState
             membershipCode: widget.customer!.membershipCode,
             minRedeemablePoints: widget.customer!.minRedeemablePoints,
             pricePerPoint: widget.customer!.pricePerPoint,
-            balance: double.tryParse(balanceController.text.trim()) ?? widget.customer!.balance,
-            paymentType: widget.customer!.paymentType,
+            balance: double.tryParse(balanceController.text.trim()) ??
+                widget.customer!.balance,
+            paymentType: paymentTypeValue ?? widget.customer!.paymentType,
             customerType: customerTypeToSend,
             address: widget.customer!.address,
             pincode: widget.customer!.pincode,
@@ -392,23 +426,69 @@ class _CustomerInformationEditWidgetState
             transactions: widget.customer!.transactions,
             orders: widget.customer!.orders,
           );
-          
+
           // Update the selected customer in the provider
           customerProvider.selectCustomer(updatedCustomer);
         }
+
+        // Navigate to customers list screen after successful update
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            Get.find<SideBarController>().index.value = 5;
+          }
+        });
       } else {
-        String errorMsg = response["message"] ?? "Failed to update customer";
-        if (response["errors"] != null) {
-          final errors = response["errors"] as Map<String, dynamic>;
-          errorMsg +=
-              "\n${errors.entries.map((e) => "${e.key}: ${(e.value as List).join(', ')}").join("\n")}";
+        // Handle error response
+        String errorMsg = "Failed to update customer";
+
+        try {
+          // Check if message is a Map (validation errors) or String
+          final messageData = response["message"];
+
+          if (messageData is Map<String, dynamic>) {
+            // Parse validation errors from message field
+            final errors = <String>[];
+            messageData.forEach((field, messages) {
+              if (messages is List) {
+                errors.add("$field: ${messages.join(', ')}");
+              } else {
+                errors.add("$field: $messages");
+              }
+            });
+            errorMsg = errors.join("\n");
+          } else if (messageData is String) {
+            // Simple string message
+            errorMsg = messageData;
+          } else if (response["errors"] != null && response["errors"] is Map) {
+            // Fallback: check errors field
+            final errors = response["errors"] as Map<String, dynamic>;
+            errorMsg = errors.entries
+                .map((e) =>
+                    "${e.key}: ${(e.value is List ? (e.value as List).join(', ') : e.value)}")
+                .join("\n");
+          }
+        } catch (e) {
+          debugPrint("Error parsing error message: $e");
+          errorMsg = "Failed to update customer. Please try again.";
         }
-        showScaffoldError(context: context, message: errorMsg);
+
+        if (mounted) {
+          showScaffoldError(context: context, message: errorMsg);
+        }
       }
-    } catch (error) {
-      Navigator.pop(context); // Close loading dialog
-      showScaffoldError(
-          context: context, message: "An error occurred: $error");
+    } catch (error, stackTrace) {
+      debugPrint("Exception in _updateProfile: $error");
+      debugPrint("Stack trace: $stackTrace");
+
+      // Close loading dialog - ensure it's properly closed
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      if (mounted) {
+        showScaffoldError(
+            context: context, message: "An error occurred: $error");
+      }
     }
   }
 
@@ -503,25 +583,124 @@ class _CustomerInformationEditWidgetState
   }
 
   Widget _buildBalanceAndPaymentTypeFields() {
-    return buildColumnWidgetForTextFields(
-      controller: balanceController,
-      hintText: 'Balance',
-      title: 'Balance',
-      size: widget.size,
-      width: double.infinity,
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Payment type on the left - custom built to match text field styling
+        Expanded(
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BuildTextTile(
+                title: 'Payment Type',
+                isStarRed: true,
+                textStyle: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s14,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              // Container matching text field style
+              BuildBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                padding: const EdgeInsets.only(left: 15),
+                height: widget.size.height * .07,
+                width: double.infinity,
+                child: Row(
+                  children: [
+                    Radio<PaymentType>(
+                      value: PaymentType.to_pay,
+                      groupValue: selectedPaymentType,
+                      activeColor: ColorManager.kPrimaryColor,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: const VisualDensity(
+                        horizontal: VisualDensity.minimumDensity,
+                        vertical: VisualDensity.minimumDensity,
+                      ),
+                      onChanged: (PaymentType? value) {
+                        setState(() {
+                          selectedPaymentType = value ?? PaymentType.to_pay;
+                        });
+                      },
+                    ),
+                    Text(
+                      'To Pay',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s13,
+                        0.27,
+                        ColorManager.textColor.withOpacity(.5),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Radio<PaymentType>(
+                      value: PaymentType.to_receive,
+                      groupValue: selectedPaymentType,
+                      activeColor: ColorManager.kPrimaryColor,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: const VisualDensity(
+                        horizontal: VisualDensity.minimumDensity,
+                        vertical: VisualDensity.minimumDensity,
+                      ),
+                      onChanged: (PaymentType? value) {
+                        setState(() {
+                          selectedPaymentType = value ?? PaymentType.to_pay;
+                        });
+                      },
+                    ),
+                    Text(
+                      'To Receive',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s13,
+                        0.27,
+                        ColorManager.textColor.withOpacity(.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 20),
+        // Balance field on the right
+        Expanded(
+          flex: 2,
+          child: buildColumnWidgetForTextFields(
+            controller: balanceController,
+            hintText: 'Balance',
+            title: 'Balance',
+            size: widget.size,
+            width: double.infinity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+            ],
+            validator: (value) {
+              if (value != null && value.isNotEmpty) {
+                final balance = double.tryParse(value);
+                if (balance == null) {
+                  return 'Please enter a valid balance';
+                }
+                if (balance < 0) {
+                  return 'Balance cannot be negative';
+                }
+                // Payment type validation removed since only two options now
+              }
+              return null;
+            },
+            onchanged: (value) {
+              // Trigger validation when balance changes
+              setState(() {});
+            },
+          ),
+        ),
       ],
-      validator: (value) {
-        if (value != null && value.isNotEmpty) {
-          final balance = double.tryParse(value);
-          if (balance == null) {
-            return 'Please enter a valid balance';
-          }
-        }
-        return null;
-      },
     );
   }
 
@@ -595,9 +774,9 @@ class _CustomerInformationEditWidgetState
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text("Change Password Request"),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(Icons.mark_email_read_outlined,
                 size: 48, color: ColorManager.kPrimaryColor),
             SizedBox(height: 16),
