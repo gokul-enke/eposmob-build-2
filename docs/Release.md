@@ -22,6 +22,13 @@ salesexecutive@eposenke.in
 123456
 
 
+EEEZEE_lMaAmnIu9bPnD3NvhnP5lKkrYYVp90dA
+salesexecutive2@eeezee.in
+123456
+
+
+
+
 # epos souqpoint
 SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
 salesexecutive@souqpoint.in

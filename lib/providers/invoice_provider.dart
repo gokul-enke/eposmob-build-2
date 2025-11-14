@@ -1240,7 +1240,92 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
+  // Refresh a single invoice from server using the list-all-invoices API,
+  // but only merge the updated invoice into the in-memory lists without
+  // changing filters, pagination or loading flags.
+  Future<void> refreshSingleInvoiceFromServer({
+    required String accessToken,
+    required int invoiceId,
+  }) async {
+    try {
+      final queryParams = {
+        'page': '1',
+        'per_page': '1000',
+      };
+
+      final uri =
+          Uri.parse(APPUrl.listAllInvoices).replace(queryParameters: queryParams);
+      debugPrint(
+          'refreshSingleInvoiceFromServer: fetching invoices for merge from: $uri');
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        debugPrint(
+            'refreshSingleInvoiceFromServer: API key missing, skipping merge');
+        return;
+      }
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint(
+            'refreshSingleInvoiceFromServer: HTTP ${response.statusCode}, skipping merge');
+        return;
+      }
+
+      final jsonData = json.decode(response.body);
+      ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
+      final List<Invoice> fetchedInvoices = listInvoiceModel.data.invoices;
+
+      final updated = fetchedInvoices
+          .where((inv) => inv.id == invoiceId)
+          .cast<Invoice?>()
+          .toList();
+
+      if (updated.isEmpty) {
+        debugPrint(
+            'refreshSingleInvoiceFromServer: invoice $invoiceId not found in response');
+        return;
+      }
+
+      final Invoice updatedInvoice = updated.first!;
+
+      // Merge into _allInvoices
+      if (_allInvoices != null && _allInvoices!.isNotEmpty) {
+        for (var i = 0; i < _allInvoices!.length; i++) {
+          if (_allInvoices![i].id == invoiceId) {
+            _allInvoices![i] = updatedInvoice;
+            break;
+          }
+        }
+      }
+
+      // Merge into paginated view
+      if (invoiceListDetails != null && invoiceListDetails!.isNotEmpty) {
+        for (var i = 0; i <invoiceListDetails!.length; i++) {
+          if (invoiceListDetails![i].id == invoiceId) {
+            invoiceListDetails![i] = updatedInvoice;
+            break;
+          }
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('refreshSingleInvoiceFromServer: exception $e');
+    }
+  }
+
   //          *********************** LIST ALL RECEIPT API ***************************************************
+
   Future<dynamic> listAllReceipts({
     required String accessToken,
     int page = 1,
