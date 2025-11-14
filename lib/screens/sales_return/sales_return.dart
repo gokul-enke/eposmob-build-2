@@ -77,6 +77,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   final List<String> paymentMethods = ['CASH', 'CARD', 'UPI'];
   bool isCompletingReturn = false;
 
+  // Track initial state to calculate session-specific returns
+  Map<int, int> _initialReturnedQuantities = {}; // cartItemId -> initial returned quantity
+  Map<int, double> _initialReturnedTotals = {}; // cartItemId -> initial returned total
+
   @override
   void initState() {
     // Check if there's an order number passed from sales screen
@@ -113,9 +117,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           // Load the order details
           await getOrderDetails(passedOrderNumber);
 
-          // Clear the provider values to prevent reloading on future navigation
+              // Clear the provider values to prevent reloading on future navigation
           salesProvider.setOrderNumber("");
           salesProvider.setOrderId("");
+          
+          debugPrint('✅ Initial order loaded and baseline state saved');
         } catch (e) {
           debugPrint('Error loading specific order: $e');
         } finally {
@@ -254,8 +260,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     resetSearch();
   }
 
-  Future<void> getOrderDetails(String ordersId) async {
-    debugPrint("Starting getOrderDetails for order ID: $ordersId");
+  Future<void> getOrderDetails(String ordersId, {bool resetInitialState = true}) async {
+    debugPrint("Starting getOrderDetails for order ID: $ordersId (resetInitialState: $resetInitialState)");
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
@@ -282,6 +288,19 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           Provider.of<SalesProvider>(context, listen: false).salesReturnItems;
 
       debugPrint('Fetched ${_salesReturnItems.length} sales return items');
+
+      // Only reset initial state when loading a NEW order, not after individual return submissions
+      if (resetInitialState) {
+        _initialReturnedQuantities.clear();
+        _initialReturnedTotals.clear();
+        for (var item in _salesReturnItems) {
+          _initialReturnedQuantities[item.cartItemId] = item.returnedQuantity;
+          _initialReturnedTotals[item.cartItemId] = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+        }
+        debugPrint('🔄 Reset initial return state for ${_initialReturnedQuantities.length} items');
+      } else {
+        debugPrint('✅ Refreshed items without resetting initial state');
+      }
 
       // If we have items, ensure the order is marked as selected
       if (_salesReturnItems.isNotEmpty) {
@@ -1330,7 +1349,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               message: 'Sales Return Submitted Successfully',
                             );
 
-                            getOrderDetails(selectedOrderNumber.toString());
+                            // Refresh items WITHOUT resetting initial state (keep session tracking)
+                            await getOrderDetails(selectedOrderNumber.toString(), resetInitialState: false);
 
                             Navigator.pop(context);
                           } catch (error, stackTrace) {
@@ -1515,22 +1535,31 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               SizedBox(
                                 height: 55,
                                 child: Center(
-                                  child: TextButton(
-                                    onPressed: () {
-                                      _showReturnDialog(
-                                        context,
-                                        productName:
-                                            item.productName.toString(),
-                                        unitPrice: item.unitPrice.toString(),
-                                        orderId: selectedOrderId.toString(),
-                                        cartItemId: item.cartItemId,
-                                        currency: '',
-                                        totalPrice: item.totalPrice.toString(),
-                                        quantity: item.quantity.toString(),
-                                      );
-                                    },
-                                    child: const Text("Return"),
-                                  ),
+                                  child: item.isReturned
+                                      ? const Text(
+                                          "Returned",
+                                          style: TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 12,
+                                          ),
+                                        )
+                                      : TextButton(
+                                          onPressed: () {
+                                            _showReturnDialog(
+                                              context,
+                                              productName:
+                                                  item.productName.toString(),
+                                              unitPrice: item.unitPrice.toString(),
+                                              orderId: selectedOrderId.toString(),
+                                              cartItemId: item.cartItemId,
+                                              currency: '',
+                                              totalPrice: item.totalPrice.toString(),
+                                              quantity: item.quantity.toString(),
+                                            );
+                                          },
+                                          child: const Text("Return"),
+                                        ),
                                 ),
                               ),
                             ],
@@ -1758,22 +1787,33 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       int totalItems = salesReturnItems.length; // Count of distinct items
       int totalQuantity = 0; // Total quantity of all items
       int returnedItems = 0;
-      int returnedQuantity = 0; // Total returned quantity
+      int returnedQuantity = 0; // Total returned quantity IN THIS SESSION
 
       for (var item in salesReturnItems) {
         final itemTotal = double.tryParse(item.totalPrice.toString()) ?? 0.0;
-        final itemReturned = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
         final itemQuantity = int.tryParse(item.quantity) ?? 0; // item.quantity is already a String
         
-        debugPrint('Item: ${item.productName}, Quantity: ${item.quantity}, Parsed: $itemQuantity');
-        
         orderTotal += itemTotal;
-        returnedTotal += itemReturned;
         totalQuantity += itemQuantity;
-        returnedQuantity += item.returnedQuantity;
         
-        if (item.returnedQuantity > 0) {
-          returnedItems += 1; // Count items that have been returned
+        // Calculate ONLY the returns made in THIS session (difference from initial state)
+        final initialReturnedQty = _initialReturnedQuantities[item.cartItemId] ?? 0;
+        final initialReturnedTotal = _initialReturnedTotals[item.cartItemId] ?? 0.0;
+        
+        final currentReturnedQty = item.returnedQuantity;
+        final currentReturnedTotal = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+        
+        // Session-specific returns
+        final sessionReturnedQty = currentReturnedQty - initialReturnedQty;
+        final sessionReturnedTotal = currentReturnedTotal - initialReturnedTotal;
+        
+        debugPrint('Item: ${item.productName}, Session Returns - Qty: $sessionReturnedQty, Total: $sessionReturnedTotal');
+        
+        returnedTotal += sessionReturnedTotal;
+        returnedQuantity += sessionReturnedQty;
+        
+        if (sessionReturnedQty > 0) {
+          returnedItems += 1; // Count items returned in this session
         }
       }
 
@@ -1910,11 +1950,13 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         return const SizedBox.shrink();
       }
 
-      // Calculate return total
+      // Calculate return total (ONLY from this session)
       double returnedTotal = 0.0;
       for (var item in salesReturnItems) {
-        final itemReturned = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
-        returnedTotal += itemReturned;
+        final initialReturnedTotal = _initialReturnedTotals[item.cartItemId] ?? 0.0;
+        final currentReturnedTotal = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+        final sessionReturnedTotal = currentReturnedTotal - initialReturnedTotal;
+        returnedTotal += sessionReturnedTotal;
       }
 
       // Autofill the return amount when payment is enabled and field is empty
