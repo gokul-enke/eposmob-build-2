@@ -3343,7 +3343,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  void _saveOrder() async {
+  Future<void> _saveOrder() async {
     setState(() {
       isLoadingSaveOrder = true; // Indicate that loading has started
     });
@@ -3359,22 +3359,6 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if customer is selected
-      if (selectedCustomerID == null && mobileNumberText == "") {
-        showScaffoldError(
-          context: context,
-          message: "billing.select_customer".tr,
-        );
-        // Auto-focus on customer field
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_autocompleteFocusNode != null) {
-            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
-          } else {
-            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
-          }
-        });
-        return;
-      }
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -5232,7 +5216,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   // Public method to save current order (for external calls)
-  void saveCurrentOrder() {
+  Future<void> saveCurrentOrder() async {
     debugPrint("===== PUBLIC SAVE CURRENT ORDER START =====");
     debugPrint("💾 BILLING: Public method called - saving current order...");
     debugPrint("📝 Current customer state:");
@@ -5249,7 +5233,7 @@ class BillingPageState extends State<BillingPage>
     debugPrint("  - Comment: '${_commentController.text}'");
     debugPrint(
         "  - Cart Items: ${Provider.of<LocalProductProvider>(context, listen: false).cartItems.length}");
-    _saveOrder();
+    await _saveOrder();
     debugPrint("===== PUBLIC SAVE CURRENT ORDER END =====");
   }
 
