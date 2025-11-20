@@ -170,7 +170,8 @@ class ThermalPrinter {
           billDocumentConfig,
           cartItems,
           isFromLocalStorage,
-          selectedFontType);
+          selectedFontType,
+          paperSize);
       debugPrint("Total amount built successfully");
 
       // Add Order Returns section if orderReturns is not null and has items
@@ -1650,7 +1651,8 @@ class ThermalPrinter {
       DocumentConfig? billDocumentConfig,
       List<dynamic> cartItems,
       bool isFromLocalStorage,
-      PosFontType fontType) {
+      PosFontType fontType,
+      PaperSize paperSize) {
     List<int> bytes = [];
 
     debugPrint("===== BUILD TOTAL AMOUNT DEBUG =====");
@@ -1756,7 +1758,18 @@ class ThermalPrinter {
     debugPrint("Left side items count: ${leftSideItems.length}");
     debugPrint("Right side items count: ${rightSideItems.length}");
 
-    // Generate rows with vertical division (5-1-6 columns: left section, gap, right section)
+    // Determine column widths based on paper size
+    // 58mm: 3(label)+3(value), gap 0, 3(label)+3(value) = 12
+    // 80mm: 3(label)+2(value), gap 2, 3(label)+2(value) = 12
+    int leftLabelWidth = 3;
+    int leftValueWidth = paperSize == PaperSize.mm58 ? 3 : 2;
+    int gapWidth = paperSize == PaperSize.mm58 ? 0 : 2;
+    int rightLabelWidth = 3;
+    int rightValueWidth = paperSize == PaperSize.mm58 ? 3 : 2;
+    
+    debugPrint("Paper size: ${paperSize == PaperSize.mm58 ? '58mm' : '80mm'}");
+    debugPrint("Column layout: left($leftLabelWidth,$leftValueWidth), gap($gapWidth), right($rightLabelWidth,$rightValueWidth)");
+
     int maxRows = leftSideItems.length > rightSideItems.length
         ? leftSideItems.length
         : rightSideItems.length;
@@ -1768,7 +1781,7 @@ class ThermalPrinter {
       List<PosColumn> columns = [];
       int rowWidth = 0;
 
-      // Left side (first 5 columns: 2 for label + 3 for value)
+      // Left side
       if (i < leftSideItems.length) {
         final leftItem = leftSideItems[i];
         PosTextSize textSize = leftItem['textSize'] == 'big'
@@ -1787,49 +1800,51 @@ class ThermalPrinter {
 
         columns.add(PosColumn(
             text: labelText,
-            width: 3,
+            width: leftLabelWidth,
             styles: PosStyles(
                 fontType: itemFontType,
                 align: PosAlign.left,
                 bold: isBold,
                 height: textSize)));
-        rowWidth += 3;
+        rowWidth += leftLabelWidth;
         debugPrint(
-            "Added left label column with width 3, row width: $rowWidth");
+            "Added left label column with width $leftLabelWidth, row width: $rowWidth");
 
         columns.add(PosColumn(
             text: leftItem['value']!,
-            width: 1,
+            width: leftValueWidth,
             styles: PosStyles(
                 fontType: itemFontType,
                 align: PosAlign.right,
                 bold: true,
                 height: textSize)));
-        rowWidth += 1;
+        rowWidth += leftValueWidth;
         debugPrint(
-            "Added left value column with width 1, row width: $rowWidth");
+            "Added left value column with width $leftValueWidth, row width: $rowWidth");
       } else {
         // Empty left side
         columns.add(PosColumn(
-            text: '', width: 2, styles: PosStyles(fontType: fontType)));
-        rowWidth += 2;
+            text: '', width: leftLabelWidth, styles: PosStyles(fontType: fontType)));
+        rowWidth += leftLabelWidth;
         debugPrint(
-            "Added empty left column with width 2, row width: $rowWidth");
+            "Added empty left column with width $leftLabelWidth, row width: $rowWidth");
 
         columns.add(PosColumn(
-            text: '', width: 2, styles: PosStyles(fontType: fontType)));
-        rowWidth += 2;
+            text: '', width: leftValueWidth, styles: PosStyles(fontType: fontType)));
+        rowWidth += leftValueWidth;
         debugPrint(
-            "Added empty left column with width 2, row width: $rowWidth");
+            "Added empty left column with width $leftValueWidth, row width: $rowWidth");
       }
 
-      // Gap column (1 column for spacing)
-      columns.add(
-          PosColumn(text: '', width: 2, styles: PosStyles(fontType: fontType)));
-      rowWidth += 2;
-      debugPrint("Added gap column with width 2, row width: $rowWidth");
+      // Gap column (if needed)
+      if (gapWidth > 0) {
+        columns.add(
+            PosColumn(text: '', width: gapWidth, styles: PosStyles(fontType: fontType)));
+        rowWidth += gapWidth;
+        debugPrint("Added gap column with width $gapWidth, row width: $rowWidth");
+      }
 
-      // Right side (last 6 columns: 3 for label + 3 for value)
+      // Right side
       if (i < rightSideItems.length) {
         final rightItem = rightSideItems[i];
         PosTextSize textSize = rightItem['textSize'] == 'big'
@@ -1848,42 +1863,42 @@ class ThermalPrinter {
 
         columns.add(PosColumn(
             text: labelText,
-            width: 3,
+            width: rightLabelWidth,
             styles: PosStyles(
                 fontType: itemFontType,
                 align: PosAlign.left,
                 bold: isBold,
                 height: textSize,
                 width: textSize)));
-        rowWidth += 3;
+        rowWidth += rightLabelWidth;
         debugPrint(
-            "Added right label column with width 3, row width: $rowWidth");
+            "Added right label column with width $rightLabelWidth, row width: $rowWidth");
 
         columns.add(PosColumn(
             text: rightItem['value']!,
-            width: 3,
+            width: rightValueWidth,
             styles: PosStyles(
                 fontType: itemFontType,
                 align: PosAlign.right,
                 bold: isBold,
                 height: textSize,
                 width: textSize)));
-        rowWidth += 3;
+        rowWidth += rightValueWidth;
         debugPrint(
-            "Added right value column with width 3, row width: $rowWidth");
+            "Added right value column with width $rightValueWidth, row width: $rowWidth");
       } else {
         // Empty right side
         columns.add(PosColumn(
-            text: '', width: 3, styles: PosStyles(fontType: fontType)));
-        rowWidth += 3;
+            text: '', width: rightLabelWidth, styles: PosStyles(fontType: fontType)));
+        rowWidth += rightLabelWidth;
         debugPrint(
-            "Added empty right column with width 3, row width: $rowWidth");
+            "Added empty right column with width $rightLabelWidth, row width: $rowWidth");
 
         columns.add(PosColumn(
-            text: '', width: 3, styles: PosStyles(fontType: fontType)));
-        rowWidth += 3;
+            text: '', width: rightValueWidth, styles: PosStyles(fontType: fontType)));
+        rowWidth += rightValueWidth;
         debugPrint(
-            "Added empty right column with width 3, row width: $rowWidth");
+            "Added empty right column with width $rightValueWidth, row width: $rowWidth");
       }
 
       debugPrint("Row $i final width: $rowWidth");
