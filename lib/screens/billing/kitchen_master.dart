@@ -989,7 +989,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.2,
+          childAspectRatio: 1.0,
           children: [
             _buildStatCard(
               'Pending Orders',
@@ -1035,7 +1035,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -1047,14 +1047,14 @@ class _KitchenMasterState extends State<KitchenMaster> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 6),
           Text(
             value,
             style: buildCustomStyle(
                 FontWeightManager.bold, FontSize.s24, 0.21, color),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             label,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s11,
