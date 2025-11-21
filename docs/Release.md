@@ -14,6 +14,7 @@ git push build1 v0.1.0-dev.259
 # eposenke demo
 https://eposdemo.hypersouq.in
 EPOSENKE_p5Ut9BRLYnlxu7UZsGjR6RmTt6X4Dhuf
+
 attender@eposenke.in
 123456
 kitchenmaster@eposenke.in
@@ -48,6 +49,7 @@ salesexecutive1eeezee@gmail.com
 Company Name: RESTKSA
 admin : admin@restksa.in
 pass : Admin!@1243
+attender@restksa.in
 RESTKSA_K0dO2IDKqIDhyHkIyE2JKXqor456XOex
 
 
