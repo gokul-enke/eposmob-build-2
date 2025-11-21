@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.282
-git push build v0.1.0-dev.282
+git tag v0.1.0-dev.283
+git push build v0.1.0-dev.283
 
 souq build
 git tag v0.1.0-dev.279
@@ -43,6 +43,12 @@ salesexecutive1@eposenke.in
 EEEZEE_4QI9tz5mhh35L9r262HGA5HnxEymxgai
 salesexecutive1eeezee@gmail.com
 123456
+
+# demo Rest ksa
+Company Name: RESTKSA
+admin : admin@restksa.in
+pass : Admin!@1243
+RESTKSA_K0dO2IDKqIDhyHkIyE2JKXqor456XOex
 
 
 
