@@ -910,7 +910,7 @@ class BillingPageState extends State<BillingPage>
     } finally {
       debugPrint("🔴 [BillingPage.processBarcode] Finally block - resetting processing flag...");
       // Reset the flag and ensure barcode is always cleared
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 750), () {
         if (mounted) {
           debugPrint("🔴 [BillingPage.processBarcode] Resetting _isProcessingBarcode to false");
           setState(() {
@@ -1491,6 +1491,7 @@ class BillingPageState extends State<BillingPage>
                               readOnly:
                                   selectedProductNameController.text.isNotEmpty,
                               onSubmitted: (query) {
+
                                 if (query != null && query.isNotEmpty) {
                                   processBarcode(query);
                                 }
