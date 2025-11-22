@@ -33,6 +33,9 @@ class RestaurantPage extends StatefulWidget {
   State<RestaurantPage> createState() => _RestaurantPageState();
 }
 
+// Mobile view navigation enum
+enum MobileView { tables, orders }
+
 class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
   int? _activeCategoryId;
@@ -43,6 +46,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       GlobalKey<_OrderPanelState>(); // Key to access OrderPanel methods
   bool _isLoadingSendToKitchen =
       false; // Loading state for Send to Kitchen button
+
+  // Mobile navigation state
+  MobileView _currentMobileView = MobileView.tables;
+  String? _selectedTableName; // Store selected table name for header
 
   @override
   void initState() {
@@ -184,70 +191,242 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Widget _buildMobileLayout(Size screenSize) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _currentMobileView == MobileView.tables
+            ? _buildTablesView(screenSize)
+            : _buildOrdersView(screenSize),
+      ),
+    );
+  }
+
+  // Full-page tables view for mobile
+  Widget _buildTablesView(Size screenSize) {
     return Column(
+      key: const ValueKey('tables_view'),
       children: [
-        // Top section with tables and order summary
-        SizedBox(
-          height: screenSize.height * 0.35, // 35% of screen height
+        // Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Row(
             children: [
-              // Tables panel - takes 60% of width
-              Expanded(
-                flex: 3,
-                child: _TablesPanel(
-                  activeTableId: _activeTableId,
-                  onSelect: (id) {
-                    _autoSaveCurrentTableBeforeSwitch();
-                    setState(() {
-                      _activeTableId = id;
-                    });
-                  },
-                  isCompact: true,
-                  screenSize: screenSize,
+              Icon(
+                Icons.table_restaurant,
+                color: const Color(0xFF2563EB),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Select a Table',
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s20,
+                  0.30,
+                  const Color(0xFF1E293B),
                 ),
               ),
-              // Order panel - takes 40% of width
-              Expanded(
-                flex: 2,
-                child: _OrderPanel(
-                  key: _orderPanelKey, // Add key to access methods
-                  tableId: _activeTableId,
-                  isCompact: true,
-                  screenSize: screenSize,
-                  onSendToKitchen:
-                      _sendOrderToKitchenWithLoading, // Use wrapper method
-                  onNewOrder: _handleNewOrder, // Pass the new callback
-                  onOrderSelected: (order) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() {
-                          _selectedOrderFromOrderPanel = order;
-                        });
-                      }
-                    });
-                  },
-                  selectedOrderFromParent:
-                      _selectedOrderFromOrderPanel, // Pass the selected order
-                  refreshCounter: _refreshCounter, // Pass refresh counter
-                  isLoadingSendToKitchen:
-                      _isLoadingSendToKitchen, // Pass loading state
-                ),
+              const Spacer(),
+              // Menu button
+              IconButton(
+                icon:
+                    const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
+                onPressed: () => _showProductsBottomSheet(context),
+                tooltip: 'Menu',
               ),
             ],
           ),
         ),
-        // Menu panel takes remaining space
+        // Tables Panel - full page
         Expanded(
-          child: _MenuPanel(
-            onCategoryChanged: (cid) => setState(() => _activeCategoryId = cid),
-            activeCategoryId: _activeCategoryId,
-            onItemAdd: _handleItemAdd,
-            isCompact: true,
+          child: _TablesPanel(
+            activeTableId: _activeTableId,
+            onSelect: (id) {
+              _autoSaveCurrentTableBeforeSwitch();
+              // Get table name from provider
+              final tableProvider =
+                  Provider.of<TableProvider>(context, listen: false);
+              final selectedTable = tableProvider.tables.firstWhere(
+                (table) => table.id == id,
+                orElse: () => tableProvider.tables.first,
+              );
+              setState(() {
+                _activeTableId = id;
+                _selectedTableName = selectedTable.name;
+                _currentMobileView =
+                    MobileView.orders; // Navigate to orders view
+              });
+            },
             screenSize: screenSize,
-            selectedOrder: _selectedOrderFromOrderPanel, // Pass selected order
           ),
         ),
       ],
+    );
+  }
+
+  // Full-page orders view for mobile
+  Widget _buildOrdersView(Size screenSize) {
+    return Column(
+      key: const ValueKey('orders_view'),
+      children: [
+        // Header with back button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
+                onPressed: () {
+                  setState(() {
+                    _currentMobileView = MobileView.tables;
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.receipt_long,
+                color: const Color(0xFF2563EB),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _selectedTableName ?? 'Orders',
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s20,
+                    0.30,
+                    const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              // Menu button
+              IconButton(
+                icon:
+                    const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
+                onPressed: () => _showProductsBottomSheet(context),
+                tooltip: 'Menu',
+              ),
+            ],
+          ),
+        ),
+        // Orders Panel - full page
+        Expanded(
+          child: _OrderPanel(
+            key: _orderPanelKey,
+            tableId: _activeTableId,
+            screenSize: screenSize,
+            onSendToKitchen: _sendOrderToKitchenWithLoading,
+            onNewOrder: _handleNewOrder,
+            onOrderSelected: (order) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _selectedOrderFromOrderPanel = order;
+                  });
+                }
+              });
+            },
+            selectedOrderFromParent: _selectedOrderFromOrderPanel,
+            refreshCounter: _refreshCounter,
+            isLoadingSendToKitchen: _isLoadingSendToKitchen,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Show products as a bottom sheet
+  void _showProductsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  children: [
+                    // Drag handle
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    // Header with only close button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    // Products panel
+                    Expanded(
+                      child: _MenuPanel(
+                        onCategoryChanged: (cid) {
+                          // Update both parent and modal state
+                          setState(() => _activeCategoryId = cid);
+                          setModalState(() => _activeCategoryId = cid);
+                        },
+                        activeCategoryId: _activeCategoryId,
+                        onItemAdd: (product, quantity) async {
+                          await _handleItemAdd(product, quantity);
+                          // Optionally close the bottom sheet after adding
+                          // Navigator.pop(context);
+                        },
+                        screenSize: MediaQuery.of(context).size,
+                        selectedOrder: _selectedOrderFromOrderPanel,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -539,15 +718,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (_activeTableId == null) return;
 
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       final cartItems = localProductProvider.cartItems;
 
       if (cartItems.isEmpty) {
-        debugPrint('💾 No items in cart for table $_activeTableId, skipping auto-save');
+        debugPrint(
+            '💾 No items in cart for table $_activeTableId, skipping auto-save');
         return;
       }
 
-      debugPrint('💾 Auto-saving cart for table $_activeTableId before switch (${cartItems.length} items)');
+      debugPrint(
+          '💾 Auto-saving cart for table $_activeTableId before switch (${cartItems.length} items)');
 
       // Auto-save as pending draft with tableId
       localProductProvider.saveCurrentCartAsOrder(
@@ -2141,7 +2323,17 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _percentageDiscount = 0.0;
   String _couponCode = "";
 
-
+  @override
+  void initState() {
+    super.initState();
+    // Load saved orders and local drafts when the widget is first created with a tableId
+    if (widget.tableId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchSavedOrders();
+        _refreshLocalDrafts();
+      });
+    }
+  }
 
   @override
   void didUpdateWidget(covariant _OrderPanel oldWidget) {
@@ -3371,7 +3563,9 @@ class _OrderPanelState extends State<_OrderPanel> {
         if (propsList is List) {
           try {
             final match = propsList.firstWhere(
-              (e) => (e is Map) && (e['code']?.toString()?.toUpperCase() == 'COMMENT'),
+              (e) =>
+                  (e is Map) &&
+                  (e['code']?.toString()?.toUpperCase() == 'COMMENT'),
               orElse: () => null,
             );
             if (match is Map && match['value'] != null) {
@@ -3385,7 +3579,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (loadedComment != null) {
         loadedComment = loadedComment!.trim();
         if (loadedComment!.startsWith('"') && loadedComment!.endsWith('"')) {
-          loadedComment = loadedComment!.substring(1, loadedComment!.length - 1);
+          loadedComment =
+              loadedComment!.substring(1, loadedComment!.length - 1);
         }
       }
 
@@ -4108,8 +4303,10 @@ class _OrderPanelState extends State<_OrderPanel> {
       child: Column(
         children: [
           // Pending Orders Section (independent scroll)
-          _buildPanelHeader('Pending Orders', Icons.pending_actions, const Color(0xFFD97706),
-              itemCount: _localDrafts.length, subtitle: widget.tableId?.toString()),
+          _buildPanelHeader(
+              'Pending Orders', Icons.pending_actions, const Color(0xFFD97706),
+              itemCount: _localDrafts.length,
+              subtitle: widget.tableId?.toString()),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -4127,13 +4324,20 @@ class _OrderPanelState extends State<_OrderPanel> {
                         },
                       ),
                       child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics()),
                         padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                         children: [
                           Center(
                             child: Text(
                               'No pending orders',
-                              style: buildCustomStyle(FontWeightManager.medium, widget.isCompact ? FontSize.s12 : FontSize.s13, 0.21, const Color(0xFF64748B)),
+                              style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  widget.isCompact
+                                      ? FontSize.s12
+                                      : FontSize.s13,
+                                  0.21,
+                                  const Color(0xFF64748B)),
                             ),
                           ),
                         ],
@@ -4151,7 +4355,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                           },
                         ),
                         child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics()),
                           padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                           itemCount: _localDrafts.length,
                           separatorBuilder: (_, __) => Container(
@@ -4159,7 +4364,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             color: Colors.grey.shade100,
                           ),
-                          itemBuilder: (_, index) => _buildLocalDraftItem(_localDrafts[index]),
+                          itemBuilder: (_, index) =>
+                              _buildLocalDraftItem(_localDrafts[index]),
                         ),
                       ),
                     ),
@@ -4188,21 +4394,23 @@ class _OrderPanelState extends State<_OrderPanel> {
                         },
                       ),
                       child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics()),
                         padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                         children: [
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(20),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF059669).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
+                                  color:
+                                      const Color(0xFF059669).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Icon(
                                   Icons.add_shopping_cart,
-                                  size: widget.isCompact ? 48 : 64,
+                                  size: widget.isCompact ? 36 : 48,
                                   color: const Color(0xFF059669),
                                 ),
                               ),
@@ -4212,7 +4420,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                 textAlign: TextAlign.center,
                                 style: buildCustomStyle(
                                     FontWeightManager.bold,
-                                    widget.isCompact ? FontSize.s16 : FontSize.s18,
+                                    widget.isCompact
+                                        ? FontSize.s16
+                                        : FontSize.s18,
                                     0.21,
                                     const Color(0xFF1E293B)),
                               ),
@@ -4222,7 +4432,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                 textAlign: TextAlign.center,
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
-                                    widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                    widget.isCompact
+                                        ? FontSize.s13
+                                        : FontSize.s14,
                                     0.21,
                                     const Color(0xFF64748B)),
                               ),
@@ -4244,7 +4456,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                           },
                         ),
                         child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics()),
                           padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                           itemCount: _savedOrders.length,
                           separatorBuilder: (_, __) => Container(
@@ -4317,20 +4530,21 @@ class _OrderPanelState extends State<_OrderPanel> {
                         const Color(0xFF1E293B)),
                   ),
                   Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '$servedItems/$totalItems',
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s11 : FontSize.s13,
-                              0.21,
-                              const Color(0xFF059669)),
-                        ),
-                      ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$servedItems/$totalItems',
+                      style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          widget.isCompact ? FontSize.s11 : FontSize.s13,
+                          0.21,
+                          const Color(0xFF059669)),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
@@ -4529,7 +4743,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                         },
                       ),
                       child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics()),
                         padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                         children: [
                           Column(
@@ -4538,7 +4753,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF64748B).withOpacity(0.1),
+                                  color:
+                                      const Color(0xFF64748B).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Icon(
@@ -4552,7 +4768,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                 'No items in this order',
                                 style: buildCustomStyle(
                                     FontWeightManager.semiBold,
-                                    widget.isCompact ? FontSize.s14 : FontSize.s16,
+                                    widget.isCompact
+                                        ? FontSize.s14
+                                        : FontSize.s16,
                                     0.21,
                                     const Color(0xFF64748B)),
                               ),
@@ -4573,7 +4791,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                           },
                         ),
                         child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics()),
                           padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                           itemCount: cartItems.length,
                           separatorBuilder: (_, __) => Container(
@@ -6074,7 +6293,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                         ),
                         child: Center(
                           child: Text(
-                            'New Order',
+                            'New',
                             style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 widget.isCompact ? FontSize.s13 : FontSize.s14,
@@ -6104,15 +6323,17 @@ class _OrderPanelState extends State<_OrderPanel> {
                               ? const Color(0xFF94A3B8)
                               : const Color(0xFF2563EB),
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: (cartItems.isNotEmpty && widget.tableId != null)
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF2563EB).withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : [],
+                          boxShadow:
+                              (cartItems.isNotEmpty && widget.tableId != null)
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF2563EB)
+                                            .withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : [],
                         ),
                         child: Center(
                           child: Row(
@@ -6130,7 +6351,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   'Save',
                                   style: buildCustomStyle(
                                       FontWeightManager.semiBold,
-                                      widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                      widget.isCompact
+                                          ? FontSize.s13
+                                          : FontSize.s14,
                                       0.21,
                                       Colors.white),
                                   overflow: TextOverflow.ellipsis,
@@ -6312,15 +6535,18 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
 
       if (localProductProvider.cartItems.isEmpty) {
-        showScaffoldError(context: context, message: 'No items in cart to save');
+        showScaffoldError(
+            context: context, message: 'No items in cart to save');
         return;
       }
 
       // Prefix table tag into comment so we can filter drafts per table without Hive migration
-      final String taggedComment = 'TABLE:${widget.tableId}' + (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
+      final String taggedComment = 'TABLE:${widget.tableId}' +
+          (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
 
       // If a local draft is loaded, update it instead of creating a new one
       if (_loadedLocalDraftId != null) {
@@ -6340,7 +6566,9 @@ class _OrderPanelState extends State<_OrderPanel> {
           context: context,
           tableId: widget.tableId,
         );
-        showScaffold(context: context, message: 'Saved local draft ${saved.orderNumber}');
+        showScaffold(
+            context: context,
+            message: 'Saved local draft ${saved.orderNumber}');
       }
 
       // Clear cart and refresh local drafts
@@ -6348,14 +6576,17 @@ class _OrderPanelState extends State<_OrderPanel> {
       _loadedLocalDraftId = null;
       _refreshLocalDrafts();
     } catch (e) {
-      showScaffoldError(context: context, message: 'Failed to save local draft: ${e.toString()}');
+      showScaffoldError(
+          context: context,
+          message: 'Failed to save local draft: ${e.toString()}');
     }
   }
 
   // Refresh local drafts from Hive filtered by table tag and pending status
   void _refreshLocalDrafts() {
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       final drafts = localProductProvider.savedOrders.where((o) {
         final st = (o.status ?? '').toLowerCase();
         return st == 'pending' && o.tableId == widget.tableId;
@@ -6368,7 +6599,8 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Delete local draft
   void _deleteLocalDraft(SavedOrder order) {
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
     localProductProvider.deleteSavedOrder(order.id);
     _refreshLocalDrafts();
   }
@@ -6381,7 +6613,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       child: InkWell(
         onTap: () {
           // Load back to current cart for editing
-          final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+          final localProductProvider =
+              Provider.of<LocalProductProvider>(context, listen: false);
           _loadedLocalDraftId = order.id;
           localProductProvider.loadOrderForEditing(order.id);
           showCurrentOrderTab();
@@ -6402,33 +6635,48 @@ class _OrderPanelState extends State<_OrderPanel> {
                 children: [
                   Text(
                     order.orderNumber,
-                    style: buildCustomStyle(FontWeightManager.semiBold, widget.isCompact ? FontSize.s13 : FontSize.s15, 0.21, const Color(0xFF1E293B)),
+                    style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s13 : FontSize.s15,
+                        0.21,
+                        const Color(0xFF1E293B)),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
                           color: const Color(0xFFD97706).withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFD97706).withOpacity(0.4)),
+                          border: Border.all(
+                              color: const Color(0xFFD97706).withOpacity(0.4)),
                         ),
                         child: Text(
                           'PENDING',
-                          style: buildCustomStyle(FontWeightManager.semiBold, widget.isCompact ? FontSize.s10 : FontSize.s11, 0.21, const Color(0xFFD97706)),
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s10 : FontSize.s11,
+                              0.21,
+                              const Color(0xFFD97706)),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF059669).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '$totalItems',
-                          style: buildCustomStyle(FontWeightManager.semiBold, widget.isCompact ? FontSize.s11 : FontSize.s13, 0.21, const Color(0xFF059669)),
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s11 : FontSize.s13,
+                              0.21,
+                              const Color(0xFF059669)),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -6461,11 +6709,19 @@ class _OrderPanelState extends State<_OrderPanel> {
                 children: [
                   Text(
                     _cleanDraftComment(order.comment),
-                    style: buildCustomStyle(FontWeightManager.medium, widget.isCompact ? FontSize.s11 : FontSize.s13, 0.21, const Color(0xFF64748B)),
+                    style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        widget.isCompact ? FontSize.s11 : FontSize.s13,
+                        0.21,
+                        const Color(0xFF64748B)),
                   ),
                   Text(
                     'Items: $totalItems',
-                    style: buildCustomStyle(FontWeightManager.medium, widget.isCompact ? FontSize.s11 : FontSize.s13, 0.21, const Color(0xFF64748B)),
+                    style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        widget.isCompact ? FontSize.s11 : FontSize.s13,
+                        0.21,
+                        const Color(0xFF64748B)),
                   ),
                 ],
               ),
@@ -6493,7 +6749,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Public method called by parent after successful send
   void deleteLoadedDraftIfAny() {
     if (_loadedLocalDraftId == null) return;
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
     localProductProvider.deleteSavedOrder(_loadedLocalDraftId!);
     _loadedLocalDraftId = null;
     _refreshLocalDrafts();
@@ -6770,7 +7027,8 @@ class _RestaurantCouponModalWrapper extends StatefulWidget {
   final double initialFlatDiscount;
   final double initialPercentageDiscount;
   final bool isCouponApplied;
-  final Function(String, bool, {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+  final Function(String, bool,
+      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
 
   const _RestaurantCouponModalWrapper({
     required this.orderSubTotal,
@@ -6782,10 +7040,12 @@ class _RestaurantCouponModalWrapper extends StatefulWidget {
   });
 
   @override
-  State<_RestaurantCouponModalWrapper> createState() => _RestaurantCouponModalWrapperState();
+  State<_RestaurantCouponModalWrapper> createState() =>
+      _RestaurantCouponModalWrapperState();
 }
 
-class _RestaurantCouponModalWrapperState extends State<_RestaurantCouponModalWrapper> {
+class _RestaurantCouponModalWrapperState
+    extends State<_RestaurantCouponModalWrapper> {
   late MockLocalProductProvider _mockProvider;
 
   @override
@@ -6824,10 +7084,10 @@ class MockLocalProductProvider extends LocalProductProvider {
     required double initialFlatDiscount,
     required double initialPercentageDiscount,
     required String initialCouponCode,
-  }) : _orderSubTotal = orderSubTotal,
-       _flatDiscount = initialFlatDiscount,
-       _percentageDiscount = initialPercentageDiscount,
-       _couponCode = initialCouponCode;
+  })  : _orderSubTotal = orderSubTotal,
+        _flatDiscount = initialFlatDiscount,
+        _percentageDiscount = initialPercentageDiscount,
+        _couponCode = initialCouponCode;
 
   @override
   Map<String, double> getCurrentDiscount() {
@@ -6839,7 +7099,8 @@ class MockLocalProductProvider extends LocalProductProvider {
 
   @override
   PriceSummary? get priceSummary {
-    final discount = (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
+    final discount =
+        (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
     return PriceSummary(
       originalSubTotal: _orderSubTotal,
       subTotal: _orderSubTotal,
@@ -6860,5 +7121,3 @@ class MockLocalProductProvider extends LocalProductProvider {
     notifyListeners();
   }
 }
-
-
