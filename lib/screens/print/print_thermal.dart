@@ -295,6 +295,10 @@ class ThermalPrinter {
         debugPrint("Thank you message built successfully");
       }
 
+      // Open cash drawer
+      debugPrint("Opening cash drawer...");
+      bytes += generator.drawer();
+
       // Cut the receipt
       bytes += generator.cut();
 
@@ -1766,9 +1770,10 @@ class ThermalPrinter {
     int gapWidth = paperSize == PaperSize.mm58 ? 0 : 2;
     int rightLabelWidth = 3;
     int rightValueWidth = paperSize == PaperSize.mm58 ? 3 : 2;
-    
+
     debugPrint("Paper size: ${paperSize == PaperSize.mm58 ? '58mm' : '80mm'}");
-    debugPrint("Column layout: left($leftLabelWidth,$leftValueWidth), gap($gapWidth), right($rightLabelWidth,$rightValueWidth)");
+    debugPrint(
+        "Column layout: left($leftLabelWidth,$leftValueWidth), gap($gapWidth), right($rightLabelWidth,$rightValueWidth)");
 
     int maxRows = leftSideItems.length > rightSideItems.length
         ? leftSideItems.length
@@ -1824,13 +1829,17 @@ class ThermalPrinter {
       } else {
         // Empty left side
         columns.add(PosColumn(
-            text: '', width: leftLabelWidth, styles: PosStyles(fontType: fontType)));
+            text: '',
+            width: leftLabelWidth,
+            styles: PosStyles(fontType: fontType)));
         rowWidth += leftLabelWidth;
         debugPrint(
             "Added empty left column with width $leftLabelWidth, row width: $rowWidth");
 
         columns.add(PosColumn(
-            text: '', width: leftValueWidth, styles: PosStyles(fontType: fontType)));
+            text: '',
+            width: leftValueWidth,
+            styles: PosStyles(fontType: fontType)));
         rowWidth += leftValueWidth;
         debugPrint(
             "Added empty left column with width $leftValueWidth, row width: $rowWidth");
@@ -1838,10 +1847,11 @@ class ThermalPrinter {
 
       // Gap column (if needed)
       if (gapWidth > 0) {
-        columns.add(
-            PosColumn(text: '', width: gapWidth, styles: PosStyles(fontType: fontType)));
+        columns.add(PosColumn(
+            text: '', width: gapWidth, styles: PosStyles(fontType: fontType)));
         rowWidth += gapWidth;
-        debugPrint("Added gap column with width $gapWidth, row width: $rowWidth");
+        debugPrint(
+            "Added gap column with width $gapWidth, row width: $rowWidth");
       }
 
       // Right side
@@ -1889,13 +1899,17 @@ class ThermalPrinter {
       } else {
         // Empty right side
         columns.add(PosColumn(
-            text: '', width: rightLabelWidth, styles: PosStyles(fontType: fontType)));
+            text: '',
+            width: rightLabelWidth,
+            styles: PosStyles(fontType: fontType)));
         rowWidth += rightLabelWidth;
         debugPrint(
             "Added empty right column with width $rightLabelWidth, row width: $rowWidth");
 
         columns.add(PosColumn(
-            text: '', width: rightValueWidth, styles: PosStyles(fontType: fontType)));
+            text: '',
+            width: rightValueWidth,
+            styles: PosStyles(fontType: fontType)));
         rowWidth += rightValueWidth;
         debugPrint(
             "Added empty right column with width $rightValueWidth, row width: $rowWidth");
