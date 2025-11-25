@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
@@ -34,6 +35,9 @@ import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Hive box name for draft stock items persistence
+const String _kDraftStockBoxName = 'draft_stock_items';
 
 class StockItem {
   String barcode;
@@ -109,6 +113,11 @@ class AddProductStockScreen extends StatefulWidget {
 class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final SideBarController sideBarController = Get.put(SideBarController());
+
+  // Hive box for draft persistence
+  Box? _draftBox;
+  Timer? _draftSaveDebouncer;
+  static const Duration _draftSaveDelay = Duration(milliseconds: 500);
 
   // Header form controllers
   final TextEditingController supplierSearchController =
@@ -277,12 +286,228 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void initState() {
     super.initState();
     _initializeData();
+    _initHiveBox();
     // Load pending items after the build is complete
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadPendingStockItems();
+      _loadItemsSequentially();
     });
     // Tax calculation will be triggered when product data is available
     // No need to calculate tax for empty stock items in initState
+  }
+
+  /// Load items - only pending items from StockProvider
+  /// Note: Draft loading disabled - only successfully added items (pending) are loaded
+  void _loadItemsSequentially() {
+    final stockProvider = Provider.of<StockProvider>(context, listen: false);
+    final pendingItems = stockProvider.pendingStockItems;
+
+    if (pendingItems.isNotEmpty) {
+      // Load pending items - these are items that were successfully added
+      _loadPendingStockItems();
+    }
+    // Clear any stale drafts from previous sessions
+    _clearDraftFromHive();
+  }
+
+  /// Initialize Hive box for draft persistence
+  Future<void> _initHiveBox() async {
+    try {
+      if (!Hive.isBoxOpen(_kDraftStockBoxName)) {
+        _draftBox = await Hive.openBox(_kDraftStockBoxName);
+      } else {
+        _draftBox = Hive.box(_kDraftStockBoxName);
+      }
+      debugPrint('✅ Draft stock Hive box initialized');
+    } catch (e) {
+      debugPrint('❌ Failed to initialize draft Hive box: $e');
+    }
+  }
+
+  /// Save current draft stock items to Hive (debounced)
+  void _saveDraftToHive() {
+    _draftSaveDebouncer?.cancel();
+    _draftSaveDebouncer = Timer(_draftSaveDelay, () async {
+      if (_draftBox == null || !_draftBox!.isOpen) return;
+
+      try {
+        // Only save items that are not yet successfully added (drafts)
+        final draftItems = stockItems
+            .where((item) => !item.isSuccessfullyAdded && item.productData != null)
+            .map((item) => _stockItemToMap(item))
+            .toList();
+
+        await _draftBox!.put('draft_items', draftItems);
+        await _draftBox!.put('supplier_id', selectedSupplier?.id);
+        await _draftBox!.put('store_id', selectedStore?.id);
+        await _draftBox!.put('selected_date', selectedDate.toIso8601String());
+        await _draftBox!.put('purchase_date', selectedPurchaseDate.toIso8601String());
+
+        debugPrint('💾 Saved ${draftItems.length} draft items to Hive');
+      } catch (e) {
+        debugPrint('❌ Failed to save draft to Hive: $e');
+      }
+    });
+  }
+
+  /// Load draft stock items from Hive
+  Future<void> _loadDraftFromHive() async {
+    if (_draftBox == null || !_draftBox!.isOpen) {
+      // Wait for box to be ready
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (_draftBox == null || !_draftBox!.isOpen) {
+        debugPrint('⏭️ Skipping draft load - Hive box not ready');
+        return;
+      }
+    }
+
+    try {
+      final draftItems = _draftBox!.get('draft_items') as List<dynamic>?;
+      if (draftItems == null || draftItems.isEmpty) {
+        debugPrint('⏭️ No draft items found in Hive');
+        return;
+      }
+
+      debugPrint('📂 Loading ${draftItems.length} draft items from Hive');
+
+      // Only load if we don't have any items with productData
+      final hasExistingProducts = stockItems.any((item) => item.productData != null);
+      if (hasExistingProducts) {
+        debugPrint('⏭️ Skipping draft load - existing items found');
+        return;
+      }
+
+      // Convert draft items to StockItems first
+      final List<StockItem> loadedItems = [];
+      for (final itemMap in draftItems) {
+        if (itemMap is Map) {
+          final stockItem = _mapToStockItem(Map<String, dynamic>.from(itemMap));
+          // Only add items that have actual product data
+          if (stockItem.productData != null) {
+            loadedItems.add(stockItem);
+          }
+        }
+      }
+
+      // Only update UI if we have valid items to load
+      if (loadedItems.isEmpty) {
+        debugPrint('⏭️ No valid draft items with product data');
+        return;
+      }
+
+      setState(() {
+        // Clear existing empty rows and replace with loaded items
+        stockItems.clear();
+        stockItems.addAll(loadedItems);
+
+        // Add one empty row for new entries
+        stockItems.add(StockItem());
+
+        _markIndexCacheDirty();
+      });
+
+      // Update controllers
+      _updateControllersFromStockItems();
+
+      debugPrint('✅ Loaded ${loadedItems.length} draft items from Hive');
+    } catch (e) {
+      debugPrint('❌ Failed to load draft from Hive: $e');
+    }
+  }
+
+  /// Convert StockItem to Map for Hive storage
+  Map<String, dynamic> _stockItemToMap(StockItem item) {
+    return {
+      'barcode': item.barcode,
+      'category': item.category,
+      'product': item.product,
+      'quantity': item.quantity,
+      'salePrice': item.salePrice,
+      'mrp': item.mrp,
+      'wholesale': item.wholesale,
+      'purchaseRate': item.purchaseRate,
+      'unit': item.unit,
+      'rack': item.rack,
+      'expDate': item.expDate.toIso8601String(),
+      'batchNumber': item.batchNumber,
+      'selectedUnit': item.selectedUnit,
+      'selectedRack': item.selectedRack,
+      'taxInclude': item.taxInclude,
+      'productId': item.productData?.productId,
+      'categoryId': item.categoryData?.categoryId,
+    };
+  }
+
+  /// Convert Map to StockItem from Hive storage
+  StockItem _mapToStockItem(Map<String, dynamic> map) {
+    final stockItem = StockItem(
+      barcode: map['barcode'] ?? '',
+      category: map['category'] ?? '',
+      product: map['product'] ?? '',
+      quantity: map['quantity'] ?? '1',
+      salePrice: map['salePrice'] ?? '0',
+      mrp: map['mrp'] ?? '0',
+      wholesale: map['wholesale'] ?? '',
+      purchaseRate: map['purchaseRate'] ?? '0',
+      unit: map['unit'] ?? '',
+      rack: map['rack'] ?? '',
+      expDate: map['expDate'] != null
+          ? DateTime.tryParse(map['expDate']) ?? DateTime.now().add(const Duration(days: 365))
+          : DateTime.now().add(const Duration(days: 365)),
+      batchNumber: map['batchNumber'] ?? '',
+      selectedUnit: map['selectedUnit'],
+      selectedRack: map['selectedRack'],
+      taxInclude: map['taxInclude'] ?? false,
+    );
+
+    // Try to restore product data
+    final productId = map['productId'];
+    if (productId != null) {
+      try {
+        final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+        final product = localProductProvider.products.firstWhere(
+          (p) => p.productId == productId,
+          orElse: () => GetProduct(),
+        );
+        if (product.productId != null) {
+          stockItem.productData = product;
+        }
+      } catch (e) {
+        debugPrint('   - Could not restore product data: $e');
+      }
+    }
+
+    // Try to restore category data
+    final categoryId = map['categoryId'];
+    if (categoryId != null) {
+      try {
+        final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+        final categoryList = categoryProvider.category;
+        if (categoryList != null) {
+          final category = categoryList.firstWhere(
+            (c) => c.categoryId == categoryId,
+            orElse: () => Category(),
+          );
+          if (category.categoryId != null) {
+            stockItem.categoryData = category;
+          }
+        }
+      } catch (e) {
+        debugPrint('   - Could not restore category data: $e');
+      }
+    }
+
+    return stockItem;
+  }
+
+  /// Clear draft items from Hive (call after successful sync or reset)
+  Future<void> _clearDraftFromHive() async {
+    if (_draftBox == null || !_draftBox!.isOpen) return;
+    try {
+      await _draftBox!.delete('draft_items');
+      debugPrint('🗑️ Cleared draft items from Hive');
+    } catch (e) {
+      debugPrint('❌ Failed to clear draft from Hive: $e');
+    }
   }
 
   /// Set supplier data from pending item
@@ -321,8 +546,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   @override
   void dispose() {
     // Dispose timers
-
     _quantityDebounceTimer?.cancel();
+    _draftSaveDebouncer?.cancel();
 
     // Dispose all search controllers safely
     categorySearchControllers.values.forEach((controller) {
@@ -645,6 +870,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
             // Add one empty row for new items
             stockItems.add(StockItem());
+
+            // CRITICAL: Mark index cache as dirty so SliverList rebuilds correctly
+            _markIndexCacheDirty();
 
             debugPrint(
                 '✅ LOADED ${pendingItems.length} PENDING ITEMS AS EDITABLE ROWS');
@@ -1044,6 +1272,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     Provider.of<StockProvider>(context, listen: false).clearPendingStockItems();
     debugPrint('✅ PENDING STOCK ITEMS CLEARED');
 
+    // Clear draft items from Hive
+    _clearDraftFromHive();
+
     setState(() {
       debugPrint('🔄 UPDATING STATE VARIABLES...');
       // Reset header fields (keep selectedStore as it's loaded from active session)
@@ -1091,6 +1322,137 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       _getBatchNumberController(index).clear();
     });
     debugPrint('🧹 CLEARED STOCK ITEM AT INDEX $index');
+  }
+
+  /// Show Add Product Modal with barcode generation enabled
+  Future<void> _showAddProductModal(int index) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const AddProductWithBarcodeModal(
+          barcode: null, // null enables barcode generation button
+          isAddToCart: false,
+        );
+      },
+    );
+
+    // If a product was created, auto-fill the stock row
+    if (result != null && result['product'] != null) {
+      final product = result['product'];
+      final String? initialQuantity = result['initialQuantity']?.toString();
+
+      if (product is GetProduct) {
+        debugPrint('🔄 AUTO-FILLING FROM ADD PRODUCT MODAL...');
+        debugPrint('   - Product: ${product.productName} (ID: ${product.productId})');
+
+        // Get selling price from price object
+        final String sellingPrice = product.price?.price?.toString() ?? '0';
+        final String mrpValue = product.mrp?.toString() ?? '0';
+        final String purchasePrice = product.purchasePrice ?? '0';
+
+        setState(() {
+          // Set product data
+          stockItems[index].productData = product;
+          stockItems[index].product = product.productName ?? '';
+          stockItems[index].barcode = product.barcode ?? '';
+
+          // Auto-fill category - find the Category from CategoryProvider
+          if (product.category != null || product.categoryId != null) {
+            debugPrint('🔍 SEARCHING FOR CATEGORY: ${product.category?.name ?? product.categoryId}');
+            final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+            List<Category>? categoryList = categoryProvider.searchCategory;
+            if (categoryList == null || categoryList.isEmpty) {
+              categoryList = categoryProvider.category;
+            }
+            if (categoryList != null && categoryList.isNotEmpty) {
+              Category? matchingCategory;
+              // 1) Match by categoryId
+              if (product.categoryId != null) {
+                try {
+                  matchingCategory = categoryList.firstWhere(
+                      (cat) => cat.categoryId == product.categoryId);
+                } catch (_) {}
+              }
+              // 2) Match by slug
+              if (matchingCategory == null && product.category?.slug != null) {
+                try {
+                  matchingCategory = categoryList.firstWhere((cat) =>
+                      (cat.categorySlug ?? '') == (product.category!.slug ?? ''));
+                } catch (_) {}
+              }
+              // 3) Match by name (case-insensitive, trimmed)
+              if (matchingCategory == null && product.category?.name != null) {
+                final targetName = (product.category!.name ?? '').trim().toLowerCase();
+                try {
+                  matchingCategory = categoryList.firstWhere((cat) =>
+                      (cat.categoryName ?? '').trim().toLowerCase() == targetName);
+                } catch (_) {}
+              }
+              if (matchingCategory != null) {
+                stockItems[index].categoryData = matchingCategory;
+                stockItems[index].category = matchingCategory.categoryName ?? '';
+                debugPrint('   - Category: ${matchingCategory.categoryName} (ID: ${matchingCategory.categoryId})');
+              }
+            }
+          }
+
+          // Set pricing from product
+          stockItems[index].salePrice = sellingPrice;
+          stockItems[index].mrp = mrpValue;
+          stockItems[index].purchaseRate = purchasePrice;
+          stockItems[index].unit = product.unit ?? '';
+
+          // Update price controllers
+          _getRetailPriceController(index).text = sellingPrice;
+          _getMrpController(index).text = mrpValue;
+          _getPurchaseRateController(index).text = purchasePrice;
+
+          // Auto-fill unit dropdown - find the matching unit key
+          if (product.unit != null && product.unit!.isNotEmpty) {
+            debugPrint('🔍 SEARCHING FOR UNIT KEY: ${product.unit}');
+            final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+            final unitList = purchaseProvider.getUnitList;
+            if (unitList != null) {
+              // Find the key that matches the unit value
+              String? matchingUnitKey = unitList.entries
+                  .firstWhere(
+                    (entry) => entry.value == product.unit,
+                    orElse: () => const MapEntry('', ''),
+                  )
+                  .key;
+              if (matchingUnitKey.isNotEmpty) {
+                stockItems[index].selectedUnit = matchingUnitKey; // Store unit ID
+                stockItems[index].unit = product.unit!; // Store unit name for display
+                debugPrint('   - Unit Key (ID): $matchingUnitKey');
+                debugPrint('   - Unit Name: ${product.unit}');
+              }
+            }
+          }
+
+          // Set quantity from modal if provided
+          if (initialQuantity != null && initialQuantity.isNotEmpty) {
+            stockItems[index].quantity = initialQuantity;
+            _getQuantityController(index).text = initialQuantity;
+          }
+
+          // Update barcode controller
+          _getBarcodeController(index).text = product.barcode ?? '';
+
+          // Clear product cache to ensure dropdown shows the new product
+          _clearProductCache();
+        });
+
+        debugPrint('✅ Product auto-filled from modal: ${product.productName}');
+        debugPrint('   - Barcode: ${product.barcode}');
+        debugPrint('   - Sale Price: $sellingPrice');
+        debugPrint('   - MRP: $mrpValue');
+        debugPrint('   - Purchase Price: $purchasePrice');
+        debugPrint('   - Quantity: $initialQuantity');
+
+        // Note: Draft saving disabled - only successfully added items are persisted via StockProvider
+      }
+    }
   }
 
   /// Update pending stock item when form fields change
@@ -1701,22 +2063,36 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               Expanded(
                 child: Form(
                   key: _formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeaderSection(size),
-                        const SizedBox(height: 20),
-                        _buildStockTableHeader(),
-                        const SizedBox(height: 10),
-                        _buildStockTable(),
-                        const SizedBox(height: 20),
-                        _buildPaymentSection(),
-                        const SizedBox(height: 20),
-                        _buildActionButtons(size),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+                  child: CustomScrollView(
+                    slivers: [
+                      // Header Section (non-scrollable header content)
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeaderSection(size),
+                            const SizedBox(height: 20),
+                            _buildStockTableHeader(),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      ),
+                      // Stock Items List - Virtualized for performance
+                      _buildOptimizedStockList(),
+                      // Footer Section (payment and action buttons)
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            _buildPaymentSection(),
+                            const SizedBox(height: 20),
+                            _buildActionButtons(size),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2027,6 +2403,32 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return _visibleToOriginalIndexMap[visibleIndex] ?? -1;
   }
 
+  /// Build optimized stock list using SliverList for virtualization
+  /// This only builds visible items, preventing memory issues with 100+ items
+  Widget _buildOptimizedStockList() {
+    final visibleItems = visibleStockItems;
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, visibleIndex) {
+          int originalIndex = getOriginalIndex(visibleIndex);
+          if (originalIndex < 0) return const SizedBox.shrink();
+
+          // Use RepaintBoundary to isolate repaints for each row
+          return RepaintBoundary(
+            child: _buildStockRow(originalIndex, visibleIndex,
+                key: ValueKey('stock_row_$originalIndex')),
+          );
+        },
+        childCount: visibleItems.length,
+        // Add extent hints for better performance
+        addAutomaticKeepAlives: false, // Don't keep all items alive
+        addRepaintBoundaries: false, // We add our own RepaintBoundary
+      ),
+    );
+  }
+
+  // Legacy method - kept for reference but no longer used
   Widget _buildStockTable() {
     final visibleItems = visibleStockItems;
     return ListView.builder(
@@ -2538,47 +2940,86 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Barcode Text Field
+                // Barcode Text Field with Add Product Button
                 Expanded(
                   flex: 2,
-                  child: BuildBoxShadowContainer(
-                    circleRadius: 5,
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: TextFormField(
-                      controller: _getBarcodeController(index),
-                      focusNode: _getBarcodeFocusNode(index),
-                      decoration: const InputDecoration(
-                        hintText: 'Barcode',
-                        border: InputBorder.none,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: BuildBoxShadowContainer(
+                          circleRadius: 5,
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: TextFormField(
+                            controller: _getBarcodeController(index),
+                            focusNode: _getBarcodeFocusNode(index),
+                            decoration: const InputDecoration(
+                              hintText: 'Barcode',
+                              border: InputBorder.none,
+                              contentPadding:
+                                  EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            ),
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s11,
+                              0.27,
+                              ColorManager.textColor,
+                            ),
+                            onTap: () {
+                              // Select all text when field is tapped
+                              _getBarcodeController(index).selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset:
+                                    _getBarcodeController(index).text.length,
+                              );
+                            },
+                            onFieldSubmitted: (value) {
+                              // Update and auto-fill only on submit
+                              stockItems[index].barcode = value;
+                              _autoFillFromBarcode(index, value);
+                              _updatePendingStockItem(index);
+                              if (mounted) setState(() {});
+                            },
+                          ),
+                        ),
                       ),
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s11,
-                        0.27,
-                        ColorManager.textColor,
+                      const SizedBox(width: 8),
+                      // Add Product Button
+                      Tooltip(
+                        message: "Create new product",
+                        child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(5),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: ColorManager.boxShadowColor,
+                                blurRadius: 3,
+                                offset: Offset(1, 1),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.add,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => _showAddProductModal(index),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
+                            ),
+                          ),
+                        ),
                       ),
-                      onTap: () {
-                        // Select all text when field is tapped
-                        _getBarcodeController(index).selection = TextSelection(
-                          baseOffset: 0,
-                          extentOffset:
-                              _getBarcodeController(index).text.length,
-                        );
-                      },
-                      onFieldSubmitted: (value) {
-                        // Update and auto-fill only on submit
-                        stockItems[index].barcode = value;
-                        _autoFillFromBarcode(index, value);
-                        _updatePendingStockItem(index);
-                        if (mounted) setState(() {});
-                      },
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 // Product Dropdown with Search (maximum width)
                 Expanded(
                   flex: 6,
@@ -3760,6 +4201,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               });
 
               debugPrint('✅ PRODUCT DROPDOWN AUTO-FILL COMPLETED SUCCESSFULLY');
+
+              // Note: Draft saving disabled - only successfully added items are persisted via StockProvider
             }
           },
           displayText: (product) => product.productName ?? '',
