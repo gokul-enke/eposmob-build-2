@@ -902,10 +902,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     debugPrint('   - Category Name: ${pendingData['categoryName']}');
     debugPrint('   - Local ID: ${pendingData['localId']}');
     debugPrint('   - Unit ID (from pending): ${pendingData['unit']}');
+    debugPrint('   - Rack (from pending): ${pendingData['rack']}');
 
     // Create a new StockItem with data from pending item
     // Note: 'unit' field in pendingData contains the unit ID (selectedUnit), not the display name
     final unitId = pendingData['unit']?.toString();
+    final rackValue = (pendingData['rack'] ?? '').toString();
     final stockItem = StockItem(
       barcode: (pendingData['barcode'] ?? '').toString(),
       category: (pendingData['categoryName'] ?? '').toString(),
@@ -917,7 +919,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       purchaseRate: (pendingData['purchaseRate'] ?? '0').toString(),
       unit: '', // Will be set from unit list lookup below
       selectedUnit: unitId, // Restore the unit ID for dropdown selection
-      rack: (pendingData['rack'] ?? '').toString(),
+      rack: rackValue,
+      selectedRack: rackValue.isNotEmpty ? rackValue : null, // Restore rack for dropdown selection
       expDate: pendingData['expiryDate'] != null
           ? DateTime.tryParse(pendingData['expiryDate'].toString()) ??
               DateTime.now().add(const Duration(days: 365))
@@ -987,6 +990,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       final productId = pendingData['productId'];
+      
+      debugPrint('   - Looking for product ID: $productId');
+      debugPrint('   - Available products count: ${localProductProvider.products.length}');
 
       if (productId != null) {
         final product = localProductProvider.products.firstWhere(
@@ -996,7 +1002,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         if (product.productId != null) {
           stockItem.productData = product;
-          debugPrint('   - Product data set: ${product.productName}');
+          debugPrint('   - Product data set: ${product.productName} (ID: ${product.productId})');
+        } else {
+          debugPrint('   - ⚠️ Product ID $productId not found in LocalProductProvider');
         }
       }
     } catch (e) {
