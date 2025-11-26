@@ -31,6 +31,7 @@ import 'dart:async'; // Added for Timer
 import 'dart:convert';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/components/build_restricted_payment_selector.dart';
+import 'package:pos_machine/components/build_stock_confirmation_dialog.dart';
 import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -4688,8 +4689,18 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       List<Map<String, dynamic>>? paidMethods =
                           apiPaymentData['paid_methods'];
 
+                      // Calculate total stock value for confirmation dialog
+                      final int itemCount = stockProvider.pendingStockItemsCount;
+                      // Match purchase summary: Total Due Amount = total purchase
+                      // amount for this stock batch + current supplier balance.
+                      final double supplierBalance = _getSupplierBalance();
+                      final double totalDueAmount = totalStockValue + supplierBalance;
+                      
+                      // Check if payment data is provided
+                      final bool hasPayment = paymentMethods != null && paymentMethods.isNotEmpty;
+
                       // Optional validation: if payment data is provided, ensure it's complete
-                      if (paymentMethods != null && paymentMethods.isNotEmpty) {
+                      if (hasPayment) {
                         debugPrint('✅ PAYMENT DATA PROVIDED - VALIDATING...');
                         debugPrint('   - Payment Methods: $paymentMethods');
                         debugPrint('   - Paid Methods: $paidMethods');
@@ -4722,9 +4733,40 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         }
 
                         debugPrint('✅ PAYMENT DATA VALIDATION PASSED');
+                        
+                        // Show payment summary confirmation dialog
+                        final confirmed = await StockConfirmationDialog.showPaymentSummary(
+                          context: context,
+                          itemCount: itemCount,
+                          totalAmount: totalStockValue,
+                          totalDueAmount: totalDueAmount,
+                          paymentData: paymentData,
+                          onConfirm: () {},
+                        );
+                        
+                        if (confirmed != true) {
+                          debugPrint('❌ USER CANCELLED PAYMENT CONFIRMATION');
+                          return;
+                        }
+                        debugPrint('✅ USER CONFIRMED PAYMENT SUMMARY');
                       } else {
                         debugPrint(
-                            'ℹ️ NO PAYMENT DATA PROVIDED - PROCEEDING WITHOUT PAYMENT INFO');
+                            'ℹ️ NO PAYMENT DATA PROVIDED - SHOWING CONFIRMATION');
+                        
+                        // Show no payment confirmation dialog
+                        final confirmed = await StockConfirmationDialog.showNoPaymentConfirmation(
+                          context: context,
+                          itemCount: itemCount,
+                          totalAmount: totalStockValue,
+                          totalDueAmount: totalDueAmount,
+                          onConfirm: () {},
+                        );
+                        
+                        if (confirmed != true) {
+                          debugPrint('❌ USER CANCELLED - WANTS TO ADD PAYMENT');
+                          return;
+                        }
+                        debugPrint('✅ USER CONFIRMED SUBMISSION WITHOUT PAYMENT');
                       }
 
                       debugPrint(
