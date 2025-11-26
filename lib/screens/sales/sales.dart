@@ -1285,6 +1285,9 @@ Powered by CloudPOS''',
                 String? customerAddress =
                     orderDetails.data?.customerDetails?.address?.join(', ');
 
+                // Note: Balance info not available from order details API
+                // customerOldBalance, customerCurrentBalance, paidAmount will be null
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -1303,6 +1306,7 @@ Powered by CloudPOS''',
                       customerEmail: customerEmail,
                       customerAddress: customerAddress,
                       orderReturns: orderDetails.data?.orderReturns,
+                      // Balance info not available from order details API
                     ),
                   ),
                 );

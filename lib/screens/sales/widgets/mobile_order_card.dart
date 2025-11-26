@@ -233,6 +233,9 @@ class MobileOrderCard extends StatelessWidget {
         String? customerAddress =
             orderDetails.data?.customerDetails?.address?.join(', ');
 
+        // Note: Balance info not available from order details API
+        // customerOldBalance, customerCurrentBalance, paidAmount will be null
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -250,6 +253,7 @@ class MobileOrderCard extends StatelessWidget {
               customerEmail: customerEmail,
               customerAddress: customerAddress,
               orderReturns: orderDetails.data?.orderReturns,
+              // Balance info not available from order details API
             ),
           ),
         );

@@ -7,6 +7,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 
 class PrintService {
   const PrintService();
@@ -109,11 +110,16 @@ class PrintService {
       }
 
       if (!context.mounted) return;
+
+      // Get active store name
+      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeName = storeSession.activeStore?.storeName ?? "Store";
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PrintPage(
-            storeName: "SOUQ POINT",
+            storeName: storeName,
             cartItems: cartItems,
             formattedTotal: netTotal.toString(),
             savedTotal: youSaved.toString(),
@@ -130,6 +136,7 @@ class PrintService {
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
+            // Balance info not available for offline saved orders
           ),
         ),
       );

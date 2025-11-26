@@ -27,6 +27,7 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
@@ -1531,34 +1532,18 @@ class BillingPageState extends State<BillingPage>
                                 size: size,
                                 onSelected: (GetProduct selectedProduct,
                                     Stock? selectedStock) async {
-                                  // Directly populate form fields without showing price modal
-
-                                  // Determine the price to use: stock price or product base price
-                                  double defaultPrice = 0.0;
-                                  if (selectedStock != null) {
-                                    // Use stock price if available
-                                    defaultPrice = double.tryParse(
-                                            selectedStock.price ?? "0") ??
-                                        0.0;
-                                  } else {
-                                    // Use product base price
-                                    defaultPrice = double.tryParse(
-                                            selectedProduct.price?.price ??
-                                                "0") ??
-                                        0.0;
-                                  }
-
+                                  // Product is already added to cart by ProductCartHelper
+                                  // Clear fields and reset autocomplete for next product
                                   setState(() {
-                                    selectedProductIdController.text =
-                                        selectedProduct.productId.toString();
-                                    unitPriceController.text =
-                                        defaultPrice.toString();
-                                    quantityController.text = '1';
-                                    selectedProductNameController.text =
-                                        selectedProduct.productName ?? '';
-                                    barcodeController.text =
-                                        selectedProduct.barcode ?? '';
+                                    _autocompleteProductKey = GlobalKey();
+                                    quantityController.clear();
+                                    barcodeController.clear();
+                                    selectedProductIdController.clear();
+                                    unitPriceController.clear();
+                                    selectedProductNameController.clear();
                                   });
+                                  // Focus the barcode/search field for next entry
+                                  _focusTextField();
                                 },
                                 productList: productProvider.productList!,
                               ),
@@ -5068,11 +5053,15 @@ class BillingPageState extends State<BillingPage>
       debugPrint(
           "Sample item: ${cartItems.isNotEmpty ? json.encode(cartItems[0]) : 'No items'}");
 
+      // Get active store name
+      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeName = storeSession.activeStore?.storeName ?? "Store";
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PrintPage(
-            storeName: "SOUQ POINT",
+            storeName: storeName,
             cartItems: cartItems,
             formattedTotal: netTotal.toString(), // Use calculated net total
             savedTotal:
@@ -5090,6 +5079,7 @@ class BillingPageState extends State<BillingPage>
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
+            // Balance info not available for offline saved orders
           ),
         ),
       );
