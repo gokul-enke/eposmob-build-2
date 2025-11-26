@@ -611,6 +611,43 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                               showName: false,
                               height: widget.size.height * 0.048,
                             ),
+                            const SizedBox(height: 4),
+                            if (_selectedCustomer != null &&
+                                _selectedCustomer!.isNotEmpty)
+                              Builder(
+                                builder: (context) {
+                                  final customer = _customerList.firstWhere(
+                                    (c) => c.id?.toString() == _selectedCustomer,
+                                    orElse: () => CustomerListModelData(id: 0),
+                                  );
+
+                                  final balance = customer.balance;
+                                  if (balance == null) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  final balanceValue =
+                                      double.tryParse(balance.toString());
+
+                                  if (balanceValue == null) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  final textColor = balanceValue >= 0
+                                      ? Colors.green.shade700
+                                      : Colors.red.shade700;
+
+                                  return Text(
+                                    'Balance: ${balanceValue.toStringAsFixed(2)}',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s11,
+                                      0.27,
+                                      textColor,
+                                    ),
+                                  );
+                                },
+                              ),
                           ],
                         ),
                       ),
@@ -898,28 +935,20 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                     _buildLabel("Payment Date",
                                         isRequired: true),
                                     const SizedBox(height: 4),
-                                    CustomBoxShadowContainer(
-                                      circleRadius: 7,
-                                      alignment: Alignment.centerLeft,
-                                      margin: const EdgeInsets.symmetric(
-                                          horizontal: 0, vertical: 0),
-                                      padding: const EdgeInsets.only(left: 0),
-                                      height: widget.size.height * .048,
-                                      width: widget.size.width,
-                                      child: CustomCalendarPickerTableCell(
-                                        initialDate: DateTime.tryParse(card
-                                                .paymentDateController.text) ??
-                                            DateTime.now(),
-                                        onDateSelected: (date) {
-                                          setState(() {
-                                            card.paymentDateController.text =
-                                                date
-                                                    .toIso8601String()
-                                                    .split('T')[0];
-                                          });
-                                        },
-                                        hintText: "Select payment date",
-                                      ),
+                                    CustomCalendarPickerTableCell(
+                                      initialDate: DateTime.tryParse(card
+                                              .paymentDateController.text) ??
+                                          DateTime.now(),
+                                      onDateSelected: (date) {
+                                        setState(() {
+                                          card.paymentDateController.text =
+                                              date
+                                                  .toIso8601String()
+                                                  .split('T')[0];
+                                        });
+                                      },
+                                      hintText: "Select payment date",
+                                      height: widget.size.height * 0.048,
                                     ),
                                   ],
                                 ),
@@ -956,28 +985,19 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                     _buildLabel("Payment Date",
                                         isRequired: true),
                                     const SizedBox(height: 4),
-                                    CustomBoxShadowContainer(
-                                      circleRadius: 7,
-                                      alignment: Alignment.centerLeft,
-                                      margin: const EdgeInsets.symmetric(
-                                          horizontal: 0, vertical: 0),
-                                      padding: const EdgeInsets.only(left: 0),
-                                      height: widget.size.height * .048,
-                                      width: widget.size.width,
-                                      child: CustomCalendarPickerTableCell(
-                                        initialDate: DateTime.tryParse(card
-                                                .paymentDateController.text) ??
-                                            DateTime.now(),
-                                        onDateSelected: (date) {
-                                          setState(() {
-                                            card.paymentDateController.text =
-                                                date
-                                                    .toIso8601String()
-                                                    .split('T')[0];
-                                          });
-                                        },
-                                        hintText: "Select payment date",
-                                      ),
+                                    CustomCalendarPickerTableCell(
+                                      initialDate: DateTime.tryParse(card
+                                              .paymentDateController.text) ??
+                                          DateTime.now(),
+                                      onDateSelected: (date) {
+                                        setState(() {
+                                          card.paymentDateController.text =
+                                              date
+                                                  .toIso8601String()
+                                                  .split('T')[0];
+                                        });
+                                      },
+                                      hintText: "Select payment date",
                                     ),
                                   ],
                                 ),

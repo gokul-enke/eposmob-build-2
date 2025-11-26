@@ -18,6 +18,7 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
   final bool isForExpiry;
   final bool isAllowEdit;
   final bool allowTextInput;
+  final double? height;
 
   const CustomCalendarPickerTableCell({
     Key? key,
@@ -31,6 +32,7 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
     this.isForExpiry = false,
     this.isAllowEdit = true,
     this.allowTextInput = false,
+    this.height,
   }) : super(key: key);
 
   @override
@@ -493,6 +495,7 @@ class _CustomCalendarPickerTableCellState
         blurRadius: 6,
         offsetValue: const Offset(1, 1),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        height: widget.height,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
