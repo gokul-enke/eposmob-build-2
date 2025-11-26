@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/list_stock.dart' as stock_models;
 import '../resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +26,13 @@ class StockProvider extends ChangeNotifier {
   // Local pending stock items for batch processing
   List<Map<String, dynamic>> _pendingStockItems = [];
   List<Map<String, dynamic>> _processedStockItems = [];
+
+  // Hive box name for pending stock items persistence
+  static const String _kPendingStockBoxName = 'pending_stock_items';
+
+  // Hive box for persistence
+  Box? _pendingStockBox;
+  bool _isHiveInitialized = false;
 
   // Pagination properties
   int _stockCurrentPage = 1;
@@ -196,6 +204,7 @@ class StockProvider extends ChangeNotifier {
     stockItem['status'] = 'pending'; // pending, processing, success, failed
     
     _pendingStockItems.add(stockItem);
+    _savePendingItemsToHive(); // Persist to Hive
     notifyListeners();
     
     debugPrint('✅ STOCK ITEM ADDED TO PENDING LIST');
@@ -207,6 +216,7 @@ class StockProvider extends ChangeNotifier {
   /// Remove stock item from pending list
   void removeStockItemLocally(String localId) {
     _pendingStockItems.removeWhere((item) => item['localId'] == localId);
+    _savePendingItemsToHive(); // Persist to Hive
     notifyListeners();
     debugPrint('🗑️ REMOVED STOCK ITEM FROM PENDING LIST: $localId');
   }
@@ -246,6 +256,7 @@ class StockProvider extends ChangeNotifier {
       'updatedAt': DateTime.now().toIso8601String(), // Add update timestamp
     };
     
+    _savePendingItemsToHive(); // Persist to Hive
     notifyListeners();
     
     debugPrint('✅ STOCK ITEM UPDATED IN PENDING LIST');
@@ -267,6 +278,7 @@ class StockProvider extends ChangeNotifier {
   void clearPendingStockItems() {
     _pendingStockItems.clear();
     _processedStockItems.clear();
+    clearPendingItemsFromHive(); // Clear from Hive too
     notifyListeners();
     debugPrint('🧹 CLEARED ALL PENDING STOCK ITEMS');
   }
@@ -287,8 +299,100 @@ class StockProvider extends ChangeNotifier {
         item['status'] = 'pending';
       }
     }
+    _savePendingItemsToHive();
     notifyListeners();
     debugPrint('🔄 RESET ${failedStockItemsCount} FAILED ITEMS TO PENDING FOR RETRY');
+  }
+  
+  /// *********************** HIVE PERSISTENCE ***************************************************
+  
+  /// Initialize Hive box for pending stock items persistence
+  Future<void> initHive() async {
+    if (_isHiveInitialized) return;
+    
+    try {
+      if (!Hive.isBoxOpen(_kPendingStockBoxName)) {
+        _pendingStockBox = await Hive.openBox(_kPendingStockBoxName);
+      } else {
+        _pendingStockBox = Hive.box(_kPendingStockBoxName);
+      }
+      _isHiveInitialized = true;
+      debugPrint('✅ StockProvider Hive box initialized');
+      
+      // Load any previously saved pending items
+      await loadPendingItemsFromHive();
+    } catch (e) {
+      debugPrint('❌ Failed to initialize StockProvider Hive box: $e');
+    }
+  }
+  
+  /// Save pending stock items to Hive
+  Future<void> _savePendingItemsToHive() async {
+    if (_pendingStockBox == null || !_pendingStockBox!.isOpen) {
+      debugPrint('⚠️ Hive box not ready, skipping save');
+      return;
+    }
+    
+    try {
+      // Convert pending items to JSON-serializable format
+      final List<Map<String, dynamic>> itemsToSave = _pendingStockItems.map((item) {
+        // Create a copy and ensure all values are serializable
+        final Map<String, dynamic> serializable = {};
+        item.forEach((key, value) {
+          if (value == null || value is String || value is num || value is bool) {
+            serializable[key] = value;
+          } else if (value is DateTime) {
+            serializable[key] = value.toIso8601String();
+          } else {
+            serializable[key] = value.toString();
+          }
+        });
+        return serializable;
+      }).toList();
+      
+      await _pendingStockBox!.put('pending_items', itemsToSave);
+      debugPrint('💾 Saved ${itemsToSave.length} pending stock items to Hive');
+    } catch (e) {
+      debugPrint('❌ Failed to save pending items to Hive: $e');
+    }
+  }
+  
+  /// Load pending stock items from Hive
+  Future<void> loadPendingItemsFromHive() async {
+    if (_pendingStockBox == null || !_pendingStockBox!.isOpen) {
+      debugPrint('⚠️ Hive box not ready, skipping load');
+      return;
+    }
+    
+    try {
+      final savedItems = _pendingStockBox!.get('pending_items');
+      if (savedItems != null && savedItems is List) {
+        _pendingStockItems.clear();
+        for (var item in savedItems) {
+          if (item is Map) {
+            _pendingStockItems.add(Map<String, dynamic>.from(item));
+          }
+        }
+        debugPrint('📂 Loaded ${_pendingStockItems.length} pending stock items from Hive');
+        notifyListeners();
+      } else {
+        debugPrint('📂 No pending stock items found in Hive');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to load pending items from Hive: $e');
+    }
+  }
+  
+  /// Clear pending items from Hive
+  Future<void> clearPendingItemsFromHive() async {
+    if (_pendingStockBox == null || !_pendingStockBox!.isOpen) return;
+    
+    try {
+      await _pendingStockBox!.delete('pending_items');
+      debugPrint('🗑️ Cleared pending stock items from Hive');
+    } catch (e) {
+      debugPrint('❌ Failed to clear pending items from Hive: $e');
+    }
   }
   
   /// *********************** BATCH PROCESS STOCK ITEMS ***************************************************
@@ -472,6 +576,7 @@ class StockProvider extends ChangeNotifier {
       };
     } finally {
       _batchProcessingLoading = false;
+      _savePendingItemsToHive(); // Save updated pending list to Hive
       notifyListeners();
     }
   }

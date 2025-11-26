@@ -296,18 +296,22 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     // No need to calculate tax for empty stock items in initState
   }
 
-  /// Load items - only pending items from StockProvider
-  /// Note: Draft loading disabled - only successfully added items (pending) are loaded
-  void _loadItemsSequentially() {
+  /// Load items - pending items from StockProvider (persisted in Hive)
+  Future<void> _loadItemsSequentially() async {
     final stockProvider = Provider.of<StockProvider>(context, listen: false);
+    
+    // Initialize StockProvider's Hive to load persisted pending items
+    await stockProvider.initHive();
+    
     final pendingItems = stockProvider.pendingStockItems;
 
     if (pendingItems.isNotEmpty) {
-      // Load pending items - these are items that were successfully added
+      // Load pending items - these are items that were successfully added and persisted
       _loadPendingStockItems();
+      debugPrint('✅ Loaded ${pendingItems.length} pending items from Hive');
+    } else {
+      debugPrint('📂 No pending stock items found');
     }
-    // Clear any stale drafts from previous sessions
-    _clearDraftFromHive();
   }
 
   /// Initialize Hive box for draft persistence
@@ -2907,7 +2911,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                         ),
                       ),
-                      // Updated indicator
+                      // Updated indicator - Yellow badge showing "Edited"
                       if (item.isSuccessfullyAdded &&
                           item.apiResponse != null &&
                           item.apiResponse!['localId'] != null) ...[
@@ -2920,16 +2924,28 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
                             if (!isUpdated) return const SizedBox.shrink();
 
-                            return const Positioned(
-                              top: 0,
-                              right: 0,
-                              child: SizedBox(
-                                width: 8,
-                                height: 8,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange,
-                                    shape: BoxShape.circle,
+                            return Positioned(
+                              top: -4,
+                              right: -8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber,
+                                  borderRadius: BorderRadius.circular(4),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: const Text(
+                                  'Edited',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
