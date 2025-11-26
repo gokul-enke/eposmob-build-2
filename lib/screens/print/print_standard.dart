@@ -60,6 +60,9 @@ class StandardPrinter {
     String? customerEmail,
     String? customerAddress,
     OrderReturns? orderReturns, // Add this parameter
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before printing
@@ -429,7 +432,9 @@ class StandardPrinter {
                         savedTotal,
                         discountAmount,
                         cartItems.length,
-                        billDocumentConfig),
+                        billDocumentConfig,
+                        customerOldBalance,
+                        customerCurrentBalance),
 
                     // Add Amount in words under order summary when there are no returns
                     if (updatedSettings?['showAmountInWords']?.visible ==
@@ -454,6 +459,16 @@ class StandardPrinter {
                             ],
                           ),
                         ],
+                      ),
+
+                    // Add Customer Balance after Amount in words (small, aligned)
+                    if (customerOldBalance != null || customerCurrentBalance != null || paidAmount != null)
+                      _buildCustomerBalancePdf(
+                        selectedPaperSize,
+                        customerOldBalance,
+                        customerCurrentBalance,
+                        paidAmount,
+                        bodyStyle,
                       ),
                   ],
                 ),
@@ -922,7 +937,9 @@ class StandardPrinter {
       String? savedTotal,
       String? discountAmount,
       int itemCount,
-      DocumentConfig? billDocumentConfig) {
+      DocumentConfig? billDocumentConfig,
+      double? customerOldBalance,
+      double? customerCurrentBalance) {
     double savedTotalValue = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
     double formattedTotalValue = double.tryParse(formattedTotal) ?? 0.0;
     double discountAmountValue =
@@ -1004,6 +1021,61 @@ class StandardPrinter {
     }
 
     return pw.Column(children: summaryWidgets);
+  }
+
+  // Helper method for customer balance display (3 lines with spacing)
+  pw.Widget _buildCustomerBalancePdf(
+    String selectedPaperSize,
+    double? oldBalance,
+    double? currentBalance,
+    double? paidAmount,
+    pw.TextStyle style,
+  ) {
+    // Use smaller font size for balance display
+    final balanceStyle = pw.TextStyle(
+      fontSize: selectedPaperSize == 'A5' ? 6.0 : 8.0,
+      color: PdfColors.black,
+    );
+    final balanceBoldStyle = pw.TextStyle(
+      fontSize: selectedPaperSize == 'A5' ? 6.0 : 8.0,
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.black,
+    );
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 5),
+      child: pw.Column(
+        children: [
+          // Old Balance line
+          if (oldBalance != null)
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Old Bal:', style: balanceStyle),
+                pw.Text(oldBalance.toStringAsFixed(2), style: balanceStyle),
+              ],
+            ),
+          // Paid Amount line
+          if (paidAmount != null)
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Paid Amt:', style: balanceStyle),
+                pw.Text(paidAmount.toStringAsFixed(2), style: balanceStyle),
+              ],
+            ),
+          // Current Balance line
+          if (currentBalance != null)
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Cur Bal:', style: balanceBoldStyle),
+                pw.Text(currentBalance.toStringAsFixed(2), style: balanceBoldStyle),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 
   // Date and Time Row for PDF - minimal design
@@ -1760,6 +1832,9 @@ class StandardPrinter {
     String? customerEmail,
     String? customerAddress,
     OrderReturns? orderReturns,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -2094,7 +2169,9 @@ class StandardPrinter {
                             savedTotal,
                             discountAmount,
                             cartItems.length,
-                            billDocumentConfig),
+                            billDocumentConfig,
+                            customerOldBalance,
+                            customerCurrentBalance),
                       ],
                     ),
                   ),
@@ -2158,6 +2235,19 @@ class StandardPrinter {
                           textAlign: pw.TextAlign.right,
                         ),
                       ],
+                    ),
+                  ),
+
+                // Add Customer Balance after Amount in words (small, aligned)
+                if (customerOldBalance != null || customerCurrentBalance != null || paidAmount != null)
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 8),
+                    child: _buildCustomerBalancePdf(
+                      selectedPaperSize,
+                      customerOldBalance,
+                      customerCurrentBalance,
+                      paidAmount,
+                      bodyStyle,
                     ),
                   ),
 

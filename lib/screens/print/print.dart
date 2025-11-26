@@ -33,6 +33,9 @@ class PrintPage extends StatefulWidget {
   final String? customerEmail;
   final String? customerAddress;
   final OrderReturns? orderReturns; // Add this line
+  final double? customerOldBalance;
+  final double? customerCurrentBalance;
+  final double? paidAmount;
 
   const PrintPage({
     super.key,
@@ -49,6 +52,9 @@ class PrintPage extends StatefulWidget {
     this.customerEmail,
     this.customerAddress,
     this.orderReturns, // Add this line
+    this.customerOldBalance,
+    this.customerCurrentBalance,
+    this.paidAmount,
   });
 
   @override
@@ -445,6 +451,9 @@ class _PrintPageState extends State<PrintPage> {
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
       orderReturns: widget.orderReturns, // Add this line
+      customerOldBalance: widget.customerOldBalance,
+      customerCurrentBalance: widget.customerCurrentBalance,
+      paidAmount: widget.paidAmount,
     );
   }
 
@@ -470,6 +479,9 @@ class _PrintPageState extends State<PrintPage> {
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
       orderReturns: widget.orderReturns, // Add this line
+      customerOldBalance: widget.customerOldBalance,
+      customerCurrentBalance: widget.customerCurrentBalance,
+      paidAmount: widget.paidAmount,
     );
   }
 

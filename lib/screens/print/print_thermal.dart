@@ -75,6 +75,9 @@ class ThermalPrinter {
     String? customerEmail,
     String? customerAddress,
     OrderReturns? orderReturns,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
   }) async {
     debugPrint("===== THERMAL PRINTING DEBUG =====");
 
@@ -171,7 +174,9 @@ class ThermalPrinter {
           cartItems,
           isFromLocalStorage,
           selectedFontType,
-          paperSize);
+          paperSize,
+          customerOldBalance,
+          customerCurrentBalance);
       debugPrint("Total amount built successfully");
 
       // Add Order Returns section if orderReturns is not null and has items
@@ -218,6 +223,18 @@ class ThermalPrinter {
             selectedFontType,
           );
           debugPrint("Amount in words built successfully");
+        }
+
+        // Add Customer Balance after Amount in words
+        if (customerOldBalance != null || customerCurrentBalance != null || paidAmount != null) {
+          bytes += _buildCustomerBalance(
+            generator,
+            customerOldBalance,
+            customerCurrentBalance,
+            paidAmount,
+            selectedFontType,
+          );
+          debugPrint("Customer balance built successfully");
         }
       }
 
@@ -1017,7 +1034,7 @@ class ThermalPrinter {
   ) {
     List<int> bytes = [];
 
-    bytes += generator.emptyLines(1);
+    // bytes += generator.emptyLines(1);
     bytes += generator.text(
       'Amount in words:',
       styles: PosStyles(
@@ -1074,6 +1091,99 @@ class ThermalPrinter {
         );
       }
     }
+
+    return bytes;
+  }
+
+  // Helper method for customer balance display (3 lines with spacing)
+  List<int> _buildCustomerBalance(
+    Generator generator,
+    double? oldBalance,
+    double? currentBalance,
+    double? paidAmount,
+    PosFontType fontType,
+  ) {
+    List<int> bytes = [];
+
+    // Add space above
+    // bytes += generator.emptyLines(1);
+
+    // Old Balance line
+    if (oldBalance != null) {
+      bytes += generator.row([
+        PosColumn(
+          text: 'Old Bal:',
+          width: 6,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: oldBalance.toStringAsFixed(2),
+          width: 6,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            height: textSizeSmall,
+          ),
+        ),
+      ]);
+    }
+
+    // Paid Amount line
+    if (paidAmount != null) {
+      bytes += generator.row([
+        PosColumn(
+          text: 'Paid Amt:',
+          width: 6,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: paidAmount.toStringAsFixed(2),
+          width: 6,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            height: textSizeSmall,
+          ),
+        ),
+      ]);
+    }
+
+    // Current Balance line
+    if (currentBalance != null) {
+      bytes += generator.row([
+        PosColumn(
+          text: 'Cur Bal:',
+          width: 6,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            bold: true,
+            height: textSizeSmall,
+          ),
+        ),
+        PosColumn(
+          text: currentBalance.toStringAsFixed(2),
+          width: 6,
+          styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.right,
+            bold: true,
+            height: textSizeSmall,
+          ),
+        ),
+      ]);
+    }
+
+    // Add space below
+    bytes += generator.emptyLines(1);
 
     return bytes;
   }
@@ -1656,7 +1766,9 @@ class ThermalPrinter {
       List<dynamic> cartItems,
       bool isFromLocalStorage,
       PosFontType fontType,
-      PaperSize paperSize) {
+      PaperSize paperSize,
+      double? customerOldBalance,
+      double? customerCurrentBalance) {
     List<int> bytes = [];
 
     debugPrint("===== BUILD TOTAL AMOUNT DEBUG =====");

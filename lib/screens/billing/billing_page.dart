@@ -3964,8 +3964,21 @@ class BillingPageState extends State<BillingPage>
             String? customerAddress =
                 orderDetails.data?.customerDetails?.address?.join(', ');
 
+            // Calculate customer balance for print
+            double? oldBalance = selectedCustomer?.balance;
+            double totalPaid = _getTotalPaidAmount();
+            double? currentBalance;
+            if (oldBalance != null) {
+              double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
+              // Current balance = Old balance - (Cart Total - Amount Paid)
+              // If customer paid less than cart total, their balance decreases (they owe more)
+              // If customer paid more than cart total, their balance increases (they have credit)
+              currentBalance = oldBalance - (cartTotal - totalPaid);
+            }
+
             debugPrint(
                 "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
+            debugPrint("💰 Customer Old Balance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -3983,6 +3996,9 @@ class BillingPageState extends State<BillingPage>
                   customerPhone: customerPhone,
                   customerEmail: customerEmail,
                   customerAddress: customerAddress,
+                  customerOldBalance: oldBalance,
+                  customerCurrentBalance: currentBalance,
+                  paidAmount: totalPaid > 0 ? totalPaid : null,
                 ),
               ),
             );
