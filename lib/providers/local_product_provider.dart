@@ -967,13 +967,21 @@ class LocalProductProvider extends ChangeNotifier {
             }
 
             // Create a new Stock object with updated quantity (since Stock fields are final)
+            // 🔧 FIX: Preserve ALL stock fields including supplier, sku, unit, date, etc.
             product.stock![i] = Stock(
               id: currentStock.id,
               productId: currentStock.productId,
+              supplier: currentStock.supplier,
               quantity: newQuantity,
               price: currentStock.price,
+              sku: currentStock.sku,
               mrp: currentStock.mrp,
+              unit: currentStock.unit,
               purchasePrice: currentStock.purchasePrice,
+              date: currentStock.date,
+              expiryDate: currentStock.expiryDate,
+              rack: currentStock.rack,
+              hsnCode: currentStock.hsnCode,
             );
 
             debugPrint(
@@ -1422,14 +1430,22 @@ class LocalProductProvider extends ChangeNotifier {
       if (stockIndex != -1) {
         // Update existing stock entry
         Stock existingStock = updatedStock[stockIndex];
+        // 🔧 FIX: Preserve ALL stock fields including supplier, sku, unit, date, etc.
         updatedStock[stockIndex] = Stock(
           id: existingStock.id,
           productId: existingStock.productId,
+          supplier: existingStock.supplier,
           quantity: (existingStock.quantity ?? 0) +
               quantity, // Add to existing quantity
           price: price,
+          sku: existingStock.sku,
           mrp: mrp,
+          unit: existingStock.unit,
           purchasePrice: purchasePrice,
+          date: existingStock.date,
+          expiryDate: existingStock.expiryDate,
+          rack: existingStock.rack,
+          hsnCode: existingStock.hsnCode,
         );
         debugPrint(
             "📦 Updated existing stock entry - New quantity: ${updatedStock[stockIndex].quantity}");
@@ -1510,13 +1526,21 @@ class LocalProductProvider extends ChangeNotifier {
 
         if (stockIndex != -1) {
           Stock existingStock = updatedStock[stockIndex];
+          // 🔧 FIX: Preserve ALL stock fields including supplier, sku, unit, date, etc.
           updatedStock[stockIndex] = Stock(
             id: existingStock.id,
             productId: existingStock.productId,
+            supplier: existingStock.supplier,
             quantity: newQuantity,
             price: existingStock.price,
+            sku: existingStock.sku,
             mrp: existingStock.mrp,
+            unit: existingStock.unit,
             purchasePrice: existingStock.purchasePrice,
+            date: existingStock.date,
+            expiryDate: existingStock.expiryDate,
+            rack: existingStock.rack,
+            hsnCode: existingStock.hsnCode,
           );
 
           // Create new product instance with updated stock
