@@ -753,6 +753,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return batchNumberControllers[index]!;
   }
 
+  TextEditingController _getUnitSearchController(int index) {
+    if (!unitSearchControllers.containsKey(index)) {
+      unitSearchControllers[index] = TextEditingController();
+    }
+    return unitSearchControllers[index]!;
+  }
+
+  TextEditingController _getRackSearchController(int index) {
+    if (!rackSearchControllers.containsKey(index)) {
+      rackSearchControllers[index] = TextEditingController();
+    }
+    return rackSearchControllers[index]!;
+  }
+
   Future<void> _initializeData() async {
     // Initialize any required data
     await _loadCategories(); // Ensure categories are fresh
@@ -3924,17 +3938,29 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           height: 40,
           child: Selector<CategoryProvider, List<Category>?>(
             selector: (context, provider) => provider.category,
-            shouldRebuild: (previous, current) => previous?.length != current?.length,
+            shouldRebuild: (previous, current) => true, // Always rebuild to ensure fresh data
             builder: (context, categoryList, child) {
               final filteredCategories = categoryList
                       ?.where((category) => category.categoryName != "ALL")
                       .toList() ??
                   [];
 
+              // Find matching category from the list to ensure proper reference
+              Category? selectedCategory = stockItems[index].categoryData;
+              if (selectedCategory != null && selectedCategory.categoryId != null) {
+                try {
+                  selectedCategory = filteredCategories.firstWhere(
+                    (cat) => cat.categoryId == selectedCategory!.categoryId,
+                  );
+                } catch (e) {
+                  selectedCategory = null;
+                }
+              }
+
               return BuildDropDownWithSearch<Category>(
                 title: null,
                 hintText: "Select category",
-                value: stockItems[index].categoryData,
+                value: selectedCategory,
                 items: filteredCategories,
                 onChanged: (category) {
                   setState(() {
@@ -3943,6 +3969,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     // Clear product when category changes
                     stockItems[index].productData = null;
                     stockItems[index].product = '';
+                    // Clear barcode when category changes
+                    stockItems[index].barcode = '';
+                    _getBarcodeController(index).text = '';
                     // Clear product cache to force refresh
                     _clearProductCache();
                   });
@@ -3970,39 +3999,29 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildProductDropdown(int index) {
     return Selector<LocalProductProvider, List<GetProduct>>(
       selector: (context, provider) => provider.products,
-      shouldRebuild: (previous, current) => previous.length != current.length,
+      shouldRebuild: (previous, current) => true, // Always rebuild to ensure fresh data
       builder: (context, allProducts, child) {
-        // Use cached filtered products to avoid repeated filtering
+        // Get current category for this row
         final selectedCategoryId = stockItems[index].categoryData?.categoryId;
-        final cacheKey = selectedCategoryId;
 
+        // Always filter fresh - don't use cache for better reliability
         List<GetProduct> filteredProducts;
-        if (_filteredProductsCache.containsKey(cacheKey)) {
-          filteredProducts = _filteredProductsCache[cacheKey]!;
+        if (selectedCategoryId != null) {
+          filteredProducts = allProducts
+              .where((p) => p.categoryId == selectedCategoryId)
+              .toList();
         } else {
-          // Filter and cache the results
-          if (selectedCategoryId != null) {
-            filteredProducts = allProducts
-                .where((p) => p.categoryId == selectedCategoryId)
-                .toList();
-          } else {
-            filteredProducts = allProducts;
-          }
-
-          // De-duplicate by productId
-          final Map<int, GetProduct> productMap = {};
-          for (var product in filteredProducts) {
-            if (product.productId != null) {
-              productMap[product.productId!] = product;
-            }
-          }
-          filteredProducts = productMap.values.toList();
-
-          // Cache the result
-          _filteredProductsCache[cacheKey] = filteredProducts;
+          filteredProducts = allProducts;
         }
 
-        List<GetProduct> uniqueProducts = filteredProducts;
+        // De-duplicate by productId
+        final Map<int, GetProduct> productMap = {};
+        for (var product in filteredProducts) {
+          if (product.productId != null) {
+            productMap[product.productId!] = product;
+          }
+        }
+        List<GetProduct> uniqueProducts = productMap.values.toList();
 
         // Ensure the selected value exists in the items list
         GetProduct? selectedProduct = stockItems[index].productData;
@@ -4014,8 +4033,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             );
             selectedProduct = matched;
           } catch (e) {
-            // If missing due to category mismatch, keep null to avoid dropdown error
+            // If missing due to category mismatch, clear the selection
             selectedProduct = null;
+            // Also clear from stockItems to keep state consistent
+            stockItems[index].productData = null;
+            stockItems[index].product = '';
           }
         }
 
@@ -4235,9 +4257,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildExpandedUnitDropdown(int index) {
     return Selector<PurchaseProvider, Map<String, String>?>(
       selector: (context, provider) => provider.getUnitList,
-      shouldRebuild: (previous, current) => previous?.length != current?.length,
+      shouldRebuild: (previous, current) => true, // Always rebuild to ensure fresh data
       builder: (context, unitList, child) {
         List<String> unitKeys = unitList?.keys.toList() ?? [];
+
+        // Ensure selected unit exists in the list
+        String? selectedUnit = stockItems[index].selectedUnit;
+        if (selectedUnit != null && !unitKeys.contains(selectedUnit)) {
+          selectedUnit = null;
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4268,7 +4296,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             BuildDropDownWithSearch<String>(
               title: null,
               hintText: "Select Unit",
-              value: stockItems[index].selectedUnit,
+              value: selectedUnit,
               items: unitKeys,
               onChanged: (String? newValue) {
                 setState(() {
@@ -4279,8 +4307,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 _updatePendingStockItem(index);
               },
               displayText: (unitKey) => unitList?[unitKey] ?? unitKey,
-              searchController:
-                  TextEditingController(), // Consider reusing controllers
+              searchController: _getUnitSearchController(index), // Use cached controller
               isRequired: false,
               height: 40,
               searchHintText: "Search unit...",
@@ -4294,9 +4321,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildExpandedRackDropdown(int index) {
     return Selector<PurchaseProvider, Map<String, String>?>(
       selector: (context, provider) => provider.getMasterDataValues,
-      shouldRebuild: (previous, current) => previous?.length != current?.length,
+      shouldRebuild: (previous, current) => true, // Always rebuild to ensure fresh data
       builder: (context, rackList, child) {
         List<String> rackKeys = rackList?.keys.toList() ?? [];
+
+        // Ensure selected rack exists in the list
+        String? selectedRack = stockItems[index].selectedRack;
+        if (selectedRack != null && !rackKeys.contains(selectedRack)) {
+          selectedRack = null;
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4318,7 +4351,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             BuildDropDownWithSearch<String>(
               title: null,
               hintText: "Select Rack",
-              value: stockItems[index].selectedRack,
+              value: selectedRack,
               items: rackKeys,
               onChanged: (String? newValue) {
                 setState(() {
@@ -4328,8 +4361,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 _updatePendingStockItem(index);
               },
               displayText: (rackKey) => rackList?[rackKey] ?? rackKey,
-              searchController:
-                  TextEditingController(), // Consider reusing controllers
+              searchController: _getRackSearchController(index), // Use cached controller
               isRequired: false,
               height: 40,
               searchHintText: "Search rack...",
