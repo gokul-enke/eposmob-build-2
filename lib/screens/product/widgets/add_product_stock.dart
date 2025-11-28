@@ -2028,15 +2028,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   // Show product details modal for the selected stock item
-  void _showProductDetailsModal(int index) {
+  void _showProductDetailsModal(int index) async {
     final item = stockItems[index];
     if (item.productData == null) return;
 
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? '';
+    final productId = item.productData!.productId;
 
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: true,
       builder: (ctx) {
@@ -2051,6 +2052,37 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         );
       },
     );
+
+    // After dialog closes, refresh the product data from LocalProductProvider
+    // This ensures any edits made in the dialog are reflected in the stock row
+    if (mounted && productId != null) {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      
+      // Find the updated product from the provider
+      try {
+        final updatedProduct = localProductProvider.products.firstWhere(
+          (p) => p.productId == productId,
+        );
+        
+        // Update the stock item with the refreshed product data
+        setState(() {
+          stockItems[index].productData = updatedProduct;
+          stockItems[index].product = updatedProduct.productName ?? '';
+          stockItems[index].barcode = updatedProduct.barcode ?? '';
+          
+          // Update barcode controller
+          _getBarcodeController(index).text = updatedProduct.barcode ?? '';
+          
+          // Clear the filtered products cache to force rebuild with updated names
+          _clearProductCache();
+          
+          debugPrint('✅ Refreshed product data after edit: ${updatedProduct.productName}');
+        });
+      } catch (e) {
+        debugPrint('⚠️ Could not find updated product: $e');
+      }
+    }
   }
 
   @override
@@ -4006,7 +4038,18 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildProductDropdown(int index) {
     return Selector<LocalProductProvider, List<GetProduct>>(
       selector: (context, provider) => provider.products,
-      shouldRebuild: (previous, current) => previous.length != current.length,
+      shouldRebuild: (previous, current) {
+        // Rebuild if length changes
+        if (previous.length != current.length) return true;
+        // Also rebuild if any product name changed (for edit updates)
+        for (int i = 0; i < previous.length; i++) {
+          if (previous[i].productName != current[i].productName ||
+              previous[i].barcode != current[i].barcode) {
+            return true;
+          }
+        }
+        return false;
+      },
       builder: (context, allProducts, child) {
         // Use cached filtered products to avoid repeated filtering
         final selectedCategoryId = stockItems[index].categoryData?.categoryId;
