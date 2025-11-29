@@ -669,7 +669,7 @@ class LocalProductProvider extends ChangeNotifier {
             'page': page.toString(),
           };
 
-          final url = Uri.parse(APPUrl.getProductUrl)
+          final url = Uri.parse(APPUrl.getSellableProductUrl)
               .replace(queryParameters: queryParams);
 
           futures.add(http.get(url, headers: {
