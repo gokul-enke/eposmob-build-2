@@ -5,10 +5,10 @@ class APPUrl {
   // static String baseURL = "https://kmstoys.enke.in";
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
-  // static String baseURL = "https://eposdemo.hypersouq.in";
+  static String baseURL = "https://eposdemo.hypersouq.in";
   // static String baseURL = "https://eeezee.enke.ae";
   // static String baseURL = "https://actdemo.yougoit.in";
-  static String baseURL = "https://epos.hypersouq.in";
+  // static String baseURL = "https://epos.hypersouq.in";
   // static String baseURL = "https://epos.yougoit.in";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
@@ -26,7 +26,9 @@ class APPUrl {
       '$baseURL/api/v1/product/fetch-prop-values';
 
   // static String getProcductUrl = '$baseURL/api/v1/list-products';
-  static String getProductUrl =
+  static String getSellableProductUrl =
+      '$baseURL/api/v1/product/executive/list-products?type=sellable';
+  static String getAllProductsUrl =
       '$baseURL/api/v1/product/executive/list-products';
   static String addToCartUrl = '$baseURL/api/v1/cart/add-to-cart';
   static String listRoles = '$baseURL/api/v1/roles/list';
