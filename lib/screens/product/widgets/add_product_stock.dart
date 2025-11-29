@@ -3375,7 +3375,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   item.rack.isNotEmpty ||
                   item.batchNumber.isNotEmpty))
             Container(
-              padding: const EdgeInsets.only(left: 48, right: 16, bottom: 8),
+              padding: const EdgeInsets.only(left: 48, right: 8, bottom: 8),
               child: Row(
                 children: [
                   // All details in one row
@@ -3408,15 +3408,30 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       ],
                     ),
                   ),
-                  // Expand hint
-                  Text(
-                    "Tap ⌄ to expand",
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s9,
-                      0.27,
-                      Colors.grey.shade500,
-                    ),
+                  // Purchase Total (Quantity × Purchase Price)
+                  Builder(
+                    builder: (context) {
+                      final qty = double.tryParse(item.quantity) ?? 0;
+                      final purchasePrice = double.tryParse(item.purchaseRate) ?? 0;
+                      final purchaseTotal = qty * purchasePrice;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Text(
+                          "Total: ₹${purchaseTotal.toStringAsFixed(2)}",
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s10,
+                            0.27,
+                            Colors.green.shade700,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -4837,6 +4852,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           totalDueAmount: totalDueAmount,
                           paymentData: paymentData,
                           onConfirm: () {},
+                          stockItems: stockProvider.pendingStockItems,
+                          supplierOldBalance: supplierBalance,
                         );
                         
                         if (confirmed != true) {
@@ -4855,6 +4872,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           totalAmount: totalStockValue,
                           totalDueAmount: totalDueAmount,
                           onConfirm: () {},
+                          stockItems: stockProvider.pendingStockItems,
+                          supplierOldBalance: supplierBalance,
                         );
                         
                         if (confirmed != true) {

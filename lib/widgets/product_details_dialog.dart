@@ -1094,17 +1094,17 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     ],
                   ),
                   const SizedBox(height: verticalGap),
-                  if (product.stock != null && product.stock!.isNotEmpty)
-                    Text(
-                      'Price and MRP changes apply to all stock entries for this product.',
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.20,
-                        ColorManager.textColor.withOpacity(0.7),
-                      ),
-                    ),
-                  const SizedBox(height: 12),
+                  // if (product.stock != null && product.stock!.isNotEmpty)
+                  //   Text(
+                  //     'Price and MRP changes apply to all stock entries for this product.',
+                  //     style: buildCustomStyle(
+                  //       FontWeightManager.medium,
+                  //       FontSize.s12,
+                  //       0.20,
+                  //       ColorManager.textColor.withOpacity(0.7),
+                  //     ),
+                  //   ),
+                  // const SizedBox(height: 12),
                 ],
               ),
             );

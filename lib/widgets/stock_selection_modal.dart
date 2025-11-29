@@ -137,6 +137,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
           maxWidth: 500,
           maxHeight: MediaQuery.of(context).size.height * 0.7,
         ),
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -150,7 +151,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             // Header
             Row(
@@ -196,7 +197,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                     },
                   ),
                   child: ListView.builder(
-                    clipBehavior: Clip.none,
+                    clipBehavior: Clip.hardEdge,
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     itemCount: combinedStocks.length,
                     physics: const BouncingScrollPhysics(),
@@ -338,11 +339,12 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                               // Show expanded stock details inside the same card
                               if (combinedStock.originalStocks.length > 1 &&
                                   expandedItems.contains(index))
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
+                                Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(12),
+                                  constraints: BoxConstraints(
+                                    maxHeight: 200, // Fixed max height for expanded section
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: const BorderRadius.only(
@@ -354,10 +356,10 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                           color: Colors.grey[300]!, width: 1),
                                     ),
                                   ),
-                                  clipBehavior: Clip.none,
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       // Header section
                                       Row(
@@ -397,9 +399,14 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-                                      // Stock items
-                                      ...combinedStock.originalStocks
-                                          .map((stock) => Container(
+                                      // Stock items - wrapped in scrollable container
+                                      Flexible(
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          itemCount: combinedStock.originalStocks.length,
+                                          itemBuilder: (context, stockIndex) {
+                                            final stock = combinedStock.originalStocks[stockIndex];
+                                            return Container(
                                                 width: double.infinity,
                                                 margin: const EdgeInsets.only(
                                                     bottom: 8),
@@ -604,8 +611,10 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                                     ),
                                                   ],
                                                 ),
-                                              ))
-                                          .toList(),
+                                              );
+                                          },
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
