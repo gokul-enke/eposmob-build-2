@@ -882,6 +882,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             // CRITICAL: Mark index cache as dirty so SliverList rebuilds correctly
             _markIndexCacheDirty();
 
+            // Mark for recalculation so total value updates
+            _markForRecalculation();
+
             debugPrint(
                 '✅ LOADED ${pendingItems.length} PENDING ITEMS AS EDITABLE ROWS');
           });
@@ -1482,6 +1485,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
           // Clear product cache to ensure dropdown shows the new product
           _clearProductCache();
+
+          _markForRecalculation(); // Trigger recalculation
         });
 
         debugPrint('✅ Product auto-filled from modal: ${product.productName}');
@@ -1628,6 +1633,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 setState(() {
                   stockItems[index].isHidden = true;
                   _markIndexCacheDirty(); // Mark cache as dirty
+                  _markForRecalculation(); // Trigger recalculation
                   debugPrint(
                       '🗑️ SOFT DELETED (HIDDEN) STOCK ITEM AT INDEX $index');
                 });
@@ -1654,6 +1660,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   void _calculateTotalStockValue() {
+    if (_needsIndexRebuild) {
+      _rebuildIndexCache();
+    }
+
     double total = 0.0;
     // OPTIMIZED: Use cached visible items instead of iterating all items
     for (StockItem item in _cachedVisibleItems) {
@@ -3652,6 +3662,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         if (stockItems[index].batchNumber.isNotEmpty) {
           _getBatchNumberController(index).text = stockItems[index].batchNumber;
         }
+
+        _markForRecalculation(); // Trigger recalculation
       });
 
       // Trigger tax calculation for both retail and wholesale prices after auto-fill
@@ -3764,7 +3776,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   "Purchase Rate",
                   item.purchaseRate,
                   (value) {
-                    setState(() => stockItems[index].purchaseRate = value);
+                    setState(() {
+                      stockItems[index].purchaseRate = value;
+                      _markForRecalculation(); // Trigger recalculation
+                    });
                     _updatePendingStockItem(index);
                   },
                   isRequired: true,
@@ -4283,6 +4298,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     stockItems[index].wholesale;
                 _getBatchNumberController(index).text =
                     stockItems[index].batchNumber;
+
+                _markForRecalculation(); // Trigger recalculation
               });
 
               // Trigger tax calculation for both retail and wholesale prices after product selection
