@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.306
-git push build v0.1.0-dev.306
+git tag v0.1.0-dev.308
+git push build v0.1.0-dev.308
 
 souq build
 git tag v0.1.0-dev.279
@@ -32,7 +32,7 @@ salesexecutive2@eeezee.in
 
 # epos souqpoint
 SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
-salesexecutive@souqpoint.in
+    salesexecutive@souqpoint.in
 123456
 
 # epos eposenke
@@ -40,7 +40,7 @@ EPOSENKE_KxUdXaoVWvIHzAZAdkva5lX4vqEw2KuF
 salesexecutive1@eposenke.in
 123456
 
-# yougoit
+# yougoit{{server}}/api/v1/master-data/COMPANY_REG_TYPE
 EEEZEE_4QI9tz5mhh35L9r262HGA5HnxEymxgai 
 salesexecutive1eeezee@gmail.com
 123456
