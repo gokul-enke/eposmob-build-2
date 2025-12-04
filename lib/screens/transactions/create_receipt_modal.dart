@@ -314,6 +314,28 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
       return;
     }
 
+    // Validation: For invoice payments, paid amount cannot exceed balance amount
+    if (_newItemCard.selectedItemType == "Invoice Payment") {
+      final paid = double.tryParse(
+              _newItemCard.amountController.text.trim().isEmpty
+                  ? '0'
+                  : _newItemCard.amountController.text.trim()) ??
+          0.0;
+      final balance = double.tryParse(
+              _newItemCard.balanceAmountController.text.trim().isEmpty
+                  ? '0'
+                  : _newItemCard.balanceAmountController.text.trim()) ??
+          0.0;
+      if (paid > balance) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Paid amount (₹${paid.toStringAsFixed(2)}) cannot exceed balance (₹${balance.toStringAsFixed(2)}).',
+        );
+        return;
+      }
+    }
+
     setState(() {
       // Add a copy of the new item card to the list
       final addedCard = ReceiptItemCard(
@@ -482,7 +504,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         'paid_amount': double.tryParse(card.amountController.text) ?? 0.0,
         'status': 'paid',
         'payment_date': card.paymentDateController.text,
-        'payment_method': _selectedPaymentMethod?.toUpperCase() ?? 'CASH',
+        'payment_method': _getPaymentMethodKey(_selectedPaymentMethod),
         'description': card.descriptionController.text.isNotEmpty
             ? card.descriptionController.text
             : 'General Payment',
@@ -675,8 +697,20 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                       );
                                       tempCard.invoiceAmountController.text =
                                           invoice.amount;
-                                      // Auto-fill amount with balance if needed
-                                      // tempCard.amountController.text = invoice.amount ?? "0.00";
+
+                                      // Set invoice balance
+                                      final invoiceBalance =
+                                          invoice.balanceAmount;
+                                      if (invoiceBalance is num) {
+                                        tempCard.balanceAmountController.text =
+                                            invoiceBalance.toStringAsFixed(2);
+                                      } else if (invoiceBalance != null) {
+                                        tempCard.balanceAmountController.text =
+                                            invoiceBalance.toString();
+                                      } else {
+                                        tempCard.balanceAmountController.text =
+                                            "0.00";
+                                      }
 
                                       // Move focus to payment date
                                       FocusScope.of(context).requestFocus(
@@ -710,6 +744,16 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             child: _buildTextField(
                               "Invoice Amount",
                               tempCard.invoiceAmountController,
+                              TextInputType.number,
+                              widget.size,
+                              readOnly: true,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildTextField(
+                              "Balance Amount",
+                              tempCard.balanceAmountController,
                               TextInputType.number,
                               widget.size,
                               readOnly: true,
@@ -996,6 +1040,24 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     );
   }
 
+  // Helper method to map display payment method names to backend keys
+  String _getPaymentMethodKey(String? displayName) {
+    switch (displayName) {
+      case 'Cash':
+        return 'CASH';
+      case 'Card':
+        return 'CARD';
+      case 'UPI':
+        return 'UPI';
+      case 'Cheque':
+        return 'CHEQUE';
+      case 'Bank Transfer':
+        return 'BANK_TRANSFER';
+      default:
+        return 'CASH';
+    }
+  }
+
   // Helper method to render label for dropdowns
   Widget _buildLabel(String title, {bool isRequired = false}) {
     return Text.rich(
@@ -1073,7 +1135,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                               value: _selectedPaymentMethod,
                               items: const [
                                 "Cash",
-                                "Credit",
+                                "Card",
                                 "UPI",
                                 "Bank Transfer",
                                 "Cheque"
@@ -1425,13 +1487,23 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Show Invoice Amount only for Invoice Payment
+                      // Show Invoice Amount and Balance Amount only for Invoice Payment
                       if (_newItemCard.selectedItemType ==
                           "Invoice Payment") ...[
                         Expanded(
                           child: _buildTextField(
                             "Invoice Amount",
                             _newItemCard.invoiceAmountController,
+                            TextInputType.number,
+                            widget.size,
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTextField(
+                            "Balance Amount",
+                            _newItemCard.balanceAmountController,
                             TextInputType.number,
                             widget.size,
                             readOnly: true,

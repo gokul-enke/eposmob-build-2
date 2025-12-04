@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
@@ -19,21 +20,38 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VoucherItem {
-  String itemName;
-  String unitAmount;
-  String tax;
-  String quantity;
-  String totalAmount;
-  bool isExpanded;
+  final TextEditingController itemNameController = TextEditingController();
+  final TextEditingController unitAmountController = TextEditingController();
+  final TextEditingController taxController = TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
+  final TextEditingController totalController = TextEditingController();
 
-  VoucherItem({
-    this.itemName = '',
-    this.unitAmount = '0',
-    this.tax = '0',
-    this.quantity = '1',
-    this.totalAmount = '0',
-    this.isExpanded = false,
-  });
+  final FocusNode itemNameFocus = FocusNode();
+  final FocusNode unitAmountFocus = FocusNode();
+  final FocusNode taxFocus = FocusNode();
+  final FocusNode quantityFocus = FocusNode();
+  final FocusNode totalFocus = FocusNode();
+
+  VoucherItem() {
+    unitAmountController.text = "0";
+    taxController.text = "0";
+    quantityController.text = "1";
+    totalController.text = "0";
+  }
+
+  void dispose() {
+    itemNameController.dispose();
+    unitAmountController.dispose();
+    taxController.dispose();
+    quantityController.dispose();
+    totalController.dispose();
+
+    itemNameFocus.dispose();
+    unitAmountFocus.dispose();
+    taxFocus.dispose();
+    quantityFocus.dispose();
+    totalFocus.dispose();
+  }
 }
 
 class CreateSupplierVoucherScreen extends StatefulWidget {
@@ -54,14 +72,22 @@ class _CreateSupplierVoucherScreenState
 
   // Date controllers
   DateTime selectedVoucherDate = DateTime.now();
-  DateTime selectedDueDate = DateTime.now().add(const Duration(days: 7));
+  DateTime selectedDueDate = DateTime.now(); // Changed to today's date
 
   // Dropdown selections
   String? selectedType;
-  String? selectedStatus;
+  String? selectedStatus = 'paid'; // Default to 'paid'
   String? selectedPaymentMethod;
   int? selectedSupplierId;
   String? selectedSupplierName;
+
+  // Focus Nodes
+  final FocusNode _typeFocus = FocusNode();
+  final FocusNode _voucherDateFocus = FocusNode();
+  final FocusNode _dueDateFocus = FocusNode();
+  final FocusNode _statusFocus = FocusNode();
+  final FocusNode _paymentMethodFocus = FocusNode();
+  final FocusNode _supplierFocus = FocusNode();
 
   // Items list
   List<VoucherItem> voucherItems = [VoucherItem()];
@@ -92,6 +118,11 @@ class _CreateSupplierVoucherScreenState
   void initState() {
     super.initState();
     _loadInitialData();
+
+    // Auto-focus on Type dropdown when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(_typeFocus);
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -130,11 +161,12 @@ class _CreateSupplierVoucherScreenState
     double total = 0;
     for (var item in voucherItems) {
       try {
-        double unitAmount = double.tryParse(item.unitAmount) ?? 0;
-        double quantity = double.tryParse(item.quantity) ?? 1;
-        double tax = double.tryParse(item.tax) ?? 0;
+        double unitAmount =
+            double.tryParse(item.unitAmountController.text) ?? 0;
+        double quantity = double.tryParse(item.quantityController.text) ?? 1;
+        double tax = double.tryParse(item.taxController.text) ?? 0;
         double itemTotal = (unitAmount * quantity) + tax;
-        item.totalAmount = itemTotal.toStringAsFixed(2);
+        item.totalController.text = itemTotal.toStringAsFixed(2);
         total += itemTotal;
       } catch (e) {
         debugPrint("Error calculating total: $e");
@@ -163,7 +195,7 @@ class _CreateSupplierVoucherScreenState
       return;
     }
     if (voucherItems.isEmpty ||
-        voucherItems.every((item) => item.itemName.isEmpty)) {
+        voucherItems.every((item) => item.itemNameController.text.isEmpty)) {
       showScaffoldError(
           context: context, message: 'Please add at least one item');
       return;
@@ -176,13 +208,14 @@ class _CreateSupplierVoucherScreenState
           Provider.of<AuthModel>(context, listen: false).token;
 
       List<Map<String, dynamic>> items = voucherItems
-          .where((item) => item.itemName.isNotEmpty)
+          .where((item) => item.itemNameController.text.isNotEmpty)
           .map((item) => {
-                'item_name': item.itemName,
-                'quantity': double.tryParse(item.quantity) ?? 1,
-                'unit_amount': double.tryParse(item.unitAmount) ?? 0,
-                'tax': double.tryParse(item.tax) ?? 0,
-                'total_amount': double.tryParse(item.totalAmount) ?? 0,
+                'item_name': item.itemNameController.text,
+                'quantity': double.tryParse(item.quantityController.text) ?? 1,
+                'unit_amount':
+                    double.tryParse(item.unitAmountController.text) ?? 0,
+                'tax': double.tryParse(item.taxController.text) ?? 0,
+                'total_amount': double.tryParse(item.totalController.text) ?? 0,
               })
           .toList();
 
@@ -443,7 +476,10 @@ class _CreateSupplierVoucherScreenState
           hintText: 'Select Type',
           value: selectedType,
           items: typeOptions.map((t) => t['value']!).toList(),
-          onChanged: (String? value) => setState(() => selectedType = value),
+          onChanged: (String? value) {
+            setState(() => selectedType = value);
+            // Navigate to next field after selection
+          },
           displayText: (String? value) {
             if (value == null) return 'Select Type';
             final type = typeOptions.firstWhere((t) => t['value'] == value,
@@ -472,7 +508,10 @@ class _CreateSupplierVoucherScreenState
           hintText: 'Select Status',
           value: selectedStatus,
           items: statusOptions.map((s) => s['value']!).toList(),
-          onChanged: (String? value) => setState(() => selectedStatus = value),
+          onChanged: (String? value) {
+            setState(() => selectedStatus = value);
+            // Navigate to next field after selection
+          },
           displayText: (String? value) {
             if (value == null) return 'Select Status';
             final status = statusOptions.firstWhere((s) => s['value'] == value,
@@ -525,8 +564,10 @@ class _CreateSupplierVoucherScreenState
           hintText: 'Select Payment Method',
           value: selectedPaymentMethod,
           items: paymentMethods.map((m) => m['value']!).toList(),
-          onChanged: (String? value) =>
-              setState(() => selectedPaymentMethod = value),
+          onChanged: (String? value) {
+            setState(() => selectedPaymentMethod = value);
+            // Navigate to next field after selection
+          },
           displayText: (String? value) {
             if (value == null) return 'Select Payment Method';
             final method = paymentMethods.firstWhere((m) => m['value'] == value,
@@ -561,15 +602,17 @@ class _CreateSupplierVoucherScreenState
               if (value != null) {
                 final supplier = suppliers.firstWhere((c) => c['id'] == value,
                     orElse: () => {});
-                selectedSupplierName = supplier['user']?['name'] ?? '';
+                selectedSupplierName =
+                    supplier['name'] ?? supplier['user']?['name'] ?? '';
               }
             });
+            // Focus will move to first item name field
           },
           displayText: (int? id) {
             if (id == null) return 'Select a supplier';
             final supplier =
                 suppliers.firstWhere((c) => c['id'] == id, orElse: () => {});
-            return supplier['user']?['name'] ?? 'Unknown';
+            return supplier['name'] ?? supplier['user']?['name'] ?? 'Unknown';
           },
           height: 45,
         ),
@@ -650,6 +693,14 @@ class _CreateSupplierVoucherScreenState
     return voucherItems.asMap().entries.map((entry) {
       int index = entry.key;
       VoucherItem item = entry.value;
+      bool isLastItem = index == voucherItems.length - 1;
+
+      // Add auto-calculation listeners
+      if (!item.unitAmountController.hasListeners) {
+        item.unitAmountController.addListener(_calculateTotal);
+        item.taxController.addListener(_calculateTotal);
+        item.quantityController.addListener(_calculateTotal);
+      }
 
       return Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
@@ -661,13 +712,26 @@ class _CreateSupplierVoucherScreenState
                 height: 45,
                 circleRadius: 7,
                 child: TextFormField(
-                  initialValue: item.itemName,
-                  onChanged: (value) => setState(() => item.itemName = value),
-                  decoration: InputDecoration(
+                  controller: item.itemNameController,
+                  focusNode: item.itemNameFocus,
+                  textInputAction: TextInputAction.next,
+                  onTap: () {
+                    // Select all text when field is focused
+                    item.itemNameController.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.itemNameController.text.length,
+                    );
+                  },
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(item.unitAmountFocus);
+                  },
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: 'Item name',
-                    contentPadding: const EdgeInsets.only(left: 15),
+                    contentPadding: EdgeInsets.only(left: 15),
                   ),
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s12, 0.27, ColorManager.textColor),
                 ),
               ),
             ),
@@ -677,17 +741,30 @@ class _CreateSupplierVoucherScreenState
                 height: 45,
                 circleRadius: 7,
                 child: TextFormField(
-                  initialValue: item.unitAmount,
+                  controller: item.unitAmountController,
+                  focusNode: item.unitAmountFocus,
                   keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setState(() => item.unitAmount = value);
-                    _calculateTotal();
+                  textInputAction: TextInputAction.next,
+                  onTap: () {
+                    // Select all text when field is focused
+                    item.unitAmountController.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.unitAmountController.text.length,
+                    );
                   },
-                  decoration: InputDecoration(
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(item.taxFocus);
+                  },
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: '0',
-                    contentPadding: const EdgeInsets.only(left: 15),
+                    contentPadding: EdgeInsets.only(left: 15),
                   ),
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s12, 0.27, ColorManager.textColor),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                  ],
                 ),
               ),
             ),
@@ -697,17 +774,30 @@ class _CreateSupplierVoucherScreenState
                 height: 45,
                 circleRadius: 7,
                 child: TextFormField(
-                  initialValue: item.tax,
+                  controller: item.taxController,
+                  focusNode: item.taxFocus,
                   keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setState(() => item.tax = value);
-                    _calculateTotal();
+                  textInputAction: TextInputAction.next,
+                  onTap: () {
+                    // Select all text when field is focused
+                    item.taxController.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.taxController.text.length,
+                    );
                   },
-                  decoration: InputDecoration(
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(item.quantityFocus);
+                  },
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: '0',
-                    contentPadding: const EdgeInsets.only(left: 15),
+                    contentPadding: EdgeInsets.only(left: 15),
                   ),
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s12, 0.27, ColorManager.textColor),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                  ],
                 ),
               ),
             ),
@@ -717,17 +807,42 @@ class _CreateSupplierVoucherScreenState
                 height: 45,
                 circleRadius: 7,
                 child: TextFormField(
-                  initialValue: item.quantity,
+                  controller: item.quantityController,
+                  focusNode: item.quantityFocus,
                   keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setState(() => item.quantity = value);
-                    _calculateTotal();
+                  textInputAction: TextInputAction.done,
+                  onTap: () {
+                    // Select all text when field is focused
+                    item.quantityController.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.quantityController.text.length,
+                    );
                   },
-                  decoration: InputDecoration(
+                  onFieldSubmitted: (_) {
+                    // When Enter is pressed on quantity field, add new item and focus on its name field
+                    if (isLastItem && item.itemNameController.text.isNotEmpty) {
+                      setState(() {
+                        voucherItems.add(VoucherItem());
+                      });
+                      // Focus on the new item's name field after a short delay
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (voucherItems.length > index + 1) {
+                          FocusScope.of(context).requestFocus(
+                              voucherItems[index + 1].itemNameFocus);
+                        }
+                      });
+                    }
+                  },
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: '1',
-                    contentPadding: const EdgeInsets.only(left: 15),
+                    contentPadding: EdgeInsets.only(left: 15),
                   ),
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s12, 0.27, ColorManager.textColor),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                  ],
                 ),
               ),
             ),
@@ -738,7 +853,7 @@ class _CreateSupplierVoucherScreenState
                 circleRadius: 7,
                 child: Center(
                   child: Text(
-                    item.totalAmount,
+                    item.totalController.text,
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s12, 0.27, Colors.black),
                   ),
@@ -750,6 +865,11 @@ class _CreateSupplierVoucherScreenState
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () {
                 setState(() {
+                  // Clean up listeners before removing
+                  item.unitAmountController.removeListener(_calculateTotal);
+                  item.taxController.removeListener(_calculateTotal);
+                  item.quantityController.removeListener(_calculateTotal);
+                  item.dispose();
                   voucherItems.removeAt(index);
                   _calculateTotal();
                 });
@@ -764,6 +884,23 @@ class _CreateSupplierVoucherScreenState
   @override
   void dispose() {
     totalAmountController.dispose();
+
+    // Dispose focus nodes
+    _typeFocus.dispose();
+    _voucherDateFocus.dispose();
+    _dueDateFocus.dispose();
+    _statusFocus.dispose();
+    _paymentMethodFocus.dispose();
+    _supplierFocus.dispose();
+
+    // Dispose all voucher items
+    for (var item in voucherItems) {
+      item.unitAmountController.removeListener(_calculateTotal);
+      item.taxController.removeListener(_calculateTotal);
+      item.quantityController.removeListener(_calculateTotal);
+      item.dispose();
+    }
+
     super.dispose();
   }
 }

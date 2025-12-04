@@ -772,7 +772,7 @@ class InvoiceProvider extends ChangeNotifier {
   Future<void> listAllPaymentList(
     String accessToken,
   ) async {
-    // debugPrint("LIST ALL listAllPaymentList ");
+    debugPrint("[InvoiceProvider] listAllPaymentList called");
 
     final url = Uri.parse(APPUrl.listTransactionType);
     // Get API key from SharedPreferences
@@ -780,25 +780,33 @@ class InvoiceProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
+      debugPrint("[InvoiceProvider] API key not found");
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
+      debugPrint("[InvoiceProvider] Fetching payment methods from: $url");
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      debugPrint("[InvoiceProvider] Payment methods response: ${response.statusCode}");
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
+        debugPrint("[InvoiceProvider] Payment methods data: $jsonData");
         GetPaymentMethodsModel getPaymentMethodsModel =
             GetPaymentMethodsModel.fromJson(jsonData);
 
         paymentList = getPaymentMethodsModel.paymentList;
+        debugPrint("[InvoiceProvider] Payment list parsed: $paymentList");
 
         notifyListeners();
-      } else {}
-    } finally {}
+      } else {
+        debugPrint("[InvoiceProvider] Payment methods error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("[InvoiceProvider] Payment methods exception: $e");
+    }
   }
 
   //          *********************** ZATCA PHASE 1 INVOICE PRINT ***************************************************
@@ -862,7 +870,7 @@ class InvoiceProvider extends ChangeNotifier {
   Future<void> listAllInvoiceAccountTypes(
     String accessToken,
   ) async {
-    // debugPrint("LIST ALL listAllInvoiceAccountTypes ");
+    debugPrint("[InvoiceProvider] listAllInvoiceAccountTypes called");
 
     final url = Uri.parse(APPUrl.listInvoiceAccountType);
     // Get API key from SharedPreferences
@@ -870,27 +878,34 @@ class InvoiceProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
+      debugPrint("[InvoiceProvider] API key not found");
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
+      debugPrint("[InvoiceProvider] Fetching account types from: $url");
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      debugPrint("[InvoiceProvider] Account types response: ${response.statusCode}");
       if (response.statusCode == 200) {
-        // debugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
+        debugPrint("[InvoiceProvider] Account types data: $jsonData");
         GetInvoiceAccountTypesModel getInvoiceAccountTypesModel =
             GetInvoiceAccountTypesModel.fromJson(jsonData);
 
         getInvoiceAccountTypesModelData =
             getInvoiceAccountTypesModel.getInvoiceAccountTypesModelData;
+        debugPrint("[InvoiceProvider] Account types parsed: $getInvoiceAccountTypesModelData");
 
         notifyListeners();
-      } else {}
-    } finally {}
+      } else {
+        debugPrint("[InvoiceProvider] Account types error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("[InvoiceProvider] Account types exception: $e");
+    }
   }
   //          *********************** LIST VOUCHER ACCOUNT TYPE  API ***************************************************
 

@@ -19,6 +19,7 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
   final bool isAllowEdit;
   final bool allowTextInput;
   final double? height;
+  final FocusNode? focusNode;
 
   const CustomCalendarPickerTableCell({
     Key? key,
@@ -35,8 +36,6 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
     this.height,
     this.focusNode,
   }) : super(key: key);
-
-  final FocusNode? focusNode;
 
   @override
   _CustomCalendarPickerTableCellState createState() =>

@@ -701,117 +701,150 @@ class _SalesExecutiveReportScreenState
   }
 
   void _showExecutiveDetails(SalesExecutiveReportData report) {
+    // Get date range or default to today
+    String dateRange;
+    if (fromDateController.text.isNotEmpty &&
+        toDateController.text.isNotEmpty) {
+      dateRange = '${fromDateController.text} - ${toDateController.text}';
+    } else if (fromDateController.text.isNotEmpty) {
+      dateRange = fromDateController.text;
+    } else if (toDateController.text.isNotEmpty) {
+      dateRange = toDateController.text;
+    } else {
+      dateRange = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+    }
+
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
           ),
-          elevation: 8,
-          backgroundColor: Colors.white,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
           child: Container(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width / 1.8,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxWidth: MediaQuery.of(context).size.width * 0.55,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
             ),
-            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Sales Executive Details',
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s20,
-                        0.30,
-                        Colors.black,
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Sales Executive Details',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s20,
+                          0.30,
+                          Colors.black,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    )
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-                BuildBoxShadowContainer(
-                  circleRadius: 12,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Executive Details',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s16,
-                            0.24,
-                            Colors.black,
+                      Container(
+                        decoration: BoxDecoration(
+                          color: ColorManager.kPrimaryColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).pop(),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: Text(
+                                'Back',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s14,
+                                  0.20,
+                                  Colors.white,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(2),
-                            1: FlexColumnWidth(2),
-                          },
-                          defaultVerticalAlignment:
-                              TableCellVerticalAlignment.middle,
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Scrollable Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        // Executive Information Section
+                        _buildSection(
+                          title: 'Executive Information',
                           children: [
-                            // Order matches screenshot: left column sequence then right column sequence
-                            _detailsRow('Name', report.name ?? 'N/A', 'Phone',
-                                report.phone ?? 'N/A'),
-                            _detailsRow(
+                            _buildInfoRow(
+                              _buildInfoItem('Name', report.name ?? 'N/A'),
+                              _buildInfoItem('Phone', report.phone ?? 'N/A'),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                              _buildInfoItem('Date Range', dateRange),
+                              _buildInfoItem(
                                 'Total Orders',
                                 (report.orderCount ?? 0).toString(),
-                                'Total Sales',
-                                '₹${report.formattedTotalSales}'),
-                            _detailsRow(
-                                'Total Payment Received',
-                                '₹${report.formattedTotalPaymentReceived}',
-                                'Total Amount Collected On Sale',
-                                '₹${report.formattedTotalCollectedOnSale}'),
-                            _detailsRow(
-                                'Total Credit Collected (Prev Balance)',
-                                '₹${report.formattedCollectedSales}',
-                                'Total UPI Sales',
-                                '₹${report.formattedUpiSales}'),
-                            _detailsRow(
-                                'Total Cash Sales',
-                                '₹${report.formattedCashSales}',
-                                'Total Credit Amount',
-                                '₹${report.formattedCreditSales}'),
+                              ),
+                            ),
                           ],
-                        )
+                        ),
+                        const SizedBox(height: 16),
+                        // Financial Summary Section
+                        _buildSection(
+                          title: 'Financial Summary',
+                          children: [
+                            _buildFinancialItem(
+                              'Total Sales',
+                              '₹${report.formattedTotalSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Payment Received',
+                              '₹${report.formattedTotalPaymentReceived}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Amount Collected On Sale',
+                              '₹${report.formattedTotalCollectedOnSale}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Credit Collected (Prev Balance)',
+                              '₹${report.formattedCollectedSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total UPI Sales',
+                              '₹${report.formattedUpiSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Cash Sales',
+                              '₹${report.formattedCashSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Credit Amount',
+                              '₹${report.formattedCreditSales}',
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorManager.kPrimaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                )
               ],
             ),
           ),
@@ -820,38 +853,102 @@ class _SalesExecutiveReportScreenState
     );
   }
 
-  TableRow _detailsRow(String leftTitle, String leftValue, String rightTitle,
-      String rightValue) {
-    return TableRow(
-      children: [
-        _detailsCell(leftTitle, leftValue),
-        _detailsCell(rightTitle, rightValue),
-      ],
-    );
-  }
-
-  Widget _detailsCell(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+  Widget _buildSection({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s13,
-              0.18,
+              FontWeightManager.semiBold,
+              FontSize.s16,
+              0.24,
               Colors.black,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(Widget item1, Widget item2) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: item1),
+        const SizedBox(width: 16),
+        Expanded(child: item2),
+      ],
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.18,
+            Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.20,
+            Colors.black,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinancialItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s13,
+                0.18,
+                Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
           Text(
             value,
             style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s13,
-              0.18,
+              FontWeightManager.semiBold,
+              FontSize.s14,
+              0.20,
               Colors.black,
             ),
           ),
