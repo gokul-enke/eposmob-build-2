@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -82,7 +83,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   @override
   void dispose() {
-    debugPrint('[PrinterSettings] dispose(): canceling discovery subscription if any');
+    debugPrint(
+        '[PrinterSettings] dispose(): canceling discovery subscription if any');
     _subscription?.cancel();
     super.dispose();
   }
@@ -99,7 +101,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   Future<bool> _requestPermissions() async {
-    debugPrint('[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
+    debugPrint(
+        '[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
     if (Theme.of(context).platform == TargetPlatform.android) {
       Map<Permission, PermissionStatus> statuses = await [
         Permission.bluetooth,
@@ -109,14 +112,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       ].request();
 
       statuses.forEach((perm, status) {
-        debugPrint('[PrinterSettings] Permission ${perm.toString()} => ${status.toString()}');
+        debugPrint(
+            '[PrinterSettings] Permission ${perm.toString()} => ${status.toString()}');
       });
 
       final granted = statuses.values.every((status) => status.isGranted);
       debugPrint('[PrinterSettings] All permissions granted: $granted');
       return granted;
     }
-    debugPrint('[PrinterSettings] Non-Android platform; skipping runtime permission request.');
+    debugPrint(
+        '[PrinterSettings] Non-Android platform; skipping runtime permission request.');
     return true;
   }
 
@@ -142,10 +147,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   void _scan() async {
     if (_isScanning) {
-      debugPrint('[PrinterSettings] _scan() requested but a scan is already in progress. Ignoring.');
+      debugPrint(
+          '[PrinterSettings] _scan() requested but a scan is already in progress. Ignoring.');
       return;
     }
-    debugPrint('[PrinterSettings] Starting scan... platform=${Platform.operatingSystem}');
+    debugPrint(
+        '[PrinterSettings] Starting scan... platform=${Platform.operatingSystem}');
     // Cancel any prior discovery subscription
     await _subscription?.cancel();
     setState(() {
@@ -156,11 +163,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     try {
       // Bluetooth discovery only on mobile platforms
       if (Platform.isAndroid || Platform.isIOS) {
-        debugPrint('[PrinterSettings] Beginning Bluetooth discovery (isBle=false)');
+        debugPrint(
+            '[PrinterSettings] Beginning Bluetooth discovery (isBle=false)');
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
-          debugPrint('[PrinterSettings] BT device found: name=${device.name}, address=${device.address}');
+          debugPrint(
+              '[PrinterSettings] BT device found: name=${device.name}, address=${device.address}');
           final printer = BluetoothPrinter(
             deviceName: device.name,
             address: device.address,
@@ -172,15 +181,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         }, onError: (err) {
           debugPrint('[PrinterSettings] Bluetooth discovery error: $err');
         }, onDone: () {
-          debugPrint('[PrinterSettings] Bluetooth discovery done. Total BT devices: ${devices.where((p) => p.typePrinter == PrinterType.bluetooth.toString()).length}');
+          debugPrint(
+              '[PrinterSettings] Bluetooth discovery done. Total BT devices: ${devices.where((p) => p.typePrinter == PrinterType.bluetooth.toString()).length}');
         }, cancelOnError: false);
       } else {
-        debugPrint('[PrinterSettings] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
+        debugPrint(
+            '[PrinterSettings] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
       debugPrint('[PrinterSettings] Beginning USB discovery');
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint('[PrinterSettings] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+        debugPrint(
+            '[PrinterSettings] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -191,7 +203,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           devices.add(printer);
         });
       });
-      debugPrint('[PrinterSettings] USB discovery completed. Total devices now: ${devices.length}');
+      debugPrint(
+          '[PrinterSettings] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {
       debugPrint('[PrinterSettings] Error during scanning: $e');
       debugPrint('[PrinterSettings] Stacktrace: $st');
@@ -199,7 +212,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       setState(() {
         _isScanning = false;
       });
-      debugPrint('[PrinterSettings] Scan finished. devices.length=${devices.length}');
+      debugPrint(
+          '[PrinterSettings] Scan finished. devices.length=${devices.length}');
     }
   }
 
@@ -294,24 +308,27 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> clearDefaultPrinter() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('default_printer');
+      // Use the provider to clear all printer settings (printer, paper size, font style)
+      await SharedPreferenceProvider().clearPrinterSettings();
 
       setState(() {
         selectedPrinter = null;
+        // Reset local state variables to defaults
+        selectedPaperSize = '80mm';
+        selectedFontStyle = 'Font A (Small & Sharp)';
       });
 
       if (mounted) {
         showScaffold(
           context: context,
-          message: "Default printer cleared successfully",
+          message: "All printer settings reset to default",
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error clearing default printer: ${e.toString()}",
+          message: "Error resetting printer settings: ${e.toString()}",
         );
       }
     }
@@ -1022,7 +1039,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                color:
+                                    ColorManager.kPrimaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
@@ -1211,8 +1229,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: ColorManager.kPrimaryColor
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
                                           Icons.description_rounded,
@@ -1251,16 +1271,19 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                         const SizedBox(width: 16),
                                         Expanded(
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16),
                                             decoration: BoxDecoration(
                                               color: Colors.white,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: DropdownButton<String>(
                                               value: selectedPaperSize,
                                               isExpanded: true,
                                               underline: const SizedBox(),
-                                              items: paperSizes.map((String size) {
+                                              items:
+                                                  paperSizes.map((String size) {
                                                 return DropdownMenuItem<String>(
                                                   value: size,
                                                   child: Text(size),
@@ -1269,9 +1292,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               onChanged: (String? newValue) {
                                                 if (newValue != null) {
                                                   setState(() {
-                                                    selectedPaperSize = newValue;
+                                                    selectedPaperSize =
+                                                        newValue;
                                                   });
-                                                  _saveDefaultPaperSize(newValue);
+                                                  _saveDefaultPaperSize(
+                                                      newValue);
                                                 }
                                               },
                                             ),
@@ -1431,15 +1456,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: ColorManager.kPrimaryColor
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
                                           Icons.devices_rounded,
@@ -1459,8 +1487,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     ],
                                   ),
                                   CustomRoundButton(
-                                    fct: () => _isScanning ? null : _checkPermissions(),
-                                    title: _isScanning ? 'Scanning...' : 'Scan for Printers',
+                                    fct: () => _isScanning
+                                        ? null
+                                        : _checkPermissions(),
+                                    title: _isScanning
+                                        ? 'Scanning...'
+                                        : 'Scan for Printers',
                                     height: 44,
                                     width: 160,
                                     fontSize: 14,
@@ -1535,7 +1567,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     )
                                   : ListView.separated(
                                       shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
                                       itemCount: devices.length,
                                       separatorBuilder: (context, index) =>
                                           const SizedBox(height: 12),
@@ -1550,12 +1583,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                         return Container(
                                           decoration: BoxDecoration(
                                             color: isSelected
-                                                ? ColorManager.kPrimaryColor.withOpacity(0.04)
+                                                ? ColorManager.kPrimaryColor
+                                                    .withOpacity(0.04)
                                                 : Colors.grey[50],
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
                                           child: ListTile(
-                                            contentPadding: const EdgeInsets.symmetric(
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
                                               horizontal: 20,
                                               vertical: 8,
                                             ),
@@ -1563,9 +1599,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               padding: const EdgeInsets.all(12),
                                               decoration: BoxDecoration(
                                                 color: isSelected
-                                                    ? ColorManager.kPrimaryColor.withOpacity(0.1)
+                                                    ? ColorManager.kPrimaryColor
+                                                        .withOpacity(0.1)
                                                     : Colors.white,
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Icon(
                                                 Icons.print,
@@ -1576,9 +1614,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               ),
                                             ),
                                             title: Text(
-                                              printer.deviceName ?? 'Unknown device',
+                                              printer.deviceName ??
+                                                  'Unknown device',
                                               style: TextStyle(
-                                                color: ColorManager.kTitleTextColor,
+                                                color: ColorManager
+                                                    .kTitleTextColor,
                                                 fontWeight: isSelected
                                                     ? FontWeight.bold
                                                     : FontWeight.w500,
@@ -1586,9 +1626,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               ),
                                             ),
                                             subtitle: Padding(
-                                              padding: const EdgeInsets.only(top: 4),
+                                              padding:
+                                                  const EdgeInsets.only(top: 4),
                                               child: Text(
-                                                printer.address ?? printer.typePrinter,
+                                                printer.address ??
+                                                    printer.typePrinter,
                                                 style: TextStyle(
                                                   color: Colors.grey[600],
                                                   fontSize: 14,
@@ -1597,7 +1639,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                             ),
                                             trailing: CustomRoundButton(
                                               fct: () => selectPrinter(printer),
-                                              title: isSelected ? 'Selected' : 'Select',
+                                              title: isSelected
+                                                  ? 'Selected'
+                                                  : 'Select',
                                               height: 36,
                                               width: 100,
                                               fontSize: 14,
