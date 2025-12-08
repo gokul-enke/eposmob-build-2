@@ -348,13 +348,15 @@ class LocalProductProvider extends ChangeNotifier {
   void _loadProductsFromHive() {
     try {
       final boxLen = _productsBox.length;
-      debugPrint("📦 [Hive] Loading products from box 'products' (len=$boxLen)...");
+      debugPrint(
+          "📦 [Hive] Loading products from box 'products' (len=$boxLen)...");
       _products = _productsBox.values.map((hiveProduct) {
         final jsonData = json.decode(hiveProduct.serializedData.value);
         return GetProduct.fromJson(jsonData);
       }).toList();
       _filteredProducts = List.from(_products);
-      debugPrint("✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}");
+      debugPrint(
+          "✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}");
       notifyListeners();
     } catch (e) {
       debugPrint("❌ [Hive] Error loading products from box: $e");
@@ -391,7 +393,8 @@ class LocalProductProvider extends ChangeNotifier {
   // Load saved orders from Hive
   void _loadSavedOrdersFromHive() {
     _savedOrders.clear();
-    debugPrint("📥 [Hive] Loading saved orders from 'saved_orders' box (len=${_savedOrdersBox.length})...");
+    debugPrint(
+        "📥 [Hive] Loading saved orders from 'saved_orders' box (len=${_savedOrdersBox.length})...");
     int idx = 0;
     for (var hiveSavedOrder in _savedOrdersBox.values) {
       idx++;
@@ -455,7 +458,8 @@ class LocalProductProvider extends ChangeNotifier {
   void _saveProductsToHive() {
     final sw = Stopwatch()..start();
     final beforeLen = _productsBox.length;
-    debugPrint("📝 [Hive] Saving products to box 'products' (beforeLen=$beforeLen)...");
+    debugPrint(
+        "📝 [Hive] Saving products to box 'products' (beforeLen=$beforeLen)...");
     _productsBox.clear();
     int saved = 0;
     for (var product in _products) {
@@ -470,11 +474,13 @@ class LocalProductProvider extends ChangeNotifier {
         _productsBox.add(hiveProduct);
         saved++;
       } catch (e) {
-        debugPrint("❌ [Hive] Failed to serialize/save productId=${product.productId}: $e");
+        debugPrint(
+            "❌ [Hive] Failed to serialize/save productId=${product.productId}: $e");
       }
     }
     sw.stop();
-    debugPrint("✅ [Hive] Saved $saved/${_products.length} products (afterLen=${_productsBox.length}) in ${sw.elapsedMilliseconds}ms");
+    debugPrint(
+        "✅ [Hive] Saved $saved/${_products.length} products (afterLen=${_productsBox.length}) in ${sw.elapsedMilliseconds}ms");
   }
 
   // Save cart items to Hive
@@ -503,7 +509,8 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save orders to Hive
   void _saveSavedOrdersToHive() {
-    debugPrint("💾 [Hive] Persisting ${_savedOrders.length} saved orders to 'saved_orders' box...");
+    debugPrint(
+        "💾 [Hive] Persisting ${_savedOrders.length} saved orders to 'saved_orders' box...");
     _savedOrdersBox.clear();
     int idx = 0;
     for (var order in _savedOrders) {
@@ -641,15 +648,15 @@ class LocalProductProvider extends ChangeNotifier {
 
     try {
       final swTotal = Stopwatch()..start();
-      debugPrint("🌐 [API] Starting batched product fetch (batch size: $batchSize)...");
-      
+      debugPrint(
+          "🌐 [API] Starting batched product fetch (batch size: $batchSize)...");
+
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
 
       if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException(
-            "API key not found. Please restart the app.");
+        throw const HttpException("API key not found. Please restart the app.");
       }
 
       bool hasMorePages = true;
@@ -658,8 +665,9 @@ class LocalProductProvider extends ChangeNotifier {
         // Create batch of page requests
         final batchStartPage = currentPage;
         final batchEndPage = currentPage + batchSize - 1;
-        
-        debugPrint("🚀 [API] Fetching batch: pages $batchStartPage-$batchEndPage concurrently...");
+
+        debugPrint(
+            "🚀 [API] Fetching batch: pages $batchStartPage-$batchEndPage concurrently...");
         final swBatch = Stopwatch()..start();
 
         // Create list of futures for concurrent requests
@@ -681,7 +689,8 @@ class LocalProductProvider extends ChangeNotifier {
         // Wait for all requests in batch to complete
         final responses = await Future.wait(futures);
         swBatch.stop();
-        debugPrint("📦 [API] Batch completed in ${swBatch.elapsedMilliseconds}ms");
+        debugPrint(
+            "📦 [API] Batch completed in ${swBatch.elapsedMilliseconds}ms");
 
         // Process responses
         int emptyPageCount = 0;
@@ -698,10 +707,10 @@ class LocalProductProvider extends ChangeNotifier {
               continue;
             }
 
-            GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+            GetProductModel getProductModel =
+                GetProductModel.fromJson(jsonData);
 
-            final productsFetched =
-                getProductModel.product?.length ?? 0;
+            final productsFetched = getProductModel.product?.length ?? 0;
 
             if (getProductModel.product == null ||
                 getProductModel.product!.isEmpty) {
@@ -718,7 +727,8 @@ class LocalProductProvider extends ChangeNotifier {
               await onProgress(allProducts.length, productsFetched);
             }
           } else {
-            debugPrint('❌ [API] Page $pageNum failed: Status ${response.statusCode}');
+            debugPrint(
+                '❌ [API] Page $pageNum failed: Status ${response.statusCode}');
             emptyPageCount++;
           }
         }
@@ -748,7 +758,8 @@ class LocalProductProvider extends ChangeNotifier {
     } finally {
       isLoading = false;
       notifyListeners();
-      debugPrint("ℹ️ [Provider] Product fetch complete. provider.products=${_products.length}, filtered=${_filteredProducts.length}");
+      debugPrint(
+          "ℹ️ [Provider] Product fetch complete. provider.products=${_products.length}, filtered=${_filteredProducts.length}");
     }
   }
 
@@ -894,7 +905,7 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("  - Product MRP: ${product.mrp}");
     debugPrint("  - Product Sale Price: ${product.price?.price}");
     debugPrint("  - Product Stock Count: ${product.stock?.length ?? 0}");
-    
+
     if (product.stock != null && product.stock!.isNotEmpty) {
       debugPrint("  - Stock Details:");
       for (int i = 0; i < product.stock!.length; i++) {
@@ -925,7 +936,7 @@ class LocalProductProvider extends ChangeNotifier {
       notifyListeners(); // Notify listeners about the change
       debugPrint("✅ Product updated in local storage successfully");
     }
-    
+
     debugPrint("📊 Total products in local storage: ${_products.length}");
   }
 
@@ -2062,7 +2073,8 @@ class LocalProductProvider extends ChangeNotifier {
     final before = _savedOrders.length;
     _savedOrders.removeWhere((o) => o.id == orderId);
     final after = _savedOrders.length;
-    debugPrint("🗑️ LOCAL PROVIDER - deleteSavedOrder id=$orderId (before=$before, after=$after)");
+    debugPrint(
+        "🗑️ LOCAL PROVIDER - deleteSavedOrder id=$orderId (before=$before, after=$after)");
 
     // If current order is deleted, clear reference
     if (_currentOrder != null && _currentOrder!.id == orderId) {
@@ -2272,6 +2284,53 @@ class LocalProductProvider extends ChangeNotifier {
       'flatDiscount': _flatDiscount,
       'percentageDiscount': _percentageDiscount,
     };
+  }
+
+  /// Clears ALL local data for multi-tenant isolation.
+  /// Call this during logout or when switching API keys (tenants)
+  /// to prevent data leakage between different tenants.
+  Future<void> clearAllLocalData() async {
+    debugPrint("🧹 CLEARING ALL LOCAL DATA FOR TENANT ISOLATION");
+
+    try {
+      // Clear Hive boxes
+      await _productsBox.clear();
+      debugPrint("  ✅ Cleared products box");
+
+      await _cartItemsBox.clear();
+      debugPrint("  ✅ Cleared cart_items box");
+
+      await _savedOrdersBox.clear();
+      debugPrint("  ✅ Cleared saved_orders box");
+
+      if (_isConfirmedBoxInitialized) {
+        await _confirmedOrdersBox.clear();
+        debugPrint("  ✅ Cleared confirmed_orders box");
+      }
+
+      // Clear in-memory lists
+      _products.clear();
+      _filteredProducts.clear();
+      _cartItems.clear();
+      _savedOrders.clear();
+      _confirmedOrders.clear();
+
+      // Reset state
+      _selectedProduct = null;
+      _selectedStock = null;
+      _currentOrder = null;
+      _flatDiscount = 0.0;
+      _percentageDiscount = 0.0;
+      priceSummary = null;
+      _currentPage = 1;
+      _totalPages = 1;
+
+      notifyListeners();
+      debugPrint("✅ ALL LOCAL DATA CLEARED SUCCESSFULLY");
+    } catch (e) {
+      debugPrint("❌ Error clearing local data: $e");
+      rethrow;
+    }
   }
 
   // End of LocalProductProvider

@@ -22,6 +22,8 @@ import 'drawer_list_tile_expandable.dart';
 import '../widgets/user_switcher.dart';
 import '../widgets/store_switcher.dart';
 import '../providers/role_provider.dart';
+import '../providers/local_product_provider.dart';
+import '../providers/category_providers.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -140,7 +142,8 @@ class _SideMenuState extends State<SideMenu> {
   }
 
   bool get _isExpanded {
-    final sidebarState = context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final sidebarState =
+        context.findAncestorStateOfType<CollapsibleSidebarState>();
     return sidebarState?.isExpanded ?? true;
   }
 
@@ -160,7 +163,11 @@ class _SideMenuState extends State<SideMenu> {
           Align(
             alignment: isExpanded ? Alignment.centerRight : Alignment.center,
             child: Container(
-              margin: EdgeInsets.only(right: isExpanded ? 10 : 8, left: isExpanded ? 10 : 8, top: isExpanded ? 8 : 6, bottom: isExpanded ? 8 : 6),
+              margin: EdgeInsets.only(
+                  right: isExpanded ? 10 : 8,
+                  left: isExpanded ? 10 : 8,
+                  top: isExpanded ? 8 : 6,
+                  bottom: isExpanded ? 8 : 6),
               decoration: BoxDecoration(
                 color: ColorManager.kPrimaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
@@ -175,8 +182,8 @@ class _SideMenuState extends State<SideMenu> {
                 padding: EdgeInsets.all(isExpanded ? 8 : 8),
                 constraints: const BoxConstraints(),
                 onPressed: () {
-                  final CollapsibleSidebarState? sidebarState =
-                      context.findAncestorStateOfType<CollapsibleSidebarState>();
+                  final CollapsibleSidebarState? sidebarState = context
+                      .findAncestorStateOfType<CollapsibleSidebarState>();
                   sidebarState?._toggleSidebar();
                 },
               ),
@@ -193,8 +200,7 @@ class _SideMenuState extends State<SideMenu> {
                 fit: BoxFit.contain,
               ),
             ),
-          if (!isExpanded)
-            const SizedBox.shrink(),
+          if (!isExpanded) const SizedBox.shrink(),
           // const SizedBox(
           //   height: 5,
           // ),
@@ -253,7 +259,7 @@ class _SideMenuState extends State<SideMenu> {
             ),
           SizedBox(height: isExpanded ? 6 : 4),
           // ========== REORGANIZED MENU (Font Awesome Icons) ==========
-          
+
           // 1. HOME (Index: 46)
           userRole == 'sales_executive'
               ? Consumer<RoleProvider>(
@@ -837,6 +843,14 @@ class _SideMenuState extends State<SideMenu> {
                   .logout(token, context)
                   .then((value) async {
                 if (value["status"] == "success") {
+                  // Clear all local data for multi-tenant isolation
+                  final localProductProvider =
+                      Provider.of<LocalProductProvider>(context, listen: false);
+                  final categoryProvider =
+                      Provider.of<CategoryProvider>(context, listen: false);
+                  await localProductProvider.clearAllLocalData();
+                  await categoryProvider.clearAllCategories();
+
                   authModel.logout();
                   SharedPreferenceProvider().removeTokenAndCustomerId();
 
@@ -913,8 +927,8 @@ class _SideMenuState extends State<SideMenu> {
                   ),
                   Consumer<RoleProvider>(
                     builder: (context, roleProvider, child) {
-                      final hasPermission =
-                          roleProvider.currentUserHasPermissionSync('view_store');
+                      final hasPermission = roleProvider
+                          .currentUserHasPermissionSync('view_store');
                       if (!hasPermission) {
                         return const SizedBox.shrink();
                       }
@@ -963,7 +977,7 @@ class DrawerListTile extends StatelessWidget {
   final VoidCallback onTap;
   final double? iconSize;
   final double? horizontalGap;
-  
+
   const DrawerListTile({
     super.key,
     this.iconPath,
@@ -981,7 +995,8 @@ class DrawerListTile extends StatelessWidget {
     final double resolvedIconSize = iconSize ?? 18.0;
     final double leadingBox = resolvedIconSize + 4.0;
     final double gap = horizontalGap ?? 12.0;
-    final sidebarState = context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final sidebarState =
+        context.findAncestorStateOfType<CollapsibleSidebarState>();
     final isExpanded = sidebarState?.isExpanded ?? true;
 
     // Collapsed state - icon only with tooltip
@@ -1011,14 +1026,18 @@ class DrawerListTile extends StatelessWidget {
                       ? Icon(
                           icon,
                           size: 16,
-                          color: selected ? Colors.white : ColorManager.kPrimaryColor,
+                          color: selected
+                              ? Colors.white
+                              : ColorManager.kPrimaryColor,
                         )
                       : WebsafeSvg.asset(
                           iconPath!,
                           width: 16,
                           height: 16,
                           colorFilter: ColorFilter.mode(
-                            selected ? Colors.white : ColorManager.kPrimaryColor,
+                            selected
+                                ? Colors.white
+                                : ColorManager.kPrimaryColor,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -1052,7 +1071,8 @@ class DrawerListTile extends StatelessWidget {
             ),
             child: ListTile(
               selected: selected,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               horizontalTitleGap: gap,
               visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
               minVerticalPadding: 0,
@@ -1072,8 +1092,8 @@ class DrawerListTile extends StatelessWidget {
                           iconPath!,
                           width: resolvedIconSize,
                           height: resolvedIconSize,
-                          colorFilter:
-                              const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                         ),
                 ),
               ),
@@ -1106,9 +1126,11 @@ class DrawerListTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 child: ListTile(
                   selected: selected,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   horizontalTitleGap: gap,
-                  visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                  visualDensity:
+                      const VisualDensity(vertical: -4, horizontal: 0),
                   minVerticalPadding: 0,
                   minLeadingWidth: leadingBox,
                   leading: SizedBox(
