@@ -13,7 +13,7 @@ git push build1 v0.1.0-dev.259
 
 # eposenke demo
 https://eposdemo.hypersouq.in
-EPOSENKE_p5Ut9BRLYnlxu7UZsGjR6RmTt6X4Dhuf
+    EPOSENKE_p5Ut9BRLYnlxu7UZsGjR6RmTt6X4Dhuf
 
 attender@eposenke.in
 123456
@@ -32,7 +32,7 @@ salesexecutive2@eeezee.in
 
 # epos souqpoint
 SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
-    salesexecutive@souqpoint.in
+salesexecutive@souqpoint.in
 123456
 
 # epos eposenke

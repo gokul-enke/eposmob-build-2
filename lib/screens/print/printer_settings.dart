@@ -20,26 +20,7 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/screens/print/print_thermal.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-
-class BluetoothPrinter {
-  String? deviceName;
-  String? address;
-  String? port;
-  String? vendorId;
-  String? productId;
-  String typePrinter;
-  bool isConnected;
-
-  BluetoothPrinter({
-    this.deviceName,
-    this.address,
-    this.port,
-    this.vendorId,
-    this.productId,
-    required this.typePrinter,
-    this.isConnected = false,
-  });
-}
+import 'package:pos_machine/models/bluetooth_printer.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -173,7 +154,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           final printer = BluetoothPrinter(
             deviceName: device.name,
             address: device.address,
-            typePrinter: PrinterType.bluetooth.toString(),
+            typePrinter: PrinterType.bluetooth,
           );
           setState(() {
             devices.add(printer);
@@ -197,7 +178,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           deviceName: device.name,
           vendorId: device.vendorId,
           productId: device.productId,
-          typePrinter: PrinterType.usb.toString(),
+          typePrinter: PrinterType.usb,
         );
         setState(() {
           devices.add(printer);
@@ -296,7 +277,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           address: printerData['address'],
           vendorId: printerData['vendorId'],
           productId: printerData['productId'],
-          typePrinter: printerData['typePrinter'],
+          typePrinter: PrinterType.values.firstWhere(
+            (e) => e.toString() == printerData['typePrinter'],
+            orElse: () => PrinterType.bluetooth,
+          ),
         );
       });
     }
@@ -917,17 +901,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       bytes += generator.cut();
 
       // Print
-      PrinterType type = printer.typePrinter == PrinterType.usb.toString()
-          ? PrinterType.usb
-          : PrinterType.bluetooth;
-      await printerManager.send(type: type, bytes: bytes);
+      await printerManager.send(type: printer.typePrinter, bytes: bytes);
     } finally {
       await _disconnectPrinter(printer);
     }
   }
 
   Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
-    if (selectedPrinter.typePrinter == PrinterType.usb.toString()) {
+    if (selectedPrinter.typePrinter == PrinterType.usb) {
       await printerManager.connect(
         type: PrinterType.usb,
         model: UsbPrinterInput(
@@ -936,8 +917,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           vendorId: selectedPrinter.vendorId,
         ),
       );
-    } else if (selectedPrinter.typePrinter ==
-        PrinterType.bluetooth.toString()) {
+    } else if (selectedPrinter.typePrinter == PrinterType.bluetooth) {
       if (selectedPrinter.address == null) {
         throw Exception('Bluetooth printer address is null');
       }
@@ -954,11 +934,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _disconnectPrinter(BluetoothPrinter selectedPrinter) async {
     try {
-      PrinterType type =
-          selectedPrinter.typePrinter == PrinterType.usb.toString()
-              ? PrinterType.usb
-              : PrinterType.bluetooth;
-      await printerManager.disconnect(type: type);
+      await printerManager.disconnect(type: selectedPrinter.typePrinter);
     } catch (e) {
       debugPrint('Error disconnecting printer: $e');
     }
@@ -1630,7 +1606,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                                   const EdgeInsets.only(top: 4),
                                               child: Text(
                                                 printer.address ??
-                                                    printer.typePrinter,
+                                                    printer.typePrinter.name,
                                                 style: TextStyle(
                                                   color: Colors.grey[600],
                                                   fontSize: 14,
