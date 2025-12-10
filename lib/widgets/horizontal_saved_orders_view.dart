@@ -92,7 +92,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         circleRadius: 8,
         color: Colors.white,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             debugPrint("===== NEW ORDER (+) BUTTON PRESSED =====");
             debugPrint("🔄 Current state:");
             debugPrint("  - Current order ID: ${provider.currentOrder?.id}");
@@ -118,7 +118,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                 debugPrint(
                     "  - Current order phone before save: ${provider.currentOrder!.customerPhone}");
                 // Call the billing page's save method to properly save with current customer info
-                billingPageState.saveCurrentOrder();
+                await billingPageState.saveCurrentOrder();
                 debugPrint(
                     "  - Current order phone after save: ${provider.currentOrder?.customerPhone}");
               } else {
@@ -143,7 +143,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
               if (billingPageState != null) {
                 debugPrint("💾 Saving new order with current customer info");
                 // Call the billing page's save method to properly save with current customer info
-                billingPageState.saveCurrentOrder();
+                await billingPageState.saveCurrentOrder();
               } else {
                 // Fallback - save without customer info (not ideal)
                 debugPrint(

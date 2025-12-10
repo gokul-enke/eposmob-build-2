@@ -50,4 +50,19 @@ class DateHelper {
     final DateFormat formatter = DateFormat('hh:mm a');
     return formatter.format(local);
   }
+
+  // Format duration as "time ago" (e.g., "5m ago", "2h ago", "3d ago")
+  static String formatTimeAgo(Duration duration) {
+    final minutes = duration.inMinutes;
+    final hours = duration.inHours;
+    final days = duration.inDays;
+
+    if (days > 0) {
+      return '${days}d ago';
+    } else if (hours > 0) {
+      return '${hours}h ago';
+    } else {
+      return '${minutes}m ago';
+    }
+  }
 }

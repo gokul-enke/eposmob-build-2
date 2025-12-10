@@ -184,9 +184,9 @@ class _CustomerInformationViewWidgetState
                             icon: Icons.account_balance_wallet_outlined,
                             label: "Balance",
                             value: "₹${widget.customer?.balance?.toStringAsFixed(2) ?? "0.00"}",
-                            valueColor: (widget.customer?.balance ?? 0) > 0 
+                            valueColor: (widget.customer?.balance ?? 0) >= 0 
                                 ? ColorManager.kSuccessColor 
-                                : ColorManager.kGreyColor,
+                                : Colors.red,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(

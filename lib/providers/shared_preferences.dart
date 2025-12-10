@@ -28,7 +28,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.setInt('customerId', customerId);
     prefs.setString('customerName', customerName);
     prefs.setString('userRole', userRole);
-    
+
     // Save new fields
     if (tokenType != null) {
       prefs.setString('token_type', tokenType);
@@ -60,7 +60,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('customerId');
     prefs.remove('customerName');
     prefs.remove('userRole');
-    
+
     // Remove new fields
     prefs.remove('token_type');
     prefs.remove('company_id');
@@ -170,5 +170,13 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<void> removeActiveStoreId() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('active_store_id');
+  }
+
+  // Printer settings management
+  Future<void> clearPrinterSettings() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('default_printer');
+    await prefs.remove('default_paper_size');
+    await prefs.remove('default_font_style');
   }
 }

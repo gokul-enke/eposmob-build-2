@@ -40,7 +40,10 @@ class CustomDropDownWithSearch<T> extends StatefulWidget {
     this.contentPadding,
     this.width,
     this.autofocus = true,
+    this.focusNode,
   });
+
+  final FocusNode? focusNode;
 
   @override
   State<CustomDropDownWithSearch<T>> createState() =>
@@ -51,6 +54,7 @@ class _CustomDropDownWithSearchState<T>
     extends State<CustomDropDownWithSearch<T>> {
   late TextEditingController _searchController;
   late FocusNode _searchFocusNode;
+  final GlobalKey<DropdownSearchState<T>> _dropdownKey = GlobalKey();
 
   @override
   void initState() {
@@ -96,7 +100,9 @@ class _CustomDropDownWithSearchState<T>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.showName && widget.title != null && widget.title!.isNotEmpty) ...[
+        if (widget.showName &&
+            widget.title != null &&
+            widget.title!.isNotEmpty) ...[
           CustomTextTile(
             title: widget.title!,
             isStarRed: widget.isRequired,
@@ -126,240 +132,254 @@ class _CustomDropDownWithSearchState<T>
               ],
             ),
             constraints: BoxConstraints(
-              minHeight:
-                  widget.height ?? MediaQuery.of(context).size.height * .048,
-              maxHeight:
-                  widget.height ?? MediaQuery.of(context).size.height * .048,
+              minHeight: widget.height ?? 48,
+              maxHeight: widget.height ?? 48,
             ),
-            child: DropdownSearch<T>(
-              items: (filter, infiniteScrollProps) => widget.items,
-              dropdownBuilder: (context, selectedItem) {
-                final bool hasValue = selectedItem != null;
-                final String text = hasValue
-                    ? widget.displayText(selectedItem as T)
-                    : widget.hintText;
-                final TextStyle style = hasValue
-                    ? buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s13,
-                        0.27,
-                        ColorManager.textColor.withOpacity(.5),
-                      )
-                    : buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s11,
-                        0.27,
-                        ColorManager.textColor.withOpacity(.5),
-                      );
-                return SizedBox.expand(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 12, right: 8),
-                      child: Text(
-                        text,
-                        style: style,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                );
+            child: Focus(
+              focusNode: widget.focusNode,
+              onKey: (node, event) {
+                if (event is RawKeyDownEvent &&
+                    event.logicalKey == LogicalKeyboardKey.enter) {
+                  _dropdownKey.currentState?.openDropDownSearch();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
               },
-              decoratorProps: DropDownDecoratorProps(
-                decoration: InputDecoration(
-                  hintText: null,
-                  hintStyle: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s11,
-                    0.27,
-                    ColorManager.textColor.withOpacity(.5),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(7),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  isDense: true,
-                  contentPadding:
-                      widget.contentPadding ?? const EdgeInsets.only(left: 12),
-                  suffixIcon: Center(
-                    child: Icon(
-                      Icons.arrow_drop_down,
-                      size: 18,
-                      color: ColorManager.textColor.withOpacity(.6),
-                    ),
-                  ),
-                  suffixIconConstraints: BoxConstraints(
-                    minHeight: widget.height ??
-                        MediaQuery.of(context).size.height * .048,
-                    minWidth: 36,
-                  ),
-                ),
-                baseStyle: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s13,
-                  0.27,
-                  ColorManager.textColor.withOpacity(.5),
-                ),
-              ),
-              popupProps: PopupProps.menu(
-                showSearchBox: true,
-                searchFieldProps: TextFieldProps(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  autofocus: widget.autofocus,
-                  decoration: InputDecoration(
-                    hintText: widget.searchHintText ?? 'Search...',
-                    hintStyle: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.27,
-                      Colors.grey.shade600,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      size: 20,
-                      color: Colors.grey.shade600,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(7),
-                      borderSide:
-                          BorderSide(color: Colors.grey.withOpacity(0.3)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(7),
-                      borderSide: BorderSide(color: Colors.blue.shade600),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.27,
-                    Colors.black87,
-                  ),
-                ),
-                // Clear the search query when popup is closed
-                onDismissed: () {
-                  _searchController.clear();
-                },
-                menuProps: MenuProps(
-                  backgroundColor: Colors.white,
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                itemBuilder: (context, item, isDisabled, isSelected) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color:
-                          isSelected ? Colors.blue.shade50 : Colors.transparent,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      widget.displayText(item),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color:
-                            isSelected ? Colors.blue.shade800 : Colors.black87,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
+              child: DropdownSearch<T>(
+                key: _dropdownKey,
+                items: (filter, infiniteScrollProps) => widget.items,
+                dropdownBuilder: (context, selectedItem) {
+                  final bool hasValue = selectedItem != null;
+                  final String text = hasValue
+                      ? widget.displayText(selectedItem as T)
+                      : widget.hintText;
+                  final TextStyle style = hasValue
+                      ? buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s13,
+                          0.27,
+                          ColorManager.textColor.withOpacity(.5),
+                        )
+                      : buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s11,
+                          0.27,
+                          ColorManager.textColor.withOpacity(.5),
+                        );
+                  return SizedBox.expand(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 12, right: 8),
+                        child: Text(
+                          text,
+                          style: style,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: null,
-                      softWrap: true,
                     ),
                   );
                 },
-                emptyBuilder: (context, searchEntry) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 16),
-                    child: Text(
-                      'No items found',
-                      style: buildCustomStyle(
+                decoratorProps: DropDownDecoratorProps(
+                  decoration: InputDecoration(
+                    focusColor: ColorManager.kPrimaryColor,
+                    hoverColor: ColorManager.kPrimaryColor.withOpacity(0.1),
+                    hintText: null,
+                    hintStyle: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(7),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    isDense: true,
+                    contentPadding: widget.contentPadding ??
+                        const EdgeInsets.only(left: 12),
+                    suffixIcon: Center(
+                      child: Icon(
+                        Icons.arrow_drop_down,
+                        size: 18,
+                        color: ColorManager.textColor.withOpacity(.6),
+                      ),
+                    ),
+                    suffixIconConstraints: BoxConstraints(
+                      minHeight: widget.height ??
+                          MediaQuery.of(context).size.height * .048,
+                      minWidth: 36,
+                    ),
+                  ),
+                  baseStyle: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s13,
+                    0.27,
+                    ColorManager.textColor.withOpacity(.5),
+                  ),
+                ),
+                popupProps: PopupProps.menu(
+                  showSearchBox: true,
+                  searchFieldProps: TextFieldProps(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    autofocus: widget.autofocus,
+                    decoration: InputDecoration(
+                      hintText: widget.searchHintText ?? 'Search...',
+                      hintStyle: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
                         0.27,
                         Colors.grey.shade600,
                       ),
-                      textAlign: TextAlign.center,
+                      prefixIcon: Icon(
+                        Icons.search,
+                        size: 20,
+                        color: Colors.grey.shade600,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(7),
+                        borderSide:
+                            BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(7),
+                        borderSide: BorderSide(color: Colors.blue.shade600),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
-                  );
-                },
-                loadingBuilder: (context, searchEntry) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.blue.shade600,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.27,
+                      Colors.black87,
+                    ),
+                  ),
+                  // Clear the search query when popup is closed
+                  onDismissed: () {
+                    _searchController.clear();
+                  },
+                  menuProps: MenuProps(
+                    backgroundColor: Colors.white,
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  itemBuilder: (context, item, isDisabled, isSelected) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Colors.blue.shade50
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        widget.displayText(item),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isSelected
+                              ? Colors.blue.shade800
+                              : Colors.black87,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                        maxLines: null,
+                        softWrap: true,
+                      ),
+                    );
+                  },
+                  emptyBuilder: (context, searchEntry) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 16),
+                      child: Text(
+                        'No items found',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.27,
+                          Colors.grey.shade600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, searchEntry) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.blue.shade600,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Loading...',
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s12,
-                            0.27,
-                            Colors.grey.shade600,
+                          const SizedBox(width: 8),
+                          Text(
+                            'Loading...',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.27,
+                              Colors.grey.shade600,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
+                        ],
+                      ),
+                    );
+                  },
+                  searchDelay: const Duration(milliseconds: 300),
+                ),
+                selectedItem: widget.value,
+                itemAsString: widget.displayText,
+                onChanged: (val) {
+                  // Propagate change
+                  widget.onChanged(val);
+                  // Clear search when user selects an item or clears selection
+                  _searchController.clear();
                 },
-                searchDelay: const Duration(milliseconds: 300),
-              ),
-              selectedItem: widget.value,
-              itemAsString: widget.displayText,
-              onChanged: (val) {
-                // Propagate change
-                widget.onChanged(val);
-                // Clear search when user selects an item or clears selection
-                _searchController.clear();
-              },
-              compareFn: (a, b) {
-                if (a == null && b == null) return true;
-                if (a == null || b == null) return false;
-                // Compare using provided displayText mapping for generic types
-                try {
-                  return widget.displayText(a) == widget.displayText(b);
-                } catch (_) {
-                  return a == b;
-                }
-              },
-              filterFn: (item, filter) {
-                return widget
-                    .displayText(item)
-                    .toLowerCase()
-                    .contains(filter.toLowerCase());
-              },
-              suffixProps: DropdownSuffixProps(
-                clearButtonProps: ClearButtonProps(
-                  isVisible: true,
-                  icon: Icon(
-                    Icons.close,
-                    size: 16,
-                    color: ColorManager.textColor.withOpacity(.6),
+                compareFn: (a, b) {
+                  if (a == null && b == null) return true;
+                  if (a == null || b == null) return false;
+                  // Compare using provided displayText mapping for generic types
+                  try {
+                    return widget.displayText(a) == widget.displayText(b);
+                  } catch (_) {
+                    return a == b;
+                  }
+                },
+                filterFn: (item, filter) {
+                  return widget
+                      .displayText(item)
+                      .toLowerCase()
+                      .contains(filter.toLowerCase());
+                },
+                suffixProps: DropdownSuffixProps(
+                  clearButtonProps: ClearButtonProps(
+                    isVisible: true,
+                    icon: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: ColorManager.textColor.withOpacity(.6),
+                    ),
                   ),
                 ),
               ),

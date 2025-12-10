@@ -571,8 +571,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         searchProducts(1);
                                       }
                                     },
-                                    displayText: (supplier) =>
-                                        supplier.user?.name ?? 'No Name',
+                                    displayText: (supplier) => supplier.displayName,
                                     searchController: supplierSearchController,
                                     height: 45,
                                     margin: const EdgeInsets.symmetric(

@@ -26,7 +26,9 @@ class APPUrl {
       '$baseURL/api/v1/product/fetch-prop-values';
 
   // static String getProcductUrl = '$baseURL/api/v1/list-products';
-  static String getProductUrl =
+  static String getSellableProductUrl =
+      '$baseURL/api/v1/product/executive/list-products?type=sellable';
+  static String getAllProductsUrl =
       '$baseURL/api/v1/product/executive/list-products';
   static String addToCartUrl = '$baseURL/api/v1/cart/add-to-cart';
   static String listRoles = '$baseURL/api/v1/roles/list';

@@ -111,19 +111,22 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     });
 
     try {
-      final productProvider = Provider.of<LocalProductProvider>(context, listen: false);
-      
+      final productProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
       // Search for product by barcode in the products list
       GetProduct? product;
       try {
         product = productProvider.products.firstWhere(
-          (p) => p.barcode != null && p.barcode!.toString().trim() == barcode.trim(),
+          (p) =>
+              p.barcode != null &&
+              p.barcode!.toString().trim() == barcode.trim(),
         );
       } catch (e) {
         // Product not found
         product = null;
       }
-      
+
       setState(() {
         selectedProduct = product;
         isLoading = false;
@@ -196,8 +199,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     }
     if (_selectedUnitId == null && _unitController.text.isNotEmpty) {
       final match = unitMap.entries.firstWhere(
-        (entry) => entry.value.toLowerCase() ==
-            _unitController.text.toLowerCase(),
+        (entry) =>
+            entry.value.toLowerCase() == _unitController.text.toLowerCase(),
         orElse: () => const MapEntry('', ''),
       );
       if (match.key.isNotEmpty) {
@@ -211,8 +214,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     }
     if (_selectedRackId == null && _rackController.text.isNotEmpty) {
       final match = rackMap.entries.firstWhere(
-        (entry) => entry.value.toLowerCase() ==
-            _rackController.text.toLowerCase(),
+        (entry) =>
+            entry.value.toLowerCase() == _rackController.text.toLowerCase(),
         orElse: () => const MapEntry('', ''),
       );
       if (match.key.isNotEmpty) {
@@ -233,11 +236,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.text = product.unit ?? '';
     _priceController.text = _valueToString(product.price?.price);
     _mrpController.text = _valueToString(product.mrp);
-    _purchasePriceController.text =
-        product.purchasePrice ??
-            (product.stock != null && product.stock!.isNotEmpty
-                ? product.stock!.first.purchasePrice
-                : '') ??
+    _purchasePriceController.text = product.purchasePrice ??
+        (product.stock != null && product.stock!.isNotEmpty
+            ? product.stock!.first.purchasePrice
+            : '') ??
         '';
 
     _editableStock = widget.selectedStock ??
@@ -354,8 +356,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         accessToken: accessToken,
       );
 
-      final String successMessage =
-          response['message']?.toString() ?? 'Product details updated successfully.';
+      final String successMessage = response['message']?.toString() ??
+          'Product details updated successfully.';
 
       ProductPrice? updatedProductPrice;
       if (product.price != null) {
@@ -385,8 +387,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         }
       } else if (resolvedUnitLabel.isNotEmpty) {
         final match = unitMap.entries.firstWhere(
-          (entry) => entry.value.toLowerCase() ==
-              resolvedUnitLabel.toLowerCase(),
+          (entry) =>
+              entry.value.toLowerCase() == resolvedUnitLabel.toLowerCase(),
           orElse: () => const MapEntry('', ''),
         );
         if (match.key.isNotEmpty) {
@@ -516,7 +518,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 ColorManager.textColor,
               ),
               softWrap: true, // Enable text wrapping
-              overflow: TextOverflow.visible, // Allow text to wrap instead of truncating
+              overflow: TextOverflow
+                  .visible, // Allow text to wrap instead of truncating
             ),
           ),
         ],
@@ -551,20 +554,31 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             Expanded(
               child: Column(
                 children: [
-                  _buildDetailRow('Price', product.price?.price != null ? '$currency ${product.price!.price}' : 'N/A'),
-                  _buildDetailRow('MRP', product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
+                  _buildDetailRow(
+                      'Price',
+                      product.price?.price != null
+                          ? '$currency ${product.price!.price}'
+                          : 'N/A'),
+                  _buildDetailRow('MRP',
+                      product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
                   _buildDetailRow(
                     'Purchase Price',
-                    (product.purchasePrice != null && product.purchasePrice!.isNotEmpty
+                    (product.purchasePrice != null &&
+                            product.purchasePrice!.isNotEmpty
                         ? '$currency ${product.purchasePrice}'
-                        :
-                        (product.stock != null && product.stock!.isNotEmpty
-                            ? (product.stock!.first.purchasePrice != null && product.stock!.first.purchasePrice!.isNotEmpty
+                        : (product.stock != null && product.stock!.isNotEmpty
+                            ? (product.stock!.first.purchasePrice != null &&
+                                    product
+                                        .stock!.first.purchasePrice!.isNotEmpty
                                 ? '$currency ${product.stock!.first.purchasePrice}'
                                 : 'N/A')
                             : 'N/A')),
                   ),
-                  _buildDetailRow('Offer Price', product.offerPrice != null ? '$currency ${product.offerPrice}' : 'N/A'),
+                  _buildDetailRow(
+                      'Offer Price',
+                      product.offerPrice != null
+                          ? '$currency ${product.offerPrice}'
+                          : 'N/A'),
                   _buildDetailRow('Currency', product.currency ?? 'N/A'),
                   _buildDetailRow('SKU', product.sku ?? 'Not Available'),
                 ],
@@ -575,11 +589,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               child: Column(
                 children: [
                   _buildDetailRow('Rating', product.rating ?? 'N/A'),
-                  _buildDetailRow('Available Qty', product.numberOfProductsAvailable ?? 'N/A'),
-                  _buildDetailRow('Location', product.productLocation?.toString() ?? 'N/A'),
+                  _buildDetailRow('Available Qty',
+                      product.numberOfProductsAvailable ?? 'N/A'),
+                  _buildDetailRow(
+                      'Location', product.productLocation?.toString() ?? 'N/A'),
                   if (product.weightInfo != null) ...[
-                    _buildDetailRow('Weight', product.weightInfo!.weight?.toString() ?? 'N/A'),
-                    _buildDetailRow('Is Weighted', product.weightInfo!.isWeighted == true ? 'Yes' : 'No'),
+                    _buildDetailRow('Weight',
+                        product.weightInfo!.weight?.toString() ?? 'N/A'),
+                    _buildDetailRow('Is Weighted',
+                        product.weightInfo!.isWeighted == true ? 'Yes' : 'No'),
                   ] else ...[
                     _buildDetailRow('Weight', 'N/A'),
                     _buildDetailRow('Is Weighted', 'N/A'),
@@ -589,7 +607,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ),
           ],
         ),
-        if (product.description != null && product.description.toString().isNotEmpty) ...[
+        if (product.description != null &&
+            product.description.toString().isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
             'Description',
@@ -653,11 +672,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       (prop.masterValue?.isNotEmpty ?? false))
                   .map((prop) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: ColorManager.kPrimaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: ColorManager.kPrimaryColor.withOpacity(0.3)),
+                    border: Border.all(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.3)),
                   ),
                   child: Text(
                     '${prop.label ?? ''}: ${prop.masterValue ?? ''}',
@@ -739,7 +760,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   final stock = entry.value;
                   return Container(
                     decoration: BoxDecoration(
-                      color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.05),
+                      color: index % 2 == 0
+                          ? Colors.white
+                          : Colors.grey.withOpacity(0.05),
                     ),
                     child: Table(
                       columnWidths: const {
@@ -755,15 +778,26 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         9: FlexColumnWidth(1.0),
                       },
                       border: null,
-                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
                       children: [
                         TableRow(
                           children: [
                             _buildStockTableCell('${index + 1}'),
-                            _buildStockTableCell(stock.quantity?.toString() ?? 'N/A'),
-                            _buildStockTableCell(stock.price != null && stock.price!.isNotEmpty ? '$currency ${stock.price}' : 'N/A'),
-                            _buildStockTableCell(stock.mrp != null && stock.mrp!.isNotEmpty ? '$currency ${stock.mrp}' : 'N/A'),
-                            _buildStockTableCell(stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty ? '$currency ${stock.purchasePrice}' : 'N/A'),
+                            _buildStockTableCell(
+                                stock.quantity?.toString() ?? 'N/A'),
+                            _buildStockTableCell(
+                                stock.price != null && stock.price!.isNotEmpty
+                                    ? '$currency ${stock.price}'
+                                    : 'N/A'),
+                            _buildStockTableCell(
+                                stock.mrp != null && stock.mrp!.isNotEmpty
+                                    ? '$currency ${stock.mrp}'
+                                    : 'N/A'),
+                            _buildStockTableCell(stock.purchasePrice != null &&
+                                    stock.purchasePrice!.isNotEmpty
+                                ? '$currency ${stock.purchasePrice}'
+                                : 'N/A'),
                             _buildStockTableCell(stock.supplier ?? 'N/A'),
                             _buildStockTableCell(stock.sku ?? 'N/A'),
                             _buildStockTableCell(stock.date ?? 'N/A'),
@@ -848,239 +882,234 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     return Form(
       key: _editFormKey,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const double horizontalGap = 12;
-          const double verticalGap = 12;
-          final double availableWidth = constraints.maxWidth;
-          final double fieldWidth = availableWidth > 0
-              ? (availableWidth - (horizontalGap * 2)) / 3
-              : size.width / 3.5;
-          final double fieldHeight = size.height * 0.05;
+      child: Padding(
+        padding: const EdgeInsets.all(2.0),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const double horizontalGap = 12;
+            const double verticalGap = 12;
+            final double availableWidth = constraints.maxWidth;
+            final double fieldWidth = availableWidth > 0
+                ? (availableWidth - (horizontalGap * 2)) / 3
+                : size.width / 3.5;
+            final double fieldHeight = size.height * 0.05;
 
-          Widget spacing() => const SizedBox(width: horizontalGap);
+            Widget spacing() => const SizedBox(width: horizontalGap);
 
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: fieldWidth,
-                      child: buildColumnWidgetForTextFields(
-                        controller: _nameController,
-                        size: size,
-                        title: 'Product Name',
-                        hintText: 'Enter product name',
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
                         width: fieldWidth,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        readOnly: false,
-                        validator: (value) => value == null || value.trim().isEmpty
-                            ? 'Required'
-                            : null,
-                        onchanged: (value) {
-                          if (value == null) return;
-                          final slug = value
-                              .trim()
-                              .toLowerCase()
-                              .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-                              .replaceAll(RegExp(r'-+'), '-')
-                              .replaceAll(RegExp(r'^-|-$'), '');
-                          _slugController.text = slug;
-                        },
+                        child: buildColumnWidgetForTextFields(
+                          controller: _nameController,
+                          size: size,
+                          title: 'Product Name',
+                          hintText: 'Enter product name',
+                          width: fieldWidth,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          readOnly: false,
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                                  ? 'Required'
+                                  : null,
+                          onchanged: (value) {
+                            if (value == null) return;
+                            final slug = value
+                                .trim()
+                                .toLowerCase()
+                                .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+                                .replaceAll(RegExp(r'-+'), '-')
+                                .replaceAll(RegExp(r'^-|-$'), '');
+                            _slugController.text = slug;
+                          },
+                        ),
                       ),
-                    ),
-                    spacing(),
-                    SizedBox(
-                      width: fieldWidth,
-                      child: buildColumnWidgetForTextFields(
-                        controller: _slugController,
-                        size: size,
-                        title: 'Slug',
-                        hintText: 'Enter slug',
+                      spacing(),
+                      SizedBox(
                         width: fieldWidth,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        readOnly: false,
-                        validator: (value) => value == null || value.trim().isEmpty
-                            ? 'Required'
-                            : null,
+                        child: buildColumnWidgetForTextFields(
+                          controller: _slugController,
+                          size: size,
+                          title: 'Slug',
+                          hintText: 'Enter slug',
+                          width: fieldWidth,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          readOnly: false,
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                                  ? 'Required'
+                                  : null,
+                        ),
                       ),
-                    ),
-                    spacing(),
-                    SizedBox(
-                      width: fieldWidth,
-                      child: buildColumnWidgetForTextFields(
-                        controller: _barcodeController,
-                        size: size,
-                        title: 'Barcode',
-                        hintText: 'Enter barcode',
+                      spacing(),
+                      SizedBox(
                         width: fieldWidth,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        readOnly: false,
+                        child: buildColumnWidgetForTextFields(
+                          controller: _barcodeController,
+                          size: size,
+                          title: 'Barcode',
+                          hintText: 'Enter barcode',
+                          width: fieldWidth,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          readOnly: false,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: verticalGap),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: fieldWidth,
-                      child: CustomDropDownWithSearch<Category>(
-                        title: 'Category',
-                        hintText: 'Select category',
-                        value: selectedCategory,
-                        items: categories,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        onChanged: (category) {
-                          setState(() {
-                            _selectedCategoryId =
-                                category?.categoryId?.toString();
-                          });
-                        },
-                        displayText: (category) =>
-                            category.categoryName ?? 'Unknown',
-                        isRequired: true,
-                        width: fieldWidth,
-                        searchHintText: 'Search category...',
-                        autofocus: false,
-                      ),
-                    ),
-                    spacing(),
-                    SizedBox(
-                      width: fieldWidth,
-                      child: CustomDropDownWithSearch<_DropdownOption>(
-                        title: 'Unit',
-                        hintText: 'Select unit',
-                        value: selectedUnitOption,
-                        items: unitOptions,
-                        onChanged: (option) {
-                          setState(() {
-                            _selectedUnitId = option?.id;
-                            _unitController.text = option?.label ?? '';
-                          });
-                        },
-                        displayText: (option) => option.label,
-                        isRequired: true,
-                        width: fieldWidth,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        searchHintText: 'Search unit...',
-                        autofocus: false,
-                      ),
-                    ),
-                    spacing(),
-                    SizedBox(
-                      width: fieldWidth,
-                      child: buildColumnWidgetForTextFields(
-                        controller: _priceController,
-                        size: size,
-                        title: 'Price',
-                        hintText: 'Enter price',
-                        width: fieldWidth,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        readOnly: false,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: verticalGap),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: fieldWidth,
-                      child: buildColumnWidgetForTextFields(
-                        controller: _mrpController,
-                        size: size,
-                        title: 'MRP',
-                        hintText: 'Enter MRP',
-                        width: fieldWidth,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        readOnly: false,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                    ),
-                    spacing(),
-                    SizedBox(
-                      width: fieldWidth,
-                      child: buildColumnWidgetForTextFields(
-                        controller: _purchasePriceController,
-                        size: size,
-                        title: 'Purchase Price',
-                        hintText: 'Enter purchase price',
-                        width: fieldWidth,
-                        height: fieldHeight,
-                        margin: EdgeInsets.zero,
-                        readOnly: false,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                    ),
-                    spacing(),
-                    // SizedBox(
-                    //   width: fieldWidth,
-                    //   child: CustomDropDownWithSearch<_DropdownOption>(
-                    //     title: 'Rack',
-                    //     hintText: 'Select rack',
-                    //     value: selectedRackOption,
-                    //     items: rackOptions,
-                    //     onChanged: (option) {
-                    //       setState(() {
-                    //         _selectedRackId = option?.id;
-                    //         _rackController.text = option?.label ?? '';
-                    //       });
-                    //     },
-                    //     displayText: (option) => option.label,
-                    //     isRequired: false,
-                    //     width: fieldWidth,
-                    //     height: fieldHeight,
-                    //     margin: EdgeInsets.zero,
-                    //     searchHintText: 'Search rack...',
-                    //     autofocus: false,
-                    //   ),
-                    // ),
-                  ],
-                ),
-                const SizedBox(height: verticalGap),
-                if (product.stock != null && product.stock!.isNotEmpty)
-                  Text(
-                    'Price and MRP changes apply to all stock entries for this product.',
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.20,
-                      ColorManager.textColor.withOpacity(0.7),
-                    ),
+                    ],
                   ),
-                const SizedBox(height: 12),
-                Text(
-                  'Saving updates will only modify local data. Please use the dedicated product edit screens to sync with the server when ready.',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.20,
-                    ColorManager.textColor.withOpacity(0.6),
+                  const SizedBox(height: verticalGap),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: fieldWidth,
+                        child: CustomDropDownWithSearch<Category>(
+                          title: 'Category',
+                          hintText: 'Select category',
+                          value: selectedCategory,
+                          items: categories,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          onChanged: (category) {
+                            setState(() {
+                              _selectedCategoryId =
+                                  category?.categoryId?.toString();
+                            });
+                          },
+                          displayText: (category) =>
+                              category.categoryName ?? 'Unknown',
+                          isRequired: true,
+                          width: fieldWidth,
+                          searchHintText: 'Search category...',
+                          autofocus: false,
+                        ),
+                      ),
+                      spacing(),
+                      SizedBox(
+                        width: fieldWidth,
+                        child: CustomDropDownWithSearch<_DropdownOption>(
+                          title: 'Unit',
+                          hintText: 'Select unit',
+                          value: selectedUnitOption,
+                          items: unitOptions,
+                          onChanged: (option) {
+                            setState(() {
+                              _selectedUnitId = option?.id;
+                              _unitController.text = option?.label ?? '';
+                            });
+                          },
+                          displayText: (option) => option.label,
+                          isRequired: true,
+                          width: fieldWidth,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          searchHintText: 'Search unit...',
+                          autofocus: false,
+                        ),
+                      ),
+                      spacing(),
+                      SizedBox(
+                        width: fieldWidth,
+                        child: buildColumnWidgetForTextFields(
+                          controller: _priceController,
+                          size: size,
+                          title: 'Price',
+                          hintText: 'Enter price',
+                          width: fieldWidth,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          readOnly: false,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(height: verticalGap),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: fieldWidth,
+                        child: buildColumnWidgetForTextFields(
+                          controller: _mrpController,
+                          size: size,
+                          title: 'MRP',
+                          hintText: 'Enter MRP',
+                          width: fieldWidth,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          readOnly: false,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                        ),
+                      ),
+                      spacing(),
+                      SizedBox(
+                        width: fieldWidth,
+                        child: buildColumnWidgetForTextFields(
+                          controller: _purchasePriceController,
+                          size: size,
+                          title: 'Purchase Price',
+                          hintText: 'Enter purchase price',
+                          width: fieldWidth,
+                          height: fieldHeight,
+                          margin: EdgeInsets.zero,
+                          readOnly: false,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                        ),
+                      ),
+                      spacing(),
+                      // SizedBox(
+                      //   width: fieldWidth,
+                      //   child: CustomDropDownWithSearch<_DropdownOption>(
+                      //     title: 'Rack',
+                      //     hintText: 'Select rack',
+                      //     value: selectedRackOption,
+                      //     items: rackOptions,
+                      //     onChanged: (option) {
+                      //       setState(() {
+                      //         _selectedRackId = option?.id;
+                      //         _rackController.text = option?.label ?? '';
+                      //       });
+                      //     },
+                      //     displayText: (option) => option.label,
+                      //     isRequired: false,
+                      //     width: fieldWidth,
+                      //     height: fieldHeight,
+                      //     margin: EdgeInsets.zero,
+                      //     searchHintText: 'Search rack...',
+                      //     autofocus: false,
+                      //   ),
+                      // ),
+                    ],
+                  ),
+                  const SizedBox(height: verticalGap),
+                  // if (product.stock != null && product.stock!.isNotEmpty)
+                  //   Text(
+                  //     'Price and MRP changes apply to all stock entries for this product.',
+                  //     style: buildCustomStyle(
+                  //       FontWeightManager.medium,
+                  //       FontSize.s12,
+                  //       0.20,
+                  //       ColorManager.textColor.withOpacity(0.7),
+                  //     ),
+                  //   ),
+                  // const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1187,7 +1216,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       backgroundColor: Colors.white,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.9, // Increased from 0.8 to 0.9
+          maxWidth: MediaQuery.of(context).size.width *
+              0.9, // Increased from 0.8 to 0.9
           maxHeight: MediaQuery.of(context).size.height * 0.8,
           minWidth: 600, // Add minimum width to ensure adequate space
         ),

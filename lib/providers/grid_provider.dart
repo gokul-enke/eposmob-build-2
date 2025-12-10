@@ -180,7 +180,7 @@ class GridSelectionProvider extends ChangeNotifier {
     notifyListeners();
     productList = [];
     final url =
-        Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+        Uri.parse(APPUrl.getSellableProductUrl).replace(queryParameters: queryParams);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -262,7 +262,7 @@ class GridSelectionProvider extends ChangeNotifier {
     notifyListeners();
     productList = [];
     final url =
-        Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+        Uri.parse(APPUrl.getSellableProductUrl).replace(queryParameters: queryParams);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -319,7 +319,7 @@ class GridSelectionProvider extends ChangeNotifier {
     // selectedCategoryId = categoryId;
     notifyListeners();
     selectedProductListAPI = [];
-    final url = Uri.parse(APPUrl.getProductUrl);
+    final url = Uri.parse(APPUrl.getSellableProductUrl);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -359,7 +359,7 @@ class GridSelectionProvider extends ChangeNotifier {
     notifyListeners();
 
     final url =
-        Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+        Uri.parse(APPUrl.getSellableProductUrl).replace(queryParameters: queryParams);
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -420,7 +420,7 @@ class GridSelectionProvider extends ChangeNotifier {
     selectedCategoryId = categoryId;
     notifyListeners();
     productList = [];
-    final url = Uri.parse(APPUrl.getProductUrl);
+    final url = Uri.parse(APPUrl.getSellableProductUrl);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');

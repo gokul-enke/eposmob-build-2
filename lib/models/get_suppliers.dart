@@ -36,6 +36,9 @@ class GetSuppliersModelData {
   final DateTime? updatedAt;
   final User? user; // Nested user object
 
+  /// Returns the supplier name, checking both direct name and nested user.name
+  String get displayName => name ?? user?.name ?? 'Unknown';
+
   GetSuppliersModelData({
     this.id,
     this.userId,

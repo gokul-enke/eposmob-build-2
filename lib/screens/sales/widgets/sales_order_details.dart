@@ -353,6 +353,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? customerEmail = customerDetails?.email;
               String? customerAddress = customerDetails?.address?.join(', ');
 
+              // Note: Balance info not available from order details API
+              // customerOldBalance, customerCurrentBalance, paidAmount will be null
+
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -369,6 +372,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                     customerEmail: customerEmail,
                     customerAddress: customerAddress,
                     orderReturns: orderDetailsModelData?.orderReturns,
+                    // Balance info not available from order details API
                   ),
                 ),
               );

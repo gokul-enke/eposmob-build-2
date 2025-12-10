@@ -161,18 +161,14 @@ class _SupplierInformationViewWidgetState
                         icon: Icons.account_circle,
                         children: [
                           _buildInfoRow(
-                            icon: Icons.account_balance,
-                            label: "Balance",
-                            value: widget.supplier?.balance.toStringAsFixed(2) ?? "0",
-                            valueColor: ColorManager.kSuccessColor,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildInfoRow(
                             icon: Icons.account_balance_wallet,
                             label: "Current Balance",
                             value: widget.supplier?.currentBalance
                                     ?.toStringAsFixed(2) ??
                                 "0.00",
+                            valueColor: (widget.supplier?.currentBalance ?? 0) >= 0
+                                ? ColorManager.kSuccessColor
+                                : Colors.red,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(

@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -477,11 +478,15 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       debugPrint("  - Net Total: $netTotal");
       debugPrint("  - You Saved: $youSaved");
 
+      // Get active store name
+      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeName = storeSession.activeStore?.storeName ?? "Store";
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PrintPage(
-            storeName: "SOUQ POINT",
+            storeName: storeName,
             cartItems: cartItems,
             formattedTotal: netTotal.toString(), // Use calculated net total
             savedTotal:
@@ -496,6 +501,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
+            // Balance info not available for offline saved orders
           ),
         ),
       );

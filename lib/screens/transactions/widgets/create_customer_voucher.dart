@@ -26,6 +26,12 @@ class VoucherItem {
   String totalAmount;
   bool isExpanded;
 
+  // Focus nodes for keyboard navigation
+  final FocusNode itemNameFocus = FocusNode();
+  final FocusNode unitAmountFocus = FocusNode();
+  final FocusNode taxFocus = FocusNode();
+  final FocusNode quantityFocus = FocusNode();
+
   VoucherItem({
     this.itemName = '',
     this.unitAmount = '0',
@@ -34,6 +40,13 @@ class VoucherItem {
     this.totalAmount = '0',
     this.isExpanded = false,
   });
+
+  void dispose() {
+    itemNameFocus.dispose();
+    unitAmountFocus.dispose();
+    taxFocus.dispose();
+    quantityFocus.dispose();
+  }
 }
 
 class CreateCustomerVoucherScreen extends StatefulWidget {
@@ -54,13 +67,21 @@ class _CreateCustomerVoucherScreenState
   final TextEditingController customerSearchController =
       TextEditingController();
 
-  // Date controllers
+  // Date controllers - Default to today's date
   DateTime selectedVoucherDate = DateTime.now();
-  DateTime selectedDueDate = DateTime.now().add(const Duration(days: 7));
+  DateTime selectedDueDate = DateTime.now();
 
-  // Dropdown selections
+  // Focus Nodes for keyboard navigation
+  final FocusNode typeFocus = FocusNode();
+  final FocusNode voucherDateFocus = FocusNode();
+  final FocusNode dueDateFocus = FocusNode();
+  final FocusNode statusFocus = FocusNode();
+  final FocusNode paymentMethodFocus = FocusNode();
+  final FocusNode customerFocus = FocusNode();
+
+  // Dropdown selections - Default status is 'paid'
   String? selectedType;
-  String? selectedStatus;
+  String? selectedStatus = 'paid';
   String? selectedPaymentMethod;
   int? selectedCustomerId;
   String? selectedCustomerName;
@@ -95,6 +116,10 @@ class _CreateCustomerVoucherScreenState
   void initState() {
     super.initState();
     _loadInitialData();
+    // Auto-focus on Type field when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(typeFocus);
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -435,7 +460,6 @@ class _CreateCustomerVoucherScreenState
     );
   }
 
-
   Widget _buildDateField(
     String label,
     DateTime selectedDate,
@@ -476,7 +500,11 @@ class _CreateCustomerVoucherScreenState
           hintText: 'Select Type',
           value: selectedType,
           items: typeOptions.map((t) => t['value']!).toList(),
-          onChanged: (String? value) => setState(() => selectedType = value),
+          onChanged: (String? value) {
+            setState(() => selectedType = value);
+            // Move focus to voucher date after selection
+            FocusScope.of(context).requestFocus(voucherDateFocus);
+          },
           displayText: (String? value) {
             if (value == null) return 'Select Type';
             final type = typeOptions.firstWhere((t) => t['value'] == value,
@@ -505,7 +533,11 @@ class _CreateCustomerVoucherScreenState
           hintText: 'Select Status',
           value: selectedStatus,
           items: statusOptions.map((s) => s['value']!).toList(),
-          onChanged: (String? value) => setState(() => selectedStatus = value),
+          onChanged: (String? value) {
+            setState(() => selectedStatus = value);
+            // Move focus to payment method after selection
+            FocusScope.of(context).requestFocus(paymentMethodFocus);
+          },
           displayText: (String? value) {
             if (value == null) return 'Select Status';
             final status = statusOptions.firstWhere((s) => s['value'] == value,
@@ -534,8 +566,11 @@ class _CreateCustomerVoucherScreenState
           hintText: 'Select Payment Method',
           value: selectedPaymentMethod,
           items: paymentMethods.map((m) => m['value']!).toList(),
-          onChanged: (String? value) =>
-              setState(() => selectedPaymentMethod = value),
+          onChanged: (String? value) {
+            setState(() => selectedPaymentMethod = value);
+            // Move focus to customer after selection
+            FocusScope.of(context).requestFocus(customerFocus);
+          },
           displayText: (String? value) {
             if (value == null) return 'Select Payment Method';
             final method = paymentMethods.firstWhere((m) => m['value'] == value,
@@ -573,6 +608,11 @@ class _CreateCustomerVoucherScreenState
                 selectedCustomerName = customer['name'] ?? '';
               }
             });
+            // Move focus to first item's name field after selection
+            if (voucherItems.isNotEmpty) {
+              FocusScope.of(context)
+                  .requestFocus(voucherItems[0].itemNameFocus);
+            }
           },
           displayText: (int? id) {
             if (id == null) return 'Select a customer';
@@ -671,7 +711,21 @@ class _CreateCustomerVoucherScreenState
                 circleRadius: 7,
                 child: TextFormField(
                   initialValue: item.itemName,
+                  focusNode: item.itemNameFocus,
+                  textInputAction: TextInputAction.next,
                   onChanged: (value) => setState(() => item.itemName = value),
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(item.unitAmountFocus);
+                  },
+                  onTap: () {
+                    // Select all text when focused
+                    final controller =
+                        TextEditingController(text: item.itemName);
+                    controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.itemName.length,
+                    );
+                  },
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: 'Item name',
@@ -687,10 +741,24 @@ class _CreateCustomerVoucherScreenState
                 circleRadius: 7,
                 child: TextFormField(
                   initialValue: item.unitAmount,
+                  focusNode: item.unitAmountFocus,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
                   onChanged: (value) {
                     setState(() => item.unitAmount = value);
                     _calculateTotal();
+                  },
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(item.taxFocus);
+                  },
+                  onTap: () {
+                    // Select all text when focused
+                    final controller =
+                        TextEditingController(text: item.unitAmount);
+                    controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.unitAmount.length,
+                    );
                   },
                   decoration: InputDecoration(
                     border: InputBorder.none,
@@ -707,10 +775,23 @@ class _CreateCustomerVoucherScreenState
                 circleRadius: 7,
                 child: TextFormField(
                   initialValue: item.tax,
+                  focusNode: item.taxFocus,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
                   onChanged: (value) {
                     setState(() => item.tax = value);
                     _calculateTotal();
+                  },
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(item.quantityFocus);
+                  },
+                  onTap: () {
+                    // Select all text when focused
+                    final controller = TextEditingController(text: item.tax);
+                    controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.tax.length,
+                    );
                   },
                   decoration: InputDecoration(
                     border: InputBorder.none,
@@ -727,10 +808,34 @@ class _CreateCustomerVoucherScreenState
                 circleRadius: 7,
                 child: TextFormField(
                   initialValue: item.quantity,
+                  focusNode: item.quantityFocus,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
                   onChanged: (value) {
                     setState(() => item.quantity = value);
                     _calculateTotal();
+                  },
+                  onFieldSubmitted: (_) {
+                    // Add new item row and focus on its name field
+                    setState(() {
+                      voucherItems.add(VoucherItem());
+                    });
+                    // Focus on new item's name field after a short delay
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      if (voucherItems.length > index + 1) {
+                        FocusScope.of(context).requestFocus(
+                            voucherItems[index + 1].itemNameFocus);
+                      }
+                    });
+                  },
+                  onTap: () {
+                    // Select all text when focused
+                    final controller =
+                        TextEditingController(text: item.quantity);
+                    controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: item.quantity.length,
+                    );
                   },
                   decoration: InputDecoration(
                     border: InputBorder.none,
@@ -759,6 +864,7 @@ class _CreateCustomerVoucherScreenState
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () {
                 setState(() {
+                  item.dispose();
                   voucherItems.removeAt(index);
                   _calculateTotal();
                 });
@@ -774,6 +880,20 @@ class _CreateCustomerVoucherScreenState
   void dispose() {
     totalAmountController.dispose();
     customerSearchController.dispose();
+
+    // Dispose focus nodes
+    typeFocus.dispose();
+    voucherDateFocus.dispose();
+    dueDateFocus.dispose();
+    statusFocus.dispose();
+    paymentMethodFocus.dispose();
+    customerFocus.dispose();
+
+    // Dispose item focus nodes
+    for (var item in voucherItems) {
+      item.dispose();
+    }
+
     super.dispose();
   }
 }

@@ -18,6 +18,8 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
   final bool isForExpiry;
   final bool isAllowEdit;
   final bool allowTextInput;
+  final double? height;
+  final FocusNode? focusNode;
 
   const CustomCalendarPickerTableCell({
     Key? key,
@@ -31,6 +33,8 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
     this.isForExpiry = false,
     this.isAllowEdit = true,
     this.allowTextInput = false,
+    this.height,
+    this.focusNode,
   }) : super(key: key);
 
   @override
@@ -486,13 +490,16 @@ class _CustomCalendarPickerTableCellState
   Widget build(BuildContext context) {
     final hasDate = selectedDate != null || widget.initialDate != null;
 
-    return GestureDetector(
+    return InkWell(
       onTap: () => _selectDate(context),
+      focusNode: widget.focusNode,
+      borderRadius: BorderRadius.circular(7),
       child: CustomBoxShadowContainer(
         circleRadius: 7,
-        blurRadius: 6,
-        offsetValue: const Offset(1, 1),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        alignment: Alignment.centerLeft,
+        margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+        padding: const EdgeInsets.only(left: 12),
+        height: widget.height,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

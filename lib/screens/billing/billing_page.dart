@@ -27,6 +27,7 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
@@ -910,7 +911,7 @@ class BillingPageState extends State<BillingPage>
     } finally {
       debugPrint("🔴 [BillingPage.processBarcode] Finally block - resetting processing flag...");
       // Reset the flag and ensure barcode is always cleared
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 750), () {
         if (mounted) {
           debugPrint("🔴 [BillingPage.processBarcode] Resetting _isProcessingBarcode to false");
           setState(() {
@@ -1491,6 +1492,7 @@ class BillingPageState extends State<BillingPage>
                               readOnly:
                                   selectedProductNameController.text.isNotEmpty,
                               onSubmitted: (query) {
+
                                 if (query != null && query.isNotEmpty) {
                                   processBarcode(query);
                                 }
@@ -1530,34 +1532,18 @@ class BillingPageState extends State<BillingPage>
                                 size: size,
                                 onSelected: (GetProduct selectedProduct,
                                     Stock? selectedStock) async {
-                                  // Directly populate form fields without showing price modal
-
-                                  // Determine the price to use: stock price or product base price
-                                  double defaultPrice = 0.0;
-                                  if (selectedStock != null) {
-                                    // Use stock price if available
-                                    defaultPrice = double.tryParse(
-                                            selectedStock.price ?? "0") ??
-                                        0.0;
-                                  } else {
-                                    // Use product base price
-                                    defaultPrice = double.tryParse(
-                                            selectedProduct.price?.price ??
-                                                "0") ??
-                                        0.0;
-                                  }
-
+                                  // Product is already added to cart by ProductCartHelper
+                                  // Clear fields and reset autocomplete for next product
                                   setState(() {
-                                    selectedProductIdController.text =
-                                        selectedProduct.productId.toString();
-                                    unitPriceController.text =
-                                        defaultPrice.toString();
-                                    quantityController.text = '1';
-                                    selectedProductNameController.text =
-                                        selectedProduct.productName ?? '';
-                                    barcodeController.text =
-                                        selectedProduct.barcode ?? '';
+                                    _autocompleteProductKey = GlobalKey();
+                                    quantityController.clear();
+                                    barcodeController.clear();
+                                    selectedProductIdController.clear();
+                                    unitPriceController.clear();
+                                    selectedProductNameController.clear();
                                   });
+                                  // Focus the barcode/search field for next entry
+                                  _focusTextField();
                                 },
                                 productList: productProvider.productList!,
                               ),
@@ -3343,7 +3329,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  void _saveOrder() async {
+  Future<void> _saveOrder() async {
     setState(() {
       isLoadingSaveOrder = true; // Indicate that loading has started
     });
@@ -3359,22 +3345,6 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if customer is selected
-      if (selectedCustomerID == null && mobileNumberText == "") {
-        showScaffoldError(
-          context: context,
-          message: "billing.select_customer".tr,
-        );
-        // Auto-focus on customer field
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_autocompleteFocusNode != null) {
-            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
-          } else {
-            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
-          }
-        });
-        return;
-      }
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -3979,8 +3949,21 @@ class BillingPageState extends State<BillingPage>
             String? customerAddress =
                 orderDetails.data?.customerDetails?.address?.join(', ');
 
+            // Calculate customer balance for print
+            double? oldBalance = selectedCustomer?.balance;
+            double totalPaid = _getTotalPaidAmount();
+            double? currentBalance;
+            if (oldBalance != null) {
+              double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
+              // Current balance = Old balance - (Cart Total - Amount Paid)
+              // If customer paid less than cart total, their balance decreases (they owe more)
+              // If customer paid more than cart total, their balance increases (they have credit)
+              currentBalance = oldBalance - (cartTotal - totalPaid);
+            }
+
             debugPrint(
                 "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
+            debugPrint("💰 Customer Old Balance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -3998,6 +3981,9 @@ class BillingPageState extends State<BillingPage>
                   customerPhone: customerPhone,
                   customerEmail: customerEmail,
                   customerAddress: customerAddress,
+                  customerOldBalance: oldBalance,
+                  customerCurrentBalance: currentBalance,
+                  paidAmount: totalPaid > 0 ? totalPaid : null,
                 ),
               ),
             );
@@ -5067,11 +5053,15 @@ class BillingPageState extends State<BillingPage>
       debugPrint(
           "Sample item: ${cartItems.isNotEmpty ? json.encode(cartItems[0]) : 'No items'}");
 
+      // Get active store name
+      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeName = storeSession.activeStore?.storeName ?? "Store";
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PrintPage(
-            storeName: "SOUQ POINT",
+            storeName: storeName,
             cartItems: cartItems,
             formattedTotal: netTotal.toString(), // Use calculated net total
             savedTotal:
@@ -5089,6 +5079,7 @@ class BillingPageState extends State<BillingPage>
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
+            // Balance info not available for offline saved orders
           ),
         ),
       );
@@ -5232,7 +5223,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   // Public method to save current order (for external calls)
-  void saveCurrentOrder() {
+  Future<void> saveCurrentOrder() async {
     debugPrint("===== PUBLIC SAVE CURRENT ORDER START =====");
     debugPrint("💾 BILLING: Public method called - saving current order...");
     debugPrint("📝 Current customer state:");
@@ -5249,7 +5240,7 @@ class BillingPageState extends State<BillingPage>
     debugPrint("  - Comment: '${_commentController.text}'");
     debugPrint(
         "  - Cart Items: ${Provider.of<LocalProductProvider>(context, listen: false).cartItems.length}");
-    _saveOrder();
+    await _saveOrder();
     debugPrint("===== PUBLIC SAVE CURRENT ORDER END =====");
   }
 

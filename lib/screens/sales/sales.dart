@@ -268,13 +268,13 @@ class _SalesScreenState extends State<SalesScreen> {
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
       final appSettings = appSettingsProvider.appSettings;
-      
+
       // Check if orderReturns data is available to determine which config to use
-      final billDocumentConfig = (orderData.orderReturns != null && 
-          orderData.orderReturns!.returnItems != null && 
-          orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ?? 
-             docConfigProvider.getDocumentConfig("Bill"))
+      final billDocumentConfig = (orderData.orderReturns != null &&
+              orderData.orderReturns!.returnItems != null &&
+              orderData.orderReturns!.returnItems!.isNotEmpty)
+          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
+              docConfigProvider.getDocumentConfig("Bill"))
           : docConfigProvider.getDocumentConfig("Bill");
 
       if (appSettings == null || billDocumentConfig == null) {
@@ -681,13 +681,13 @@ class _SalesScreenState extends State<SalesScreen> {
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
       final appSettings = appSettingsProvider.appSettings;
-      
+
       // Check if orderReturns data is available to determine which config to use
-      final billDocumentConfig = (orderData.orderReturns != null && 
-          orderData.orderReturns!.returnItems != null && 
-          orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ?? 
-             docConfigProvider.getDocumentConfig("Bill"))
+      final billDocumentConfig = (orderData.orderReturns != null &&
+              orderData.orderReturns!.returnItems != null &&
+              orderData.orderReturns!.returnItems!.isNotEmpty)
+          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
+              docConfigProvider.getDocumentConfig("Bill"))
           : docConfigProvider.getDocumentConfig("Bill");
 
       if (appSettings == null || billDocumentConfig == null) {
@@ -743,10 +743,10 @@ class _SalesScreenState extends State<SalesScreen> {
 
       // CRITICAL FIX: Ensure PDF file is completely written and accessible
       debugPrint('✅ PDF generated: ${pdfFile.path}');
-      
+
       // Wait for file system to sync (important for WhatsApp sharing)
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       // Verify PDF file integrity before sharing
       if (!await pdfFile.exists()) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -758,29 +758,31 @@ class _SalesScreenState extends State<SalesScreen> {
         }
         return;
       }
-      
+
       final fileSize = await pdfFile.length();
       debugPrint('📄 PDF file size: $fileSize bytes');
-      
+
       if (fileSize < 100) {
         debugPrint('⚠️  WARNING: PDF file is too small ($fileSize bytes)');
         Navigator.of(context, rootNavigator: true).pop();
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'PDF file appears to be corrupted or empty ($fileSize bytes).',
+            message:
+                'PDF file appears to be corrupted or empty ($fileSize bytes).',
           );
         }
         return;
       }
-      
+
       // Test file readability
       try {
         final testBytes = await pdfFile.readAsBytes();
         if (testBytes.isEmpty) {
           throw Exception('PDF file is empty');
         }
-        debugPrint('✅ PDF file verification successful: ${testBytes.length} bytes');
+        debugPrint(
+            '✅ PDF file verification successful: ${testBytes.length} bytes');
       } catch (e) {
         debugPrint('❌ PDF file verification failed: $e');
         Navigator.of(context, rootNavigator: true).pop();
@@ -809,7 +811,7 @@ class _SalesScreenState extends State<SalesScreen> {
       debugPrint('📱 Target phone: $customerPhone');
       debugPrint('📄 PDF file ready: ${pdfFile.path}');
       debugPrint('📄 File size: ${await pdfFile.length()} bytes');
-      
+
       // Send via WhatsApp bot with actual PDF file
       final success = await whatsappProvider.sendPDFFile(
         phoneNumber: customerPhone,
@@ -853,7 +855,7 @@ Powered by CloudPOS''',
         } else {
           // If PDF sending failed, try fallback with message and PDF info
           debugPrint('🔄 PDF file sending failed, trying fallback approach...');
-          
+
           final fallbackSuccess = await whatsappProvider.sendMessageWithPDF(
             phoneNumber: customerPhone,
             message: '''🧾 *Invoice for Order #${order.orderNumber}*
@@ -874,7 +876,7 @@ We appreciate your business!
 Powered by CloudPOS''',
             pdfFile: pdfFile,
           );
-          
+
           if (fallbackSuccess) {
             showScaffold(
               context: context,
@@ -1063,7 +1065,7 @@ Powered by CloudPOS''',
       // Prepare filters
       final filters = {
         if (orderNumberController.text.isNotEmpty)
-          'orderNumber': orderNumberController.text.trim(),
+          'orderNumber': orderNumberController.text.trim().toUpperCase(),
         if (customerNameController.text.isNotEmpty)
           'filterName': customerNameController.text.trim(),
         if (amountController.text.isNotEmpty)
@@ -1130,10 +1132,11 @@ Powered by CloudPOS''',
       calendarPickerKey = UniqueKey();
     });
     searchOrders(1); // Trigger fresh search after reset
-    
+
     // Optionally hide filters after reset on mobile
     if (_isMobile(context)) {
-      Provider.of<SalesProvider>(context, listen: false).setFiltersVisibility(false);
+      Provider.of<SalesProvider>(context, listen: false)
+          .setFiltersVisibility(false);
     }
   }
 
@@ -1282,6 +1285,9 @@ Powered by CloudPOS''',
                 String? customerAddress =
                     orderDetails.data?.customerDetails?.address?.join(', ');
 
+                // Note: Balance info not available from order details API
+                // customerOldBalance, customerCurrentBalance, paidAmount will be null
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -1300,6 +1306,7 @@ Powered by CloudPOS''',
                       customerEmail: customerEmail,
                       customerAddress: customerAddress,
                       orderReturns: orderDetails.data?.orderReturns,
+                      // Balance info not available from order details API
                     ),
                   ),
                 );
@@ -1558,7 +1565,6 @@ Powered by CloudPOS''',
                                               await _shareViaWhatsAppBot(order);
                                             },
                                           ),
-                                          
                                           ListTile(
                                             leading: const CircleAvatar(
                                               radius: 18,
@@ -1931,14 +1937,15 @@ Powered by CloudPOS''',
                     ),
                     Consumer<SalesProvider>(
                       builder: (context, salesProvider, child) {
-                        final hasFilters = orderNumberController.text.isNotEmpty ||
-                            customerNameController.text.isNotEmpty ||
-                            amountController.text.isNotEmpty ||
-                            emailController.text.isNotEmpty ||
-                            phoneController.text.isNotEmpty ||
-                            storeController.text.isNotEmpty ||
-                            statusController.text.isNotEmpty ||
-                            selectedDate != null;
+                        final hasFilters =
+                            orderNumberController.text.isNotEmpty ||
+                                customerNameController.text.isNotEmpty ||
+                                amountController.text.isNotEmpty ||
+                                emailController.text.isNotEmpty ||
+                                phoneController.text.isNotEmpty ||
+                                storeController.text.isNotEmpty ||
+                                statusController.text.isNotEmpty ||
+                                selectedDate != null;
 
                         return Stack(
                           children: [
@@ -1983,433 +1990,459 @@ Powered by CloudPOS''',
                     if (!salesProvider.showFilters) {
                       return const SizedBox.shrink();
                     }
-                    
+
                     return _isMobile(context)
                         ? MobileFilters(
-                        orderNumberController: orderNumberController,
-                        customerNameController: customerNameController,
-                        phoneController: phoneController,
-                        amountController: amountController,
-                        storeController: storeController,
-                        storeSearchController: storeSearchController,
-                        statusController: statusController,
-                        selectedStatus: selectedStatus,
-                        storeSelected: storeSelected,
-                        selectedDate: selectedDate,
-                        calendarPickerKey: calendarPickerKey,
-                        storeList: storeList ?? [],
-                        statusOptions: statusOptions,
-                        onSearch: (value) {
-                          if (value == null || value.isEmpty || value.length > 2) {
-                            searchOrders(1);
-                          }
-                        },
-                        onStoreChanged: (GetStoreModelData? storeModelData) {
-                          setState(() {
-                            if (storeModelData?.id == 0) {
-                              storeSelected = null;
-                              storeController.clear();
-                            } else {
-                              storeSelected = storeModelData;
-                              if (storeModelData != null) {
-                                storeController.text = storeModelData.id.toString();
-                              } else {
-                                storeController.clear();
+                            orderNumberController: orderNumberController,
+                            customerNameController: customerNameController,
+                            phoneController: phoneController,
+                            amountController: amountController,
+                            storeController: storeController,
+                            storeSearchController: storeSearchController,
+                            statusController: statusController,
+                            selectedStatus: selectedStatus,
+                            storeSelected: storeSelected,
+                            selectedDate: selectedDate,
+                            calendarPickerKey: calendarPickerKey,
+                            storeList: storeList ?? [],
+                            statusOptions: statusOptions,
+                            onSearch: (value) {
+                              if (value == null ||
+                                  value.isEmpty ||
+                                  value.length > 2) {
+                                searchOrders(1);
                               }
-                            }
-                          });
-                          searchOrders(1);
-                        },
-                        onStatusChanged: (String? status) {
-                          setState(() {
-                            selectedStatus = status;
-                            if (status != null) {
-                              statusController.text = status;
-                            } else {
-                              statusController.clear();
-                            }
-                          });
-                          searchOrders(1);
-                        },
-                        onDateSelected: (DateTime date) {
-                          setState(() {
-                            selectedDate = date;
-                          });
-                          searchOrders(1);
-                        },
-                        onReset: resetSearch,
-                      )
-                    : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // First row of filters with equal width
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Order #
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Order #",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                onchanged: (value) {
-                                  if (value!.isEmpty || value.length > 2) {
-                                    searchOrders(1);
+                            },
+                            onStoreChanged:
+                                (GetStoreModelData? storeModelData) {
+                              setState(() {
+                                if (storeModelData?.id == 0) {
+                                  storeSelected = null;
+                                  storeController.clear();
+                                } else {
+                                  storeSelected = storeModelData;
+                                  if (storeModelData != null) {
+                                    storeController.text =
+                                        storeModelData.id.toString();
+                                  } else {
+                                    storeController.clear();
                                   }
-                                },
-                                controller: orderNumberController,
-                                size: size,
-                                hintText: 'Order Number',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Customer
-                        Expanded(
-                          flex: 1,
-                          child: Column(
+                                }
+                              });
+                              searchOrders(1);
+                            },
+                            onStatusChanged: (String? status) {
+                              setState(() {
+                                selectedStatus = status;
+                                if (status != null) {
+                                  statusController.text = status;
+                                } else {
+                                  statusController.clear();
+                                }
+                              });
+                              searchOrders(1);
+                            },
+                            onDateSelected: (DateTime date) {
+                              setState(() {
+                                selectedDate = date;
+                              });
+                              searchOrders(1);
+                            },
+                            onReset: resetSearch,
+                          )
+                        : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Customer",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                onchanged: (value) {
-                                  if (value!.isEmpty || value.length > 2) {
-                                    searchOrders(1);
-                                  }
-                                },
-                                controller: customerNameController,
-                                size: size,
-                                hintText: 'Customer Name',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Phone
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Phone",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                onchanged: (value) {
-                                  if (value!.isEmpty || value.length > 2) {
-                                    searchOrders(1);
-                                  }
-                                },
-                                controller: phoneController,
-                                size: size,
-                                hintText: 'Phone',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Date
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Date",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                height: 45,
-                                child: Center(
-                                  child: CalendarPickerTableCell(
-                                    key: calendarPickerKey,
-                                    onDateSelected: (DateTime date) {
-                                      setState(() {
-                                        selectedDate = date;
-                                      });
-                                      searchOrders(1);
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Second row of filters with equal width
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Price
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Price",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                onchanged: (value) {
-                                  if (value!.isEmpty || value.length > 2) {
-                                    searchOrders(1);
-                                  }
-                                },
-                                controller: amountController,
-                                size: size,
-                                hintText: 'Price',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Store
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Store",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              BuildDropDownWithSearch<GetStoreModelData>(
-                                title:
-                                    null, // Remove title since we're handling it manually
-                                showName:
-                                    false, // Don't show the built-in title
-                                hintText: 'Select Store',
-                                value: storeSelected,
-                                items: [
-                                  GetStoreModelData(
-                                      id: 0,
-                                      name:
-                                          'All Stores'), // Add "All Stores" option
-                                  ...storeList!
-                                ],
-                                onChanged: (GetStoreModelData? storeModelData) {
-                                  setState(() {
-                                    if (storeModelData?.id == 0) {
-                                      // Handle "All Stores" selection
-                                      storeSelected = null;
-                                      storeController.clear();
-                                    } else {
-                                      storeSelected = storeModelData;
-                                      if (storeModelData != null) {
-                                        storeController.text =
-                                            storeModelData.id.toString();
-                                      } else {
-                                        storeController.clear();
-                                      }
-                                    }
-                                  });
-                                  searchOrders(1);
-                                },
-                                displayText: (store) =>
-                                    store.name ?? 'Unknown Store',
-                                searchController: storeSearchController,
-                                height: 45,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 0, vertical: 0),
-                              ),
-                            ],
-                          ),
-                        ),
-// Add this in your filter section (after the Store filter or wherever you prefer)
-                        const SizedBox(width: 15),
-
-// Status Filter
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Status",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                height: 45,
-                                child: BuildBoxShadowContainer(
-                                  circleRadius: 7,
-                                  alignment: Alignment.centerLeft,
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 0, vertical: 0),
-                                  padding: const EdgeInsets.only(left: 15),
-                                  color: Colors.white,
-                                  child: DropdownButtonFormField<String>(
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                    ),
-                                    value: selectedStatus,
-                                    dropdownColor: Colors.white,
-                                    hint: Text(
-                                      'Select Status',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s10,
-                                        0.27,
-                                        ColorManager.textColor.withOpacity(.5),
-                                      ),
-                                    ),
-                                    items: [
-                                      DropdownMenuItem<String>(
-                                        value: null,
-                                        child: Text(
-                                          'All',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.27,
-                                            ColorManager.textColor
-                                                .withOpacity(.5),
-                                          ),
-                                        ),
-                                      ),
-                                      ...statusOptions.map((String status) {
-                                        return DropdownMenuItem<String>(
-                                          value: status,
+                              // First row of filters with equal width
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Order #
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            status.toUpperCase(),
+                                            "Order #",
                                             style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s10,
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
                                               0.27,
-                                              ColorManager.textColor
-                                                  .withOpacity(.5),
+                                              Colors.black.withOpacity(0.6),
                                             ),
                                           ),
-                                        );
-                                      }).toList()
-                                    ],
-                                    onChanged: (String? status) {
-                                      setState(() {
-                                        selectedStatus = status;
-                                        if (status != null) {
-                                          statusController.text = status;
-                                        } else {
-                                          statusController.clear();
-                                        }
-                                      });
-                                      searchOrders(1);
-                                    },
+                                        ),
+                                        buildColumnWidgetForTextFields(
+                                          height: 45,
+                                          onchanged: (value) {
+                                            if (value!.isEmpty ||
+                                                value.length > 2) {
+                                              searchOrders(1);
+                                            }
+                                          },
+                                          controller: orderNumberController,
+                                          size: size,
+                                          hintText: 'Order Number',
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 10),
+
+                                  // Customer
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Customer",
+                                            style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.27,
+                                              Colors.black.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        buildColumnWidgetForTextFields(
+                                          height: 45,
+                                          onchanged: (value) {
+                                            if (value!.isEmpty ||
+                                                value.length > 2) {
+                                              searchOrders(1);
+                                            }
+                                          },
+                                          controller: customerNameController,
+                                          size: size,
+                                          hintText: 'Customer Name',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  // Phone
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Phone",
+                                            style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.27,
+                                              Colors.black.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        buildColumnWidgetForTextFields(
+                                          height: 45,
+                                          onchanged: (value) {
+                                            if (value!.isEmpty ||
+                                                value.length > 2) {
+                                              searchOrders(1);
+                                            }
+                                          },
+                                          controller: phoneController,
+                                          size: size,
+                                          hintText: 'Phone',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  // Date
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Date",
+                                            style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.27,
+                                              Colors.black.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        BuildBoxShadowContainer(
+                                          circleRadius: 7,
+                                          height: 45,
+                                          child: Center(
+                                            child: CalendarPickerTableCell(
+                                              key: calendarPickerKey,
+                                              onDateSelected: (DateTime date) {
+                                                setState(() {
+                                                  selectedDate = date;
+                                                });
+                                                searchOrders(1);
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Second row of filters with equal width
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Price
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Price",
+                                            style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.27,
+                                              Colors.black.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        buildColumnWidgetForTextFields(
+                                          height: 45,
+                                          onchanged: (value) {
+                                            if (value!.isEmpty ||
+                                                value.length > 2) {
+                                              searchOrders(1);
+                                            }
+                                          },
+                                          controller: amountController,
+                                          size: size,
+                                          hintText: 'Price',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 15),
+
+                                  // Store
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Store",
+                                            style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.27,
+                                              Colors.black.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        BuildDropDownWithSearch<
+                                            GetStoreModelData>(
+                                          title:
+                                              null, // Remove title since we're handling it manually
+                                          showName:
+                                              false, // Don't show the built-in title
+                                          hintText: 'Select Store',
+                                          value: storeSelected,
+                                          items: [
+                                            GetStoreModelData(
+                                                id: 0,
+                                                name:
+                                                    'All Stores'), // Add "All Stores" option
+                                            ...storeList!
+                                          ],
+                                          onChanged: (GetStoreModelData?
+                                              storeModelData) {
+                                            setState(() {
+                                              if (storeModelData?.id == 0) {
+                                                // Handle "All Stores" selection
+                                                storeSelected = null;
+                                                storeController.clear();
+                                              } else {
+                                                storeSelected = storeModelData;
+                                                if (storeModelData != null) {
+                                                  storeController.text =
+                                                      storeModelData.id
+                                                          .toString();
+                                                } else {
+                                                  storeController.clear();
+                                                }
+                                              }
+                                            });
+                                            searchOrders(1);
+                                          },
+                                          displayText: (store) =>
+                                              store.name ?? 'Unknown Store',
+                                          searchController:
+                                              storeSearchController,
+                                          height: 45,
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 0, vertical: 0),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+// Add this in your filter section (after the Store filter or wherever you prefer)
+                                  const SizedBox(width: 15),
+
+// Status Filter
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Status",
+                                            style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.27,
+                                              Colors.black.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          height: 45,
+                                          child: BuildBoxShadowContainer(
+                                            circleRadius: 7,
+                                            alignment: Alignment.centerLeft,
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 0, vertical: 0),
+                                            padding:
+                                                const EdgeInsets.only(left: 15),
+                                            color: Colors.white,
+                                            child:
+                                                DropdownButtonFormField<String>(
+                                              decoration: const InputDecoration(
+                                                border: InputBorder.none,
+                                                filled: true,
+                                                fillColor: Colors.white,
+                                              ),
+                                              value: selectedStatus,
+                                              dropdownColor: Colors.white,
+                                              hint: Text(
+                                                'Select Status',
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s10,
+                                                  0.27,
+                                                  ColorManager.textColor
+                                                      .withOpacity(.5),
+                                                ),
+                                              ),
+                                              items: [
+                                                DropdownMenuItem<String>(
+                                                  value: null,
+                                                  child: Text(
+                                                    'All',
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s10,
+                                                      0.27,
+                                                      ColorManager.textColor
+                                                          .withOpacity(.5),
+                                                    ),
+                                                  ),
+                                                ),
+                                                ...statusOptions
+                                                    .map((String status) {
+                                                  return DropdownMenuItem<
+                                                      String>(
+                                                    value: status,
+                                                    child: Text(
+                                                      status.toUpperCase(),
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .medium,
+                                                        FontSize.s10,
+                                                        0.27,
+                                                        ColorManager.textColor
+                                                            .withOpacity(.5),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList()
+                                              ],
+                                              onChanged: (String? status) {
+                                                setState(() {
+                                                  selectedStatus = status;
+                                                  if (status != null) {
+                                                    statusController.text =
+                                                        status;
+                                                  } else {
+                                                    statusController.clear();
+                                                  }
+                                                });
+                                                searchOrders(1);
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 15),
+
+                                  // Reset button
+                                  Expanded(
+                                    flex: 1,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 35.0),
+                                      child: CustomRoundButton(
+                                        title: "Reset",
+                                        boxColor: Colors.white,
+                                        textColor: ColorManager.kPrimaryColor,
+                                        fct: resetSearch,
+                                        height: 45,
+                                        width: double
+                                            .infinity, // Take full available width
+                                        fontSize: FontSize.s12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Reset button
-                        Expanded(
-                          flex: 1,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 35.0),
-                            child: CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width:
-                                  double.infinity, // Take full available width
-                              fontSize: FontSize.s12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
+                          );
                   },
                 ),
-                
+
                 Consumer<SalesProvider>(
                   builder: (context, salesProvider, child) {
-                    return salesProvider.showFilters 
-                        ? const SizedBox(height: 20) 
+                    return salesProvider.showFilters
+                        ? const SizedBox(height: 20)
                         : const SizedBox.shrink();
                   },
                 ),
@@ -2429,7 +2462,8 @@ Powered by CloudPOS''',
                           Expanded(
                             child: _isMobile(context)
                                 ? ListView.builder(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 8),
                                     itemCount: orderProvider.orders.length,
                                     itemBuilder: (context, index) {
                                       return MobileOrderCard(

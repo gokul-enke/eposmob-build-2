@@ -212,10 +212,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                             2: FlexColumnWidth(2.0), // Email
                                             3: FlexColumnWidth(1.3), // Phone
                                             4: FlexColumnWidth(1.5), // Address
-                                            5: FlexColumnWidth(1.2), // Balance
-                                            6: FlexColumnWidth(
+                                            5: FlexColumnWidth(
                                                 1.5), // Current Balance
-                                            7: FlexColumnWidth(0.8), // Action
+                                            6: FlexColumnWidth(0.8), // Action
                                           },
                                           border: null,
                                           defaultVerticalAlignment:
@@ -228,7 +227,6 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                 _buildTableHeader('Email'),
                                                 _buildTableHeader('Phone'),
                                                 _buildTableHeader('Address'),
-                                                _buildTableHeader('Balance'),
                                                 _buildTableHeader(
                                                     'Current Balance'),
                                                 _buildTableHeader('Action'),
@@ -321,10 +319,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                         4: FlexColumnWidth(
                                                             1.5), // Address
                                                         5: FlexColumnWidth(
-                                                            1.2), // Balance
-                                                        6: FlexColumnWidth(
                                                             1.5), // Current Balance
-                                                        7: FlexColumnWidth(
+                                                        6: FlexColumnWidth(
                                                             0.8), // Action
                                                       },
                                                       border: null,
@@ -467,27 +463,6 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       .all(8.0),
                                                               child: Text(
                                                                 supplier
-                                                                    .balance
-                                                                    .toStringAsFixed(2),
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                style:
-                                                                    buildCustomStyle(
-                                                                  FontWeightManager
-                                                                      .medium,
-                                                                  FontSize.s9,
-                                                                  0.13,
-                                                                  Colors.black,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                supplier
                                                                     .currentBalance
                                                                     .toStringAsFixed(
                                                                         2),
@@ -500,16 +475,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       .medium,
                                                                   FontSize.s9,
                                                                   0.13,
-                                                                  supplier.paymentType ==
-                                                                          'to_pay'
-                                                                      ? Colors
-                                                                          .red
-                                                                      : supplier.paymentType ==
-                                                                              'to_receive'
-                                                                          ? Colors
-                                                                              .green
-                                                                          : Colors
-                                                                              .black,
+                                                                  supplier.currentBalance >= 0
+                                                                      ? ColorManager.kSuccessColor
+                                                                      : Colors.red,
                                                                 ),
                                                               ),
                                                             ),

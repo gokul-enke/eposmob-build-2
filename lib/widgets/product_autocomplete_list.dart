@@ -117,7 +117,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
       product: product,
       onSelected: widget.onSelected,
       addToCartDirectly:
-          false, // Prefill form fields for review before adding to cart
+          true, // Add product directly to cart on selection
       // Customer info will be fetched from global provider in the helper
     );
   }

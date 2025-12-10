@@ -15,6 +15,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:get/get.dart';
 
 class SideBarProductList extends StatefulWidget {
@@ -145,8 +146,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
         // Category search field using reusable widget
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (widget.showSectionTitles) ...[
                 Text(
@@ -156,49 +157,53 @@ class _SideBarProductListState extends State<SideBarProductList> {
                 ),
                 const SizedBox(height: 6),
               ],
-              Expanded(
-                child: buildColumnWidgetForTextFields(
-                  controller: _searchCategoryController,
-                  size: MediaQuery.of(context).size,
-                  hintText: 'common.search_category'.tr,
-                  readOnly: false,
-                  focusNode: _categoryFocusNode,
-                  width: double.infinity, // Take full width
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 8), // Minimal margin
-                  onchanged: (query) {
-                    final categoryProvider =
-                        Provider.of<CategoryProvider>(context, listen: false);
-                    if (query!.isEmpty) {
-                      // Reset to show all categories without API call
-                      categoryProvider.resetCategoryFilter();
-                    } else {
-                      // Make API call for filtering
-                      categoryProvider.listAllCategory(filterName: query);
-                    }
-                    setState(() {}); // Update to show/hide clear button
-                  },
-                ),
-              ),
-              // Clear button for category search
-              if (_searchCategoryController.text.isNotEmpty)
-                BuildBoxShadowContainer(
-                  circleRadius: 7,
-                  padding: const EdgeInsets.all(5),
-                  width: 50,
-                  height: MediaQuery.of(context).size.height *
-                      .07, // Same height as text field
-                  child: IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () {
-                      _searchCategoryController.clear();
-                      // Don't call API, just reset the local category list
-                      Provider.of<CategoryProvider>(context, listen: false)
-                          .resetCategoryFilter();
-                      setState(() {}); // Update to show/hide clear button
-                    },
+              Row(
+                children: [
+                  Expanded(
+                    child: buildColumnWidgetForTextFields(
+                      controller: _searchCategoryController,
+                      size: MediaQuery.of(context).size,
+                      hintText: 'common.search_category'.tr,
+                      readOnly: false,
+                      focusNode: _categoryFocusNode,
+                      width: double.infinity, // Take full width
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 8), // Minimal margin
+                      onchanged: (query) {
+                        final categoryProvider =
+                            Provider.of<CategoryProvider>(context, listen: false);
+                        if (query!.isEmpty) {
+                          // Reset to show all categories without API call
+                          categoryProvider.resetCategoryFilter();
+                        } else {
+                          // Make API call for filtering
+                          categoryProvider.listAllCategory(filterName: query);
+                        }
+                        setState(() {}); // Update to show/hide clear button
+                      },
+                    ),
                   ),
-                ),
+                  // Clear button for category search
+                  if (_searchCategoryController.text.isNotEmpty)
+                    BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      padding: const EdgeInsets.all(5),
+                      width: 50,
+                      height: MediaQuery.of(context).size.height *
+                          .07, // Same height as text field
+                      child: IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchCategoryController.clear();
+                          // Don't call API, just reset the local category list
+                          Provider.of<CategoryProvider>(context, listen: false)
+                              .resetCategoryFilter();
+                          setState(() {}); // Update to show/hide clear button
+                        },
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -425,10 +430,59 @@ class _SideBarProductListState extends State<SideBarProductList> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (widget.showSectionTitles) ...[
-                      Text(
-                        'Products',
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s18, 0.30, ColorManager.textColor),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Products',
+                            style: buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s18, 0.30, ColorManager.textColor),
+                          ),
+                          // Add Product Button
+                          GestureDetector(
+                            onTap: () async {
+                              final result = await showDialog(
+                                context: context,
+                                builder: (context) => const AddProductWithBarcodeModal(
+                                  isAddToCart: false,
+                                ),
+                              );
+                              
+                              // If product was created successfully, refresh the product list
+                              if (result != null) {
+                                Provider.of<LocalProductProvider>(context, listen: false)
+                                    .refreshProducts();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: ColorManager.kPrimaryColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Add Product',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.30,
+                                      Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 6),
                     ],

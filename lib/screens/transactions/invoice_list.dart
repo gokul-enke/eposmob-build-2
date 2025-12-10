@@ -98,9 +98,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
             .updateInvoiceZatcaStatus(invoice.id, 'success');
-        // Soft refresh: reapply current filters/pagination from cache (no loader / no scroll jump)
-        Provider.of<InvoiceProvider>(context, listen: false)
-            .reapplyCurrentFilters();
+        // Also refresh this invoice from server without resetting filters/pagination
+        final String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        if (accessToken != null && accessToken.isNotEmpty) {
+          await Provider.of<InvoiceProvider>(context, listen: false)
+              .refreshSingleInvoiceFromServer(
+            accessToken: accessToken,
+            invoiceId: invoice.id,
+          );
+        }
       } else {
         final msg = (result is Map ? result['message'] : null) ??
             'Failed to process ZATCA Phase 2';
@@ -164,9 +171,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           // Flip row UI immediately if resync is successful
           Provider.of<InvoiceProvider>(context, listen: false)
               .updateInvoiceZatcaStatus(invoice.id, 'success');
-          // Soft refresh from cache only
-          Provider.of<InvoiceProvider>(context, listen: false)
-              .reapplyCurrentFilters();
+          // Also refresh this invoice from server without resetting filters/pagination
+          final String? accessToken =
+              Provider.of<AuthModel>(context, listen: false).token;
+          if (accessToken != null && accessToken.isNotEmpty) {
+            await Provider.of<InvoiceProvider>(context, listen: false)
+                .refreshSingleInvoiceFromServer(
+              accessToken: accessToken,
+              invoiceId: invoice.id,
+            );
+          }
         } else {
           String detail = rawError != null
               ? rawError
@@ -210,12 +224,44 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 .appSettings;
         final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
         final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
-        final bool isZatcaSuccess =
-            (invoice.zatcaStatus?.toLowerCase() == 'success');
+
+        // Read both ZATCA status fields
+        final String? zatcaStatus = invoice.zatcaStatus?.toLowerCase();
+        final String? zatcaRequestStatus =
+            invoice.zatcaRequestStatus?.toLowerCase();
+
+        // Determine states
+        // Backend zatca_status values: PASS, WARNING, null
+        final bool isZatcaPass = (zatcaStatus == 'pass');
+        final bool isZatcaWarning = (zatcaStatus == 'warning');
+        final bool isRequestFailed = (zatcaRequestStatus == 'failed');
+        final bool isRequestPending = (zatcaRequestStatus == 'pending' ||
+            zatcaRequestStatus == 'processing');
+        final bool neverRequested = (zatcaRequestStatus == null);
 
         final List<Widget> dynamicItems = [];
-        // If ZATCA is already success for this invoice, only show Phase 2 button
-        if (isZatcaSuccess) {
+
+        // Always show Phase 1 print when enabled, regardless of status
+        if (phase1) {
+          dynamicItems.add(
+            ListTile(
+              leading: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.green.withOpacity(0.12),
+                child: const Icon(Icons.qr_code, color: Colors.green),
+              ),
+              title: const Text('Phase 1 Print'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _performZatcaPhase1Print(invoice);
+              },
+            ),
+          );
+        }
+
+        // ===== SCENARIO 1: Already ZATCA compliant (zatca_status == 'PASS') =====
+        if (isZatcaPass) {
+          // Only show Phase 2 Print button (download existing PDF)
           if (phase2) {
             dynamicItems.add(
               ListTile(
@@ -224,7 +270,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   backgroundColor: Colors.orange.withOpacity(0.12),
                   child: const Icon(Icons.description, color: Colors.orange),
                 ),
-                title: const Text('ZATCA Phase 2'),
+                title: const Text('Phase 2 Print'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performZatcaPhase2SendWithPdf(invoice);
@@ -232,26 +278,98 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               ),
             );
           }
-        } else {
-          // When not success, keep existing behavior: show Print and Send when any phase is enabled
-          if (phase1 || phase2) {
-            dynamicItems.addAll([
+        }
+        // ===== SCENARIO 2: zatca_status == 'WARNING' (requires resync) =====
+        else if (isZatcaWarning) {
+          if (phase2) {
+            dynamicItems.add(
               ListTile(
                 leading: CircleAvatar(
                   radius: 18,
-                  backgroundColor: Colors.green.withOpacity(0.12),
-                  child: const Icon(Icons.qr_code, color: Colors.green),
+                  backgroundColor: Colors.purple.withOpacity(0.12),
+                  child: const Icon(Icons.sync, color: Colors.purple),
                 ),
-                title: const Text('ZATCA Print'),
+                title: const Text('Resync Invoice (Warning)'),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await _performZatcaPhase1Print(invoice);
+                  await _performZatcaPhase2Resync(invoice);
                 },
               ),
+            );
+          }
+        }
+        // ===== SCENARIO 3: zatca_status == null & request_status == 'success' =====
+        // Invoice was sent successfully but final ZATCA status not set yet
+        else if (!isZatcaPass &&
+            !isZatcaWarning &&
+            zatcaRequestStatus == 'success') {
+          if (phase2) {
+            dynamicItems.add(
               ListTile(
                 leading: CircleAvatar(
                   radius: 18,
-                  backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+                  backgroundColor: Colors.purple.withOpacity(0.12),
+                  child: const Icon(Icons.sync, color: Colors.purple),
+                ),
+                title: const Text('Resync Invoice'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _performZatcaPhase2Resync(invoice);
+                },
+              ),
+            );
+          }
+        }
+        // ===== SCENARIO 4: Request failed (zatca_request_status == 'failed') =====
+        else if (isRequestFailed) {
+          // Hide Phase 2 button, show Resync button
+          if (phase2) {
+            dynamicItems.add(
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.purple.withOpacity(0.12),
+                  child: const Icon(Icons.sync, color: Colors.purple),
+                ),
+                title: const Text('Resync Invoice (Failed)'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _performZatcaPhase2Resync(invoice);
+                },
+              ),
+            );
+          }
+        }
+        // ===== SCENARIO 5: Request pending/processing =====
+        else if (isRequestPending) {
+          // Hide Phase 2 button (already sent), show Resync button
+          if (phase2) {
+            dynamicItems.add(
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.purple.withOpacity(0.12),
+                  child: const Icon(Icons.sync, color: Colors.purple),
+                ),
+                title: const Text('Resync Invoice (Pending)'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _performZatcaPhase2Resync(invoice);
+                },
+              ),
+            );
+          }
+        }
+        // ===== SCENARIO 6: Never requested (zatca_request_status == null) =====
+        else if (neverRequested) {
+          // Show Phase 2 button, hide Resync button
+          if (phase2) {
+            dynamicItems.add(
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor:
+                      ColorManager.kPrimaryColor.withOpacity(0.12),
                   child: Icon(Icons.send, color: ColorManager.kPrimaryColor),
                 ),
                 title: const Text('Send to ZATCA'),
@@ -260,26 +378,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   await _performZatcaPhase2Send(invoice);
                 },
               ),
-            ]);
+            );
           }
-        }
-
-        // Show Resync only when Phase 2 is enabled AND not already success
-        if (phase2 && !isZatcaSuccess) {
-          dynamicItems.add(
-            ListTile(
-              leading: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.purple.withOpacity(0.12),
-                child: const Icon(Icons.sync, color: Colors.purple),
-              ),
-              title: const Text('Resync Invoice'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _performZatcaPhase2Resync(invoice);
-              },
-            ),
-          );
         }
 
         return SafeArea(
@@ -354,9 +454,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
             .updateInvoiceZatcaStatus(invoice.id, 'success');
-        // Soft refresh from cache only
-        Provider.of<InvoiceProvider>(context, listen: false)
-            .reapplyCurrentFilters();
+        // Also refresh this invoice from server without resetting filters/pagination
+        final String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        if (accessToken != null && accessToken.isNotEmpty) {
+          await Provider.of<InvoiceProvider>(context, listen: false)
+              .refreshSingleInvoiceFromServer(
+            accessToken: accessToken,
+            invoiceId: invoice.id,
+          );
+        }
       } else {
         final msg = (result is Map ? result['message'] : null) ??
             'Failed to send to ZATCA';
