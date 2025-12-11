@@ -14,6 +14,7 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -103,13 +104,9 @@ class _CreateSupplierVoucherScreenState
     {'value': 'pending', 'display': 'Pending'},
     {'value': 'overdue', 'display': 'Overdue'},
   ];
-  List<Map<String, String>> paymentMethods = [
-    {'value': 'COD', 'display': 'Cash On Delivery'},
-    {'value': 'ONLINE', 'display': 'Online Payment'},
-    {'value': 'CHEQUE', 'display': 'Cheque'},
-    {'value': 'UPI', 'display': 'UPI'},
-    {'value': 'CASH', 'display': 'Cash'},
-  ];
+  // Payment methods from API
+  Map<String, String> _paymentMethods = {};
+  bool _isLoadingPaymentMethods = false;
   List<Map<String, dynamic>> suppliers = [];
 
   bool _isLoading = false;
@@ -127,6 +124,45 @@ class _CreateSupplierVoucherScreenState
 
   Future<void> _loadInitialData() async {
     await _loadSuppliers();
+    await _loadPaymentMethods();
+  }
+
+  Future<void> _loadPaymentMethods() async {
+    setState(() {
+      _isLoadingPaymentMethods = true;
+    });
+
+    try {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+
+      final paymentMethods = await masterDataProvider.fetchPaymentMethods();
+
+      if (mounted && paymentMethods != null) {
+        setState(() {
+          _paymentMethods = paymentMethods;
+          _isLoadingPaymentMethods = false;
+          // Set default payment method if available and not already set
+          if (_paymentMethods.isNotEmpty && selectedPaymentMethod == null) {
+            if (_paymentMethods.containsKey('CASH')) {
+              selectedPaymentMethod = 'CASH';
+            } else if (_paymentMethods.containsKey('COD')) {
+              selectedPaymentMethod = 'COD';
+            } else {
+              selectedPaymentMethod = _paymentMethods.keys.first;
+            }
+          }
+        });
+        debugPrint(
+            '📋 [Supplier Voucher] Payment methods loaded: $_paymentMethods');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Error loading payment methods: $e');
+      setState(() {
+        _isLoadingPaymentMethods = false;
+      });
+    }
   }
 
   Future<void> _loadSuppliers() async {
@@ -561,18 +597,17 @@ class _CreateSupplierVoucherScreenState
         BuildDropDownWithSearch<String>(
           title: null,
           showName: false,
-          hintText: 'Select Payment Method',
+          hintText:
+              _isLoadingPaymentMethods ? 'Loading...' : 'Select Payment Method',
           value: selectedPaymentMethod,
-          items: paymentMethods.map((m) => m['value']!).toList(),
+          items: _paymentMethods.keys.toList(),
           onChanged: (String? value) {
             setState(() => selectedPaymentMethod = value);
             // Navigate to next field after selection
           },
           displayText: (String? value) {
             if (value == null) return 'Select Payment Method';
-            final method = paymentMethods.firstWhere((m) => m['value'] == value,
-                orElse: () => {'display': 'Unknown'});
-            return method['display']!;
+            return _paymentMethods[value] ?? value;
           },
           height: 45,
         ),

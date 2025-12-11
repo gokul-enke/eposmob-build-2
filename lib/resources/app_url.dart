@@ -172,6 +172,8 @@ class APPUrl {
   static String getMasterDataValues = '$baseURL/api/v1/master-data-values';
   static String getTableList =
       '$baseURL/api/v1/master-data-values?code=TABLE_LIST';
+  static String getPaymentMethods =
+      '$baseURL/api/v1/master-data-values?code=PAYMENT_METHOD';
   static String documentConfigs = '$baseURL/api/v1/document/document-configs';
   static String supplierTransactions =
       '$baseURL/api/v1/suppliers/list-transactions';

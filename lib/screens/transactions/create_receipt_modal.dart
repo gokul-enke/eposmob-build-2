@@ -13,6 +13,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:provider/provider.dart';
@@ -135,12 +136,16 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
   List<Invoice> _invoiceList = [];
   bool _isLoadingInvoices = false;
 
+  // Payment methods from API
+  Map<String, String> _paymentMethods = {};
+  bool _isLoadingPaymentMethods = false;
+
   @override
   void initState() {
     super.initState();
     // Set default values
     _totalAmountController.text = "0.00";
-    _selectedPaymentMethod = "Cash";
+    // Payment method will be set dynamically in _loadPaymentMethods
 
     // Initialize new item card
     _newItemCard = ReceiptItemCard(defaultDescription: "Item 1");
@@ -148,9 +153,10 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     // Add listener to new item card's amount controller
     _newItemCard.amountController.addListener(_calculateTotalAmount);
 
-    // Load customers and invoices
+    // Load customers, invoices, and payment methods
     _loadCustomers();
     _loadInvoices();
+    _loadPaymentMethods();
 
     // Focus on Payment Method field on load
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -217,6 +223,46 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         context: context,
         message: 'Error loading customers: $e',
       );
+    }
+  }
+
+  // Load payment methods from API
+  void _loadPaymentMethods() async {
+    setState(() {
+      _isLoadingPaymentMethods = true;
+    });
+
+    try {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+
+      final paymentMethods = await masterDataProvider.fetchPaymentMethods();
+
+      if (mounted && paymentMethods != null) {
+        setState(() {
+          _paymentMethods = paymentMethods;
+          _isLoadingPaymentMethods = false;
+          // Set default payment method if available
+          if (_paymentMethods.isNotEmpty && _selectedPaymentMethod == null) {
+            // Try to set CASH or COD as default, otherwise use first available
+            if (_paymentMethods.containsKey('CASH')) {
+              _selectedPaymentMethod = 'CASH';
+            } else if (_paymentMethods.containsKey('COD')) {
+              _selectedPaymentMethod = 'COD';
+            } else {
+              _selectedPaymentMethod = _paymentMethods.keys.first;
+            }
+          }
+        });
+        debugPrint(
+            '📋 [Receipt Modal] Payment methods loaded: $_paymentMethods');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Error loading payment methods: $e');
+      setState(() {
+        _isLoadingPaymentMethods = false;
+      });
     }
   }
 
@@ -1040,22 +1086,10 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     );
   }
 
-  // Helper method to map display payment method names to backend keys
-  String _getPaymentMethodKey(String? displayName) {
-    switch (displayName) {
-      case 'Cash':
-        return 'CASH';
-      case 'Card':
-        return 'CARD';
-      case 'UPI':
-        return 'UPI';
-      case 'Cheque':
-        return 'CHEQUE';
-      case 'Bank Transfer':
-        return 'BANK_TRANSFER';
-      default:
-        return 'CASH';
-    }
+  // Helper method to get payment method key for API
+  // Since we now store keys directly in _selectedPaymentMethod, return it as-is
+  String _getPaymentMethodKey(String? paymentMethodKey) {
+    return paymentMethodKey ?? 'CASH';
   }
 
   // Helper method to render label for dropdowns
@@ -1130,16 +1164,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             _buildLabel("Payment Method", isRequired: true),
                             const SizedBox(height: 4),
                             CustomDropDownWithSearch<String>(
-                              hintText: "Payment Method",
+                              hintText: _isLoadingPaymentMethods
+                                  ? "Loading..."
+                                  : "Payment Method",
                               title: "",
                               value: _selectedPaymentMethod,
-                              items: const [
-                                "Cash",
-                                "Card",
-                                "UPI",
-                                "Bank Transfer",
-                                "Cheque"
-                              ],
+                              items: _paymentMethods.keys.toList(),
                               focusNode: _paymentMethodFocus,
                               onChanged: (value) {
                                 setState(() {
@@ -1149,7 +1179,8 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                 FocusScope.of(context)
                                     .requestFocus(_customerFocus);
                               },
-                              displayText: (item) => item,
+                              displayText: (item) =>
+                                  _paymentMethods[item] ?? item,
                               showName: false,
                               height: 48,
                             ),
