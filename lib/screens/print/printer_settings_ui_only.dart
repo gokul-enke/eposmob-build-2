@@ -3,6 +3,8 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'dart:convert';
@@ -109,14 +111,16 @@ class _PrinterSettingsState extends State<PrinterSettings>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _fadeAnimationController, curve: Curves.easeInOut),
     );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+          parent: _slideAnimationController, curve: Curves.easeOutCubic),
     );
 
     _fadeAnimationController.forward();
@@ -249,8 +253,8 @@ class _PrinterSettingsState extends State<PrinterSettings>
           typePrinter: PrinterType.usb.toString(),
         );
         setState(() {
-          bool exists = devices.any((d) => 
-            d.vendorId == device.vendorId && d.productId == device.productId);
+          bool exists = devices.any((d) =>
+              d.vendorId == device.vendorId && d.productId == device.productId);
           if (!exists) {
             devices.add(printer);
           }
@@ -833,7 +837,8 @@ class _PrinterSettingsState extends State<PrinterSettings>
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -964,13 +969,15 @@ class _PrinterSettingsState extends State<PrinterSettings>
               value: selectedPaperSize,
               isExpanded: true,
               underline: const SizedBox(),
-              icon: const Icon(Icons.keyboard_arrow_down, color: ColorManager.kPrimaryColor),
+              icon: const Icon(Icons.keyboard_arrow_down,
+                  color: ColorManager.kPrimaryColor),
               items: paperSizes.map((size) {
                 return DropdownMenuItem<String>(
                   value: size['value'],
                   child: Row(
                     children: [
-                      Icon(size['icon'], size: 20, color: ColorManager.kPrimaryColor),
+                      Icon(size['icon'],
+                          size: 20, color: ColorManager.kPrimaryColor),
                       const SizedBox(width: 12),
                       Text(
                         size['label'],
@@ -1052,7 +1059,8 @@ class _PrinterSettingsState extends State<PrinterSettings>
               value: selectedFontStyle,
               isExpanded: true,
               underline: const SizedBox(),
-              icon: const Icon(Icons.keyboard_arrow_down, color: ColorManager.kPrimaryColor),
+              icon: const Icon(Icons.keyboard_arrow_down,
+                  color: ColorManager.kPrimaryColor),
               items: fontStyles.map((style) {
                 return DropdownMenuItem<String>(
                   value: style['value'],
@@ -1062,7 +1070,8 @@ class _PrinterSettingsState extends State<PrinterSettings>
                     children: [
                       Row(
                         children: [
-                          Icon(style['icon'], size: 20, color: ColorManager.kPrimaryColor),
+                          Icon(style['icon'],
+                              size: 20, color: ColorManager.kPrimaryColor),
                           const SizedBox(width: 12),
                           Text(
                             style['label'],
@@ -1107,7 +1116,10 @@ class _PrinterSettingsState extends State<PrinterSettings>
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.orange.withOpacity(0.1), Colors.red.withOpacity(0.05)],
+          colors: [
+            Colors.orange.withOpacity(0.1),
+            Colors.red.withOpacity(0.05)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1158,7 +1170,8 @@ class _PrinterSettingsState extends State<PrinterSettings>
               GestureDetector(
                 onTap: _printSample,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Colors.orange, Colors.deepOrange],
@@ -1211,7 +1224,7 @@ class _PrinterSettingsState extends State<PrinterSettings>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '• Premium Coffee Beans - ₹400.00 x 2\n• Organic Green Tea - ₹225.00 x 1\n• Fresh Milk 1L - ₹60.00 x 3',
+                  '• Premium Coffee Beans - ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? '₹'}400.00 x 2\n• Organic Green Tea - ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? '₹'}225.00 x 1\n• Fresh Milk 1L - ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? '₹'}60.00 x 3',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,
@@ -1219,8 +1232,8 @@ class _PrinterSettingsState extends State<PrinterSettings>
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Total: ₹1,205.00',
+                Text(
+                  'Total: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? '₹'}1,205.00',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -1295,17 +1308,24 @@ class _PrinterSettingsState extends State<PrinterSettings>
               GestureDetector(
                 onTap: _isScanning ? null : _checkPermissions,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: _isScanning
-                        ? LinearGradient(colors: [Colors.grey[400]!, Colors.grey[500]!])
+                        ? LinearGradient(
+                            colors: [Colors.grey[400]!, Colors.grey[500]!])
                         : const LinearGradient(
-                            colors: [ColorManager.kPrimaryColor, Color(0xFF667EEA)],
+                            colors: [
+                              ColorManager.kPrimaryColor,
+                              Color(0xFF667EEA)
+                            ],
                           ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: (_isScanning ? Colors.grey : ColorManager.kPrimaryColor)
+                        color: (_isScanning
+                                ? Colors.grey
+                                : ColorManager.kPrimaryColor)
                             .withOpacity(0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
@@ -1321,7 +1341,8 @@ class _PrinterSettingsState extends State<PrinterSettings>
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       else
@@ -1358,8 +1379,9 @@ class _PrinterSettingsState extends State<PrinterSettings>
                   itemCount: devices.length,
                   itemBuilder: (context, index) {
                     final printer = devices[index];
-                    final isSelected = selectedPrinter?.deviceName == printer.deviceName &&
-                        selectedPrinter?.address == printer.address;
+                    final isSelected =
+                        selectedPrinter?.deviceName == printer.deviceName &&
+                            selectedPrinter?.address == printer.address;
 
                     return _buildPrinterCard(printer, isSelected);
                   },
@@ -1416,7 +1438,9 @@ class _PrinterSettingsState extends State<PrinterSettings>
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? ColorManager.kPrimaryColor.withOpacity(0.1) : Colors.grey[50],
+          color: isSelected
+              ? ColorManager.kPrimaryColor.withOpacity(0.1)
+              : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? ColorManager.kPrimaryColor : Colors.grey[300]!,
@@ -1446,8 +1470,11 @@ class _PrinterSettingsState extends State<PrinterSettings>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    printer.typePrinter.contains('bluetooth') ? Icons.bluetooth : Icons.usb,
-                    color: isSelected ? Colors.white : ColorManager.kPrimaryColor,
+                    printer.typePrinter.contains('bluetooth')
+                        ? Icons.bluetooth
+                        : Icons.usb,
+                    color:
+                        isSelected ? Colors.white : ColorManager.kPrimaryColor,
                     size: 20,
                   ),
                 ),
@@ -1496,7 +1523,9 @@ class _PrinterSettingsState extends State<PrinterSettings>
                 color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: isSelected ? ColorManager.kPrimaryColor : Colors.grey[300]!,
+                  color: isSelected
+                      ? ColorManager.kPrimaryColor
+                      : Colors.grey[300]!,
                 ),
               ),
               child: Text(

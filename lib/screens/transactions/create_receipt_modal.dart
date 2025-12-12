@@ -381,7 +381,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         showScaffoldError(
           context: context,
           message:
-              'Paid amount (₹${paid.toStringAsFixed(2)}) cannot exceed balance (₹${balance.toStringAsFixed(2)}).',
+              'Paid amount (${paid.toStringAsFixed(2)}) cannot exceed balance (${balance.toStringAsFixed(2)}).',
         );
         return;
       }

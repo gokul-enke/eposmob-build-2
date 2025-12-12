@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
@@ -515,15 +516,15 @@ class _SalesExecutiveReportScreenState
                                                             ?.toString() ??
                                                         "0"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedTotalSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedTotalSales}"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedUpiSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedUpiSales}"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedCashSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCashSales}"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedCreditSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCreditSales}"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedCollectedSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCollectedSales}"),
                                                     _buildActionsCell(report),
                                                   ],
                                                 );
@@ -813,31 +814,31 @@ class _SalesExecutiveReportScreenState
                           children: [
                             _buildFinancialItem(
                               'Total Sales',
-                              '₹${report.formattedTotalSales}',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}',
                             ),
                             _buildFinancialItem(
                               'Total Payment Received',
-                              '₹${report.formattedTotalPaymentReceived}',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalPaymentReceived}',
                             ),
                             _buildFinancialItem(
                               'Total Amount Collected On Sale',
-                              '₹${report.formattedTotalCollectedOnSale}',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalCollectedOnSale}',
                             ),
                             _buildFinancialItem(
                               'Total Credit Collected (Prev Balance)',
-                              '₹${report.formattedCollectedSales}',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}',
                             ),
                             _buildFinancialItem(
                               'Total UPI Sales',
-                              '₹${report.formattedUpiSales}',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}',
                             ),
                             _buildFinancialItem(
                               'Total Cash Sales',
-                              '₹${report.formattedCashSales}',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}',
                             ),
                             _buildFinancialItem(
                               'Total Credit Amount',
-                              '₹${report.formattedCreditSales}',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}',
                             ),
                           ],
                         ),

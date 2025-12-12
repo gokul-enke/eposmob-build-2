@@ -729,7 +729,7 @@ class SupplierTransactionReportThermalPrinter {
     // Show Total Credit if enabled
     if (displayConfig?['showTotalCredit']?.visible == true) {
       bytes += generator.text(
-          'Total Credit: Rs. ${totalCredit.toStringAsFixed(2)}',
+          'Total Credit: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.'} ${totalCredit.toStringAsFixed(2)}',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.right,
@@ -740,7 +740,7 @@ class SupplierTransactionReportThermalPrinter {
     // Show Total Debit if enabled
     if (displayConfig?['showTotalDebit']?.visible == true) {
       bytes += generator.text(
-          'Total Debit: Rs. ${totalDebit.toStringAsFixed(2)}',
+          'Total Debit: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.'} ${totalDebit.toStringAsFixed(2)}',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.right,
@@ -750,7 +750,8 @@ class SupplierTransactionReportThermalPrinter {
 
     // Show Balance if enabled
     if (displayConfig?['showBalance']?.visible == true) {
-      String balanceText = 'Balance: Rs. ${balance.toStringAsFixed(2)}';
+      String balanceText =
+          'Balance: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.'} ${balance.toStringAsFixed(2)}';
       bytes += generator.text(balanceText,
           styles: PosStyles(
               fontType: fontType,

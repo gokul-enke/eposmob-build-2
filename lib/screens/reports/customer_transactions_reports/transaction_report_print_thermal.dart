@@ -496,7 +496,8 @@ class TransactionReportThermalPrinter {
         transactionType = item['transactionType'] ?? 'N/A';
         type = item['type'] ?? 'N/A';
         amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
-        transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
+        transactionBalance =
+            double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
         // status = item['status'] ?? 'N/A'; // COMMENTED OUT (Status column hidden)
         date = item['date'] ?? 'N/A';
       } else {
@@ -513,7 +514,8 @@ class TransactionReportThermalPrinter {
               'N/A';
           type = item['type']?.toString() ?? 'N/A';
           amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
-          transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
+          transactionBalance =
+              double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
           // status = item['status']?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
           date = item['date']?.toString() ?? 'N/A';
         } else {
@@ -542,7 +544,8 @@ class TransactionReportThermalPrinter {
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
             amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
-            transactionBalance = double.tryParse(item.balance?.toString() ?? '0') ?? 0.0;
+            transactionBalance =
+                double.tryParse(item.balance?.toString() ?? '0') ?? 0.0;
             // status = item.status?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
             date = item.date?.toString() ?? 'N/A';
 
@@ -762,7 +765,7 @@ class TransactionReportThermalPrinter {
 
     // Show Total Credit
     bytes += generator.text(
-        'Total Credit: Rs. ${totalCredit.toStringAsFixed(2)}',
+        'Total Credit: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.'} ${totalCredit.toStringAsFixed(2)}',
         styles: PosStyles(
             fontType: fontType,
             align: PosAlign.right,
@@ -770,7 +773,8 @@ class TransactionReportThermalPrinter {
             height: textSizeSmall));
 
     // Show Total Debit
-    bytes += generator.text('Total Debit: Rs. ${totalDebit.toStringAsFixed(2)}',
+    bytes += generator.text(
+        'Total Debit: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.'} ${totalDebit.toStringAsFixed(2)}',
         styles: PosStyles(
             fontType: fontType,
             align: PosAlign.right,
@@ -778,7 +782,8 @@ class TransactionReportThermalPrinter {
             height: textSizeSmall));
 
     // Show Balance with color coding (positive = green, negative = red)
-    String balanceText = 'Balance: Rs. ${balance.toStringAsFixed(2)}';
+    String balanceText =
+        'Balance: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.'} ${balance.toStringAsFixed(2)}';
     bytes += generator.text(balanceText,
         styles: PosStyles(
             fontType: fontType,

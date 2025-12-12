@@ -13,6 +13,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -79,17 +80,20 @@ class ReturnBillStandardPrinter {
         return;
       }
 
-      final displayConfig = returnBillDocumentConfig.displayConfiguration?.options;
+      final displayConfig =
+          returnBillDocumentConfig.displayConfiguration?.options;
 
       debugPrint("===== RETURN BILL PDF GENERATION =====");
       debugPrint("returnBillDocumentConfig ID: ${returnBillDocumentConfig.id}");
-      debugPrint("returnBillDocumentConfig Type: ${returnBillDocumentConfig.type}");
+      debugPrint(
+          "returnBillDocumentConfig Type: ${returnBillDocumentConfig.type}");
       debugPrint("Display Config Options Count: ${displayConfig?.length ?? 0}");
 
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Preparing $selectedPaperSize Return Bill document for printing...",
+          message:
+              "Preparing $selectedPaperSize Return Bill document for printing...",
         );
       }
 
@@ -99,12 +103,24 @@ class ReturnBillStandardPrinter {
       // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
           Provider.of<PaymentGatewaysProvider>(context, listen: false);
+      final currencySymbol = Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.';
       final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
           .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
               orElse: () => PaymentGateway(
-                    id: 0, name: "", code: "", label: "", link: "", image: "",
-                    status: "", isWebActive: 0, isAndroidActive: 0, isIosActive: 0,
-                    contactEmail: "", contactPhone: "", createdAt: "", updatedAt: "",
+                    id: 0,
+                    name: "",
+                    code: "",
+                    label: "",
+                    link: "",
+                    image: "",
+                    status: "",
+                    isWebActive: 0,
+                    isAndroidActive: 0,
+                    isIosActive: 0,
+                    contactEmail: "",
+                    contactPhone: "",
+                    createdAt: "",
+                    updatedAt: "",
                   ));
 
       // Determine page format based on paper size
@@ -167,7 +183,8 @@ class ReturnBillStandardPrinter {
                   // Store name
                   if (displayConfig?['showStoreName']?.visible == true)
                     pw.Text(
-                      displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME',
+                      displayConfig?['showStoreName']?.value as String? ??
+                          'STORE NAME',
                       style: headerStyle,
                     ),
 
@@ -175,12 +192,15 @@ class ReturnBillStandardPrinter {
                   if (displayConfig?['showDescription']?.visible == true)
                     pw.Text(
                       displayConfig?['showDescription']?.value as String? ?? '',
-                      style: pw.TextStyle(fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0),
+                      style: pw.TextStyle(
+                          fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0),
                     ),
 
                   // Store address
                   if (displayConfig?['showStoreAddress']?.visible == true) ...[
-                    if ((displayConfig?['showStoreAddress']?.value as String?)?.isNotEmpty == true)
+                    if ((displayConfig?['showStoreAddress']?.value as String?)
+                            ?.isNotEmpty ==
+                        true)
                       pw.Text(
                         displayConfig!['showStoreAddress']!.value as String,
                         style: bodyStyle,
@@ -189,7 +209,9 @@ class ReturnBillStandardPrinter {
 
                   // FSSAI info
                   if (displayConfig?['showFssaiInfo']?.visible == true) ...[
-                    if ((displayConfig?['showFssaiInfo']?.value as String?)?.isNotEmpty == true)
+                    if ((displayConfig?['showFssaiInfo']?.value as String?)
+                            ?.isNotEmpty ==
+                        true)
                       pw.Text(
                         displayConfig!['showFssaiInfo']!.value as String,
                         style: bodyStyle,
@@ -199,13 +221,15 @@ class ReturnBillStandardPrinter {
                   // Contact information
                   if (displayConfig?['showTel']?.visible == true)
                     pw.Text(
-                      displayConfig?['showTel']?.value as String? ?? customerCareNumber,
+                      displayConfig?['showTel']?.value as String? ??
+                          customerCareNumber,
                       style: bodyStyle,
                     ),
 
                   if (displayConfig?['showEmail']?.visible == true)
                     pw.Text(
-                      displayConfig?['showEmail']?.value as String? ?? customerCareEmail,
+                      displayConfig?['showEmail']?.value as String? ??
+                          customerCareEmail,
                       style: bodyStyle,
                     ),
                 ],
@@ -218,7 +242,8 @@ class ReturnBillStandardPrinter {
             if ((displayConfig?['showInvoiceTitle']?.visible == true) ||
                 (displayConfig?['showInvoiceNumber']?.visible == true))
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                padding:
+                    const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -244,7 +269,8 @@ class ReturnBillStandardPrinter {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    if (displayConfig?['showCustomerNameAndPhone']?.visible == true) ...[
+                    if (displayConfig?['showCustomerNameAndPhone']?.visible ==
+                        true) ...[
                       if (customerName != null && customerName.isNotEmpty)
                         pw.Text('Customer: $customerName', style: bodyStyle),
                       if (customerPhone != null && customerPhone.isNotEmpty)
@@ -253,7 +279,8 @@ class ReturnBillStandardPrinter {
                           style: bodyStyle,
                         ),
                     ],
-                    if (customerBalance != null && customerBalance.isNotEmpty &&
+                    if (customerBalance != null &&
+                        customerBalance.isNotEmpty &&
                         displayConfig?['showCustomerBalance']?.visible == true)
                       pw.Text('Balance: $customerBalance', style: summaryStyle),
                   ],
@@ -275,28 +302,31 @@ class ReturnBillStandardPrinter {
 
             // Total Summary - matching sale bill style
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              padding:
+                  const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text('RETURN TOTAL:', style: summaryStyle),
                   pw.SizedBox(height: 8),
-                  
+
                   // Return Total Amount
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text('Rs.', style: netTotalStyle),
+                      pw.Text(
+                          '$currencySymbol ',
+                          style: netTotalStyle),
                       pw.Text(returnTotalAmount, style: netTotalStyle),
                     ],
                   ),
-                  
+
                   pw.SizedBox(height: 8),
-                  
+
                   // ORDER SUMMARY section - matching sale bill
                   pw.Text('ORDER SUMMARY', style: subheaderStyle),
                   pw.SizedBox(height: 5),
-                  
+
                   // Total Items
                   if (displayConfig?['showReturnItemsCount']?.visible == true)
                     pw.Row(
@@ -306,31 +336,33 @@ class ReturnBillStandardPrinter {
                         pw.Text('${returnItems.length}', style: bodyStyle),
                       ],
                     ),
-                  
+
                   pw.SizedBox(height: 3),
-                  
+
                   // Total MRP (calculated from return items)
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text('Total MRP:', style: bodyStyle),
-                      pw.Text(_calculateTotalMRP(returnItems), style: bodyStyle),
+                      pw.Text(_calculateTotalMRP(returnItems),
+                          style: bodyStyle),
                     ],
                   ),
-                  
+
                   pw.SizedBox(height: 3),
-                  
+
                   // You Saved (difference between MRP and return amount)
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text('You Saved:', style: bodyStyle),
-                      pw.Text(_calculateSaved(returnItems, returnTotalAmount), style: bodyStyle),
+                      pw.Text(_calculateSaved(returnItems, returnTotalAmount),
+                          style: bodyStyle),
                     ],
                   ),
-                  
+
                   pw.SizedBox(height: 3),
-                  
+
                   // Discount
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -339,9 +371,9 @@ class ReturnBillStandardPrinter {
                       pw.Text('0.00', style: bodyStyle),
                     ],
                   ),
-                  
+
                   pw.Divider(color: PdfColors.black),
-                  
+
                   // Net Total
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -350,9 +382,10 @@ class ReturnBillStandardPrinter {
                       pw.Text(returnTotalAmount, style: netTotalStyle),
                     ],
                   ),
-                  
+
                   // Amount in words
-                  if (displayConfig?['showReturnAmountInWords']?.visible == true) ...[
+                  if (displayConfig?['showReturnAmountInWords']?.visible ==
+                      true) ...[
                     pw.SizedBox(height: 5),
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -381,7 +414,8 @@ class ReturnBillStandardPrinter {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      displayConfig?['showQRCode']?.value?.toString() ?? 'Scan QR to Pay',
+                      displayConfig?['showQRCode']?.value?.toString() ??
+                          'Scan QR to Pay',
                       style: bodyStyle,
                     ),
                     pw.SizedBox(height: 3),
@@ -399,7 +433,8 @@ class ReturnBillStandardPrinter {
 
             // Date and Time - matching sale bill format
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+              padding:
+                  const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -449,7 +484,8 @@ class ReturnBillStandardPrinter {
               pw.Text('Terms & Conditions:', style: subheaderStyle),
               pw.Text(
                 displayConfig?['showTermsConditions']?.value?.toString() ??
-                    returnBillDocumentConfig.terms ?? '',
+                    returnBillDocumentConfig.terms ??
+                    '',
                 style: smallStyle,
               ),
               pw.SizedBox(height: 5),
@@ -459,7 +495,7 @@ class ReturnBillStandardPrinter {
             if (displayConfig?['showThankYouMessage']?.visible == true)
               pw.Center(
                 child: pw.Text(
-                  displayConfig?['showThankYouMessage']?.value?.toString() ?? 
+                  displayConfig?['showThankYouMessage']?.value?.toString() ??
                       '*** THANK YOU FOR SHOPPING WITH US ***',
                   style: pw.TextStyle(
                     fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
@@ -498,9 +534,13 @@ class ReturnBillStandardPrinter {
     int visibleColIndex = 0;
 
     if (displayConfig?['showReturnSLNumber']?.visible == true) {
-      final label = (displayConfig?['showReturnSLNumber']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnSLNumber']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnSLNumber']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnSlNumber?.isNotEmpty == true
+          : (returnBillDocumentConfig
+                      ?.resolvedLabels?.returnSlNumber?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnSlNumber!
               : 'SL#');
       tableHeaders.add(label.toUpperCase());
@@ -508,9 +548,13 @@ class ReturnBillStandardPrinter {
     }
 
     if (displayConfig?['showReturnParticulars']?.visible == true) {
-      final label = (displayConfig?['showReturnParticulars']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnParticulars']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnParticulars']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnParticulars?.isNotEmpty == true
+          : (returnBillDocumentConfig
+                      ?.resolvedLabels?.returnParticulars?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnParticulars!
               : 'DESCRIPTION');
       tableHeaders.add(label.toUpperCase());
@@ -519,9 +563,12 @@ class ReturnBillStandardPrinter {
 
     // Add MRP column
     if (displayConfig?['showReturnMRP']?.visible == true) {
-      final label = (displayConfig?['showReturnMRP']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnMRP']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnMRP']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnMrp?.isNotEmpty == true
+          : (returnBillDocumentConfig?.resolvedLabels?.returnMrp?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnMrp!
               : 'MRP');
       tableHeaders.add(label.toUpperCase());
@@ -529,9 +576,12 @@ class ReturnBillStandardPrinter {
     }
 
     if (displayConfig?['showReturnQty']?.visible == true) {
-      final label = (displayConfig?['showReturnQty']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnQty']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnQty']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnQty?.isNotEmpty == true
+          : (returnBillDocumentConfig?.resolvedLabels?.returnQty?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnQty!
               : 'QTY');
       tableHeaders.add(label.toUpperCase());
@@ -539,9 +589,12 @@ class ReturnBillStandardPrinter {
     }
 
     if (displayConfig?['showReturnRate']?.visible == true) {
-      final label = (displayConfig?['showReturnRate']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnRate']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnRate']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnRate?.isNotEmpty == true
+          : (returnBillDocumentConfig?.resolvedLabels?.returnRate?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnRate!
               : 'RATE');
       tableHeaders.add(label.toUpperCase());
@@ -549,11 +602,15 @@ class ReturnBillStandardPrinter {
     }
 
     if (displayConfig?['showReturnTotal']?.visible == true) {
-      final label = (displayConfig?['showReturnTotal']?.value as String?)?.isNotEmpty == true
-          ? displayConfig!['showReturnTotal']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnTotal?.isNotEmpty == true
-              ? returnBillDocumentConfig!.resolvedLabels!.returnTotal!
-              : 'AMOUNT');
+      final label =
+          (displayConfig?['showReturnTotal']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showReturnTotal']!.value as String
+              : (returnBillDocumentConfig
+                          ?.resolvedLabels?.returnTotal?.isNotEmpty ==
+                      true
+                  ? returnBillDocumentConfig!.resolvedLabels!.returnTotal!
+                  : 'AMOUNT');
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
     }
@@ -574,10 +631,15 @@ class ReturnBillStandardPrinter {
 
       if (displayConfig?['showReturnMRP']?.visible == true) {
         // Calculate MRP based on return amount divided by quantity
-        double returnAmount = double.tryParse(returnItems.fold<String>('0', (prev, item) => 
-          (double.tryParse(prev) ?? 0.0 + (item.quantity ?? 0) * 20.0).toString())) ?? 0.0;
-        double itemMrp = returnItem.quantity != null && returnItem.quantity! > 0 
-            ? returnAmount / returnItem.quantity! : 0.0;
+        double returnAmount = double.tryParse(returnItems.fold<String>(
+                '0',
+                (prev, item) =>
+                    (double.tryParse(prev) ?? 0.0 + (item.quantity ?? 0) * 20.0)
+                        .toString())) ??
+            0.0;
+        double itemMrp = returnItem.quantity != null && returnItem.quantity! > 0
+            ? returnAmount / returnItem.quantity!
+            : 0.0;
         rowData.add(itemMrp.toStringAsFixed(2));
       }
 
@@ -632,7 +694,8 @@ class ReturnBillStandardPrinter {
   }
 
   // Helper method to calculate saved amount
-  String _calculateSaved(List<OrderReturnItem> returnItems, String returnTotalAmount) {
+  String _calculateSaved(
+      List<OrderReturnItem> returnItems, String returnTotalAmount) {
     double totalMrp = double.tryParse(_calculateTotalMRP(returnItems)) ?? 0.0;
     double returnAmount = double.tryParse(returnTotalAmount) ?? 0.0;
     double saved = totalMrp - returnAmount;
@@ -662,7 +725,8 @@ class ReturnBillStandardPrinter {
         if (Platform.isWindows) {
           await OpenFile.open(file.path);
         } else if (Platform.isAndroid || Platform.isIOS) {
-          await Share.shareXFiles([XFile(file.path)], text: 'Return Bill $orderNumber');
+          await Share.shareXFiles([XFile(file.path)],
+              text: 'Return Bill $orderNumber');
         }
       }
 
