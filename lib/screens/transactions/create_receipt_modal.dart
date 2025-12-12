@@ -14,6 +14,7 @@ import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:provider/provider.dart';
@@ -137,7 +138,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
   bool _isLoadingInvoices = false;
 
   // Payment methods from API
-  Map<String, String> _paymentMethods = {};
+  List<MasterDataValue> _paymentMethods = [];
   bool _isLoadingPaymentMethods = false;
 
   @override
@@ -245,12 +246,16 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
           // Set default payment method if available
           if (_paymentMethods.isNotEmpty && _selectedPaymentMethod == null) {
             // Try to set CASH or COD as default, otherwise use first available
-            if (_paymentMethods.containsKey('CASH')) {
+            final cashMethod =
+                _paymentMethods.where((m) => m.value == 'CASH').firstOrNull;
+            final codMethod =
+                _paymentMethods.where((m) => m.value == 'COD').firstOrNull;
+            if (cashMethod != null) {
               _selectedPaymentMethod = 'CASH';
-            } else if (_paymentMethods.containsKey('COD')) {
+            } else if (codMethod != null) {
               _selectedPaymentMethod = 'COD';
             } else {
-              _selectedPaymentMethod = _paymentMethods.keys.first;
+              _selectedPaymentMethod = _paymentMethods.first.value;
             }
           }
         });
@@ -550,7 +555,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         'paid_amount': double.tryParse(card.amountController.text) ?? 0.0,
         'status': 'paid',
         'payment_date': card.paymentDateController.text,
-        'payment_method': _getPaymentMethodKey(_selectedPaymentMethod),
+        'payment_method': _getPaymentMethodId(_selectedPaymentMethod),
         'description': card.descriptionController.text.isNotEmpty
             ? card.descriptionController.text
             : 'General Payment',
@@ -1086,10 +1091,17 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     );
   }
 
-  // Helper method to get payment method key for API
-  // Since we now store keys directly in _selectedPaymentMethod, return it as-is
-  String _getPaymentMethodKey(String? paymentMethodKey) {
-    return paymentMethodKey ?? 'CASH';
+  // Helper method to get payment method ID for API
+  // Finds the ID for the given payment method value
+  int? _getPaymentMethodId(String? paymentMethodValue) {
+    if (paymentMethodValue == null || _paymentMethods.isEmpty) return null;
+    try {
+      return _paymentMethods
+          .firstWhere((m) => m.value == paymentMethodValue)
+          .id;
+    } catch (e) {
+      return null;
+    }
   }
 
   // Helper method to render label for dropdowns
@@ -1169,7 +1181,8 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                   : "Payment Method",
                               title: "",
                               value: _selectedPaymentMethod,
-                              items: _paymentMethods.keys.toList(),
+                              items:
+                                  _paymentMethods.map((m) => m.value).toList(),
                               focusNode: _paymentMethodFocus,
                               onChanged: (value) {
                                 setState(() {
@@ -1179,8 +1192,15 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                 FocusScope.of(context)
                                     .requestFocus(_customerFocus);
                               },
-                              displayText: (item) =>
-                                  _paymentMethods[item] ?? item,
+                              displayText: (item) {
+                                try {
+                                  return _paymentMethods
+                                      .firstWhere((m) => m.value == item)
+                                      .description;
+                                } catch (e) {
+                                  return item;
+                                }
+                              },
                               showName: false,
                               height: 48,
                             ),

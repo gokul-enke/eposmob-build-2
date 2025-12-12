@@ -11,8 +11,8 @@ class MasterDataProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  // Payment methods cache
-  Map<String, String>? _paymentMethods;
+  // Payment methods cache - now stores list of MasterDataValue
+  List<MasterDataValue>? _paymentMethods;
   bool _isLoadingPaymentMethods = false;
 
   MasterData? get masterData => _masterData;
@@ -20,12 +20,44 @@ class MasterDataProvider with ChangeNotifier {
   String? get error => _error;
 
   // Payment methods getters
-  Map<String, String>? get paymentMethods => _paymentMethods;
+  List<MasterDataValue>? get paymentMethods => _paymentMethods;
   bool get isLoadingPaymentMethods => _isLoadingPaymentMethods;
 
+  /// Get payment method ID by its value (e.g., "CASH" -> 3200)
+  int? getPaymentMethodId(String? value) {
+    if (value == null || _paymentMethods == null) return null;
+    try {
+      return _paymentMethods!.firstWhere((item) => item.value == value).id;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get payment method value by its ID (e.g., 3200 -> "CASH")
+  String? getPaymentMethodValue(int? id) {
+    if (id == null || _paymentMethods == null) return null;
+    try {
+      return _paymentMethods!.firstWhere((item) => item.id == id).value;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get payment method description by its value
+  String? getPaymentMethodDescription(String? value) {
+    if (value == null || _paymentMethods == null) return null;
+    try {
+      return _paymentMethods!
+          .firstWhere((item) => item.value == value)
+          .description;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Fetches payment methods from the API and caches them
-  /// Returns a Map with payment method code as key and display name as value
-  Future<Map<String, String>?> fetchPaymentMethods() async {
+  /// Returns a List of MasterDataValue objects
+  Future<List<MasterDataValue>?> fetchPaymentMethods() async {
     // Return cached data if available
     if (_paymentMethods != null && _paymentMethods!.isNotEmpty) {
       return _paymentMethods;
@@ -61,7 +93,9 @@ class MasterDataProvider with ChangeNotifier {
         final Map<String, dynamic> data = json.decode(response.body);
 
         if (data['status'] == 'success') {
-          _paymentMethods = Map<String, String>.from(data['data'] ?? {});
+          final dataList = data['data'] as List<dynamic>? ?? [];
+          _paymentMethods =
+              dataList.map((item) => MasterDataValue.fromJson(item)).toList();
           debugPrint('✅ Payment methods fetched successfully');
           debugPrint('📋 Payment methods: $_paymentMethods');
           return _paymentMethods;
@@ -125,7 +159,7 @@ class MasterDataProvider with ChangeNotifier {
         if (data['status'] == 'success') {
           _masterData = MasterData.fromJson(data);
           debugPrint('✅ Master data fetched successfully for code: $code');
-          debugPrint('📋 Data keys: ${_masterData?.data.keys.toList()}');
+          debugPrint('📋 Data count: ${_masterData?.data.length}');
           return _masterData;
         } else {
           _error = data['message'] ?? 'Failed to fetch master data';

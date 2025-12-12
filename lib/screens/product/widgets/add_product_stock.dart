@@ -30,11 +30,13 @@ import 'package:intl/intl.dart';
 import 'dart:async'; // Added for Timer
 import 'dart:convert';
 import 'package:pos_machine/widgets/add_product_modal.dart';
-import 'package:pos_machine/components/build_restricted_payment_selector.dart';
+import 'package:pos_machine/components/build_dynamic_payment_selector.dart';
 import 'package:pos_machine/components/build_stock_confirmation_dialog.dart';
 import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Hive box name for draft stock items persistence
@@ -155,8 +157,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   bool _isLoading = false;
 
-  // Payment method state
-  RestrictedPaymentData paymentData = RestrictedPaymentData();
+  // Payment method state - using dynamic payment methods from API
+  DynamicPaymentData paymentData = DynamicPaymentData();
+  List<MasterDataValue> _paymentMethods = [];
+  bool _isLoadingPaymentMethods = false;
   double totalStockValue = 0.0;
   bool _needsRecalculation =
       false; // Flag to track if total needs recalculation
@@ -299,10 +303,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   /// Load items - pending items from StockProvider (persisted in Hive)
   Future<void> _loadItemsSequentially() async {
     final stockProvider = Provider.of<StockProvider>(context, listen: false);
-    
+
     // Initialize StockProvider's Hive to load persisted pending items
     await stockProvider.initHive();
-    
+
     final pendingItems = stockProvider.pendingStockItems;
 
     if (pendingItems.isNotEmpty) {
@@ -337,7 +341,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       try {
         // Only save items that are not yet successfully added (drafts)
         final draftItems = stockItems
-            .where((item) => !item.isSuccessfullyAdded && item.productData != null)
+            .where(
+                (item) => !item.isSuccessfullyAdded && item.productData != null)
             .map((item) => _stockItemToMap(item))
             .toList();
 
@@ -345,7 +350,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         await _draftBox!.put('supplier_id', selectedSupplier?.id);
         await _draftBox!.put('store_id', selectedStore?.id);
         await _draftBox!.put('selected_date', selectedDate.toIso8601String());
-        await _draftBox!.put('purchase_date', selectedPurchaseDate.toIso8601String());
+        await _draftBox!
+            .put('purchase_date', selectedPurchaseDate.toIso8601String());
 
         debugPrint('💾 Saved ${draftItems.length} draft items to Hive');
       } catch (e) {
@@ -375,7 +381,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       debugPrint('📂 Loading ${draftItems.length} draft items from Hive');
 
       // Only load if we don't have any items with productData
-      final hasExistingProducts = stockItems.any((item) => item.productData != null);
+      final hasExistingProducts =
+          stockItems.any((item) => item.productData != null);
       if (hasExistingProducts) {
         debugPrint('⏭️ Skipping draft load - existing items found');
         return;
@@ -456,7 +463,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       unit: map['unit'] ?? '',
       rack: map['rack'] ?? '',
       expDate: map['expDate'] != null
-          ? DateTime.tryParse(map['expDate']) ?? DateTime.now().add(const Duration(days: 365))
+          ? DateTime.tryParse(map['expDate']) ??
+              DateTime.now().add(const Duration(days: 365))
           : DateTime.now().add(const Duration(days: 365)),
       batchNumber: map['batchNumber'] ?? '',
       selectedUnit: map['selectedUnit'],
@@ -468,7 +476,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     final productId = map['productId'];
     if (productId != null) {
       try {
-        final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+        final localProductProvider =
+            Provider.of<LocalProductProvider>(context, listen: false);
         final product = localProductProvider.products.firstWhere(
           (p) => p.productId == productId,
           orElse: () => GetProduct(),
@@ -485,7 +494,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     final categoryId = map['categoryId'];
     if (categoryId != null) {
       try {
-        final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+        final categoryProvider =
+            Provider.of<CategoryProvider>(context, listen: false);
         final categoryList = categoryProvider.category;
         if (categoryList != null) {
           final category = categoryList.firstWhere(
@@ -763,6 +773,49 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     await _loadUnits(); // Load units
     await _loadRacks(); // Load racks
     await _loadActiveStore(); // Load active store from session
+    await _loadPaymentMethods(); // Load payment methods from API
+  }
+
+  /// Load payment methods from API (uses cached data if available)
+  Future<void> _loadPaymentMethods() async {
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+
+    // Check if payment methods are already cached in the provider
+    final cachedMethods = masterDataProvider.paymentMethods;
+    if (cachedMethods != null && cachedMethods.isNotEmpty) {
+      debugPrint(
+          '📋 [Add Stock] Using cached payment methods: ${cachedMethods.length}');
+      setState(() {
+        _paymentMethods = cachedMethods;
+        _isLoadingPaymentMethods = false;
+      });
+      return;
+    }
+
+    // No cache, fetch from API
+    setState(() {
+      _isLoadingPaymentMethods = true;
+    });
+
+    try {
+      final paymentMethods = await masterDataProvider.fetchPaymentMethods();
+
+      if (mounted && paymentMethods != null) {
+        setState(() {
+          _paymentMethods = paymentMethods;
+          _isLoadingPaymentMethods = false;
+        });
+        debugPrint(
+            '📋 [Add Stock] Payment methods loaded: ${_paymentMethods.length}');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Error loading payment methods: $e');
+      setState(() {
+        _isLoadingPaymentMethods = false;
+      });
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -923,7 +976,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       unit: '', // Will be set from unit list lookup below
       selectedUnit: unitId, // Restore the unit ID for dropdown selection
       rack: rackValue,
-      selectedRack: rackValue.isNotEmpty ? rackValue : null, // Restore rack for dropdown selection
+      selectedRack: rackValue.isNotEmpty
+          ? rackValue
+          : null, // Restore rack for dropdown selection
       expDate: pendingData['expiryDate'] != null
           ? DateTime.tryParse(pendingData['expiryDate'].toString()) ??
               DateTime.now().add(const Duration(days: 365))
@@ -971,14 +1026,18 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   /// Set unit display name from unit list based on selectedUnit (unit ID)
   void _setUnitDataFromPending(StockItem stockItem) {
     try {
-      if (stockItem.selectedUnit != null && stockItem.selectedUnit!.isNotEmpty) {
-        final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+      if (stockItem.selectedUnit != null &&
+          stockItem.selectedUnit!.isNotEmpty) {
+        final purchaseProvider =
+            Provider.of<PurchaseProvider>(context, listen: false);
         final unitList = purchaseProvider.getUnitList;
         if (unitList != null && unitList.containsKey(stockItem.selectedUnit)) {
           stockItem.unit = unitList[stockItem.selectedUnit] ?? '';
-          debugPrint('   - Unit data set: ${stockItem.unit} (ID: ${stockItem.selectedUnit})');
+          debugPrint(
+              '   - Unit data set: ${stockItem.unit} (ID: ${stockItem.selectedUnit})');
         } else {
-          debugPrint('   - Unit ID ${stockItem.selectedUnit} not found in unit list');
+          debugPrint(
+              '   - Unit ID ${stockItem.selectedUnit} not found in unit list');
         }
       }
     } catch (e) {
@@ -993,9 +1052,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       final productId = pendingData['productId'];
-      
+
       debugPrint('   - Looking for product ID: $productId');
-      debugPrint('   - Available products count: ${localProductProvider.products.length}');
+      debugPrint(
+          '   - Available products count: ${localProductProvider.products.length}');
 
       if (productId != null) {
         final product = localProductProvider.products.firstWhere(
@@ -1005,9 +1065,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         if (product.productId != null) {
           stockItem.productData = product;
-          debugPrint('   - Product data set: ${product.productName} (ID: ${product.productId})');
+          debugPrint(
+              '   - Product data set: ${product.productName} (ID: ${product.productId})');
         } else {
-          debugPrint('   - ⚠️ Product ID $productId not found in LocalProductProvider');
+          debugPrint(
+              '   - ⚠️ Product ID $productId not found in LocalProductProvider');
         }
       }
     } catch (e) {
@@ -1334,7 +1396,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       debugPrint('✅ STOCK ITEMS RESET TO 1 EMPTY ROW (NO SUCCESS FLAGS)');
 
       // Reset payment data
-      paymentData = RestrictedPaymentData();
+      paymentData = DynamicPaymentData();
       totalStockValue = 0.0;
       debugPrint('✅ PAYMENT DATA RESET');
     });
@@ -1388,7 +1450,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       if (product is GetProduct) {
         debugPrint('🔄 AUTO-FILLING FROM ADD PRODUCT MODAL...');
-        debugPrint('   - Product: ${product.productName} (ID: ${product.productId})');
+        debugPrint(
+            '   - Product: ${product.productName} (ID: ${product.productId})');
 
         // Get selling price from price object
         final String sellingPrice = product.price?.price?.toString() ?? '0';
@@ -1403,8 +1466,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
           // Auto-fill category - find the Category from CategoryProvider
           if (product.category != null || product.categoryId != null) {
-            debugPrint('🔍 SEARCHING FOR CATEGORY: ${product.category?.name ?? product.categoryId}');
-            final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+            debugPrint(
+                '🔍 SEARCHING FOR CATEGORY: ${product.category?.name ?? product.categoryId}');
+            final categoryProvider =
+                Provider.of<CategoryProvider>(context, listen: false);
             List<Category>? categoryList = categoryProvider.searchCategory;
             if (categoryList == null || categoryList.isEmpty) {
               categoryList = categoryProvider.category;
@@ -1422,21 +1487,26 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               if (matchingCategory == null && product.category?.slug != null) {
                 try {
                   matchingCategory = categoryList.firstWhere((cat) =>
-                      (cat.categorySlug ?? '') == (product.category!.slug ?? ''));
+                      (cat.categorySlug ?? '') ==
+                      (product.category!.slug ?? ''));
                 } catch (_) {}
               }
               // 3) Match by name (case-insensitive, trimmed)
               if (matchingCategory == null && product.category?.name != null) {
-                final targetName = (product.category!.name ?? '').trim().toLowerCase();
+                final targetName =
+                    (product.category!.name ?? '').trim().toLowerCase();
                 try {
                   matchingCategory = categoryList.firstWhere((cat) =>
-                      (cat.categoryName ?? '').trim().toLowerCase() == targetName);
+                      (cat.categoryName ?? '').trim().toLowerCase() ==
+                      targetName);
                 } catch (_) {}
               }
               if (matchingCategory != null) {
                 stockItems[index].categoryData = matchingCategory;
-                stockItems[index].category = matchingCategory.categoryName ?? '';
-                debugPrint('   - Category: ${matchingCategory.categoryName} (ID: ${matchingCategory.categoryId})');
+                stockItems[index].category =
+                    matchingCategory.categoryName ?? '';
+                debugPrint(
+                    '   - Category: ${matchingCategory.categoryName} (ID: ${matchingCategory.categoryId})');
               }
             }
           }
@@ -1455,7 +1525,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           // Auto-fill unit dropdown - find the matching unit key
           if (product.unit != null && product.unit!.isNotEmpty) {
             debugPrint('🔍 SEARCHING FOR UNIT KEY: ${product.unit}');
-            final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+            final purchaseProvider =
+                Provider.of<PurchaseProvider>(context, listen: false);
             final unitList = purchaseProvider.getUnitList;
             if (unitList != null) {
               // Find the key that matches the unit value
@@ -1466,8 +1537,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   )
                   .key;
               if (matchingUnitKey.isNotEmpty) {
-                stockItems[index].selectedUnit = matchingUnitKey; // Store unit ID
-                stockItems[index].unit = product.unit!; // Store unit name for display
+                stockItems[index].selectedUnit =
+                    matchingUnitKey; // Store unit ID
+                stockItems[index].unit =
+                    product.unit!; // Store unit name for display
                 debugPrint('   - Unit Key (ID): $matchingUnitKey');
                 debugPrint('   - Unit Name: ${product.unit}');
               }
@@ -1685,33 +1758,22 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     _needsRecalculation = true;
   }
 
-  /// Convert RestrictedPaymentData to API format
+  /// Convert DynamicPaymentData to API format with payment method IDs
   Map<String, dynamic> _convertPaymentDataToApiFormat(
-      RestrictedPaymentData paymentData) {
-    List<String> paymentMethods = [];
+      DynamicPaymentData paymentData) {
+    List<int> paymentMethodIds = [];
     List<Map<String, dynamic>> paidMethods = [];
-
-    String _getMethodString(RestrictedPaymentType method) {
-      switch (method) {
-        case RestrictedPaymentType.cash:
-          return 'CASH';
-        case RestrictedPaymentType.card:
-          return 'CARD';
-        case RestrictedPaymentType.upi:
-          return 'UPI';
-      }
-    }
 
     // Add primary method if present
     if (paymentData.primaryMethod != null &&
         paymentData.primaryAmount.isNotEmpty) {
-      String methodString = _getMethodString(paymentData.primaryMethod!);
+      int? methodId = paymentData.primaryMethodId;
       double amount = double.tryParse(paymentData.primaryAmount) ?? 0.0;
 
-      if (amount > 0) {
-        paymentMethods.add(methodString);
+      if (methodId != null && amount > 0) {
+        paymentMethodIds.add(methodId);
         paidMethods.add({
-          'method': methodString,
+          'payment_method_id': methodId,
           'amount': amount,
         });
       }
@@ -1720,20 +1782,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     // Add secondary method if present
     if (paymentData.secondaryMethod != null &&
         paymentData.secondaryAmount.isNotEmpty) {
-      String methodString = _getMethodString(paymentData.secondaryMethod!);
+      int? methodId = paymentData.secondaryMethodId;
       double amount = double.tryParse(paymentData.secondaryAmount) ?? 0.0;
 
-      if (amount > 0) {
-        paymentMethods.add(methodString);
+      if (methodId != null && amount > 0) {
+        paymentMethodIds.add(methodId);
         paidMethods.add({
-          'method': methodString,
+          'payment_method_id': methodId,
           'amount': amount,
         });
       }
     }
 
     return {
-      'payment_methods': paymentMethods,
+      'payment_method_ids': paymentMethodIds,
       'paid_methods': paidMethods,
     };
   }
@@ -2068,26 +2130,27 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     if (mounted && productId != null) {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      
+
       // Find the updated product from the provider
       try {
         final updatedProduct = localProductProvider.products.firstWhere(
           (p) => p.productId == productId,
         );
-        
+
         // Update the stock item with the refreshed product data
         setState(() {
           stockItems[index].productData = updatedProduct;
           stockItems[index].product = updatedProduct.productName ?? '';
           stockItems[index].barcode = updatedProduct.barcode ?? '';
-          
+
           // Update barcode controller
           _getBarcodeController(index).text = updatedProduct.barcode ?? '';
-          
+
           // Clear the filtered products cache to force rebuild with updated names
           _clearProductCache();
-          
-          debugPrint('✅ Refreshed product data after edit: ${updatedProduct.productName}');
+
+          debugPrint(
+              '✅ Refreshed product data after edit: ${updatedProduct.productName}');
         });
       } catch (e) {
         debugPrint('⚠️ Could not find updated product: $e');
@@ -2364,17 +2427,18 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                             listen: false)
                                         .allSuppliers ??
                                     [];
-                            
+
                             if (updatedSupplierList.isNotEmpty) {
                               try {
-                                final newSupplier = updatedSupplierList.firstWhere(
+                                final newSupplier =
+                                    updatedSupplierList.firstWhere(
                                   (supplier) => supplier.phone == createdPhone,
                                 );
-                                
+
                                 setState(() {
                                   selectedSupplier = newSupplier;
                                 });
-                                
+
                                 debugPrint(
                                     "✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
                               } catch (e) {
@@ -2602,14 +2666,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
             const SizedBox(height: 16),
 
-            // Payment method selector with restrictions (no validation)
-            BuildRestrictedPaymentSelector(
+            // Dynamic payment method selector using API payment methods
+            BuildDynamicPaymentSelector(
               title: "Select Payment Method",
-              availableMethods: const [
-                RestrictedPaymentType.cash,
-                RestrictedPaymentType.card,
-                RestrictedPaymentType.upi,
-              ], // Supports all methods but blocks Card + UPI
+              paymentMethods: _paymentMethods,
+              isLoading: _isLoadingPaymentMethods,
               onPaymentChanged: (data) {
                 setState(() {
                   paymentData = data;
@@ -2617,8 +2678,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 debugPrint('Purchase Payment Data: ${data.totalAmount}');
               },
               showTotalAmount: true,
-              // expectedAmount: totalStockValue, // Validation removed - no amount validation
-              // showRestrictionInfo: false, // Default - no info box shown
+              maxMethods: 2, // Allow split payment with any 2 methods
             ),
           ],
         );
@@ -2995,10 +3055,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           item.apiResponse!['localId'] != null) ...[
                         Consumer<StockProvider>(
                           builder: (context, stockProvider, child) {
-                            final pendingItem = stockProvider
-                                .getPendingStockItem(item.apiResponse!['localId']);
-                            final bool isUpdated =
-                                pendingItem != null && pendingItem['updatedAt'] != null;
+                            final pendingItem =
+                                stockProvider.getPendingStockItem(
+                                    item.apiResponse!['localId']);
+                            final bool isUpdated = pendingItem != null &&
+                                pendingItem['updatedAt'] != null;
 
                             if (!isUpdated) return const SizedBox.shrink();
 
@@ -3006,7 +3067,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               top: -4,
                               right: -8,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.amber,
                                   borderRadius: BorderRadius.circular(4),
@@ -3051,8 +3113,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             decoration: const InputDecoration(
                               hintText: 'Barcode',
                               border: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 8),
                             ),
                             style: buildCustomStyle(
                               FontWeightManager.regular,
@@ -3062,7 +3124,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             ),
                             onTap: () {
                               // Select all text when field is tapped
-                              _getBarcodeController(index).selection = TextSelection(
+                              _getBarcodeController(index).selection =
+                                  TextSelection(
                                 baseOffset: 0,
                                 extentOffset:
                                     _getBarcodeController(index).text.length,
@@ -3216,110 +3279,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                      // Clear/Delete Button (Conditional)
-                      if (item.productData != null ||
-                          item.isSuccessfullyAdded) ...[
-                        Tooltip(
-                          message: item.isSuccessfullyAdded
-                              ? "Delete stock item"
-                              : "Clear product selection",
-                          child: Container(
-                            height: 40,
-                            width: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(5),
-                              border: Border.all(
-                                  color: Colors.red.withOpacity(0.3)),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: ColorManager.boxShadowColor,
-                                  blurRadius: 3,
-                                  offset: Offset(1, 1),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                item.isSuccessfullyAdded
-                                    ? Icons.delete
-                                    : Icons.clear,
-                                size: 18,
-                                color: Colors.red,
-                              ),
-                              onPressed: () {
-                                if (item.isSuccessfullyAdded) {
-                                  _deleteStockItem(index);
-                                } else {
-                                  _clearStockItem(index);
-                                }
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 40,
-                                minHeight: 40,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      // Spacing between delete and add buttons
-                      if (item.productData != null || item.isSuccessfullyAdded)
-                        const SizedBox(width: 8),
-                      // Add Stock Button (Only show if not already added)
-                      if (!item.isSuccessfullyAdded) ...[
-                        Tooltip(
-                          message: _isLoading ? "Adding..." : "Add stock item",
-                          child: Container(
-                            height: 40,
-                            width: 40,
-                            decoration: BoxDecoration(
-                              color: _isLoading
-                                  ? Colors.grey
-                                  : ColorManager.kPrimaryColor,
-                              borderRadius: BorderRadius.circular(5),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: ColorManager.boxShadowColor,
-                                  blurRadius: 3,
-                                  offset: Offset(1, 1),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                _isLoading ? Icons.hourglass_empty : Icons.add,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                              onPressed: _isLoading
-                                  ? null
-                                  : () => _addStockForSingleItem(index),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 40,
-                                minHeight: 40,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      // Expand Button with Tooltip
+                    // Clear/Delete Button (Conditional)
+                    if (item.productData != null ||
+                        item.isSuccessfullyAdded) ...[
                       Tooltip(
-                        message: item.isExpanded
-                            ? "Hide details"
-                            : "Show prices, expiry & tax details",
+                        message: item.isSuccessfullyAdded
+                            ? "Delete stock item"
+                            : "Clear product selection",
                         child: Container(
                           height: 40,
                           width: 40,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(5),
-                            border: Border.all(
-                                color: item.isExpanded
-                                    ? ColorManager.kPrimaryColor
-                                    : Colors.grey.withOpacity(0.3)),
+                            border:
+                                Border.all(color: Colors.red.withOpacity(0.3)),
                             boxShadow: const [
                               BoxShadow(
                                 color: ColorManager.boxShadowColor,
@@ -3330,15 +3304,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                           child: IconButton(
                             icon: Icon(
-                              item.isExpanded
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
+                              item.isSuccessfullyAdded
+                                  ? Icons.delete
+                                  : Icons.clear,
                               size: 18,
-                              color: item.isExpanded
-                                  ? ColorManager.kPrimaryColor
-                                  : Colors.grey.shade600,
+                              color: Colors.red,
                             ),
-                            onPressed: () => _toggleExpanded(index),
+                            onPressed: () {
+                              if (item.isSuccessfullyAdded) {
+                                _deleteStockItem(index);
+                              } else {
+                                _clearStockItem(index);
+                              }
+                            },
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(
                               minWidth: 40,
@@ -3347,29 +3325,114 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                         ),
                       ),
-                      // if (stockItems.length > 1) ...[
-                      //   const SizedBox(width: 8),
-                      //   BuildBoxShadowContainer(
-                      //     circleRadius: 7,
-                      //     height: 40,
-                      //     width: 40,
-                      //     child: IconButton(
-                      //       icon: item.isSuccessfullyAdded
-                      //           ? const Icon(Icons.check_circle,
-                      //               size: 18, color: Colors.green)
-                      //           : const Icon(Icons.delete,
-                      //               size: 18, color: Colors.red),
-                      //       onPressed: item.isSuccessfullyAdded
-                      //           ? null // Disable button for successfully added rows
-                      //           : () => _removeStockRow(index),
-                      //       padding: EdgeInsets.zero,
-                      //       constraints: const BoxConstraints(
-                      //         minWidth: 40,
-                      //         minHeight: 40,
-                      //       ),
-                      //     ),
-                      //   ),
-                      // ],
+                    ],
+                    // Spacing between delete and add buttons
+                    if (item.productData != null || item.isSuccessfullyAdded)
+                      const SizedBox(width: 8),
+                    // Add Stock Button (Only show if not already added)
+                    if (!item.isSuccessfullyAdded) ...[
+                      Tooltip(
+                        message: _isLoading ? "Adding..." : "Add stock item",
+                        child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: _isLoading
+                                ? Colors.grey
+                                : ColorManager.kPrimaryColor,
+                            borderRadius: BorderRadius.circular(5),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: ColorManager.boxShadowColor,
+                                blurRadius: 3,
+                                offset: Offset(1, 1),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              _isLoading ? Icons.hourglass_empty : Icons.add,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            onPressed: _isLoading
+                                ? null
+                                : () => _addStockForSingleItem(index),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    // Expand Button with Tooltip
+                    Tooltip(
+                      message: item.isExpanded
+                          ? "Hide details"
+                          : "Show prices, expiry & tax details",
+                      child: Container(
+                        height: 40,
+                        width: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                              color: item.isExpanded
+                                  ? ColorManager.kPrimaryColor
+                                  : Colors.grey.withOpacity(0.3)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: ColorManager.boxShadowColor,
+                              blurRadius: 3,
+                              offset: Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            item.isExpanded
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            size: 18,
+                            color: item.isExpanded
+                                ? ColorManager.kPrimaryColor
+                                : Colors.grey.shade600,
+                          ),
+                          onPressed: () => _toggleExpanded(index),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // if (stockItems.length > 1) ...[
+                    //   const SizedBox(width: 8),
+                    //   BuildBoxShadowContainer(
+                    //     circleRadius: 7,
+                    //     height: 40,
+                    //     width: 40,
+                    //     child: IconButton(
+                    //       icon: item.isSuccessfullyAdded
+                    //           ? const Icon(Icons.check_circle,
+                    //               size: 18, color: Colors.green)
+                    //           : const Icon(Icons.delete,
+                    //               size: 18, color: Colors.red),
+                    //       onPressed: item.isSuccessfullyAdded
+                    //           ? null // Disable button for successfully added rows
+                    //           : () => _removeStockRow(index),
+                    //       padding: EdgeInsets.zero,
+                    //       constraints: const BoxConstraints(
+                    //         minWidth: 40,
+                    //         minHeight: 40,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ],
                   ],
                 ),
               ],
@@ -3422,10 +3485,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   Builder(
                     builder: (context) {
                       final qty = double.tryParse(item.quantity) ?? 0;
-                      final purchasePrice = double.tryParse(item.purchaseRate) ?? 0;
+                      final purchasePrice =
+                          double.tryParse(item.purchaseRate) ?? 0;
                       final purchaseTotal = qty * purchasePrice;
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(4),
@@ -4003,7 +4068,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-
   Widget _buildExpandedCategoryDropdown(int index) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4022,7 +4086,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           height: 40,
           child: Selector<CategoryProvider, List<Category>?>(
             selector: (context, provider) => provider.category,
-            shouldRebuild: (previous, current) => previous?.length != current?.length,
+            shouldRebuild: (previous, current) =>
+                previous?.length != current?.length,
             builder: (context, categoryList, child) {
               final filteredCategories = categoryList
                       ?.where((category) => category.categoryName != "ALL")
@@ -4817,14 +4882,17 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           apiPaymentData['paid_methods'];
 
                       // Calculate total stock value for confirmation dialog
-                      final int itemCount = stockProvider.pendingStockItemsCount;
+                      final int itemCount =
+                          stockProvider.pendingStockItemsCount;
                       // Match purchase summary: Total Due Amount = total purchase
                       // amount for this stock batch + current supplier balance.
                       final double supplierBalance = _getSupplierBalance();
-                      final double totalDueAmount = totalStockValue + supplierBalance;
-                      
+                      final double totalDueAmount =
+                          totalStockValue + supplierBalance;
+
                       // Check if payment data is provided
-                      final bool hasPayment = paymentMethods != null && paymentMethods.isNotEmpty;
+                      final bool hasPayment =
+                          paymentMethods != null && paymentMethods.isNotEmpty;
 
                       // Optional validation: if payment data is provided, ensure it's complete
                       if (hasPayment) {
@@ -4860,9 +4928,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         }
 
                         debugPrint('✅ PAYMENT DATA VALIDATION PASSED');
-                        
+
                         // Show payment summary confirmation dialog
-                        final confirmed = await StockConfirmationDialog.showPaymentSummary(
+                        final confirmed =
+                            await StockConfirmationDialog.showPaymentSummary(
                           context: context,
                           itemCount: itemCount,
                           totalAmount: totalStockValue,
@@ -4872,7 +4941,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           stockItems: stockProvider.pendingStockItems,
                           supplierOldBalance: supplierBalance,
                         );
-                        
+
                         if (confirmed != true) {
                           debugPrint('❌ USER CANCELLED PAYMENT CONFIRMATION');
                           return;
@@ -4881,9 +4950,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       } else {
                         debugPrint(
                             'ℹ️ NO PAYMENT DATA PROVIDED - SHOWING CONFIRMATION');
-                        
+
                         // Show no payment confirmation dialog
-                        final confirmed = await StockConfirmationDialog.showNoPaymentConfirmation(
+                        final confirmed = await StockConfirmationDialog
+                            .showNoPaymentConfirmation(
                           context: context,
                           itemCount: itemCount,
                           totalAmount: totalStockValue,
@@ -4892,12 +4962,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           stockItems: stockProvider.pendingStockItems,
                           supplierOldBalance: supplierBalance,
                         );
-                        
+
                         if (confirmed != true) {
                           debugPrint('❌ USER CANCELLED - WANTS TO ADD PAYMENT');
                           return;
                         }
-                        debugPrint('✅ USER CONFIRMED SUBMISSION WITHOUT PAYMENT');
+                        debugPrint(
+                            '✅ USER CONFIRMED SUBMISSION WITHOUT PAYMENT');
                       }
 
                       debugPrint(

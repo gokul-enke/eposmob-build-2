@@ -178,7 +178,7 @@ class PurchaseProvider extends ChangeNotifier {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey, 
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -292,10 +292,31 @@ class PurchaseProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         debugPrint('Master data response: ${response.body}');
         final jsonData = json.decode(response.body);
-        
+
         if (jsonData['status'] == 'success' && jsonData['data'] != null) {
-          masterDataValues = Map<String, String>.from(jsonData['data']);
-          debugPrint('Master data values loaded: $masterDataValues');
+          // Handle both new List structure and legacy Map structure
+          if (jsonData['data'] is List) {
+            // New structure: List of objects with id, value, description
+            masterDataValues = {};
+            for (var item in jsonData['data']) {
+              final value = item['value']?.toString() ?? '';
+              final description = item['description']?.toString() ?? value;
+              if (value.isNotEmpty) {
+                masterDataValues![value] = description;
+              }
+            }
+            debugPrint(
+                'Master data values loaded (from List): $masterDataValues');
+          } else if (jsonData['data'] is Map) {
+            // Legacy structure: Map<String, String>
+            masterDataValues = Map<String, String>.from(jsonData['data']);
+            debugPrint(
+                'Master data values loaded (from Map): $masterDataValues');
+          } else {
+            debugPrint(
+                'Unexpected data format: ${jsonData['data'].runtimeType}');
+            masterDataValues = {};
+          }
         } else {
           debugPrint('Failed to load master data: ${jsonData['message']}');
           masterDataValues = {};
@@ -303,7 +324,8 @@ class PurchaseProvider extends ChangeNotifier {
 
         notifyListeners();
       } else {
-        debugPrint('Master data API failed with status: ${response.statusCode}');
+        debugPrint(
+            'Master data API failed with status: ${response.statusCode}');
         masterDataValues = {};
         notifyListeners();
       }
@@ -687,13 +709,12 @@ class PurchaseProvider extends ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
-      final response = await http.post(url,
-          body: json.encode(apiBodyData),
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json',
-            'X-Tenant': apiKey,
-          });
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
 
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -760,7 +781,7 @@ class PurchaseProvider extends ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
-      try {
+    try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
@@ -793,14 +814,17 @@ class PurchaseProvider extends ChangeNotifier {
 
     final Map<String, dynamic> apiBodyData = {
       'purchase_id': purchaseId,
-      'payment_method': (paymentMethods != null && paymentMethods.isNotEmpty) ? paymentMethods : [],
-      'paid_methods': (paidMethods != null && paidMethods.isNotEmpty) ? paidMethods : [],
+      'payment_method': (paymentMethods != null && paymentMethods.isNotEmpty)
+          ? paymentMethods
+          : [],
+      'paid_methods':
+          (paidMethods != null && paidMethods.isNotEmpty) ? paidMethods : [],
     };
-    
+
     debugPrint("API Body Data: $apiBodyData");
-    
+
     final url = Uri.parse(APPUrl.finishPurchaseOrder);
-    
+
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -808,26 +832,26 @@ class PurchaseProvider extends ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
-    
+
     try {
-      final response = await http.post(url, 
-        body: json.encode(apiBodyData), 
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-          'X-Tenant': apiKey,
-        }
-      );
-      
-      debugPrint('Finish Purchase Order API response status: ${response.statusCode}');
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+
+      debugPrint(
+          'Finish Purchase Order API response status: ${response.statusCode}');
       debugPrint('Finish Purchase Order API response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
         debugPrint('Finish Purchase Order API success: $result');
         return result;
       } else {
-        debugPrint('Finish Purchase Order API failed with status: ${response.statusCode}');
+        debugPrint(
+            'Finish Purchase Order API failed with status: ${response.statusCode}');
         return {
           'status': 'failed',
           'message': 'API request failed with status: ${response.statusCode}',

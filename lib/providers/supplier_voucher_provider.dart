@@ -130,7 +130,9 @@ class SupplierVoucherProvider extends ChangeNotifier {
     }
 
     // Filter by type
-    if (filterType != null && filterType.isNotEmpty && filterType != 'All Types') {
+    if (filterType != null &&
+        filterType.isNotEmpty &&
+        filterType != 'All Types') {
       filteredVouchers = filteredVouchers.where((voucher) {
         return voucher.type.toLowerCase() == filterType.toLowerCase();
       }).toList();
@@ -252,7 +254,7 @@ class SupplierVoucherProvider extends ChangeNotifier {
     required String voucherDate,
     required String dueDate,
     required String status,
-    required String paymentMethod,
+    required int? paymentMethodId,
     required List<Map<String, dynamic>> voucherItems,
     required String accessToken,
   }) async {
@@ -274,7 +276,7 @@ class SupplierVoucherProvider extends ChangeNotifier {
         'voucher_date': voucherDate,
         'due_date': dueDate,
         'status': status,
-        'payment_method': paymentMethod,
+        'payment_method_id': paymentMethodId,
         'voucher_items': voucherItems,
       };
 

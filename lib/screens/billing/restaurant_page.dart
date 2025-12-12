@@ -24,6 +24,7 @@ import '../../screens/billing/widgets/payment_method_modal.dart';
 import '../../components/build_round_button.dart'; // Add button import
 import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 
 class RestaurantPage extends StatefulWidget {
@@ -2531,8 +2532,21 @@ class _OrderPanelState extends State<_OrderPanel> {
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cash, card,
-            upi, debit, transaction, toCustomerCredit) {
+        onPaymentMethodSelected: (
+          isCash,
+          isCard,
+          isUpi,
+          isDebit,
+          cash,
+          card,
+          upi,
+          debit,
+          transaction,
+          toCustomerCredit, {
+          String? cashMethodId,
+          String? cardMethodId,
+          String? upiMethodId,
+        }) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -2552,6 +2566,12 @@ class _OrderPanelState extends State<_OrderPanel> {
                 '  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
             debugPrint(
                 '  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+            if (cashMethodId != null)
+              debugPrint('  - Cash Method ID: $cashMethodId');
+            if (cardMethodId != null)
+              debugPrint('  - Card Method ID: $cardMethodId');
+            if (upiMethodId != null)
+              debugPrint('  - UPI Method ID: $upiMethodId');
 
             // Calculate balance
             final totalPaid = (double.tryParse(cash) ?? 0.0) +
@@ -2559,6 +2579,25 @@ class _OrderPanelState extends State<_OrderPanel> {
                 (double.tryParse(upi) ?? 0.0);
             _balanceAmount = totalPaid - orderTotal;
           });
+
+          // Store payment method IDs in BillingProvider for API use
+          final billingProvider =
+              Provider.of<BillingProvider>(context, listen: false);
+          billingProvider.updatePaymentFromModal(
+            isCash: isCash,
+            isCard: isCard,
+            isUpi: isUpi,
+            isDebit: isDebit,
+            cashAmount: cash,
+            cardAmount: card,
+            upiAmount: upi,
+            debitAmount: debit,
+            transactionNumber: transaction,
+            toCustomerCredit: toCustomerCredit,
+            cashMethodId: cashMethodId,
+            cardMethodId: cardMethodId,
+            upiMethodId: upiMethodId,
+          );
         },
       ),
     );
@@ -5834,20 +5873,27 @@ class _OrderPanelState extends State<_OrderPanel> {
       List<Map<String, dynamic>> paidMethods = [];
 
       if (_hasPaymentMethod()) {
-        // Multi-payment handling
+        // Get payment method IDs from BillingProvider
+        final billingProvider =
+            Provider.of<BillingProvider>(context, listen: false);
+        final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
+        final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
+        final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
+
+        // Multi-payment handling with dynamic IDs
         List<String> selectedMethods = [];
-        if (_isCashSelected) selectedMethods.add('CASH');
-        if (_isCardSelected) selectedMethods.add('CARD');
-        if (_isUpiSelected) selectedMethods.add('UPI');
+        if (_isCashSelected) selectedMethods.add(cashId);
+        if (_isCardSelected) selectedMethods.add(cardId);
+        if (_isUpiSelected) selectedMethods.add(upiId);
 
         if (selectedMethods.length > 1) {
-          // Multi-payment: store as JSON
+          // Multi-payment: store as JSON with IDs as keys
           Map<String, dynamic> multiPaymentData = {
             "methods": selectedMethods,
             "amounts": {
-              "CASH": _cashAmount.isNotEmpty ? _cashAmount : "0",
-              "CARD": _cardAmount.isNotEmpty ? _cardAmount : "0",
-              "UPI": _upiAmount.isNotEmpty ? _upiAmount : "0",
+              cashId: _cashAmount.isNotEmpty ? _cashAmount : "0",
+              cardId: _cardAmount.isNotEmpty ? _cardAmount : "0",
+              upiId: _upiAmount.isNotEmpty ? _upiAmount : "0",
             },
             "isMultiPayment": true
           };
@@ -5859,35 +5905,35 @@ class _OrderPanelState extends State<_OrderPanel> {
           final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
           paidAmount = (cashAmount + cardAmount + upiAmount).toString();
 
-          // Prepare paidMethods array
+          // Prepare paidMethods array with IDs
           if (_isCashSelected) {
             paidMethods.add({
-              "method": "CASH",
+              "method": cashId,
               "amount": double.tryParse(_cashAmount) ?? 0.0
             });
           }
           if (_isCardSelected) {
             paidMethods.add({
-              "method": "CARD",
+              "method": cardId,
               "amount": double.tryParse(_cardAmount) ?? 0.0
             });
           }
           if (_isUpiSelected) {
             paidMethods.add({
-              "method": "UPI",
+              "method": upiId,
               "amount": double.tryParse(_upiAmount) ?? 0.0
             });
           }
 
           paymentMethods = selectedMethods;
         } else {
-          // Single payment method
+          // Single payment method with ID
           paymentMethod = selectedMethods.first;
-          if (paymentMethod == "CASH") {
+          if (_isCashSelected) {
             paidAmount = _cashAmount;
-          } else if (paymentMethod == "CARD") {
+          } else if (_isCardSelected) {
             paidAmount = _cardAmount;
-          } else if (paymentMethod == "UPI") {
+          } else if (_isUpiSelected) {
             paidAmount = _upiAmount;
           }
         }

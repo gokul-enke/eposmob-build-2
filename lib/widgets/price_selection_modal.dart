@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
 
 // Price Selection Modal Widget
 class PriceSelectionModal extends StatelessWidget {
@@ -18,9 +20,16 @@ class PriceSelectionModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("🎯 PRICE MODAL: Building price selection modal for: $productName");
+    // Get currency from app settings
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'INR';
+
+    debugPrint(
+        "🎯 PRICE MODAL: Building price selection modal for: $productName");
     debugPrint("🎯 PRICE MODAL: Available prices: $prices");
-    
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -71,7 +80,8 @@ class PriceSelectionModal extends StatelessWidget {
                   final price = prices[index];
                   return GestureDetector(
                     onTap: () {
-                      debugPrint("🎯 PRICE MODAL: User selected price: ₹$price");
+                      debugPrint(
+                          "🎯 PRICE MODAL: User selected price: $currency$price");
                       onPriceSelected(price);
                       Navigator.of(context).pop(price);
                     },
@@ -85,7 +95,7 @@ class PriceSelectionModal extends StatelessWidget {
                       ),
                       child: Center(
                         child: Text(
-                          '₹${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)}',
+                          '$currency ${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)}',
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s14,
@@ -105,7 +115,8 @@ class PriceSelectionModal extends StatelessWidget {
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      debugPrint("🎯 PRICE MODAL: User cancelled price selection");
+                      debugPrint(
+                          "🎯 PRICE MODAL: User cancelled price selection");
                       Navigator.of(context).pop();
                     },
                     child: Container(

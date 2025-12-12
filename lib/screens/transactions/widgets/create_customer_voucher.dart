@@ -14,6 +14,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -103,7 +104,7 @@ class _CreateCustomerVoucherScreenState
     {'value': 'overdue', 'display': 'Overdue'},
   ];
   // Payment methods from API
-  Map<String, String> _paymentMethods = {};
+  List<MasterDataValue> _paymentMethods = [];
   bool _isLoadingPaymentMethods = false;
   List<Map<String, dynamic>> customers = [];
 
@@ -141,12 +142,16 @@ class _CreateCustomerVoucherScreenState
           _isLoadingPaymentMethods = false;
           // Set default payment method if available and not already set
           if (_paymentMethods.isNotEmpty && selectedPaymentMethod == null) {
-            if (_paymentMethods.containsKey('CASH')) {
+            final cashMethod =
+                _paymentMethods.where((m) => m.value == 'CASH').firstOrNull;
+            final codMethod =
+                _paymentMethods.where((m) => m.value == 'COD').firstOrNull;
+            if (cashMethod != null) {
               selectedPaymentMethod = 'CASH';
-            } else if (_paymentMethods.containsKey('COD')) {
+            } else if (codMethod != null) {
               selectedPaymentMethod = 'COD';
             } else {
-              selectedPaymentMethod = _paymentMethods.keys.first;
+              selectedPaymentMethod = _paymentMethods.first.value;
             }
           }
         });
@@ -258,7 +263,7 @@ class _CreateCustomerVoucherScreenState
         voucherDate: DateFormat('yyyy-MM-dd').format(selectedVoucherDate),
         dueDate: DateFormat('yyyy-MM-dd').format(selectedDueDate),
         status: selectedStatus!,
-        paymentMethod: selectedPaymentMethod!,
+        paymentMethodId: _getPaymentMethodId(selectedPaymentMethod),
         customerId: selectedCustomerId!,
         voucherItems: items,
         accessToken: accessToken ?? '',
@@ -602,7 +607,7 @@ class _CreateCustomerVoucherScreenState
           hintText:
               _isLoadingPaymentMethods ? 'Loading...' : 'Select Payment Method',
           value: selectedPaymentMethod,
-          items: _paymentMethods.keys.toList(),
+          items: _paymentMethods.map((m) => m.value).toList(),
           onChanged: (String? value) {
             setState(() => selectedPaymentMethod = value);
             // Move focus to customer after selection
@@ -610,12 +615,30 @@ class _CreateCustomerVoucherScreenState
           },
           displayText: (String? value) {
             if (value == null) return 'Select Payment Method';
-            return _paymentMethods[value] ?? value;
+            try {
+              return _paymentMethods
+                  .firstWhere((m) => m.value == value)
+                  .description;
+            } catch (e) {
+              return value;
+            }
           },
           height: 45,
         ),
       ],
     );
+  }
+
+  // Helper method to get payment method ID for API
+  int? _getPaymentMethodId(String? paymentMethodValue) {
+    if (paymentMethodValue == null || _paymentMethods.isEmpty) return null;
+    try {
+      return _paymentMethods
+          .firstWhere((m) => m.value == paymentMethodValue)
+          .id;
+    } catch (e) {
+      return null;
+    }
   }
 
   Widget _buildCustomerDropdown() {

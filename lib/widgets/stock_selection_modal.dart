@@ -4,9 +4,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
 
 // Class to represent combined stocks with same pricing
 class CombinedStock {
@@ -121,6 +123,12 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
 
   @override
   Widget build(BuildContext context) {
+    // Get currency from app settings
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'INR';
+
     // Group stocks by pricing information
     List<CombinedStock> combinedStocks =
         _groupStocksByPricing(widget.stockOptions);
@@ -237,13 +245,13 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                   children: [
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Price: ₹${combinedStock.price ?? "0.00"}',
+                                      'Price: $currency ${combinedStock.price ?? "0.00"}',
                                       style: const TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500),
                                     ),
                                     Text(
-                                      'MRP: ₹${combinedStock.mrp ?? "0.00"}',
+                                      'MRP: $currency ${combinedStock.mrp ?? "0.00"}',
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                     Text(
@@ -343,7 +351,8 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(12),
                                   constraints: BoxConstraints(
-                                    maxHeight: 200, // Fixed max height for expanded section
+                                    maxHeight:
+                                        200, // Fixed max height for expanded section
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -403,215 +412,206 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                       Flexible(
                                         child: ListView.builder(
                                           shrinkWrap: true,
-                                          itemCount: combinedStock.originalStocks.length,
+                                          itemCount: combinedStock
+                                              .originalStocks.length,
                                           itemBuilder: (context, stockIndex) {
-                                            final stock = combinedStock.originalStocks[stockIndex];
+                                            final stock = combinedStock
+                                                .originalStocks[stockIndex];
                                             return Container(
-                                                width: double.infinity,
-                                                margin: const EdgeInsets.only(
-                                                    bottom: 8),
-                                                padding:
-                                                    const EdgeInsets.all(12),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                      color: Colors.grey[300]!),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black
-                                                          .withOpacity(0.03),
-                                                      spreadRadius: 1,
-                                                      blurRadius: 2,
-                                                      offset:
-                                                          const Offset(0, 1),
+                                              width: double.infinity,
+                                              margin: const EdgeInsets.only(
+                                                  bottom: 8),
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                    color: Colors.grey[300]!),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.03),
+                                                    spreadRadius: 1,
+                                                    blurRadius: 2,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  // Stock icon
+                                                  Container(
+                                                    width: 36,
+                                                    height: 36,
+                                                    decoration: BoxDecoration(
+                                                      color: stock.expiryDate !=
+                                                              null
+                                                          ? Colors.orange
+                                                              .withOpacity(0.1)
+                                                          : Colors.grey
+                                                              .withOpacity(0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
                                                     ),
-                                                  ],
-                                                ),
-                                                child: Row(
-                                                  children: [
-                                                    // Stock icon
-                                                    Container(
-                                                      width: 36,
-                                                      height: 36,
-                                                      decoration: BoxDecoration(
-                                                        color: stock.expiryDate !=
-                                                                null
-                                                            ? Colors.orange
-                                                                .withOpacity(
-                                                                    0.1)
-                                                            : Colors.grey
-                                                                .withOpacity(
-                                                                    0.1),
+                                                    child: Icon(
+                                                      Icons.inventory,
+                                                      color: stock.expiryDate !=
+                                                              null
+                                                          ? Colors.orange
+                                                          : Colors.grey,
+                                                      size: 18,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  // Stock details
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Row(
+                                                          children: [
+                                                            Text(
+                                                              'Stock ID: ',
+                                                              style: TextStyle(
+                                                                fontSize: 11,
+                                                                color: Colors
+                                                                    .grey[600],
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              '${stock.id}',
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        Row(
+                                                          children: [
+                                                            Icon(
+                                                              Icons.inventory_2,
+                                                              size: 12,
+                                                              color: Colors
+                                                                  .grey[600],
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Text(
+                                                              'Qty: ${stock.quantity}',
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                color: Colors
+                                                                    .grey[700],
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 16),
+                                                            Icon(
+                                                              stock.expiryDate !=
+                                                                      null
+                                                                  ? Icons
+                                                                      .schedule
+                                                                  : Icons
+                                                                      .all_inclusive,
+                                                              size: 12,
+                                                              color:
+                                                                  stock.expiryDate !=
+                                                                          null
+                                                                      ? Colors
+                                                                          .orange
+                                                                      : Colors
+                                                                          .grey,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Flexible(
+                                                              child: Text(
+                                                                stock.expiryDate !=
+                                                                        null
+                                                                    ? stock
+                                                                        .expiryDate!
+                                                                    : 'No expiry',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 10,
+                                                                  color: stock.expiryDate !=
+                                                                          null
+                                                                      ? Colors
+                                                                          .orange
+                                                                      : Colors
+                                                                          .grey,
+                                                                  fontWeight: stock
+                                                                              .expiryDate !=
+                                                                          null
+                                                                      ? FontWeight
+                                                                          .w500
+                                                                      : FontWeight
+                                                                          .normal,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  // Choose button
+                                                  ElevatedButton(
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      backgroundColor:
+                                                          ColorManager
+                                                              .kPrimaryColor,
+                                                      foregroundColor:
+                                                          Colors.white,
+                                                      textStyle:
+                                                          const TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 6,
+                                                      ),
+                                                      minimumSize:
+                                                          const Size(60, 28),
+                                                      shape:
+                                                          RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(6),
                                                       ),
-                                                      child: Icon(
-                                                        Icons.inventory,
-                                                        color:
-                                                            stock.expiryDate !=
-                                                                    null
-                                                                ? Colors.orange
-                                                                : Colors.grey,
-                                                        size: 18,
-                                                      ),
                                                     ),
-                                                    const SizedBox(width: 12),
-                                                    // Stock details
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Row(
-                                                            children: [
-                                                              Text(
-                                                                'Stock ID: ',
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 11,
-                                                                  color: Colors
-                                                                          .grey[
-                                                                      600],
-                                                                ),
-                                                              ),
-                                                              Text(
-                                                                '${stock.id}',
-                                                                style:
-                                                                    const TextStyle(
-                                                                  fontSize: 11,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                  color: Colors
-                                                                      .black87,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 4),
-                                                          Row(
-                                                            children: [
-                                                              Icon(
-                                                                Icons
-                                                                    .inventory_2,
-                                                                size: 12,
-                                                                color: Colors
-                                                                    .grey[600],
-                                                              ),
-                                                              const SizedBox(
-                                                                  width: 4),
-                                                              Text(
-                                                                'Qty: ${stock.quantity}',
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 10,
-                                                                  color: Colors
-                                                                          .grey[
-                                                                      700],
-                                                                ),
-                                                              ),
-                                                              const SizedBox(
-                                                                  width: 16),
-                                                              Icon(
-                                                                stock.expiryDate !=
-                                                                        null
-                                                                    ? Icons
-                                                                        .schedule
-                                                                    : Icons
-                                                                        .all_inclusive,
-                                                                size: 12,
-                                                                color: stock.expiryDate !=
-                                                                        null
-                                                                    ? Colors
-                                                                        .orange
-                                                                    : Colors
-                                                                        .grey,
-                                                              ),
-                                                              const SizedBox(
-                                                                  width: 4),
-                                                              Flexible(
-                                                                child: Text(
-                                                                  stock.expiryDate !=
-                                                                          null
-                                                                      ? stock
-                                                                          .expiryDate!
-                                                                      : 'No expiry',
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        10,
-                                                                    color: stock.expiryDate !=
-                                                                            null
-                                                                        ? Colors
-                                                                            .orange
-                                                                        : Colors
-                                                                            .grey,
-                                                                    fontWeight: stock.expiryDate !=
-                                                                            null
-                                                                        ? FontWeight
-                                                                            .w500
-                                                                        : FontWeight
-                                                                            .normal,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    // Choose button
-                                                    ElevatedButton(
-                                                      style: ElevatedButton
-                                                          .styleFrom(
-                                                        backgroundColor:
-                                                            ColorManager
-                                                                .kPrimaryColor,
-                                                        foregroundColor:
-                                                            Colors.white,
-                                                        textStyle:
-                                                            const TextStyle(
-                                                          fontSize: 10,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 12,
-                                                          vertical: 6,
-                                                        ),
-                                                        minimumSize:
-                                                            const Size(60, 28),
-                                                        shape:
-                                                            RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(6),
-                                                        ),
-                                                      ),
-                                                      onPressed: () {
-                                                        // Return the specific individual stock
-                                                        Navigator.pop(context, {
-                                                          'product':
-                                                              widget.product,
-                                                          'stock': stock,
-                                                          'originalStocks': [
-                                                            stock
-                                                          ], // Single stock in array
-                                                        });
-                                                      },
-                                                      child:
-                                                          const Text('Choose'),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
+                                                    onPressed: () {
+                                                      // Return the specific individual stock
+                                                      Navigator.pop(context, {
+                                                        'product':
+                                                            widget.product,
+                                                        'stock': stock,
+                                                        'originalStocks': [
+                                                          stock
+                                                        ], // Single stock in array
+                                                      });
+                                                    },
+                                                    child: const Text('Choose'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
                                           },
                                         ),
                                       ),

@@ -19,7 +19,8 @@ class PaymentMethodModalWrapper extends StatelessWidget {
           initialCardAmount: billingProvider.cardAmountController.text,
           initialUpiAmount: billingProvider.upiAmountController.text,
           initialDebitAmount: billingProvider.debitAmountController.text,
-          initialTransactionNumber: billingProvider.transactionNumberController.text,
+          initialTransactionNumber:
+              billingProvider.transactionNumberController.text,
           cartTotal: billingProvider.totalOrderAmount,
           customerPrevBalance: billingProvider.customerBalance,
           onPaymentMethodSelected: (
@@ -32,8 +33,11 @@ class PaymentMethodModalWrapper extends StatelessWidget {
             upiAmt,
             debitAmt,
             transNum,
-            toCustomerCredit,
-          ) {
+            toCustomerCredit, {
+            String? cashMethodId,
+            String? cardMethodId,
+            String? upiMethodId,
+          }) {
             billingProvider.updatePaymentFromModal(
               isCash: isCash,
               isCard: isCard,
@@ -45,6 +49,9 @@ class PaymentMethodModalWrapper extends StatelessWidget {
               debitAmount: debitAmt,
               transactionNumber: transNum,
               toCustomerCredit: toCustomerCredit,
+              cashMethodId: cashMethodId,
+              cardMethodId: cardMethodId,
+              upiMethodId: upiMethodId,
             );
           },
         );

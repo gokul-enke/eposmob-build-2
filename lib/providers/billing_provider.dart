@@ -11,13 +11,12 @@ import '../models/delivery_method.dart';
 import '../providers/sales_provider.dart';
 
 class BillingProvider extends ChangeNotifier {
-  
   // 1. Internet Connectivity - Real-time connection monitoring with status indicator
   bool _hasInternet = true;
   StreamSubscription? _internetSubscription;
-  
+
   bool get hasInternet => _hasInternet;
-  
+
   // 2. Loading States - Individual loading flags for each operation
   bool _isLoadingClearCart = false;
   bool _isLoadingSaveOrder = false;
@@ -26,7 +25,7 @@ class BillingProvider extends ChangeNotifier {
   bool _isLoadingSaveOrderAndPrint = false;
   bool _isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
-  
+
   bool get isLoadingClearCart => _isLoadingClearCart;
   bool get isLoadingSaveOrder => _isLoadingSaveOrder;
   bool get isLoadingCreateOrder => _isLoadingCreateOrder;
@@ -34,11 +33,14 @@ class BillingProvider extends ChangeNotifier {
   bool get isLoadingSaveOrderAndPrint => _isLoadingSaveOrderAndPrint;
   bool get isLoadingAddItem => _isLoadingAddItem;
   bool get isProcessingBarcode => _isProcessingBarcode;
-  
+
   // 3. Form State Management - Controllers for all input fields with proper disposal
-  final TextEditingController mobileNumberTextController = TextEditingController();
-  final TextEditingController coupenCodeTextController = TextEditingController();
-  final TextEditingController transactionNumberController = TextEditingController();
+  final TextEditingController mobileNumberTextController =
+      TextEditingController();
+  final TextEditingController coupenCodeTextController =
+      TextEditingController();
+  final TextEditingController transactionNumberController =
+      TextEditingController();
   final TextEditingController paidAmountController = TextEditingController();
   final TextEditingController cashAmountController = TextEditingController();
   final TextEditingController cardAmountController = TextEditingController();
@@ -47,15 +49,18 @@ class BillingProvider extends ChangeNotifier {
   final TextEditingController barcodeController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController unitPriceController = TextEditingController();
-  final TextEditingController selectedProductIdController = TextEditingController();
-  final TextEditingController selectedProductNameController = TextEditingController();
+  final TextEditingController selectedProductIdController =
+      TextEditingController();
+  final TextEditingController selectedProductNameController =
+      TextEditingController();
   final TextEditingController commentController = TextEditingController();
   final TextEditingController carNumberController = TextEditingController();
-  
+
   // Additional controllers
-  final TextEditingController _transactionNumberController = TextEditingController();
+  final TextEditingController _transactionNumberController =
+      TextEditingController();
   final ScrollController _customerScrollController = ScrollController();
-  
+
   // 4. Focus Management - Focus nodes for keyboard navigation and field selection
   final FocusNode paidAmountFocusNode = FocusNode();
   final FocusNode cashAmountFocusNode = FocusNode();
@@ -67,35 +72,35 @@ class BillingProvider extends ChangeNotifier {
   final FocusNode focusNode = FocusNode();
   final FocusNode barcodeNode = FocusNode();
   final FocusNode customerTextFieldFocus = FocusNode();
-  
+
   // 5. Debounce Logic - Prevent rapid API calls during user input
   Timer? _debounce;
   Timer? _debounceTimer;
-  
+
   Timer? get debounce => _debounce;
   Timer? get debounceTimer => _debounceTimer;
-  
+
   // MISSED LOGIC: Debounce management methods
   void setDebounce(Timer? timer) {
     _debounce?.cancel();
     _debounce = timer;
   }
-  
+
   void setDebounceTimer(Timer? timer) {
     _debounceTimer?.cancel();
     _debounceTimer = timer;
   }
-  
+
   void cancelDebounce() {
     _debounce?.cancel();
     _debounce = null;
   }
-  
+
   void cancelDebounceTimer() {
     _debounceTimer?.cancel();
     _debounceTimer = null;
   }
-  
+
   // Initialize connectivity listener
   void initConnectivityListener({
     Function(String)? onConnectivityChanged,
@@ -107,13 +112,12 @@ class BillingProvider extends ChangeNotifier {
       notifyListeners();
 
       // Listen for connectivity changes
-      _internetSubscription = InternetConnection()
-          .onStatusChange
-          .listen((InternetStatus status) {
+      _internetSubscription =
+          InternetConnection().onStatusChange.listen((InternetStatus status) {
         final isConnected = status == InternetStatus.connected;
         _hasInternet = isConnected;
         notifyListeners();
-        
+
         // Optional callback for UI feedback
         if (onConnectivityChanged != null) {
           if (!isConnected) {
@@ -130,54 +134,54 @@ class BillingProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   // Loading state setters
   void setLoadingClearCart(bool value) {
     _isLoadingClearCart = value;
     notifyListeners();
   }
-  
+
   void setLoadingSaveOrder(bool value) {
     _isLoadingSaveOrder = value;
     notifyListeners();
   }
-  
+
   void setLoadingCreateOrder(bool value) {
     _isLoadingCreateOrder = value;
     notifyListeners();
   }
-  
+
   void setLoadingConfirmOrder(bool value) {
     _isLoadingConfirmOrder = value;
     notifyListeners();
   }
-  
+
   void setLoadingSaveOrderAndPrint(bool value) {
     _isLoadingSaveOrderAndPrint = value;
     notifyListeners();
   }
-  
+
   void setLoadingAddItem(bool value) {
     _isLoadingAddItem = value;
     notifyListeners();
   }
-  
+
   void setProcessingBarcode(bool value) {
     _isProcessingBarcode = value;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Barcode processing with debounce
   void processBarcodeWithDebounce(String barcode, VoidCallback onProcess) {
     if (_isProcessingBarcode || barcode.isEmpty) {
       return;
     }
-    
+
     setProcessingBarcode(true);
-    
+
     // Cancel existing debounce
     cancelDebounce();
-    
+
     // Set new debounce
     setDebounce(Timer(const Duration(milliseconds: 500), () {
       if (barcode.isNotEmpty) {
@@ -189,21 +193,23 @@ class BillingProvider extends ChangeNotifier {
       });
     }));
   }
-  
+
   // 6. Customer Autocomplete - Search by phone/name with keyboard navigation
   List<CustomerListModelData>? _customerList = [];
   List<CustomerListModelData>? _filteredCustomerList = [];
   List<CustomerListModelData> _currentCustomerOptions = [];
   int? _highlightedCustomerIndex;
-  
+
   // Customer item height for scrolling calculations
   final double _customerItemHeight = 48.0;
-  
+
   List<CustomerListModelData>? get customerList => _customerList;
-  List<CustomerListModelData>? get filteredCustomerList => _filteredCustomerList;
-  List<CustomerListModelData> get currentCustomerOptions => _currentCustomerOptions;
+  List<CustomerListModelData>? get filteredCustomerList =>
+      _filteredCustomerList;
+  List<CustomerListModelData> get currentCustomerOptions =>
+      _currentCustomerOptions;
   int? get highlightedCustomerIndex => _highlightedCustomerIndex;
-  
+
   // 7. Customer Selection - Manual vs automatic customer assignment logic
   int? _selectedCustomerID;
   String? _selectedCustomerPhone;
@@ -212,7 +218,7 @@ class BillingProvider extends ChangeNotifier {
   bool _isCustomerManuallySelected = false;
   String? _mobileNumberText = "";
   String? _salesExecutivemobileNumberText = "";
-  
+
   int? get selectedCustomerID => _selectedCustomerID;
   String? get selectedCustomerPhone => _selectedCustomerPhone;
   CustomerListModelData? get selectedCustomer => _selectedCustomer;
@@ -220,33 +226,34 @@ class BillingProvider extends ChangeNotifier {
   bool get isCustomerManuallySelected => _isCustomerManuallySelected;
   String? get mobileNumberText => _mobileNumberText;
   String? get salesExecutivemobileNumberText => _salesExecutivemobileNumberText;
-  
+
   // 8. Customer Balance Display - Show customer credit/debit with color coding
   double _customerBalance = 0.0;
   bool _hasCustomerCredit = false;
-  
+
   double get customerBalance => _customerBalance;
   bool get hasCustomerCredit => _hasCustomerCredit;
-  
+
   // 9. Customer Validation - Phone number validation and customer existence checks
   bool _isValidPhoneNumber = false;
   String? _phoneValidationError;
-  
+
   bool get isValidPhoneNumber => _isValidPhoneNumber;
   String? get phoneValidationError => _phoneValidationError;
-  
+
   // 10. Sales Executive Integration - Auto-assign default customer based on current sales executive
   CustomerListModelData? _defaultSalesExecutiveCustomer;
-  
-  CustomerListModelData? get defaultSalesExecutiveCustomer => _defaultSalesExecutiveCustomer;
-  
+
+  CustomerListModelData? get defaultSalesExecutiveCustomer =>
+      _defaultSalesExecutiveCustomer;
+
   // 11. Add New Customer - Modal integration with auto-selection after creation
   bool _isAddingNewCustomer = false;
-  
+
   bool get isAddingNewCustomer => _isAddingNewCustomer;
-  
+
   // Customer management methods
-  
+
   /// Fetch customers from API via [CustomerProvider] and populate [_customerList].
   /// Returns `true` on success, `false` otherwise.
   Future<bool> fetchCustomers({
@@ -279,39 +286,42 @@ class BillingProvider extends ChangeNotifier {
       return false;
     }
   }
+
   void setCustomerList(List<CustomerListModelData>? list) {
     _customerList = list;
     notifyListeners();
   }
-  
+
   void setFilteredCustomerList(List<CustomerListModelData>? list) {
     _filteredCustomerList = list;
     notifyListeners();
   }
-  
+
   void setCurrentCustomerOptions(List<CustomerListModelData> options) {
     _currentCustomerOptions = options;
     notifyListeners();
   }
-  
+
   void setHighlightedCustomerIndex(int? index) {
     _highlightedCustomerIndex = index;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Customer scroll management
   void scrollToHighlightedCustomer() {
     if (_highlightedCustomerIndex == null) return;
-    
+
     // Calculate the offset to scroll to
-    final double scrollOffset = _highlightedCustomerIndex! * _customerItemHeight;
-    
+    final double scrollOffset =
+        _highlightedCustomerIndex! * _customerItemHeight;
+
     // Get the current scroll position and visible height
     final double currentScroll = _customerScrollController.offset;
-    const double visibleHeight = 180.0; // Approximate visible height of dropdown
-    
+    const double visibleHeight =
+        180.0; // Approximate visible height of dropdown
+
     // Check if the highlighted item is outside the visible area
-    if (scrollOffset < currentScroll || 
+    if (scrollOffset < currentScroll ||
         scrollOffset > currentScroll + visibleHeight - _customerItemHeight) {
       // Scroll to make the highlighted item visible
       _customerScrollController.animateTo(
@@ -321,11 +331,11 @@ class BillingProvider extends ChangeNotifier {
       );
     }
   }
-  
+
   // MISSED LOGIC: Keyboard navigation for customer list
   void navigateCustomerUp() {
     if (_currentCustomerOptions.isEmpty) return;
-    
+
     if (_highlightedCustomerIndex == null) {
       _highlightedCustomerIndex = _currentCustomerOptions.length - 1;
     } else if (_highlightedCustomerIndex! > 0) {
@@ -333,45 +343,50 @@ class BillingProvider extends ChangeNotifier {
     } else {
       _highlightedCustomerIndex = _currentCustomerOptions.length - 1;
     }
-    
+
     scrollToHighlightedCustomer();
     notifyListeners();
   }
-  
+
   void navigateCustomerDown() {
     if (_currentCustomerOptions.isEmpty) return;
-    
+
     if (_highlightedCustomerIndex == null) {
       _highlightedCustomerIndex = 0;
-    } else if (_highlightedCustomerIndex! < _currentCustomerOptions.length - 1) {
+    } else if (_highlightedCustomerIndex! <
+        _currentCustomerOptions.length - 1) {
       _highlightedCustomerIndex = _highlightedCustomerIndex! + 1;
     } else {
       _highlightedCustomerIndex = 0;
     }
-    
+
     scrollToHighlightedCustomer();
     notifyListeners();
   }
-  
+
   void selectHighlightedCustomer() {
-    if (_highlightedCustomerIndex != null && 
+    if (_highlightedCustomerIndex != null &&
         _highlightedCustomerIndex! < _currentCustomerOptions.length) {
       final customer = _currentCustomerOptions[_highlightedCustomerIndex!];
       setSelectedCustomer(customer, isManual: true);
     }
   }
-  
-  void setSelectedCustomer(CustomerListModelData? customer, {bool isManual = true}) {
+
+  void setSelectedCustomer(CustomerListModelData? customer,
+      {bool isManual = true}) {
     _selectedCustomer = customer;
     _selectedCustomerID = customer?.id;
     _selectedCustomerPhone = customer?.phone;
     _isCustomerManuallySelected = isManual;
     _isCustomerFound = customer != null;
-    
+
     if (customer != null) {
       // Update mobile number text based on customer data
-      if (customer.id != null && customer.name != null && customer.name!.isNotEmpty) {
-        mobileNumberTextController.text = "${customer.name} ${customer.phone}".trim();
+      if (customer.id != null &&
+          customer.name != null &&
+          customer.name!.isNotEmpty) {
+        mobileNumberTextController.text =
+            "${customer.name} ${customer.phone}".trim();
         _isCustomerFound = true;
       } else {
         mobileNumberTextController.text = customer.phone ?? '';
@@ -379,10 +394,10 @@ class BillingProvider extends ChangeNotifier {
         _isCustomerFound = false;
       }
     }
-    
+
     notifyListeners();
   }
-  
+
   void clearSelectedCustomerButKeepText() {
     _selectedCustomer = null;
     _selectedCustomerID = null;
@@ -404,112 +419,112 @@ class BillingProvider extends ChangeNotifier {
     mobileNumberTextController.clear();
     notifyListeners();
   }
-  
+
   void setMobileNumberText(String? text) {
     _mobileNumberText = text;
     notifyListeners();
   }
-  
+
   void setSalesExecutiveMobileNumberText(String? text) {
     _salesExecutivemobileNumberText = text;
     notifyListeners();
   }
-  
+
   void setCustomerBalance(double balance) {
     _customerBalance = balance;
     _hasCustomerCredit = balance > 0;
     notifyListeners();
   }
-  
+
   void setPhoneValidation(bool isValid, String? error) {
     _isValidPhoneNumber = isValid;
     _phoneValidationError = error;
     notifyListeners();
   }
-  
+
   void setDefaultSalesExecutiveCustomer(CustomerListModelData? customer) {
     _defaultSalesExecutiveCustomer = customer;
     notifyListeners();
   }
-  
+
   void setAddingNewCustomer(bool value) {
     _isAddingNewCustomer = value;
     notifyListeners();
   }
-  
+
   // Phone number validation logic
   bool validatePhoneNumber(String phone) {
     if (phone.isEmpty) {
       setPhoneValidation(false, "Phone number is required");
       return false;
     }
-    
+
     if (phone.length < 10) {
       setPhoneValidation(false, "Phone number must be at least 10 digits");
       return false;
     }
-    
+
     // Add more validation rules as needed
     setPhoneValidation(true, null);
     return true;
   }
-  
+
   // 12. Add to Cart Logic - Product selection with stock management and pricing
   List<ListCartModelDataCartItem>? _cartProductItems = [];
   Map<String, num> _taxNames = {};
   Map<int, bool> _hoverMap = {};
-  
+
   List<ListCartModelDataCartItem>? get cartProductItems => _cartProductItems;
   Map<String, num> get taxNames => _taxNames;
   Map<int, bool> get hoverMap => _hoverMap;
-  
+
   // 13. Remove from Cart - Individual item removal with confirmation
   bool _showRemoveConfirmation = false;
   int? _itemToRemoveIndex;
-  
+
   bool get showRemoveConfirmation => _showRemoveConfirmation;
   int? get itemToRemoveIndex => _itemToRemoveIndex;
-  
+
   // 14. Quantity Control - Increment/decrement with validation
   Map<int, int> _itemQuantities = {};
-  
+
   Map<int, int> get itemQuantities => _itemQuantities;
-  
+
   // 15. Price Editing - Custom price and MRP modification per item
   Map<int, double> _customPrices = {};
   Map<int, double> _customMRPs = {};
   bool _isPriceEditing = false;
-  
+
   Map<int, double> get customPrices => _customPrices;
   Map<int, double> get customMRPs => _customMRPs;
   bool get isPriceEditing => _isPriceEditing;
-  
+
   // 16. Cart Validation - Ensure valid pricing before operations
   bool _isCartValid = true;
   String? _cartValidationError;
-  
+
   bool get isCartValid => _isCartValid;
   String? get cartValidationError => _cartValidationError;
-  
+
   // 17. Cart Clear - Complete cart reset with state cleanup
   bool _isCartEmpty = true;
-  
+
   bool get isCartEmpty => _isCartEmpty;
-  
+
   // Cart management methods
   void setCartProductItems(List<ListCartModelDataCartItem>? items) {
     _cartProductItems = items;
     _isCartEmpty = items == null || items.isEmpty;
     notifyListeners();
   }
-  
+
   void addToCart(ListCartModelDataCartItem item) {
     _cartProductItems ??= [];
     _cartProductItems!.add(item);
     _isCartEmpty = false;
     notifyListeners();
   }
-  
+
   void removeFromCart(int index) {
     if (_cartProductItems != null && index < _cartProductItems!.length) {
       _cartProductItems!.removeAt(index);
@@ -517,55 +532,55 @@ class BillingProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   void showRemoveConfirmationDialog(int index) {
     _itemToRemoveIndex = index;
     _showRemoveConfirmation = true;
     notifyListeners();
   }
-  
+
   void hideRemoveConfirmationDialog() {
     _itemToRemoveIndex = null;
     _showRemoveConfirmation = false;
     notifyListeners();
   }
-  
+
   void updateItemQuantity(int index, int quantity) {
     if (_cartProductItems != null && index < _cartProductItems!.length) {
       _itemQuantities[index] = quantity;
       notifyListeners();
     }
   }
-  
+
   void incrementQuantity(int index) {
     int currentQuantity = _itemQuantities[index] ?? 1;
     updateItemQuantity(index, currentQuantity + 1);
   }
-  
+
   void decrementQuantity(int index) {
     int currentQuantity = _itemQuantities[index] ?? 1;
     if (currentQuantity > 1) {
       updateItemQuantity(index, currentQuantity - 1);
     }
   }
-  
+
   void updateCustomPrice(int index, double price) {
     _customPrices[index] = price;
     validateCart();
     notifyListeners();
   }
-  
+
   void updateCustomMRP(int index, double mrp) {
     _customMRPs[index] = mrp;
     validateCart();
     notifyListeners();
   }
-  
+
   void setPriceEditing(bool value) {
     _isPriceEditing = value;
     notifyListeners();
   }
-  
+
   void clearCart() {
     _cartProductItems?.clear();
     _itemQuantities.clear();
@@ -578,7 +593,7 @@ class BillingProvider extends ChangeNotifier {
     _isCartValid = true;
     notifyListeners();
   }
-  
+
   bool validateCart() {
     if (_cartProductItems == null || _cartProductItems!.isEmpty) {
       _cartValidationError = "Cart is empty";
@@ -586,20 +601,20 @@ class BillingProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    
+
     // Validate each item has valid pricing
     for (int i = 0; i < _cartProductItems!.length; i++) {
       final item = _cartProductItems![i];
       final customPrice = _customPrices[i];
       final customMRP = _customMRPs[i];
-      
+
       if (customPrice != null && customPrice <= 0) {
         _cartValidationError = "Invalid price for item ${item.productName}";
         _isCartValid = false;
         notifyListeners();
         return false;
       }
-      
+
       if (customMRP != null && customMRP <= 0) {
         _cartValidationError = "Invalid MRP for item ${item.productName}";
         _isCartValid = false;
@@ -607,66 +622,66 @@ class BillingProvider extends ChangeNotifier {
         return false;
       }
     }
-    
+
     _cartValidationError = null;
     _isCartValid = true;
     notifyListeners();
     return true;
   }
-  
+
   void setTaxNames(Map<String, num> taxes) {
     _taxNames = taxes;
     notifyListeners();
   }
-  
+
   void setHoverMap(Map<int, bool> hover) {
     _hoverMap = hover;
     notifyListeners();
   }
-  
+
   // 18. Barcode Processing - Weight-based (KG) and count-based (PC) product scanning
   String _barcodeInput = "";
   bool _isWeightBasedProduct = false;
   bool _isCountBasedProduct = false;
-  
+
   String get barcodeInput => _barcodeInput;
   bool get isWeightBasedProduct => _isWeightBasedProduct;
   bool get isCountBasedProduct => _isCountBasedProduct;
-  
+
   // 19. Product Autocomplete - Search and select products with stock variants
   List<dynamic> _productList = [];
   List<dynamic> _filteredProductList = [];
   dynamic _selectedProduct;
   String _selectedProductName = "";
   int? _selectedProductId;
-  
+
   List<dynamic> get productList => _productList;
   List<dynamic> get filteredProductList => _filteredProductList;
   dynamic get selectedProduct => _selectedProduct;
   String get selectedProductName => _selectedProductName;
   int? get selectedProductId => _selectedProductId;
-  
+
   // 20. Stock Management - Handle products with/without stock tracking
   bool _hasStockTracking = false;
   int _availableStock = 0;
   bool _isStockSufficient = true;
-  
+
   bool get hasStockTracking => _hasStockTracking;
   int get availableStock => _availableStock;
   bool get isStockSufficient => _isStockSufficient;
-  
+
   // 21. Product Validation - Ensure selected product exists and has valid data
   bool _isProductValid = false;
   String? _productValidationError;
-  
+
   bool get isProductValid => _isProductValid;
   String? get productValidationError => _productValidationError;
-  
+
   // Product management methods
   void setBarcodeInput(String barcode) {
     _barcodeInput = barcode;
     barcodeController.text = barcode;
-    
+
     // Determine product type based on barcode format
     if (barcode.length >= 13 && barcode.startsWith('2')) {
       _isWeightBasedProduct = true;
@@ -675,20 +690,20 @@ class BillingProvider extends ChangeNotifier {
       _isWeightBasedProduct = false;
       _isCountBasedProduct = true;
     }
-    
+
     notifyListeners();
   }
-  
+
   void setProductList(List<dynamic> products) {
     _productList = products;
     notifyListeners();
   }
-  
+
   void setFilteredProductList(List<dynamic> products) {
     _filteredProductList = products;
     notifyListeners();
   }
-  
+
   void setSelectedProduct(dynamic product) {
     _selectedProduct = product;
     if (product != null) {
@@ -696,7 +711,7 @@ class BillingProvider extends ChangeNotifier {
       _selectedProductName = product.productName ?? "";
       selectedProductIdController.text = _selectedProductId.toString();
       selectedProductNameController.text = _selectedProductName;
-      
+
       // Validate product
       validateProduct();
     } else {
@@ -704,7 +719,7 @@ class BillingProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
   void clearSelectedProduct() {
     _selectedProduct = null;
     _selectedProductId = null;
@@ -715,14 +730,14 @@ class BillingProvider extends ChangeNotifier {
     _productValidationError = null;
     notifyListeners();
   }
-  
+
   void setStockInfo(bool hasTracking, int available) {
     _hasStockTracking = hasTracking;
     _availableStock = available;
     _isStockSufficient = available > 0 || !hasTracking;
     notifyListeners();
   }
-  
+
   bool validateProduct() {
     if (_selectedProduct == null) {
       _productValidationError = "No product selected";
@@ -730,34 +745,34 @@ class BillingProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    
+
     if (_selectedProductName.isEmpty) {
       _productValidationError = "Product name is required";
       _isProductValid = false;
       notifyListeners();
       return false;
     }
-    
+
     if (_hasStockTracking && !_isStockSufficient) {
       _productValidationError = "Insufficient stock available";
       _isProductValid = false;
       notifyListeners();
       return false;
     }
-    
+
     _productValidationError = null;
     _isProductValid = true;
     notifyListeners();
     return true;
   }
-  
+
   void clearProductFields() {
     barcodeController.clear();
     quantityController.clear();
     unitPriceController.clear();
     selectedProductIdController.clear();
     selectedProductNameController.clear();
-    
+
     _barcodeInput = "";
     _selectedProduct = null;
     _selectedProductId = null;
@@ -766,10 +781,10 @@ class BillingProvider extends ChangeNotifier {
     _isCountBasedProduct = false;
     _isProductValid = false;
     _productValidationError = null;
-    
+
     notifyListeners();
   }
-  
+
   // 22. Multi-Payment Methods - Cash, Card, UPI, Debit, Online with individual amounts
   bool _isCashSelected = false;
   bool _isCardSelected = false;
@@ -777,10 +792,15 @@ class BillingProvider extends ChangeNotifier {
   bool _isDebitSelected = false;
   bool _isOnlineSelected = false;
   bool _toCustomerCreditEnabled = false;
-  
+
+  // Payment method IDs from API (for sending to backend)
+  String? _cashPaymentMethodId;
+  String? _cardPaymentMethodId;
+  String? _upiPaymentMethodId;
+
   // Pine Labs payment success state
   bool _pineLabsPaymentSuccess = false;
-  
+
   bool get isCashSelected => _isCashSelected;
   bool get isCardSelected => _isCardSelected;
   bool get isUpiSelected => _isUpiSelected;
@@ -788,33 +808,38 @@ class BillingProvider extends ChangeNotifier {
   bool get isOnlineSelected => _isOnlineSelected;
   bool get toCustomerCreditEnabled => _toCustomerCreditEnabled;
   bool get pineLabsPaymentSuccess => _pineLabsPaymentSuccess;
-  
+
+  // Payment method ID getters
+  String? get cashPaymentMethodId => _cashPaymentMethodId;
+  String? get cardPaymentMethodId => _cardPaymentMethodId;
+  String? get upiPaymentMethodId => _upiPaymentMethodId;
+
   // 23. Payment Validation - Ensure payment methods are selected before confirmation
   bool _isPaymentValid = false;
   String? _paymentValidationError;
-  
+
   bool get isPaymentValid => _isPaymentValid;
   String? get paymentValidationError => _paymentValidationError;
-  
+
   // 24. Balance Calculation - Complex logic for customer credit and cash balance
   double _balanceAmount = 0.0;
   double _totalPaidAmount = 0.0;
   double _totalOrderAmount = 0.0;
-  
+
   double get balanceAmount => _balanceAmount;
   double get totalPaidAmount => _totalPaidAmount;
   double get totalOrderAmount => _totalOrderAmount;
-  
+
   // 25. To Customer Credit Toggle - Handle excess payment allocation
   bool _hasExcessPayment = false;
-  
+
   bool get hasExcessPayment => _hasExcessPayment;
-  
+
   // 26. Payment Method Modal - Centralized payment selection interface
   bool _showPaymentModal = false;
-  
+
   bool get showPaymentModal => _showPaymentModal;
-  
+
   // Payment management methods
   void setPaymentMethod(String method, bool selected) {
     switch (method.toUpperCase()) {
@@ -838,24 +863,25 @@ class BillingProvider extends ChangeNotifier {
         _isOnlineSelected = selected;
         // Keep UI in sync: when ONLINE is selected, reflect Pine Labs paid state
         _pineLabsPaymentSuccess = selected;
-        debugPrint('[BillingProvider] ONLINE set to $selected -> pineLabsPaymentSuccess=$_pineLabsPaymentSuccess');
+        debugPrint(
+            '[BillingProvider] ONLINE set to $selected -> pineLabsPaymentSuccess=$_pineLabsPaymentSuccess');
         break;
     }
     validatePayment();
     calculateBalance();
     notifyListeners();
   }
-  
+
   void setToCustomerCreditEnabled(bool enabled) {
     _toCustomerCreditEnabled = enabled;
     notifyListeners();
   }
-  
+
   void setPineLabsPaymentSuccess(bool success) {
     _pineLabsPaymentSuccess = success;
     notifyListeners();
   }
-  
+
   void clearAllPaymentMethods() {
     _isCashSelected = false;
     _isCardSelected = false;
@@ -864,20 +890,20 @@ class BillingProvider extends ChangeNotifier {
     _isOnlineSelected = false;
     _toCustomerCreditEnabled = false;
     _pineLabsPaymentSuccess = false;
-    
+
     cashAmountController.clear();
     cardAmountController.clear();
     upiAmountController.clear();
     debitAmountController.clear();
     paidAmountController.clear();
-    
+
     _balanceAmount = 0.0;
     _totalPaidAmount = 0.0;
     _hasExcessPayment = false;
-    
+
     notifyListeners();
   }
-  
+
   List<String> getSelectedPaymentMethods() {
     List<String> methods = [];
     if (_isCashSelected) methods.add("CASH");
@@ -908,17 +934,17 @@ class BillingProvider extends ChangeNotifier {
     }
     return true;
   }
-  
+
   List<Map<String, dynamic>> getPaidMethods() {
     List<Map<String, dynamic>> paidMethods = [];
-    
+
     if (_isCashSelected) {
       paidMethods.add({
         "method": "CASH",
         "amount": double.tryParse(cashAmountController.text) ?? 0,
       });
     }
-    
+
     // Include CARD and UPI only when amounts are > 0 to match billing_page.dart
     final double cardAmount = double.tryParse(cardAmountController.text) ?? 0;
     if (_isCardSelected && cardAmount > 0) {
@@ -927,7 +953,7 @@ class BillingProvider extends ChangeNotifier {
         "amount": cardAmount,
       });
     }
-    
+
     final double upiAmount = double.tryParse(upiAmountController.text) ?? 0;
     if (_isUpiSelected && upiAmount > 0) {
       paidMethods.add({
@@ -935,7 +961,7 @@ class BillingProvider extends ChangeNotifier {
         "amount": upiAmount,
       });
     }
-    
+
     // Include ONLINE (Pine Labs) with cart total as amount
     if (_isOnlineSelected) {
       paidMethods.add({
@@ -943,22 +969,22 @@ class BillingProvider extends ChangeNotifier {
         "amount": totalOrderAmount,
       });
     }
-    
+
     // Note: DEBIT (to customer credit) is excluded from paid methods list
-    
+
     return paidMethods;
   }
-  
+
   bool validatePayment() {
     List<String> selectedMethods = getSelectedPaymentMethods();
-    
+
     if (selectedMethods.isEmpty) {
       _paymentValidationError = "Please select at least one payment method";
       _isPaymentValid = false;
       notifyListeners();
       return false;
     }
-    
+
     // Validate each selected payment method has an amount
     for (String method in selectedMethods) {
       double amount = 0.0;
@@ -980,7 +1006,7 @@ class BillingProvider extends ChangeNotifier {
           amount = totalOrderAmount;
           break;
       }
-      
+
       if (amount <= 0) {
         _paymentValidationError = "Please enter a valid amount for $method";
         _isPaymentValid = false;
@@ -988,42 +1014,42 @@ class BillingProvider extends ChangeNotifier {
         return false;
       }
     }
-    
+
     _paymentValidationError = null;
     _isPaymentValid = true;
     notifyListeners();
     return true;
   }
-  
+
   void calculateBalance() {
     // Use the new getTotalPaidAmount() method that excludes debit/customer credit
     _totalPaidAmount = getTotalPaidAmount();
-    
+
     // Use the complex balance calculation logic
     _balanceAmount = calculateBalanceAmount(_totalOrderAmount);
     _hasExcessPayment = _balanceAmount > 0;
-    
+
     paidAmountController.text = _totalPaidAmount.toString();
-    
+
     notifyListeners();
   }
-  
+
   void setTotalOrderAmount(double amount) {
     _totalOrderAmount = amount;
     calculateBalance();
     notifyListeners();
   }
-  
+
   void showPaymentMethodModal() {
     _showPaymentModal = true;
     notifyListeners();
   }
-  
+
   void hidePaymentMethodModal() {
     _showPaymentModal = false;
     notifyListeners();
   }
-  
+
   void updatePaymentFromModal({
     required bool isCash,
     required bool isCard,
@@ -1035,58 +1061,67 @@ class BillingProvider extends ChangeNotifier {
     required String debitAmount,
     required String transactionNumber,
     required bool toCustomerCredit,
+    // Optional payment method IDs from API
+    String? cashMethodId,
+    String? cardMethodId,
+    String? upiMethodId,
   }) {
     _isCashSelected = isCash;
     _isCardSelected = isCard;
     _isUpiSelected = isUpi;
     _isDebitSelected = isDebit;
     _toCustomerCreditEnabled = toCustomerCredit;
-    
+
+    // Store payment method IDs if provided
+    if (cashMethodId != null) _cashPaymentMethodId = cashMethodId;
+    if (cardMethodId != null) _cardPaymentMethodId = cardMethodId;
+    if (upiMethodId != null) _upiPaymentMethodId = upiMethodId;
+
     cashAmountController.text = cashAmount;
     cardAmountController.text = cardAmount;
     upiAmountController.text = upiAmount;
     debitAmountController.text = debitAmount;
     transactionNumberController.text = transactionNumber;
-    
+
     validatePayment();
     calculateBalance();
     hidePaymentMethodModal();
     notifyListeners();
   }
-  
+
   // 27. Save Order - Local storage with customer and payment data
   bool _isSavingOrder = false;
   List<Map<String, dynamic>> _savedOrders = [];
-  
+
   bool get isSavingOrder => _isSavingOrder;
   List<Map<String, dynamic>> get savedOrders => _savedOrders;
-  
+
   // 28. Load Order for Editing - Rehydrate UI state from saved orders
   bool _isLoadingOrder = false;
   Map<String, dynamic>? _currentEditingOrder;
-  
+
   bool get isLoadingOrder => _isLoadingOrder;
   Map<String, dynamic>? get currentEditingOrder => _currentEditingOrder;
-  
+
   // 29. Confirm Order - API integration with validation and error handling
   bool _isConfirmingOrder = false;
   String? _orderConfirmationError;
-  
+
   bool get isConfirmingOrder => _isConfirmingOrder;
   String? get orderConfirmationError => _orderConfirmationError;
-  
+
   // 30. Order State Rehydration - Restore complete UI state when editing orders
   bool _isRehydratingState = false;
-  
+
   bool get isRehydratingState => _isRehydratingState;
-  
+
   // 31. Order Printing - Generate print-ready order data
   bool _isPrintingOrder = false;
   Map<String, dynamic>? _printOrderData;
-  
+
   bool get isPrintingOrder => _isPrintingOrder;
   Map<String, dynamic>? get printOrderData => _printOrderData;
-  
+
   // Delivery & Logistics (items 32-35)
   String _deliveryMethod = "Store Takeaway";
   String _deliveryMethodId = "";
@@ -1096,7 +1131,7 @@ class BillingProvider extends ChangeNotifier {
   String _orderComment = "";
   List<DeliveryMethod> _deliveryMethods = [];
   bool _isLoadingDeliveryMethods = false;
-  
+
   String get deliveryMethod => _deliveryMethod;
   String get deliveryMethodId => _deliveryMethodId;
   DateTime? get deliveryDate => _deliveryDate;
@@ -1105,81 +1140,81 @@ class BillingProvider extends ChangeNotifier {
   String get orderComment => _orderComment;
   List<DeliveryMethod> get deliveryMethods => _deliveryMethods;
   bool get isLoadingDeliveryMethods => _isLoadingDeliveryMethods;
-  
+
   // Order management methods
   void setSavingOrder(bool value) {
     _isSavingOrder = value;
     notifyListeners();
   }
-  
+
   void addSavedOrder(Map<String, dynamic> order) {
     _savedOrders.add(order);
     notifyListeners();
   }
-  
+
   void removeSavedOrder(int index) {
     if (index < _savedOrders.length) {
       _savedOrders.removeAt(index);
       notifyListeners();
     }
   }
-  
+
   void setSavedOrders(List<Map<String, dynamic>> orders) {
     _savedOrders = orders;
     notifyListeners();
   }
-  
+
   void setLoadingOrder(bool value) {
     _isLoadingOrder = value;
     notifyListeners();
   }
-  
+
   void setCurrentEditingOrder(Map<String, dynamic>? order) {
     _currentEditingOrder = order;
     notifyListeners();
   }
-  
+
   void setConfirmingOrder(bool value) {
     _isConfirmingOrder = value;
     notifyListeners();
   }
-  
+
   void setOrderConfirmationError(String? error) {
     _orderConfirmationError = error;
     notifyListeners();
   }
-  
+
   void setRehydratingState(bool value) {
     _isRehydratingState = value;
     notifyListeners();
   }
-  
+
   void setPrintingOrder(bool value) {
     _isPrintingOrder = value;
     notifyListeners();
   }
-  
+
   void setPrintOrderData(Map<String, dynamic>? data) {
     _printOrderData = data;
     notifyListeners();
   }
-  
+
   void setDeliveryMethod(String method, String methodId) {
     _deliveryMethod = method;
     _deliveryMethodId = methodId;
     notifyListeners();
   }
-  
+
   void setDeliveryDate(DateTime? date) {
     _deliveryDate = date;
     notifyListeners();
   }
-  
+
   void setDeliveryTime(String? time) {
     _deliveryTime = time;
     notifyListeners();
   }
-  
+
   void setDeliveryDateString(String? date) {
     _deliveryDateString = date;
     if (date != null) {
@@ -1189,24 +1224,24 @@ class BillingProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
   void setDeliveryTimeString(String? time) {
     _deliveryTimeString = time;
     notifyListeners();
   }
-  
+
   void setCarNumber(String number) {
     _carNumber = number;
     carNumberController.text = number;
     notifyListeners();
   }
-  
+
   void setOrderComment(String comment) {
     _orderComment = comment;
     commentController.text = comment;
     notifyListeners();
   }
-  
+
   // Validate delivery requirements
   bool validateDelivery() {
     if (_deliveryMethod == "Car Delivery" && _carNumber.isEmpty) {
@@ -1214,11 +1249,12 @@ class BillingProvider extends ChangeNotifier {
     }
     return true;
   }
-  
+
   // Create order data for API
   Map<String, dynamic> createOrderData() {
     // Build payment information aligned with billing_page.dart
-    final List<String> selectedMethods = getSelectedPaymentMethodsExcludingEmpty();
+    final List<String> selectedMethods =
+        getSelectedPaymentMethodsExcludingEmpty();
     String paymentMethodValue = "";
     String paidAmountValue = "0";
 
@@ -1269,26 +1305,29 @@ class BillingProvider extends ChangeNotifier {
       'deliveryDate': _deliveryDate?.toIso8601String(),
       'deliveryTime': _deliveryTime,
       'transactionId': transactionNumberController.text,
-      'couponId': coupenCodeTextController.text.isNotEmpty ? coupenCodeTextController.text : null,
+      'couponId': coupenCodeTextController.text.isNotEmpty
+          ? coupenCodeTextController.text
+          : null,
       'toCustomerCredit': _toCustomerCreditEnabled,
       'cartItems': _cartProductItems,
       'taxNames': _taxNames,
     };
   }
-  
+
   // Rehydrate state from saved order
   void rehydrateFromOrder(Map<String, dynamic> order) {
     setRehydratingState(true);
-    
+
     try {
       // Restore customer information
       if (order['customerId'] != null) {
         _selectedCustomerID = order['customerId'];
         _selectedCustomerPhone = order['customerPhone'];
-        mobileNumberTextController.text = "${order['customerName']} ${order['customerPhone']}".trim();
+        mobileNumberTextController.text =
+            "${order['customerName']} ${order['customerPhone']}".trim();
         _isCustomerFound = true;
       }
-      
+
       // Restore payment methods
       final paymentMethod = order['paymentMethod'] as String?;
       if (paymentMethod != null && paymentMethod.isNotEmpty) {
@@ -1298,8 +1337,10 @@ class BillingProvider extends ChangeNotifier {
         if (pm.startsWith('{')) {
           try {
             final Map<String, dynamic> multi = json.decode(pm);
-            final List<String> methods = List<String>.from(multi['methods'] ?? []);
-            final Map<String, dynamic> amounts = Map<String, dynamic>.from(multi['amounts'] ?? {});
+            final List<String> methods =
+                List<String>.from(multi['methods'] ?? []);
+            final Map<String, dynamic> amounts =
+                Map<String, dynamic>.from(multi['amounts'] ?? {});
 
             _isCashSelected = methods.contains('CASH');
             _isCardSelected = methods.contains('CARD');
@@ -1322,7 +1363,8 @@ class BillingProvider extends ChangeNotifier {
 
             // Reflect Pine Labs success if ONLINE was part of saved methods
             if (_isOnlineSelected) {
-              debugPrint('♻️ [Rehydrate] ONLINE detected in multi-payment. Setting PineLabs success');
+              debugPrint(
+                  '♻️ [Rehydrate] ONLINE detected in multi-payment. Setting PineLabs success');
               setPineLabsPaymentSuccess(true);
             }
 
@@ -1351,7 +1393,8 @@ class BillingProvider extends ChangeNotifier {
               break;
             case 'ONLINE':
               // No amount field for ONLINE; mark Pine Labs success for UI state
-              debugPrint('♻️ [Rehydrate] ONLINE detected in single-payment. Setting PineLabs success');
+              debugPrint(
+                  '♻️ [Rehydrate] ONLINE detected in single-payment. Setting PineLabs success');
               setPineLabsPaymentSuccess(true);
               break;
           }
@@ -1362,42 +1405,43 @@ class BillingProvider extends ChangeNotifier {
       }
 
       // Restore balance and to-customer-credit flag
-      _balanceAmount = double.tryParse(order['balanceAmount']?.toString() ?? '0') ?? 0.0;
+      _balanceAmount =
+          double.tryParse(order['balanceAmount']?.toString() ?? '0') ?? 0.0;
       _toCustomerCreditEnabled = (order['toCustomerCredit'] == true);
-      
+
       // Restore delivery information
       _deliveryMethod = order['deliveryMethod'] ?? 'Store Takeaway';
       _deliveryMethodId = order['deliveryMethodId'] ?? '';
       _carNumber = order['carNumber'] ?? '';
       _orderComment = order['comment'] ?? '';
-      
+
       if (order['deliveryDate'] != null) {
         _deliveryDate = DateTime.tryParse(order['deliveryDate']);
       }
       _deliveryTime = order['deliveryTime'];
-      
+
       // Restore other fields
       transactionNumberController.text = order['transactionId'] ?? '';
       coupenCodeTextController.text = order['couponId'] ?? '';
-      
+
       // Recalculate balance to reflect any restored amounts (mirrors billing_page.dart _updateBalanceAmount)
       // Only recalc if total order amount is already known; otherwise keep restored balance
       if (_totalOrderAmount > 0) {
         calculateBalance();
       }
-      
+
       setCurrentEditingOrder(order);
     } finally {
       setRehydratingState(false);
     }
   }
-  
+
   void clearOrderState() {
     // Clear all order-related state
     _currentEditingOrder = null;
     _orderConfirmationError = null;
     _printOrderData = null;
-    
+
     // Reset delivery info
     _deliveryMethod = "Store Takeaway";
     _deliveryMethodId = "";
@@ -1405,61 +1449,62 @@ class BillingProvider extends ChangeNotifier {
     _deliveryTime = null;
     _carNumber = "";
     _orderComment = "";
-    
+
     // Clear controllers
     transactionNumberController.clear();
     commentController.clear();
     carNumberController.clear();
-    
+
     notifyListeners();
   }
-  
+
   // 36. Coupon Application - API-based coupon validation and discount calculation
   bool _isCouponApplied = false;
   String _couponCode = "";
   double _couponDiscount = 0.0;
   String? _couponValidationError;
-  
+
   bool get isCouponApplied => _isCouponApplied;
   String get couponCode => _couponCode;
   double get couponDiscount => _couponDiscount;
   String? get couponValidationError => _couponValidationError;
-  
+
   // 37. Manual Discount - Flat amount and percentage discounts
   double _manualDiscountAmount = 0.0;
   double _manualDiscountPercentage = 0.0;
   bool _isManualDiscountApplied = false;
-  
+
   double get manualDiscountAmount => _manualDiscountAmount;
   double get manualDiscountPercentage => _manualDiscountPercentage;
   bool get isManualDiscountApplied => _isManualDiscountApplied;
-  
+
   // 40. Sidebar Management - Collapsible product/order sidebar
   bool _isSidebarCollapsed = false;
-  
+
   bool get isSidebarCollapsed => _isSidebarCollapsed;
-  
+
   // 41. Tab Navigation - Switch between products and saved orders
   int _currentTabIndex = 0;
-  
+
   int get currentTabIndex => _currentTabIndex;
-  
+
   // 60. Keyboard Shortcuts - F6-F9 function key support
   Map<String, VoidCallback> _keyboardShortcuts = {};
-  
+
   Map<String, VoidCallback> get keyboardShortcuts => _keyboardShortcuts;
-  
+
   // 64. App Settings Provider - Feature toggles
   bool _barcodeSalesEnabled = true;
   bool _discountsEnabled = true;
   bool _multiPaymentEnabled = true;
-  
+
   bool get barcodeSalesEnabled => _barcodeSalesEnabled;
   bool get discountsEnabled => _discountsEnabled;
   bool get multiPaymentEnabled => _multiPaymentEnabled;
-  
+
   // Coupon and discount methods
-  void setCouponApplied(bool applied, {String code = "", double discount = 0.0}) {
+  void setCouponApplied(bool applied,
+      {String code = "", double discount = 0.0}) {
     _isCouponApplied = applied;
     _couponCode = code;
     _couponDiscount = discount;
@@ -1479,7 +1524,7 @@ class BillingProvider extends ChangeNotifier {
     try {
       // Clear any previous validation errors
       setCouponValidationError(null);
-      
+
       if (couponCode.isEmpty) {
         setCouponValidationError("Coupon code is required");
         return {
@@ -1490,7 +1535,7 @@ class BillingProvider extends ChangeNotifier {
 
       // Use provided CartProvider or create new instance
       final provider = cartProvider ?? CartProvider();
-      
+
       final result = await provider.applyCoupon(
         totalAmount: totalAmount,
         couponCode: couponCode,
@@ -1501,9 +1546,8 @@ class BillingProvider extends ChangeNotifier {
         if (result['success'] == true) {
           // Extract coupon data
           final couponData = result['data']['data'];
-          double discountAmount = double.parse(
-            couponData['discount_amount'].replaceAll(',', '')
-          );
+          double discountAmount =
+              double.parse(couponData['discount_amount'].replaceAll(',', ''));
           double discountedTotal = totalAmount - discountAmount;
 
           // Update provider state
@@ -1527,7 +1571,8 @@ class BillingProvider extends ChangeNotifier {
           };
         } else {
           // Handle failure
-          setCouponValidationError(result['message'] ?? 'Failed to Apply Coupon');
+          setCouponValidationError(
+              result['message'] ?? 'Failed to Apply Coupon');
           return {
             'success': false,
             'message': result['message'] ?? 'Failed to Apply Coupon',
@@ -1549,19 +1594,19 @@ class BillingProvider extends ChangeNotifier {
       };
     }
   }
-  
+
   void setCouponValidationError(String? error) {
     _couponValidationError = error;
     notifyListeners();
   }
-  
+
   void setManualDiscount({double amount = 0.0, double percentage = 0.0}) {
     _manualDiscountAmount = amount;
     _manualDiscountPercentage = percentage;
     _isManualDiscountApplied = amount > 0 || percentage > 0;
     notifyListeners();
   }
-  
+
   void clearDiscounts() {
     _isCouponApplied = false;
     _couponCode = "";
@@ -1573,32 +1618,32 @@ class BillingProvider extends ChangeNotifier {
     coupenCodeTextController.clear();
     notifyListeners();
   }
-  
+
   // UI management methods
   void toggleSidebar() {
     _isSidebarCollapsed = !_isSidebarCollapsed;
     notifyListeners();
   }
-  
+
   void setSidebarCollapsed(bool collapsed) {
     _isSidebarCollapsed = collapsed;
     notifyListeners();
   }
-  
+
   void setCurrentTab(int index) {
     _currentTabIndex = index;
     notifyListeners();
   }
-  
+
   // Keyboard shortcuts
   void registerKeyboardShortcut(String key, VoidCallback callback) {
     _keyboardShortcuts[key] = callback;
   }
-  
+
   void executeKeyboardShortcut(String key) {
     _keyboardShortcuts[key]?.call();
   }
-  
+
   // MISSED LOGIC: Specific keyboard shortcut handlers
   void handleKeyPress(String key) {
     switch (key) {
@@ -1616,7 +1661,7 @@ class BillingProvider extends ChangeNotifier {
         break;
     }
   }
-  
+
   void registerDefaultKeyboardShortcuts({
     VoidCallback? onClearCart,
     VoidCallback? onSaveOrder,
@@ -1636,102 +1681,105 @@ class BillingProvider extends ChangeNotifier {
       registerKeyboardShortcut('confirmOrder', onConfirmOrder);
     }
   }
-  
+
   // Settings management
   void setBarcodeSalesEnabled(bool enabled) {
     _barcodeSalesEnabled = enabled;
     notifyListeners();
   }
-  
+
   void setDiscountsEnabled(bool enabled) {
     _discountsEnabled = enabled;
     notifyListeners();
   }
-  
+
   void setMultiPaymentEnabled(bool enabled) {
     _multiPaymentEnabled = enabled;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Additional focus nodes from billing_page.dart
   final FocusNode _customerTextFieldFocus = FocusNode();
   final FocusNode _quantityFocusNode = FocusNode();
   final FocusNode _unitPriceFocusNode = FocusNode();
-  
+
   // MISSED LOGIC: Autocomplete focus node references
-  FocusNode? _autocompleteFocusNode; // Store reference to Autocomplete's focusNode
-  TextEditingController? _autocompleteController; // Store reference to Autocomplete's controller
-  
+  FocusNode?
+      _autocompleteFocusNode; // Store reference to Autocomplete's focusNode
+  TextEditingController?
+      _autocompleteController; // Store reference to Autocomplete's controller
+
   // Getters for autocomplete references
   FocusNode? get autocompleteFocusNode => _autocompleteFocusNode;
   TextEditingController? get autocompleteController => _autocompleteController;
-  
+
   // Getters for additional controllers and focus nodes
-  TextEditingController get transactionNumberControllerPrivate => _transactionNumberController;
+  TextEditingController get transactionNumberControllerPrivate =>
+      _transactionNumberController;
   FocusNode get customerTextFieldFocusNode => _customerTextFieldFocus;
   FocusNode get quantityFocusNodePrivate => _quantityFocusNode;
   FocusNode get unitPriceFocusNodePrivate => _unitPriceFocusNode;
   ScrollController get customerScrollController => _customerScrollController;
-  
+
   // MISSED LOGIC: Sidebar and UI state management
   bool _isSidebarVisible = true;
   int _selectedSidebarTab = 1; // 0 for products, 1 for orders/categories
-  
+
   bool get isSidebarVisible => _isSidebarVisible;
   int get selectedSidebarTab => _selectedSidebarTab;
-  
+
   // MISSED LOGIC: AutomaticKeepAliveClientMixin state
   bool _wantKeepAlive = true;
-  
+
   bool get wantKeepAlive => _wantKeepAlive;
-  
+
   // MISSED LOGIC: Form validation key
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   GlobalKey<FormState> get formKey => _formKey;
-  
+
   // MISSED LOGIC: Autocomplete keys for rebuilding widgets
   GlobalKey _autocompletePhoneKey = GlobalKey();
   GlobalKey _autocompleteProductKey = GlobalKey();
-  
+
   GlobalKey get autocompletePhoneKey => _autocompletePhoneKey;
   GlobalKey get autocompleteProductKey => _autocompleteProductKey;
-  
+
   // MISSED LOGIC: UniqueKey for tile rebuilding
   UniqueKey _keyTile = UniqueKey();
-  
+
   UniqueKey get keyTile => _keyTile;
-  
+
   double get customerItemHeight => _customerItemHeight;
-  
+
   // MISSED LOGIC: Last rehydrated order tracking
   String? _lastRehydratedOrderId;
-  
+
   String? get lastRehydratedOrderId => _lastRehydratedOrderId;
-  
+
   // MISSED LOGIC: Barcode subscription management
   StreamSubscription<String>? _barcodeSubscription;
-  
+
   StreamSubscription<String>? get barcodeSubscription => _barcodeSubscription;
-  
+
   // MISSED LOGIC: Delivery date and time management (String versions)
   String? _deliveryDateString;
   String? _deliveryTimeString;
-  
+
   String? get deliveryDateString => _deliveryDateString;
   String? get deliveryTimeString => _deliveryTimeString;
-  
+
   // MISSED LOGIC: Init loading state
   bool _isInitLoading = false;
-  
+
   bool get isInitLoading => _isInitLoading;
-  
+
   // MISSED LOGIC: Focus change handlers
   void handleFocusChange() {
     // Focus change logic for main focus node
     notifyListeners();
   }
-  
+
   void handlePaidAmountFocusChange() {
     if (paidAmountFocusNode.hasFocus) {
       paidAmountController.selection = TextSelection(
@@ -1741,7 +1789,7 @@ class BillingProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
   void handleQuantityFocusChange() {
     if (_quantityFocusNode.hasFocus) {
       quantityController.selection = TextSelection(
@@ -1751,7 +1799,7 @@ class BillingProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
   void handleUnitPriceFocusChange() {
     if (_unitPriceFocusNode.hasFocus) {
       unitPriceController.selection = TextSelection(
@@ -1761,70 +1809,70 @@ class BillingProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Sidebar management
   void setSidebarVisible(bool visible) {
     _isSidebarVisible = visible;
     notifyListeners();
   }
-  
+
   void setSelectedSidebarTab(int tab) {
     _selectedSidebarTab = tab;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Autocomplete key management
   void resetAutocompletePhoneKey() {
     _autocompletePhoneKey = GlobalKey();
     notifyListeners();
   }
-  
+
   void resetAutocompleteProductKey() {
     _autocompleteProductKey = GlobalKey();
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Tile key management
   void resetKeyTile() {
     _keyTile = UniqueKey();
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Last rehydrated order management
   void setLastRehydratedOrderId(String? id) {
     _lastRehydratedOrderId = id;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Barcode subscription management
   void setBarcodeSubscription(StreamSubscription<String>? subscription) {
     _barcodeSubscription?.cancel();
     _barcodeSubscription = subscription;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Init loading management
   void setInitLoading(bool loading) {
     _isInitLoading = loading;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Cart provider integration
   CartProvider? _cartProvider;
-  
+
   CartProvider? get cartProvider => _cartProvider;
-  
+
   void setCartProvider(CartProvider? provider) {
     _cartProvider = provider;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Keep alive management
   void setWantKeepAlive(bool keepAlive) {
     _wantKeepAlive = keepAlive;
     notifyListeners();
   }
-  
+
   /// Save current order to local storage via SalesProvider
   /// Returns success/failure result with message
   Future<Map<String, dynamic>> saveCurrentOrder({
@@ -1834,7 +1882,7 @@ class BillingProvider extends ChangeNotifier {
   }) async {
     debugPrint("===== SAVE CURRENT ORDER START =====");
     setSavingOrder(true);
-    
+
     try {
       // Validate required data
       if (_cartProductItems == null || _cartProductItems!.isEmpty) {
@@ -1847,7 +1895,7 @@ class BillingProvider extends ChangeNotifier {
 
       // Create order data
       final orderData = createOrderData();
-      
+
       // Save order locally (SalesProvider doesn't have direct saveOrder method)
       // This would typically save to local storage or cache
       final result = {
@@ -1857,11 +1905,11 @@ class BillingProvider extends ChangeNotifier {
       };
 
       setSavingOrder(false);
-      
+
       if (result['success'] == true) {
         // Add to saved orders list
         addSavedOrder(orderData);
-        
+
         debugPrint("✅ Order saved successfully");
         return {
           'success': true,
@@ -1894,7 +1942,7 @@ class BillingProvider extends ChangeNotifier {
   }) async {
     debugPrint("===== CREATE ORDER AND PRINT START =====");
     setLoadingCreateOrder(true);
-    
+
     try {
       // Validate required data
       if (_cartProductItems == null || _cartProductItems!.isEmpty) {
@@ -1910,13 +1958,14 @@ class BillingProvider extends ChangeNotifier {
         setLoadingCreateOrder(false);
         return {
           'success': false,
-          'message': _paymentValidationError ?? 'Please select valid payment methods',
+          'message':
+              _paymentValidationError ?? 'Please select valid payment methods',
         };
       }
 
       // Create order data
       final orderData = createOrderData();
-      
+
       // Create order (SalesProvider doesn't have direct createOrder method)
       // This would typically call an API endpoint to create the order
       final result = {
@@ -1927,11 +1976,11 @@ class BillingProvider extends ChangeNotifier {
       };
 
       setLoadingCreateOrder(false);
-      
+
       if (result['success'] == true) {
         // Store print data
         setPrintOrderData(result['orderData'] as Map<String, dynamic>?);
-        
+
         debugPrint("✅ Order created successfully for printing");
         return {
           'success': true,
@@ -1965,7 +2014,7 @@ class BillingProvider extends ChangeNotifier {
   }) async {
     debugPrint("===== CONFIRM ORDER START =====");
     setConfirmingOrder(true);
-    
+
     try {
       // Validate required data
       if (_cartProductItems == null || _cartProductItems!.isEmpty) {
@@ -1981,13 +2030,14 @@ class BillingProvider extends ChangeNotifier {
         setConfirmingOrder(false);
         return {
           'success': false,
-          'message': _paymentValidationError ?? 'Please select valid payment methods',
+          'message':
+              _paymentValidationError ?? 'Please select valid payment methods',
         };
       }
 
       // Create order data
       final orderData = createOrderData();
-      
+
       // Confirm order (SalesProvider doesn't have direct confirmOrder method)
       // This would typically call an API endpoint to confirm the order
       final result = {
@@ -1998,11 +2048,11 @@ class BillingProvider extends ChangeNotifier {
       };
 
       setConfirmingOrder(false);
-      
+
       if (result['success'] == true) {
         // Clear cart and reset state after successful confirmation
         resetAllState();
-        
+
         debugPrint("✅ Order confirmed successfully");
         return {
           'success': true,
@@ -2012,7 +2062,8 @@ class BillingProvider extends ChangeNotifier {
         };
       } else {
         debugPrint("❌ Failed to confirm order: ${result['message']}");
-        setOrderConfirmationError(result['message']?.toString() ?? 'Failed to confirm order');
+        setOrderConfirmationError(
+            result['message']?.toString() ?? 'Failed to confirm order');
         return {
           'success': false,
           'message': result['message'] ?? 'Failed to confirm order',
@@ -2021,21 +2072,22 @@ class BillingProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("❌ Error confirming order: $e");
       setConfirmingOrder(false);
-      setOrderConfirmationError('Network error occurred while confirming order');
+      setOrderConfirmationError(
+          'Network error occurred while confirming order');
       return {
         'success': false,
         'message': 'Network error occurred while confirming order',
       };
     }
   }
-  
+
   // MISSED LOGIC: User switch handling
   void onUserSwitched() {
     debugPrint("🔄 BILLING: User switched, updating default customer...");
-    
+
     // Clear current customer selection
     clearSelectedCustomer();
-    
+
     // Reset billing page customer state
     _mobileNumberText = "";
     _selectedCustomerID = null;
@@ -2045,23 +2097,24 @@ class BillingProvider extends ChangeNotifier {
     _salesExecutivemobileNumberText = "";
     mobileNumberTextController.clear();
     resetAutocompletePhoneKey();
-    
+
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Sales executive change handling
   void onSalesExecutiveChanged() {
-    debugPrint("🔄 BILLING: Sales executive changed, updating default customer...");
+    debugPrint(
+        "🔄 BILLING: Sales executive changed, updating default customer...");
     // Implementation would trigger customer fetch with new executive
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Default delivery method management
   String getDefaultDeliveryMethodId() {
     // Fallback to Store Takeaway ID from API
     return "11";
   }
-  
+
   void initializeDeliveryMethod() {
     // Set initial default values
     _deliveryMethod = "Store Takeaway";
@@ -2080,12 +2133,12 @@ class BillingProvider extends ChangeNotifier {
 
       // Use provided provider or create new instance
       final provider = deliveryProvider ?? DeliveryMethodsProvider();
-      
+
       await provider.fetchDeliveryMethods();
-      
+
       // Update local state with fetched methods
       _deliveryMethods = provider.deliveryMethods;
-      
+
       // Set default delivery method if not already set
       if (_deliveryMethodId.isEmpty && _deliveryMethods.isNotEmpty) {
         final defaultMethod = provider.defaultDeliveryMethod;
@@ -2120,17 +2173,17 @@ class BillingProvider extends ChangeNotifier {
     try {
       return _deliveryMethods.firstWhere(
         (method) => method.name.toLowerCase().contains('store takeaway'),
-        orElse: () => _deliveryMethods.isNotEmpty 
-            ? _deliveryMethods.first 
+        orElse: () => _deliveryMethods.isNotEmpty
+            ? _deliveryMethods.first
             : DeliveryMethod(id: "11", name: "Store Takeaway"),
       );
     } catch (e) {
-      return _deliveryMethods.isNotEmpty 
-          ? _deliveryMethods.first 
+      return _deliveryMethods.isNotEmpty
+          ? _deliveryMethods.first
           : DeliveryMethod(id: "11", name: "Store Takeaway");
     }
   }
-  
+
   // MISSED LOGIC: Balance calculation methods - Updated to match billing_page.dart logic
   double calculateBalanceAmount(double cartTotal, {String currency = 'INR'}) {
     // For balance calculation, only include actual cash payments (not debit/store credit)
@@ -2215,7 +2268,8 @@ class BillingProvider extends ChangeNotifier {
         }
       }
     } else {
-      debugPrint('🔴 BILLING PROVIDER: Toggle is OFF - Using simple calculation');
+      debugPrint(
+          '🔴 BILLING PROVIDER: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
       balance = totalCollected - cartTotal;
       debugPrint(
@@ -2264,7 +2318,7 @@ class BillingProvider extends ChangeNotifier {
     // Note: Debit is handled separately as customer credit, not a payment method
     return methods;
   }
-  
+
   // MISSED LOGIC: Payment label generation
   String getPaymentLabel() {
     // Build label using methods that mirror billing_page.dart semantics
@@ -2275,7 +2329,7 @@ class BillingProvider extends ChangeNotifier {
     if (methods.contains("UPI")) activeMethods.add("UPI");
     if (methods.contains("ONLINE")) activeMethods.add("Online");
     // DEBIT is not shown in label for collected payments
-    
+
     if (activeMethods.isEmpty) {
       return "Select Payment Method";
     } else if (activeMethods.length == 1) {
@@ -2284,7 +2338,7 @@ class BillingProvider extends ChangeNotifier {
       return "Multi-Payment (${activeMethods.length})";
     }
   }
-  
+
   // MISSED LOGIC: Formatted total calculation helper
   String getFormattedTotal(double total, bool priceRoundOff) {
     if (priceRoundOff) {
@@ -2293,18 +2347,18 @@ class BillingProvider extends ChangeNotifier {
       return total.toStringAsFixed(2);
     }
   }
-  
+
   // MISSED LOGIC: Autocomplete reference management
   void setAutocompleteFocusNode(FocusNode? focusNode) {
     _autocompleteFocusNode = focusNode;
     notifyListeners();
   }
-  
+
   void setAutocompleteController(TextEditingController? controller) {
     _autocompleteController = controller;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Focus text field helper
   void focusTextField(bool barcodeSalesEnabled) {
     if (barcodeSalesEnabled) {
@@ -2312,7 +2366,7 @@ class BillingProvider extends ChangeNotifier {
     }
     selectedProductNameController.clear();
   }
-  
+
   // MISSED LOGIC: Clear product fields helper
   void clearProductFieldsAndReset() {
     barcodeController.clear();
@@ -2320,38 +2374,38 @@ class BillingProvider extends ChangeNotifier {
     unitPriceController.clear();
     selectedProductIdController.clear();
     selectedProductNameController.clear();
-    
+
     // Reset autocomplete keys by triggering rebuild
     resetAutocompleteProductKey();
   }
-  
+
   // MISSED LOGIC: Update balance amount helper - matches billing_page.dart _updateBalanceAmount()
   void updateBalanceAmount(double cartTotal, {String currency = 'INR'}) {
     double balance = calculateBalanceAmount(cartTotal, currency: currency);
     _balanceAmount = balance;
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Reset autocomplete helper
   void resetAutocomplete({bool shouldFetchCustomers = true}) {
     // Reset autocomplete keys to force widget rebuild
     resetAutocompletePhoneKey();
     resetAutocompleteProductKey();
-    
+
     // Clear selected product
     clearSelectedProduct();
-    
+
     // Clear barcode controller
     barcodeController.clear();
-    
+
     // Reset focus to barcode field if barcode sales enabled
     if (_barcodeSalesEnabled) {
       barcodeNode.requestFocus();
     }
-    
+
     notifyListeners();
   }
-  
+
   // MISSED LOGIC: Get payment icon helper
   IconData getPaymentIcon() {
     List<String> methods = getSelectedPaymentMethods();
@@ -2370,33 +2424,33 @@ class BillingProvider extends ChangeNotifier {
     }
     return Icons.payment;
   }
-  
+
   // Complete reset method
   void resetAllState() {
     // Clear customer state
     clearSelectedCustomer();
-    
+
     // Clear cart state
     clearCart();
-    
+
     // Clear product state
     clearProductFields();
-    
+
     // Clear payment state
     clearAllPaymentMethods();
-    
+
     // Clear order state
     clearOrderState();
-    
+
     // Clear discounts
     clearDiscounts();
-    
+
     // Reset UI state
     _isSidebarCollapsed = false;
     _currentTabIndex = 0;
     _isSidebarVisible = true;
     _selectedSidebarTab = 1;
-    
+
     // Reset loading states
     _isLoadingClearCart = false;
     _isLoadingSaveOrder = false;
@@ -2406,31 +2460,31 @@ class BillingProvider extends ChangeNotifier {
     _isLoadingAddItem = false;
     _isProcessingBarcode = false;
     _isInitLoading = false;
-    
+
     // Reset keys
     resetAutocompletePhoneKey();
     resetAutocompleteProductKey();
     resetKeyTile();
-    
+
     // Clear last rehydrated order
     _lastRehydratedOrderId = null;
-    
+
     // Clear autocomplete references
     _autocompleteFocusNode = null;
     _autocompleteController = null;
-    
+
     // Clear delivery date/time
     _deliveryDate = null;
     _deliveryTime = null;
     _deliveryDateString = null;
     _deliveryTimeString = null;
-    
+
     // Cancel timers
     cancelDebounce();
-    
+
     notifyListeners();
   }
-  
+
   @override
   void dispose() {
     // Dispose all controllers
@@ -2450,7 +2504,7 @@ class BillingProvider extends ChangeNotifier {
     commentController.dispose();
     carNumberController.dispose();
     _transactionNumberController.dispose();
-    
+
     // Dispose focus nodes
     paidAmountFocusNode.dispose();
     cashAmountFocusNode.dispose();
@@ -2465,18 +2519,18 @@ class BillingProvider extends ChangeNotifier {
     _customerTextFieldFocus.dispose();
     _quantityFocusNode.dispose();
     _unitPriceFocusNode.dispose();
-    
+
     // Dispose scroll controllers
     _customerScrollController.dispose();
-    
+
     // Cancel subscriptions
     _internetSubscription?.cancel();
     _barcodeSubscription?.cancel();
-    
+
     // Cancel timers
     _debounce?.cancel();
     _debounceTimer?.cancel();
-    
+
     super.dispose();
   }
 }

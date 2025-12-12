@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.315
-git push build v0.1.0-dev.315
+git tag v0.1.0-dev.318
+git push build v0.1.0-dev.318
 
 souq build
 git tag v0.1.0-dev.279
@@ -12,8 +12,8 @@ git push build1 v0.1.0-dev.259
 
 
 # eposenke demo
-https://eposdemo.hypersouq.in
-    EPOSENKE_p5Ut9BRLYnlxu7UZsGjR6RmTt6X4Dhuf
+https://eposdemo.yougoit.in
+EPOSENKE_p5Ut9BRLYnlxu7UZsGjR6RmTt6X4Dhuf
 
 attender@eposenke.in
 123456

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_round_button.dart';
-import 'package:pos_machine/components/build_restricted_payment_selector.dart';
+import 'package:pos_machine/components/build_dynamic_payment_selector.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -10,7 +11,7 @@ class StockConfirmationDialog extends StatefulWidget {
   final String title;
   final int itemCount;
   final double totalAmount;
-  final RestrictedPaymentData? paymentData;
+  final DynamicPaymentData? paymentData;
   final VoidCallback onConfirm;
   final VoidCallback? onCancel;
   final String confirmButtonText;
@@ -72,7 +73,7 @@ class StockConfirmationDialog extends StatefulWidget {
     required BuildContext context,
     required int itemCount,
     required double totalAmount,
-    required RestrictedPaymentData paymentData,
+    required DynamicPaymentData paymentData,
     double? totalDueAmount,
     required VoidCallback onConfirm,
     List<Map<String, dynamic>>? stockItems,
@@ -100,44 +101,45 @@ class StockConfirmationDialog extends StatefulWidget {
   }
 
   @override
-  State<StockConfirmationDialog> createState() => _StockConfirmationDialogState();
+  State<StockConfirmationDialog> createState() =>
+      _StockConfirmationDialogState();
 }
 
 class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
   bool _isItemsExpanded = false;
   static const int _maxVisibleItems = 10;
 
-  String _getMethodName(RestrictedPaymentType method) {
-    switch (method) {
-      case RestrictedPaymentType.cash:
-        return 'Cash';
-      case RestrictedPaymentType.card:
-        return 'Card';
-      case RestrictedPaymentType.upi:
-        return 'UPI';
-    }
+  // Color palette for payment methods
+  final List<Color> _methodColors = [
+    ColorManager.kButtonGreen,
+    ColorManager.kButtonBlue,
+    ColorManager.kPrimaryColor,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+  ];
+
+  // Icon palette for payment methods
+  final Map<String, IconData> _methodIcons = {
+    'CASH': Icons.money,
+    'COD': Icons.money,
+    'CARD': Icons.credit_card,
+    'UPI': Icons.qr_code,
+    'ONLINE': Icons.language,
+    'CHEQUE': Icons.receipt_long,
+  };
+
+  String _getMethodName(MasterDataValue method) {
+    return method.description.isNotEmpty ? method.description : method.value;
   }
 
-  IconData _getMethodIcon(RestrictedPaymentType method) {
-    switch (method) {
-      case RestrictedPaymentType.cash:
-        return Icons.money;
-      case RestrictedPaymentType.card:
-        return Icons.credit_card;
-      case RestrictedPaymentType.upi:
-        return Icons.qr_code;
-    }
+  IconData _getMethodIcon(MasterDataValue method) {
+    final value = method.value.toUpperCase();
+    return _methodIcons[value] ?? Icons.payment;
   }
 
-  Color _getMethodColor(RestrictedPaymentType method) {
-    switch (method) {
-      case RestrictedPaymentType.cash:
-        return ColorManager.kButtonGreen;
-      case RestrictedPaymentType.card:
-        return ColorManager.kButtonBlue;
-      case RestrictedPaymentType.upi:
-        return ColorManager.kPrimaryColor;
-    }
+  Color _getMethodColor(MasterDataValue method, int index) {
+    return _methodColors[index % _methodColors.length];
   }
 
   // Calculate totals from stock items
@@ -152,10 +154,11 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasPayment = widget.paymentData != null && widget.paymentData!.hasPaymentMethods;
+    final bool hasPayment =
+        widget.paymentData != null && widget.paymentData!.hasPaymentMethods;
     final double paidAmount = widget.paymentData?.totalAmount ?? 0;
     final double supplierOldBalance = widget.supplierOldBalance ?? 0;
-    
+
     // Calculate current supplier balance correctly
     // Current Balance = (Old Balance + New Purchase) - Payment Made
     final double totalDue = supplierOldBalance + widget.totalAmount;
@@ -163,7 +166,8 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
 
     final Size screenSize = MediaQuery.of(context).size;
     final bool isSmallScreen = screenSize.width < 800;
-    final bool hasStockItems = widget.stockItems != null && widget.stockItems!.isNotEmpty;
+    final bool hasStockItems =
+        widget.stockItems != null && widget.stockItems!.isNotEmpty;
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -240,7 +244,8 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close, color: Colors.grey.shade600, size: 22),
+                    icon: Icon(Icons.close,
+                        color: Colors.grey.shade600, size: 22),
                     onPressed: () {
                       if (widget.onCancel != null) widget.onCancel!();
                       Navigator.of(context).pop(false);
@@ -266,11 +271,13 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                         decoration: BoxDecoration(
                           color: Colors.orange.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.orange.withOpacity(0.3)),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline_rounded, color: Colors.orange.shade700, size: 20),
+                            Icon(Icons.info_outline_rounded,
+                                color: Colors.orange.shade700, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -363,7 +370,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     final items = widget.stockItems!;
     final int totalItems = items.length;
     final bool needsExpand = totalItems > _maxVisibleItems;
-    final List<Map<String, dynamic>> visibleItems = 
+    final List<Map<String, dynamic>> visibleItems =
         _isItemsExpanded ? items : items.take(_maxVisibleItems).toList();
 
     return Container(
@@ -444,8 +451,10 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             final index = entry.key;
             final item = entry.value;
             final productName = item['productName'] ?? 'Unknown';
-            final quantity = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
-            final purchaseRate = double.tryParse(item['purchaseRate']?.toString() ?? '0') ?? 0;
+            final quantity =
+                int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+            final purchaseRate =
+                double.tryParse(item['purchaseRate']?.toString() ?? '0') ?? 0;
             final total = quantity * purchaseRate;
 
             return Container(
@@ -545,8 +554,8 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _isItemsExpanded 
-                          ? 'Show Less' 
+                      _isItemsExpanded
+                          ? 'Show Less'
                           : 'Show All ${totalItems - _maxVisibleItems} More Items',
                       style: buildCustomStyle(
                         FontWeightManager.medium,
@@ -617,7 +626,9 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             _buildSummaryRow(
               "Old Supplier Balance",
               "₹${supplierOldBalance.toStringAsFixed(2)}",
-              valueColor: supplierOldBalance > 0 ? Colors.orange.shade700 : Colors.green.shade700,
+              valueColor: supplierOldBalance > 0
+                  ? Colors.orange.shade700
+                  : Colors.green.shade700,
             ),
           ],
 
@@ -639,6 +650,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
               _buildPaymentMethodRow(
                 widget.paymentData!.primaryMethod!,
                 double.tryParse(widget.paymentData!.primaryAmount) ?? 0,
+                0,
               ),
             ],
             if (widget.paymentData!.secondaryMethod != null &&
@@ -647,6 +659,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
               _buildPaymentMethodRow(
                 widget.paymentData!.secondaryMethod!,
                 double.tryParse(widget.paymentData!.secondaryAmount) ?? 0,
+                1,
               ),
             ],
             const Divider(height: 16),
@@ -664,13 +677,13 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: currentSupplierBalance > 0 
-                  ? Colors.red.shade50 
+              color: currentSupplierBalance > 0
+                  ? Colors.red.shade50
                   : Colors.green.shade50,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: currentSupplierBalance > 0 
-                    ? Colors.red.shade200 
+                color: currentSupplierBalance > 0
+                    ? Colors.red.shade200
                     : Colors.green.shade200,
               ),
             ),
@@ -683,8 +696,8 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                     FontWeightManager.semiBold,
                     FontSize.s13,
                     0.27,
-                    currentSupplierBalance > 0 
-                        ? Colors.red.shade700 
+                    currentSupplierBalance > 0
+                        ? Colors.red.shade700
                         : Colors.green.shade700,
                   ),
                 ),
@@ -694,8 +707,8 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                     FontWeightManager.bold,
                     FontSize.s15,
                     0.27,
-                    currentSupplierBalance > 0 
-                        ? Colors.red.shade700 
+                    currentSupplierBalance > 0
+                        ? Colors.red.shade700
                         : Colors.green.shade700,
                   ),
                 ),
@@ -707,7 +720,8 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     );
   }
 
-  Widget _buildCompactSummaryItem(String label, String value, IconData icon, Color color) {
+  Widget _buildCompactSummaryItem(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
@@ -780,18 +794,20 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     );
   }
 
-  Widget _buildPaymentMethodRow(RestrictedPaymentType method, double amount) {
+  Widget _buildPaymentMethodRow(
+      MasterDataValue method, double amount, int index) {
+    final color = _getMethodColor(method, index);
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(5),
           decoration: BoxDecoration(
-            color: _getMethodColor(method).withOpacity(0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(5),
           ),
           child: Icon(
             _getMethodIcon(method),
-            color: _getMethodColor(method),
+            color: color,
             size: 14,
           ),
         ),
@@ -812,7 +828,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             FontWeightManager.semiBold,
             FontSize.s12,
             0.27,
-            _getMethodColor(method),
+            color,
           ),
         ),
       ],
