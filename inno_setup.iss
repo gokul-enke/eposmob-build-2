@@ -47,6 +47,14 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[InstallDelete]
+; Clean only products and categories cache when installing/upgrading
+; This preserves cart_items, saved_orders, and confirmed_orders
+Type: files; Name: "{userappdata}\com.enke\pos_machine\epos\hive_data\products.hive"
+Type: files; Name: "{userappdata}\com.enke\pos_machine\epos\hive_data\products.lock"
+Type: files; Name: "{userappdata}\com.enke\pos_machine\epos\hive_data\categories.hive"
+Type: files; Name: "{userappdata}\com.enke\pos_machine\epos\hive_data\categories.lock"
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\com.enke\pos_machine\epos\hive_data"
 Type: dirifempty; Name: "{userappdata}\com.enke\pos_machine\epos"
