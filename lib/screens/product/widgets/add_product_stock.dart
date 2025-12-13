@@ -1761,7 +1761,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   /// Convert DynamicPaymentData to API format with payment method IDs
   Map<String, dynamic> _convertPaymentDataToApiFormat(
       DynamicPaymentData paymentData) {
-    List<int> paymentMethodIds = [];
+    List<String> paymentMethodIds = [];
     List<Map<String, dynamic>> paidMethods = [];
 
     // Add primary method if present
@@ -1771,9 +1771,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       double amount = double.tryParse(paymentData.primaryAmount) ?? 0.0;
 
       if (methodId != null && amount > 0) {
-        paymentMethodIds.add(methodId);
+        paymentMethodIds.add(methodId.toString());
         paidMethods.add({
-          'payment_method_id': methodId,
+          'method': methodId,
           'amount': amount,
         });
       }
@@ -1786,16 +1786,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       double amount = double.tryParse(paymentData.secondaryAmount) ?? 0.0;
 
       if (methodId != null && amount > 0) {
-        paymentMethodIds.add(methodId);
+        paymentMethodIds.add(methodId.toString());
         paidMethods.add({
-          'payment_method_id': methodId,
+          'method': methodId,
           'amount': amount,
         });
       }
     }
 
     return {
-      'payment_method_ids': paymentMethodIds,
+      'payment_methods': paymentMethodIds,
       'paid_methods': paidMethods,
     };
   }

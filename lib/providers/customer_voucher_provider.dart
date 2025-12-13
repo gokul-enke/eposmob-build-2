@@ -279,12 +279,15 @@ class CustomerVoucherProvider extends ChangeNotifier {
         'voucher_date': voucherDate,
         'due_date': dueDate,
         'status': status,
-        'payment_method_id': paymentMethodId,
+        'payment_method': paymentMethodId,
         'customer_id': customerId,
         'voucher_items': voucherItems,
       };
 
-      debugPrint("Creating voucher with body: $body");
+      debugPrint("=== CREATE CUSTOMER VOUCHER API REQUEST ===");
+      debugPrint("URL: ${APPUrl.createCustomerVoucher}");
+      debugPrint("Request Body:");
+      debugPrint(const JsonEncoder.withIndent('  ').convert(body));
 
       final response = await http.post(
         Uri.parse(APPUrl.createCustomerVoucher),

@@ -276,11 +276,14 @@ class SupplierVoucherProvider extends ChangeNotifier {
         'voucher_date': voucherDate,
         'due_date': dueDate,
         'status': status,
-        'payment_method_id': paymentMethodId,
+        'payment_method': paymentMethodId,
         'voucher_items': voucherItems,
       };
 
-      debugPrint("Creating voucher with body: $body");
+      debugPrint("=== CREATE SUPPLIER VOUCHER API REQUEST ===");
+      debugPrint("URL: ${APPUrl.createSupplierVoucher}");
+      debugPrint("Request Body:");
+      debugPrint(const JsonEncoder.withIndent('  ').convert(body));
 
       final response = await http.post(
         Uri.parse(APPUrl.createSupplierVoucher),
