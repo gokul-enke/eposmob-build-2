@@ -134,7 +134,9 @@ class CustomerVoucherProvider extends ChangeNotifier {
     }
 
     // Filter by type
-    if (filterType != null && filterType.isNotEmpty && filterType != 'All Types') {
+    if (filterType != null &&
+        filterType.isNotEmpty &&
+        filterType != 'All Types') {
       filteredVouchers = filteredVouchers.where((voucher) {
         return voucher.type.toLowerCase() == filterType.toLowerCase();
       }).toList();
@@ -255,7 +257,7 @@ class CustomerVoucherProvider extends ChangeNotifier {
     required String voucherDate,
     required String dueDate,
     required String status,
-    required String paymentMethod,
+    required int? paymentMethodId,
     required int customerId,
     required List<Map<String, dynamic>> voucherItems,
     required String accessToken,
@@ -277,12 +279,15 @@ class CustomerVoucherProvider extends ChangeNotifier {
         'voucher_date': voucherDate,
         'due_date': dueDate,
         'status': status,
-        'payment_method': paymentMethod,
+        'payment_method': paymentMethodId,
         'customer_id': customerId,
         'voucher_items': voucherItems,
       };
 
-      debugPrint("Creating voucher with body: $body");
+      debugPrint("=== CREATE CUSTOMER VOUCHER API REQUEST ===");
+      debugPrint("URL: ${APPUrl.createCustomerVoucher}");
+      debugPrint("Request Body:");
+      debugPrint(const JsonEncoder.withIndent('  ').convert(body));
 
       final response = await http.post(
         Uri.parse(APPUrl.createCustomerVoucher),
@@ -344,22 +349,21 @@ class CustomerVoucherProvider extends ChangeNotifier {
 
     try {
       final headers = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $headers');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -368,7 +372,8 @@ class CustomerVoucherProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'
@@ -401,22 +406,21 @@ class CustomerVoucherProvider extends ChangeNotifier {
 
     try {
       final maskedHeaders = {
-        'Authorization': 'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6)+'...' : '***'}',
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
         'X-Tenant': apiKey,
       };
       debugPrint('[ZATCA][Provider] Headers: $maskedHeaders');
       debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
 
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-            body: {'id': id.toString()},
-          )
-          .timeout(const Duration(seconds: 20));
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         try {
@@ -425,7 +429,8 @@ class CustomerVoucherProvider extends ChangeNotifier {
           return response.body;
         }
       } else {
-        debugPrint('[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
         return {
           'status': 'error',
           'message': 'Failed with status ${response.statusCode}'

@@ -122,7 +122,9 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+        final appSettings =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings;
         final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
 
         final List<Widget> dynamicItems = [];
@@ -191,27 +193,40 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
 
   Future<void> _performZatcaPhase2SendWithPdf(CustomerVoucher voucher) async {
     try {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Send With PDF] Start for voucher '+voucher.voucherNumber+' (ID: '+voucher.id.toString()+')');
+      final String? token =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Send With PDF] Start for voucher ' +
+          voucher.voucherNumber +
+          ' (ID: ' +
+          voucher.id.toString() +
+          ')');
       if (token == null || token.isEmpty) {
-        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
-        showScaffoldError(context: context, message: 'Missing authentication token');
+        debugPrint(
+            '[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
+        showScaffoldError(
+            context: context, message: 'Missing authentication token');
         return;
       }
 
       showScaffold(context: context, message: 'Processing ZATCA Phase 2...');
       showLoadingOverlay(context, message: 'Processing...');
 
-      final provider = Provider.of<CustomerVoucherProvider>(context, listen: false);
+      final provider =
+          Provider.of<CustomerVoucherProvider>(context, listen: false);
       final result = await provider.zatcaPhase2VoucherPrint(
         id: voucher.id,
         accessToken: token,
       );
 
-      debugPrint('[ZATCA][Phase2 Send With PDF] Response: '+result.toString());
-      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+      debugPrint(
+          '[ZATCA][Phase2 Send With PDF] Response: ' + result.toString());
+      if (result is Map &&
+          ((result['status'] == 'success') ||
+              (result['success'] == true) ||
+              (result['status'] == true))) {
         final data = result['data'] ?? {};
-        final String voucherNumber = (data['voucher_number']?.toString() ?? voucher.voucherNumber);
+        final String voucherNumber =
+            (data['voucher_number']?.toString() ?? voucher.voucherNumber);
         final String? downloadUrl = data['download_url']?.toString();
         final String? fileName = data['filename']?.toString();
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
@@ -219,16 +234,18 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         }
         showScaffold(
           context: context,
-          message: 'Voucher '+voucherNumber+' processed under ZATCA Phase 2.',
+          message:
+              'Voucher ' + voucherNumber + ' processed under ZATCA Phase 2.',
         );
       } else {
-        final msg = (result is Map ? result['message'] : null) ?? 'Failed to process ZATCA Phase 2';
-        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: '+msg.toString());
+        final msg = (result is Map ? result['message'] : null) ??
+            'Failed to process ZATCA Phase 2';
+        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: ' + msg.toString());
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: '+e.toString());
-      showScaffoldError(context: context, message: 'Error: '+e.toString());
+      debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: ' + e.toString());
+      showScaffoldError(context: context, message: 'Error: ' + e.toString());
     } finally {
       hideLoadingOverlay();
     }
@@ -236,46 +253,60 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
 
   Future<void> _performZatcaPhase2Send(CustomerVoucher voucher) async {
     try {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Send] Start for voucher '+voucher.voucherNumber+' (ID: '+voucher.id.toString()+')');
+      final String? token =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('[ZATCA][Phase2 Send] Start for voucher ' +
+          voucher.voucherNumber +
+          ' (ID: ' +
+          voucher.id.toString() +
+          ')');
       if (token == null || token.isEmpty) {
         debugPrint('[ZATCA][Phase2 Send] ERROR: Missing authentication token');
-        showScaffoldError(context: context, message: 'Missing authentication token');
+        showScaffoldError(
+            context: context, message: 'Missing authentication token');
         return;
       }
 
       showScaffold(context: context, message: 'Sending to ZATCA...');
       showLoadingOverlay(context, message: 'Sending...');
 
-      final provider = Provider.of<CustomerVoucherProvider>(context, listen: false);
+      final provider =
+          Provider.of<CustomerVoucherProvider>(context, listen: false);
       final result = await provider.zatcaPhase2VoucherPrint(
         id: voucher.id,
         accessToken: token,
       );
 
-      debugPrint('[ZATCA][Phase2 Send] Response: '+result.toString());
-      if (result is Map && ((result['status'] == 'success') || (result['success'] == true) || (result['status'] == true))) {
+      debugPrint('[ZATCA][Phase2 Send] Response: ' + result.toString());
+      if (result is Map &&
+          ((result['status'] == 'success') ||
+              (result['success'] == true) ||
+              (result['status'] == true))) {
         final data = result['data'] ?? {};
-        final String voucherNumber = (data['voucher_number']?.toString() ?? voucher.voucherNumber);
+        final String voucherNumber =
+            (data['voucher_number']?.toString() ?? voucher.voucherNumber);
         // Do NOT open PDF here per requirement. Just inform the user.
         showScaffold(
           context: context,
-          message: 'Voucher '+voucherNumber+' submitted to ZATCA successfully.',
+          message:
+              'Voucher ' + voucherNumber + ' submitted to ZATCA successfully.',
         );
       } else {
-        final msg = (result is Map ? result['message'] : null) ?? 'Failed to send to ZATCA';
-        debugPrint('[ZATCA][Phase2 Send] ERROR: '+msg.toString());
+        final msg = (result is Map ? result['message'] : null) ??
+            'Failed to send to ZATCA';
+        debugPrint('[ZATCA][Phase2 Send] ERROR: ' + msg.toString());
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase2 Send] EXCEPTION: '+e.toString());
-      showScaffoldError(context: context, message: 'Error: '+e.toString());
+      debugPrint('[ZATCA][Phase2 Send] EXCEPTION: ' + e.toString());
+      showScaffoldError(context: context, message: 'Error: ' + e.toString());
     } finally {
       hideLoadingOverlay();
     }
   }
 
-  Future<void> _downloadAndOpenPdf(String url, {String? suggestedFileName}) async {
+  Future<void> _downloadAndOpenPdf(String url,
+      {String? suggestedFileName}) async {
     try {
       if (kIsWeb) {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
@@ -284,9 +315,10 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       }
 
       final dir = await getApplicationDocumentsDirectory();
-      final String fileName = (suggestedFileName != null && suggestedFileName.trim().isNotEmpty)
-          ? suggestedFileName
-          : 'voucher_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final String fileName =
+          (suggestedFileName != null && suggestedFileName.trim().isNotEmpty)
+              ? suggestedFileName
+              : 'voucher_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final String savePath = '${dir.path}/$fileName';
 
       final dio = Dio();
@@ -303,7 +335,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       await OpenFile.open(savePath);
       showScaffold(context: context, message: 'PDF downloaded');
     } catch (e) {
-      debugPrint('[ZATCA][PDF] ERROR while downloading/opening: '+e.toString());
+      debugPrint(
+          '[ZATCA][PDF] ERROR while downloading/opening: ' + e.toString());
       try {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
       } catch (_) {}
@@ -361,13 +394,14 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           children: [
             Text(
               "Customer Voucher List",
-              style: buildCustomStyle(FontWeightManager.semiBold,
-                  FontSize.s20, 0.30, ColorManager.textColor),
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                  0.30, ColorManager.textColor),
             ),
             CustomRoundButton(
               title: "Create Voucher",
               fct: () {
-                Get.find<SideBarController>().index.value = 71; // Create Voucher Screen
+                Get.find<SideBarController>().index.value =
+                    71; // Create Voucher Screen
               },
               fontSize: FontSize.s12,
               height: 45,
@@ -737,7 +771,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                                   _buildTableCell(
                                                       voucher.paymentMethod),
                                                   _buildTableCell(
-                                                      '₹${voucher.amount}'),
+                                                      '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}'),
                                                   Center(
                                                     child: _buildStatusChip(
                                                         voucher.status),
@@ -826,28 +860,62 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                                           ),
                                                           Builder(
                                                             builder: (context) {
-                                                              final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-                                                              final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
-                                                              final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
-                                                              final bool showZatcaMenu = phase1 || phase2;
+                                                              final appSettings = Provider.of<
+                                                                          AppSettingsProvider>(
+                                                                      context,
+                                                                      listen:
+                                                                          false)
+                                                                  .appSettings;
+                                                              final bool
+                                                                  phase1 =
+                                                                  appSettings
+                                                                          ?.zatcaPhase1Enabled ??
+                                                                      false;
+                                                              final bool
+                                                                  phase2 =
+                                                                  appSettings
+                                                                          ?.zatcaPhase2Enabled ??
+                                                                      false;
+                                                              final bool
+                                                                  showZatcaMenu =
+                                                                  phase1 ||
+                                                                      phase2;
                                                               if (!showZatcaMenu) {
-                                                                return const SizedBox.shrink();
+                                                                return const SizedBox
+                                                                    .shrink();
                                                               }
                                                               return BuildBoxShadowContainer(
-                                                                margin: const EdgeInsets.only(left: 5, right: 5),
+                                                                margin:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                        left: 5,
+                                                                        right:
+                                                                            5),
                                                                 circleRadius: 5,
-                                                                child: IconButton(
+                                                                child:
+                                                                    IconButton(
                                                                   icon: Icon(
-                                                                    Icons.more_vert,
+                                                                    Icons
+                                                                        .more_vert,
                                                                     size: 18,
-                                                                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                                    color: ColorManager
+                                                                        .kPrimaryColor
+                                                                        .withOpacity(
+                                                                            0.9),
                                                                   ),
-                                                                  onPressed: () => _showVoucherActionsSheet(voucher),
-                                                                  constraints: const BoxConstraints(
-                                                                    minWidth: 36,
-                                                                    minHeight: 36,
+                                                                  onPressed: () =>
+                                                                      _showVoucherActionsSheet(
+                                                                          voucher),
+                                                                  constraints:
+                                                                      const BoxConstraints(
+                                                                    minWidth:
+                                                                        36,
+                                                                    minHeight:
+                                                                        36,
                                                                   ),
-                                                                  padding: EdgeInsets.zero,
+                                                                  padding:
+                                                                      EdgeInsets
+                                                                          .zero,
                                                                 ),
                                                               );
                                                             },
@@ -1054,14 +1122,19 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildDetailRow('Voucher Number', voucher.voucherNumber),
-                              _buildDetailRow('Customer Name', voucher.customer.user.name),
-                              _buildDetailRow('Customer Phone', voucher.customer.user.phone),
+                              _buildDetailRow(
+                                  'Voucher Number', voucher.voucherNumber),
+                              _buildDetailRow(
+                                  'Customer Name', voucher.customer.user.name),
+                              _buildDetailRow('Customer Phone',
+                                  voucher.customer.user.phone),
                               _buildDetailRow('Type', voucher.type),
-                              _buildDetailRow('Voucher Date', voucher.voucherDate),
+                              _buildDetailRow(
+                                  'Voucher Date', voucher.voucherDate),
                               _buildDetailRow('Due Date', voucher.dueDate),
                               _buildDetailRow('Status', voucher.status),
-                              _buildDetailRow('Payment Method', voucher.paymentMethod),
+                              _buildDetailRow(
+                                  'Payment Method', voucher.paymentMethod),
                             ],
                           ),
                         ),
@@ -1156,7 +1229,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '₹${voucher.amount}',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}',
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   FontSize.s18,

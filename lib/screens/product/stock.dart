@@ -315,8 +315,28 @@ class _AddStockScreenState extends State<AddStockScreen> {
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           if (data['status'] == 'success') {
-            racksData = Map<String, String>.from(data['data']);
-            debugPrint("Successfully loaded ${racksData.length} racks");
+            // Handle both new List structure and legacy Map structure
+            if (data['data'] is List) {
+              // New structure: List of objects with id, value, description
+              racksData = {};
+              for (var item in data['data']) {
+                final value = item['value']?.toString() ?? '';
+                final description = item['description']?.toString() ?? value;
+                if (value.isNotEmpty) {
+                  racksData[value] = description;
+                }
+              }
+              debugPrint(
+                  "Successfully loaded ${racksData.length} racks (from List)");
+            } else if (data['data'] is Map) {
+              // Legacy structure: Map<String, String>
+              racksData = Map<String, String>.from(data['data']);
+              debugPrint(
+                  "Successfully loaded ${racksData.length} racks (from Map)");
+            } else {
+              debugPrint("Unexpected data format: ${data['data'].runtimeType}");
+              racksData = {};
+            }
           } else {
             debugPrint("API returned error status: ${data['message']}");
           }

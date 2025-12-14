@@ -29,6 +29,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -144,7 +145,6 @@ class BillingPageState extends State<BillingPage>
   int _selectedSidebarTab =
       1; // 0 for products, 1 for orders/categories - default to orders tab
 
-  
   Timer? _debounceTimer;
 
   // Add these variables for keyboard navigation in customer list
@@ -243,16 +243,19 @@ class BillingPageState extends State<BillingPage>
         Provider.of<BarcodeProvider>(context, listen: false);
     debugPrint("🟡 [BillingPage] Setting up barcode stream listener...");
     _barcodeSubscription = barcodeProvider.barcodeStream.listen((barcode) {
-      debugPrint("🟡 [BillingPage] ========== BARCODE STREAM RECEIVED ==========");
+      debugPrint(
+          "🟡 [BillingPage] ========== BARCODE STREAM RECEIVED ==========");
       debugPrint("🟡 [BillingPage] Barcode from stream: '$barcode'");
       debugPrint("🟡 [BillingPage] Widget mounted: $mounted");
       if (mounted) {
         debugPrint("🟡 [BillingPage] Calling processBarcode()...");
         processBarcode(barcode);
       } else {
-        debugPrint("⚠️ [BillingPage] Widget not mounted - skipping processBarcode");
+        debugPrint(
+            "⚠️ [BillingPage] Widget not mounted - skipping processBarcode");
       }
-      debugPrint("🟡 [BillingPage] =============================================\n");
+      debugPrint(
+          "🟡 [BillingPage] =============================================\n");
     });
     debugPrint("🟡 [BillingPage] Barcode stream listener setup complete");
 
@@ -318,7 +321,6 @@ class BillingPageState extends State<BillingPage>
     _upiAmountFocusNode.dispose();
     _debitAmountFocusNode.dispose();
 
-    
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
@@ -559,7 +561,8 @@ class BillingPageState extends State<BillingPage>
 
         // 4. Restore Transaction, Delivery, and Other Details
         _transactionNumberController.text = currentOrder.transactionId ?? "";
-        deliveryMethod = currentOrder.deliveryMethod ?? "billing.store_takeaway".tr;
+        deliveryMethod =
+            currentOrder.deliveryMethod ?? "billing.store_takeaway".tr;
         deliveryMethodId =
             currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
         _commentController.text = currentOrder.comment ?? "";
@@ -776,16 +779,22 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> processBarcode(String barcode) async {
-    debugPrint("🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE START ==========");
+    debugPrint(
+        "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE START ==========");
     debugPrint("🔴 [BillingPage.processBarcode] Input barcode: '$barcode'");
-    debugPrint("🔴 [BillingPage.processBarcode] Barcode length: ${barcode.length}");
-    debugPrint("🔴 [BillingPage.processBarcode] _isProcessingBarcode: $_isProcessingBarcode");
-    debugPrint("🔴 [BillingPage.processBarcode] barcode.isEmpty: ${barcode.isEmpty}");
-    
+    debugPrint(
+        "🔴 [BillingPage.processBarcode] Barcode length: ${barcode.length}");
+    debugPrint(
+        "🔴 [BillingPage.processBarcode] _isProcessingBarcode: $_isProcessingBarcode");
+    debugPrint(
+        "🔴 [BillingPage.processBarcode] barcode.isEmpty: ${barcode.isEmpty}");
+
     // If a barcode is already being processed, or if the input is empty, do nothing.
     if (_isProcessingBarcode || barcode.isEmpty) {
-      debugPrint("⚠️ [BillingPage.processBarcode] SKIPPING - Already processing or empty barcode");
-      debugPrint("🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END (SKIPPED) ==========\n");
+      debugPrint(
+          "⚠️ [BillingPage.processBarcode] SKIPPING - Already processing or empty barcode");
+      debugPrint(
+          "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END (SKIPPED) ==========\n");
       return;
     }
 
@@ -794,7 +803,8 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       _isProcessingBarcode = true;
     });
-    debugPrint("🔴 [BillingPage.processBarcode] _isProcessingBarcode set to true");
+    debugPrint(
+        "🔴 [BillingPage.processBarcode] _isProcessingBarcode set to true");
     String query = barcode;
 
     List<GetProduct> filteredProducts = [];
@@ -810,7 +820,8 @@ class BillingPageState extends State<BillingPage>
       }
 
       if (prefix != '000' || query.length != 14) {
-        debugPrint("🔴 [BillingPage.processBarcode] Standard barcode - searching by: '$query'");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode] Standard barcode - searching by: '$query'");
         filteredProducts =
             Provider.of<LocalProductProvider>(context, listen: false)
                 .filterProductByBarcode(
@@ -819,7 +830,8 @@ class BillingPageState extends State<BillingPage>
       } else {
         productCode = query.substring(3, 9); // Next 6 digits
         lastFive = query.substring(9, 14); // Last 5 digits
-        debugPrint("🔴 [BillingPage.processBarcode] Weight/Count barcode - productCode: $productCode, lastFive: $lastFive");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode] Weight/Count barcode - productCode: $productCode, lastFive: $lastFive");
         filteredProducts =
             Provider.of<LocalProductProvider>(context, listen: false)
                 .filterProductByBarcode(
@@ -827,9 +839,11 @@ class BillingPageState extends State<BillingPage>
         );
       }
 
-      debugPrint("🔴 [BillingPage.processBarcode] Products found: ${filteredProducts.length}");
+      debugPrint(
+          "🔴 [BillingPage.processBarcode] Products found: ${filteredProducts.length}");
       if (filteredProducts.isNotEmpty) {
-        debugPrint("🔴 [BillingPage.processBarcode] First product: ${filteredProducts.first.productName}");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode] First product: ${filteredProducts.first.productName}");
         // Get the first product
         GetProduct product = filteredProducts.first;
 
@@ -851,11 +865,15 @@ class BillingPageState extends State<BillingPage>
         }
 
         // Use centralized helper for stock handling
-        debugPrint("🔴 [BillingPage.processBarcode] 🛒 Calling ProductCartHelper with:");
-        debugPrint("🔴 [BillingPage.processBarcode]   - Product: ${product.productName}");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode] 🛒 Calling ProductCartHelper with:");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode]   - Product: ${product.productName}");
         debugPrint("🔴 [BillingPage.processBarcode]   - Quantity: $quantity");
-        debugPrint("🔴 [BillingPage.processBarcode]   - Customer ID: $selectedCustomerID");
-        debugPrint("🔴 [BillingPage.processBarcode]   - Customer Name: ${selectedCustomer?.name}");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode]   - Customer ID: $selectedCustomerID");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode]   - Customer Name: ${selectedCustomer?.name}");
 
         await ProductCartHelper.handleProductSelection(
           context: context,
@@ -866,8 +884,9 @@ class BillingPageState extends State<BillingPage>
           customerName: selectedCustomer?.name,
         );
 
-        debugPrint("✅ [BillingPage.processBarcode] Product added to cart successfully");
-        
+        debugPrint(
+            "✅ [BillingPage.processBarcode] Product added to cart successfully");
+
         // Clear input fields
         debugPrint("🔴 [BillingPage.processBarcode] Clearing input fields...");
         setState(() {
@@ -881,7 +900,8 @@ class BillingPageState extends State<BillingPage>
         _focusTextField();
         debugPrint("🔴 [BillingPage.processBarcode] Focus reset");
       } else {
-        debugPrint("⚠️ [BillingPage.processBarcode] No products found for barcode: '$query'");
+        debugPrint(
+            "⚠️ [BillingPage.processBarcode] No products found for barcode: '$query'");
         // Set dialog state to open
         await showDialog(
           context: context,
@@ -894,11 +914,13 @@ class BillingPageState extends State<BillingPage>
         });
         _focusTextField();
 
-        debugPrint("🔴 [BillingPage.processBarcode] No products found for barcode: '$query'");
+        debugPrint(
+            "🔴 [BillingPage.processBarcode] No products found for barcode: '$query'");
       }
     } catch (e) {
       debugPrint("❌ [BillingPage.processBarcode] ERROR: $e");
-      debugPrint("❌ [BillingPage.processBarcode] Stack trace: ${StackTrace.current}");
+      debugPrint(
+          "❌ [BillingPage.processBarcode] Stack trace: ${StackTrace.current}");
       showScaffoldError(
         context: context,
         message: "billing.invalid_barcode".tr,
@@ -909,20 +931,24 @@ class BillingPageState extends State<BillingPage>
       });
       debugPrint("🔴 [BillingPage.processBarcode] Barcode cleared after error");
     } finally {
-      debugPrint("🔴 [BillingPage.processBarcode] Finally block - resetting processing flag...");
+      debugPrint(
+          "🔴 [BillingPage.processBarcode] Finally block - resetting processing flag...");
       // Reset the flag and ensure barcode is always cleared
       Future.delayed(const Duration(milliseconds: 750), () {
         if (mounted) {
-          debugPrint("🔴 [BillingPage.processBarcode] Resetting _isProcessingBarcode to false");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode] Resetting _isProcessingBarcode to false");
           setState(() {
             _isProcessingBarcode = false;
             // Ensure barcode is always cleared
             barcodeController.clear();
           });
-          debugPrint("🔴 [BillingPage.processBarcode] Processing complete - ready for next scan");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode] Processing complete - ready for next scan");
         }
       });
-      debugPrint("🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END ==========\n");
+      debugPrint(
+          "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END ==========\n");
     }
   }
 
@@ -1347,7 +1373,9 @@ class BillingPageState extends State<BillingPage>
         Row(
           children: [
             Text(
-              isEditingOrder ? '${'billing.edit_order'.tr} - ' : '${'billing.new_order'.tr} - ',
+              isEditingOrder
+                  ? '${'billing.edit_order'.tr} - '
+                  : '${'billing.new_order'.tr} - ',
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
@@ -1492,7 +1520,6 @@ class BillingPageState extends State<BillingPage>
                               readOnly:
                                   selectedProductNameController.text.isNotEmpty,
                               onSubmitted: (query) {
-
                                 if (query != null && query.isNotEmpty) {
                                   processBarcode(query);
                                 }
@@ -1791,8 +1818,7 @@ class BillingPageState extends State<BillingPage>
                                   debugPrint('Error adding item: $e');
                                   showScaffoldError(
                                     context: context,
-                                    message:
-                                        "billing.failed_add_item".tr,
+                                    message: "billing.failed_add_item".tr,
                                   );
                                 } finally {
                                   debugPrint('Finally adding item');
@@ -3345,7 +3371,6 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -3592,15 +3617,23 @@ class BillingPageState extends State<BillingPage>
 
           // Determine payment method and data using multi-payment JSON format
           List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-          
+
           // Always use multi-payment JSON format for consistency with sync button
           Map<String, dynamic> multiPaymentData = {
             "methods": selectedPaymentMethods,
             "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
-              "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
-              "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
-              "DEBIT": _debitAmountController.text.isNotEmpty ? _debitAmountController.text : "0",
+              "CASH": _cashAmountController.text.isNotEmpty
+                  ? _cashAmountController.text
+                  : "0",
+              "CARD": _cardAmountController.text.isNotEmpty
+                  ? _cardAmountController.text
+                  : "0",
+              "UPI": _upiAmountController.text.isNotEmpty
+                  ? _upiAmountController.text
+                  : "0",
+              "DEBIT": _debitAmountController.text.isNotEmpty
+                  ? _debitAmountController.text
+                  : "0",
             },
             "isMultiPayment": true
           };
@@ -3642,15 +3675,23 @@ class BillingPageState extends State<BillingPage>
 
         // Determine payment method and data using multi-payment JSON format
         List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-        
+
         // Always use multi-payment JSON format for consistency with sync button
         Map<String, dynamic> multiPaymentData = {
           "methods": selectedPaymentMethods,
           "amounts": {
-            "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
-            "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
-            "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
-            "DEBIT": _debitAmountController.text.isNotEmpty ? _debitAmountController.text : "0",
+            "CASH": _cashAmountController.text.isNotEmpty
+                ? _cashAmountController.text
+                : "0",
+            "CARD": _cardAmountController.text.isNotEmpty
+                ? _cardAmountController.text
+                : "0",
+            "UPI": _upiAmountController.text.isNotEmpty
+                ? _upiAmountController.text
+                : "0",
+            "DEBIT": _debitAmountController.text.isNotEmpty
+                ? _debitAmountController.text
+                : "0",
           },
           "isMultiPayment": true
         };
@@ -3963,7 +4004,8 @@ class BillingPageState extends State<BillingPage>
 
             debugPrint(
                 "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
-            debugPrint("💰 Customer Old Balance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
+            debugPrint(
+                "💰 Customer Old Balance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -4281,22 +4323,26 @@ class BillingPageState extends State<BillingPage>
     String paymentMethod = "";
     String paidAmount = "";
 
+    // Get payment method IDs from BillingProvider
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
+    final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
+    final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
+
     if (selectedPaymentMethods.length > 1) {
-      // Multi-payment: store as JSON
+      // Multi-payment: store as JSON with IDs as keys
       Map<String, dynamic> multiPaymentData = {
         "methods": selectedPaymentMethods,
         "amounts": {
-          "CASH": _cashAmountController.text.isNotEmpty
+          cashId: _cashAmountController.text.isNotEmpty
               ? _cashAmountController.text
               : "0",
-          "CARD": _cardAmountController.text.isNotEmpty
+          cardId: _cardAmountController.text.isNotEmpty
               ? _cardAmountController.text
               : "0",
-          "UPI": _upiAmountController.text.isNotEmpty
+          upiId: _upiAmountController.text.isNotEmpty
               ? _upiAmountController.text
-              : "0",
-          "DEBIT": _debitAmountController.text.isNotEmpty
-              ? _debitAmountController.text
               : "0",
         },
         "isMultiPayment": true
@@ -4307,14 +4353,22 @@ class BillingPageState extends State<BillingPage>
       // Single payment method
       if (selectedPaymentMethods.isNotEmpty) {
         paymentMethod = selectedPaymentMethods.first;
-        if (paymentMethod == "CASH") {
+        // Check by comparing with the stored IDs
+        if (paymentMethod == cashId) {
           paidAmount = _cashAmountController.text;
-        } else if (paymentMethod == "CARD") {
+        } else if (paymentMethod == cardId) {
           paidAmount = _cardAmountController.text;
-        } else if (paymentMethod == "UPI") {
+        } else if (paymentMethod == upiId) {
           paidAmount = _upiAmountController.text;
-        } else if (paymentMethod == "DEBIT") {
-          paidAmount = _debitAmountController.text;
+        } else {
+          // Fallback for legacy string checks
+          if (_isCashSelected) {
+            paidAmount = _cashAmountController.text;
+          } else if (_isCardSelected) {
+            paidAmount = _cardAmountController.text;
+          } else if (_isUpiSelected) {
+            paidAmount = _upiAmountController.text;
+          }
         }
       } else {
         // No payment method selected - leave empty
@@ -4457,16 +4511,22 @@ class BillingPageState extends State<BillingPage>
 
   List<String> _getSelectedPaymentMethods() {
     List<String> methods = [];
+
+    // Get payment method IDs from BillingProvider
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
     if (_isCashSelected) {
-      methods.add("CASH");
+      // Use payment method ID if available, otherwise fallback to string
+      methods.add(billingProvider.cashPaymentMethodId ?? "CASH");
     }
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
-      methods.add("CARD");
+      methods.add(billingProvider.cardPaymentMethodId ?? "CARD");
     }
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
-      methods.add("UPI");
+      methods.add(billingProvider.upiPaymentMethodId ?? "UPI");
     }
     // if (_isDebitSelected &&
     //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
@@ -4478,9 +4538,14 @@ class BillingPageState extends State<BillingPage>
   List<Map<String, dynamic>> _getPaidMethods() {
     List<Map<String, dynamic>> paidMethods = [];
 
+    // Get payment method IDs from BillingProvider
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
     if (_isCashSelected) {
       paidMethods.add({
-        "method": "CASH",
+        // Use payment method ID if available, otherwise fallback to string
+        "method": billingProvider.cashPaymentMethodId ?? "CASH",
         "amount": double.tryParse(_cashAmountController.text) ?? 0,
       });
     }
@@ -4488,7 +4553,7 @@ class BillingPageState extends State<BillingPage>
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": "CARD",
+        "method": billingProvider.cardPaymentMethodId ?? "CARD",
         "amount": double.tryParse(_cardAmountController.text) ?? 0,
       });
     }
@@ -4496,7 +4561,7 @@ class BillingPageState extends State<BillingPage>
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": "UPI",
+        "method": billingProvider.upiPaymentMethodId ?? "UPI",
         "amount": double.tryParse(_upiAmountController.text) ?? 0,
       });
     }
@@ -4603,7 +4668,9 @@ class BillingPageState extends State<BillingPage>
                     icon: isCouponApplied
                         ? Icons.discount
                         : Icons.local_offer_outlined,
-                    label: isCouponApplied ? 'billing.applied_label'.tr : 'billing.discount_label'.tr,
+                    label: isCouponApplied
+                        ? 'billing.applied_label'.tr
+                        : 'billing.discount_label'.tr,
                     color: isCouponApplied
                         ? ColorManager.kButtonGreen
                         : ColorManager.kButtonYellow,
@@ -4775,7 +4842,8 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  void _showPaymentMethodModal({VoidCallback? onAfterApply, String? customButtonTitle}) {
+  void _showPaymentMethodModal(
+      {VoidCallback? onAfterApply, String? customButtonTitle}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -4808,16 +4876,21 @@ class BillingPageState extends State<BillingPage>
         customerPrevBalance: selectedCustomer?.balance ?? 0.0,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,
-        onPaymentMethodSelected: (isCash,
-            isCard,
-            isUpi,
-            isDebit,
-            cashAmount,
-            cardAmount,
-            upiAmount,
-            debitAmount,
-            transactionNumber,
-            toCustomerCredit) {
+        onPaymentMethodSelected: (
+          isCash,
+          isCard,
+          isUpi,
+          isDebit,
+          cashAmount,
+          cardAmount,
+          upiAmount,
+          debitAmount,
+          transactionNumber,
+          toCustomerCredit, {
+          String? cashMethodId,
+          String? cardMethodId,
+          String? upiMethodId,
+        }) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -4833,6 +4906,25 @@ class BillingPageState extends State<BillingPage>
             // Update balance amount using the same calculation logic as the modal
             _updateBalanceAmount();
           });
+
+          // Store payment method IDs in BillingProvider for later use
+          final billingProvider =
+              Provider.of<BillingProvider>(context, listen: false);
+          billingProvider.updatePaymentFromModal(
+            isCash: isCash,
+            isCard: isCard,
+            isUpi: isUpi,
+            isDebit: isDebit,
+            cashAmount: cashAmount,
+            cardAmount: cardAmount,
+            upiAmount: upiAmount,
+            debitAmount: debitAmount,
+            transactionNumber: transactionNumber,
+            toCustomerCredit: toCustomerCredit,
+            cashMethodId: cashMethodId,
+            cardMethodId: cardMethodId,
+            upiMethodId: upiMethodId,
+          );
         },
       ),
     );
@@ -4978,7 +5070,8 @@ class BillingPageState extends State<BillingPage>
       }
     } else {
       // Handle unauthenticated state
-      showScaffoldError(context: context, message: 'billing.not_authenticated'.tr);
+      showScaffoldError(
+          context: context, message: 'billing.not_authenticated'.tr);
     }
   }
 
@@ -5054,7 +5147,8 @@ class BillingPageState extends State<BillingPage>
           "Sample item: ${cartItems.isNotEmpty ? json.encode(cartItems[0]) : 'No items'}");
 
       // Get active store name
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
       Navigator.push(

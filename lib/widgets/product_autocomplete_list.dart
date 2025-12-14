@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -116,8 +117,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
       context: context,
       product: product,
       onSelected: widget.onSelected,
-      addToCartDirectly:
-          true, // Add product directly to cart on selection
+      addToCartDirectly: true, // Add product directly to cart on selection
       // Customer info will be fetched from global provider in the helper
     );
   }
@@ -241,6 +241,13 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
           );
         },
         optionsViewBuilder: (context, onSelected, options) {
+          // Get currency from app settings
+          final currency =
+              Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.currency ??
+                  'INR';
+
           // Update current options reference for Enter key handling
           currentOptions = options;
 
@@ -308,7 +315,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         trailing: Text(
-                          '${option.price?.price ?? ''} ${option.currency ?? ''}',
+                          '$currency ${option.price?.price ?? ''}',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,

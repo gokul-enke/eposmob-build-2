@@ -8,6 +8,8 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -27,9 +29,12 @@ class PaymentMethodModal extends StatefulWidget {
   // Customer previous balance (positive = customer has credit; negative = customer owes)
   final double customerPrevBalance;
   final Function(
-          bool, bool, bool, bool, String, String, String, String, String, bool)
-      onPaymentMethodSelected;
-  final VoidCallback? onAfterApply; // Optional callback to execute after applying payment methods
+      bool, bool, bool, bool, String, String, String, String, String, bool,
+      {String? cashMethodId,
+      String? cardMethodId,
+      String? upiMethodId}) onPaymentMethodSelected;
+  final VoidCallback?
+      onAfterApply; // Optional callback to execute after applying payment methods
   final String? customButtonTitle; // Optional custom button title
 
   const PaymentMethodModal({
@@ -72,9 +77,19 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late TextEditingController toCustomerCreditController;
   double toCustomerCredit = 0.0;
 
+  // Payment method IDs from API
+  String? _cashPaymentMethodId;
+  String? _cardPaymentMethodId;
+  String? _upiPaymentMethodId;
+  List<MasterDataValue> _paymentMethods = [];
+  bool _isLoadingPaymentMethods = false;
+
   @override
   void initState() {
     super.initState();
+
+    // Load payment methods from API
+    _loadPaymentMethods();
 
     // Use existing selections without any defaults - let user select manually
     isCashSelected = widget.initialIsCashSelected;
@@ -210,6 +225,75 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             'toCustomerCredit', toCustomerCreditController));
     toCustomerCreditController.dispose();
     super.dispose();
+  }
+
+  /// Load payment methods from API and assign IDs
+  Future<void> _loadPaymentMethods() async {
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+
+    // Check if payment methods are already cached in the provider
+    final cachedMethods = masterDataProvider.paymentMethods;
+    if (cachedMethods != null && cachedMethods.isNotEmpty) {
+      debugPrint(
+          '📋 [Payment Modal] Using cached payment methods: ${cachedMethods.length}');
+      _assignPaymentMethodIds(cachedMethods);
+      return;
+    }
+
+    // No cache, fetch from API
+    setState(() {
+      _isLoadingPaymentMethods = true;
+    });
+
+    try {
+      final paymentMethods = await masterDataProvider.fetchPaymentMethods();
+
+      if (mounted && paymentMethods != null) {
+        debugPrint(
+            '📋 [Payment Modal] Loaded payment methods: ${paymentMethods.length}');
+        _assignPaymentMethodIds(paymentMethods);
+      }
+    } catch (e) {
+      debugPrint('❌ [Payment Modal] Error loading payment methods: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingPaymentMethods = false;
+        });
+      }
+    }
+  }
+
+  /// Assign payment method IDs by matching value field
+  void _assignPaymentMethodIds(List<MasterDataValue> methods) {
+    // Sort to put CASH first
+    final sortedMethods = List<MasterDataValue>.from(methods);
+    sortedMethods.sort((a, b) {
+      if (a.value.toUpperCase() == 'CASH') return -1;
+      if (b.value.toUpperCase() == 'CASH') return 1;
+      return a.value.compareTo(b.value);
+    });
+
+    setState(() {
+      _paymentMethods = sortedMethods;
+      _isLoadingPaymentMethods = false;
+
+      // Assign IDs based on value field
+      for (final method in sortedMethods) {
+        final value = method.value.toUpperCase();
+        if (value == 'CASH' || value == 'COD') {
+          _cashPaymentMethodId = method.id.toString();
+          debugPrint('💵 CASH ID: $_cashPaymentMethodId');
+        } else if (value == 'CARD') {
+          _cardPaymentMethodId = method.id.toString();
+          debugPrint('💳 CARD ID: $_cardPaymentMethodId');
+        } else if (value == 'UPI') {
+          _upiPaymentMethodId = method.id.toString();
+          debugPrint('📱 UPI ID: $_upiPaymentMethodId');
+        }
+      }
+    });
   }
 
   // Base balance calculation: always based on current purchase total
@@ -481,7 +565,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    final currency = context.watch<AppSettingsProvider>().appSettings?.currency ?? 'INR';
+    final currency =
+        context.watch<AppSettingsProvider>().appSettings?.currency ?? 'INR';
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: BuildBoxShadowContainer(
@@ -494,380 +579,385 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'billing.payment_methods'.tr,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'billing.payment_methods'.tr,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s16,
+                      0.21,
+                      ColorManager.kPrimaryColor,
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Cash Payment
-            _buildModalPaymentRow(
-              isSelected: isCashSelected,
-              icon: ImageAssets.cashIcon,
-              label: 'billing.cash'.tr,
-              controller: cashAmountController,
-              focusNode: cashAmountFocusNode,
-              size: size,
-              onToggle: () => _togglePaymentMethod('cash'),
-            ),
-
-            const SizedBox(height: 15),
-
-            // Card Payment
-            _buildModalPaymentRow(
-              isSelected: isCardSelected,
-              icon: ImageAssets.creditCardIcon,
-              label: 'billing.card'.tr,
-              controller: cardAmountController,
-              focusNode: cardAmountFocusNode,
-              size: size,
-              onToggle: () => _togglePaymentMethod('card'),
-            ),
-
-            const SizedBox(height: 15),
-
-            // UPI Payment
-            _buildModalPaymentRow(
-              isSelected: isUpiSelected,
-              icon: ImageAssets.creditCardIcon,
-              label: 'billing.upi'.tr,
-              controller: upiAmountController,
-              focusNode: upiAmountFocusNode,
-              size: size,
-              onToggle: () => _togglePaymentMethod('upi'),
-            ),
-
-            const SizedBox(height: 15),
-
-            // Transaction Reference Field - Show only if Card or UPI is selected
-            if (isCardSelected || isUpiSelected) ...[
-              Text(
-                'billing.transaction_reference'.tr,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s13,
-                  0.16,
-                  ColorManager.textColor,
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              buildColumnWidgetForTextFields(
-                controller: transactionNumberController,
+              const SizedBox(height: 20),
+
+              // Cash Payment
+              _buildModalPaymentRow(
+                isSelected: isCashSelected,
+                icon: ImageAssets.cashIcon,
+                label: 'billing.cash'.tr,
+                controller: cashAmountController,
+                focusNode: cashAmountFocusNode,
                 size: size,
-                width: 600,
-                height: size.height * .06,
-                hintText: 'Enter transaction reference number',
-                onTap: () {
-                  Provider.of<KeyboardProvider>(context, listen: false).show(
-                    'number',
-                    transactionNumberController,
-                    replaceOnFirstInput: true,
-                  );
-                },
+                onToggle: () => _togglePaymentMethod('cash'),
               ),
+
               const SizedBox(height: 15),
-            ],
 
-            const SizedBox(height: 10),
+              // Card Payment
+              _buildModalPaymentRow(
+                isSelected: isCardSelected,
+                icon: ImageAssets.creditCardIcon,
+                label: 'billing.card'.tr,
+                controller: cardAmountController,
+                focusNode: cardAmountFocusNode,
+                size: size,
+                onToggle: () => _togglePaymentMethod('card'),
+              ),
 
-            // Extended Summary
-            BuildPaymentRow(
-              amount: '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
-              title: 'billing.total_paid'.tr,
-              secondRowTextStyle: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.18,
-                ColorManager.kPrimaryColor,
-              ),
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s15,
-                0.23,
-                ColorManager.kPrimaryColor,
-              ),
-              color: ColorManager.kPrimaryColor,
-            ),
+              const SizedBox(height: 15),
 
-            BuildPaymentRow(
-              amount: '$currency ${widget.cartTotal.toStringAsFixed(2)}',
-              title: 'billing.purchase_total'.tr,
-              secondRowTextStyle: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s15,
-                0.18,
-                ColorManager.textColor,
+              // UPI Payment
+              _buildModalPaymentRow(
+                isSelected: isUpiSelected,
+                icon: ImageAssets.creditCardIcon,
+                label: 'billing.upi'.tr,
+                controller: upiAmountController,
+                focusNode: upiAmountFocusNode,
+                size: size,
+                onToggle: () => _togglePaymentMethod('upi'),
               ),
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s15,
-                0.20,
-                ColorManager.textColor,
-              ),
-              color: ColorManager.textColor,
-            ),
 
-            BuildPaymentRow(
-              amount: _formatSignedWithCurrency(widget.customerPrevBalance),
-              title: 'billing.customer_prev_balance'.tr,
-              secondRowTextStyle: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s15,
-                0.18,
-                widget.customerPrevBalance >= 0
-                    ? ColorManager.kButtonGreen
-                    : ColorManager.textColorRed,
-              ),
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s15,
-                0.20,
-                widget.customerPrevBalance >= 0
-                    ? ColorManager.kButtonGreen
-                    : ColorManager.textColorRed,
-              ),
-              color: widget.customerPrevBalance >= 0
-                  ? ColorManager.kButtonGreen
-                  : ColorManager.textColorRed,
-            ),
+              const SizedBox(height: 15),
 
-            const SizedBox(height: 8),
-            const Divider(thickness: 1),
-            const SizedBox(height: 8),
-
-            // To Customer Credit - toggle + optional input
-            Row(
-              children: [
+              // Transaction Reference Field - Show only if Card or UPI is selected
+              if (isCardSelected || isUpiSelected) ...[
                 Text(
-                  'billing.to_customer_credit'.tr,
+                  'billing.transaction_reference'.tr,
                   style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s14,
-                    0.20,
-                    ColorManager.kPrimaryColor,
+                    FontWeightManager.medium,
+                    FontSize.s13,
+                    0.16,
+                    ColorManager.textColor,
                   ),
                 ),
-                const Spacer(),
-                Switch(
-                  value: toCustomerCreditEnabled,
-                  activeColor: ColorManager.kPrimaryColor,
-                  onChanged: (value) {
-                    setState(() {
-                      debugPrint('=== TOGGLE TO CUSTOMER CREDIT ===');
-                      debugPrint('Toggle value changed to: $value');
-
-                      toCustomerCreditEnabled = value;
-                      if (toCustomerCreditEnabled) {
-                        debugPrint(
-                            '📈 TOGGLE ON - Enabling customer credit functionality');
-
-                        // Calculate current state
-                        final currentBaseBalance = _computeBaseBalance();
-                        final cashAmount =
-                            double.tryParse(cashAmountController.text) ?? 0.0;
-                        final cardAmount =
-                            double.tryParse(cardAmountController.text) ?? 0.0;
-                        final upiAmount =
-                            double.tryParse(upiAmountController.text) ?? 0.0;
-                        final totalCollected =
-                            cashAmount + cardAmount + upiAmount;
-                        final netDueWithToggle =
-                            widget.cartTotal - widget.customerPrevBalance;
-                        final netDueWithoutToggle = widget.cartTotal;
-
-                        debugPrint('💰 Current Payment State:');
-                        debugPrint(
-                            '  - Cash: ₹${cashAmount.toStringAsFixed(2)}');
-                        debugPrint(
-                            '  - Card: ₹${cardAmount.toStringAsFixed(2)}');
-                        debugPrint('  - UPI: ₹${upiAmount.toStringAsFixed(2)}');
-                        debugPrint(
-                            '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
-                        debugPrint('');
-                        debugPrint('🎯 Purchase & Balance Info:');
-                        debugPrint(
-                            '  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
-                        debugPrint(
-                            '  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
-                        debugPrint(
-                            '  - Net Due (Toggle OFF): ₹${netDueWithoutToggle.toStringAsFixed(2)}');
-                        debugPrint(
-                            '  - Net Due (Toggle ON): ₹${netDueWithToggle.toStringAsFixed(2)}');
-                        debugPrint(
-                            '  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
-                        debugPrint('');
-
-                        // Auto-fill logic with debt settlement priority
-                        // Calculate transaction excess (money beyond purchase total)
-                        final transactionExcess =
-                            totalCollected - widget.cartTotal;
-
-                        if (transactionExcess > 0) {
-                          double prefillAmount;
-
-                          if (widget.customerPrevBalance < 0) {
-                            // Customer owes money - prioritize debt settlement
-                            final customerDebt = widget.customerPrevBalance
-                                .abs(); // Convert negative to positive
-
-                            debugPrint('💳 DEBT SETTLEMENT PRIORITY:');
-                            debugPrint(
-                                '  - Customer Debt: ₹${customerDebt.toStringAsFixed(2)}');
-                            debugPrint(
-                                '  - Transaction Excess: ₹${transactionExcess.toStringAsFixed(2)}');
-                            debugPrint(
-                                '  - Available Base Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
-
-                            if (customerDebt <= transactionExcess) {
-                              // Can settle full debt from transaction excess - auto-fill with debt amount
-                              prefillAmount = customerDebt;
-                              debugPrint(
-                                  '  - Auto-filling with debt amount: ₹${prefillAmount.toStringAsFixed(2)} (can settle full debt)');
-                            } else {
-                              // Can't settle full debt - auto-fill with available transaction excess
-                              prefillAmount = transactionExcess;
-                              debugPrint(
-                                  '  - Auto-filling with transaction excess: ₹${prefillAmount.toStringAsFixed(2)} (partial debt settlement)');
-                            }
-                          } else {
-                            // Customer has positive/zero balance - use available base balance as before
-                            prefillAmount = currentBaseBalance;
-                            debugPrint(
-                                '  - Customer has credit/zero balance - auto-filling with base balance: ₹${prefillAmount.toStringAsFixed(2)}');
-                          }
-
-                          toCustomerCreditController.text =
-                              prefillAmount.toStringAsFixed(2);
-                          toCustomerCredit = prefillAmount;
-                          debugPrint(
-                              '✅ Auto-filled toCustomerCredit: ₹${prefillAmount.toStringAsFixed(2)}');
-                        } else {
-                          toCustomerCreditController.clear();
-                          toCustomerCredit = 0.0;
-                          debugPrint(
-                              'ℹ️ No excess money available - field left empty');
-                        }
-                      } else {
-                        debugPrint(
-                            '📉 TOGGLE OFF - Disabling customer credit functionality');
-                        debugPrint('  - Clearing toCustomerCredit field');
-                        debugPrint(
-                            '  - All excess money will go to cash balance');
-
-                        toCustomerCreditController.clear();
-                        toCustomerCredit = 0.0;
-                      }
-
-                      debugPrint('');
-                      _calculateBalance();
-                      debugPrint('=== END TOGGLE OPERATION ===\n');
-                    });
+                const SizedBox(height: 8),
+                buildColumnWidgetForTextFields(
+                  controller: transactionNumberController,
+                  size: size,
+                  width: 600,
+                  height: size.height * .06,
+                  hintText: 'Enter transaction reference number',
+                  onTap: () {
+                    Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number',
+                      transactionNumberController,
+                      replaceOnFirstInput: true,
+                    );
                   },
                 ),
+                const SizedBox(height: 15),
               ],
-            ),
-            if (toCustomerCreditEnabled) ...[
+
+              const SizedBox(height: 10),
+
+              // Extended Summary
+              BuildPaymentRow(
+                amount: '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
+                title: 'billing.total_paid'.tr,
+                secondRowTextStyle: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s15,
+                  0.18,
+                  ColorManager.kPrimaryColor,
+                ),
+                firstRowTextStyle: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s15,
+                  0.23,
+                  ColorManager.kPrimaryColor,
+                ),
+                color: ColorManager.kPrimaryColor,
+              ),
+
+              BuildPaymentRow(
+                amount: '$currency ${widget.cartTotal.toStringAsFixed(2)}',
+                title: 'billing.purchase_total'.tr,
+                secondRowTextStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s15,
+                  0.18,
+                  ColorManager.textColor,
+                ),
+                firstRowTextStyle: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s15,
+                  0.20,
+                  ColorManager.textColor,
+                ),
+                color: ColorManager.textColor,
+              ),
+
+              BuildPaymentRow(
+                amount: _formatSignedWithCurrency(widget.customerPrevBalance),
+                title: 'billing.customer_prev_balance'.tr,
+                secondRowTextStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s15,
+                  0.18,
+                  widget.customerPrevBalance >= 0
+                      ? ColorManager.kButtonGreen
+                      : ColorManager.textColorRed,
+                ),
+                firstRowTextStyle: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s15,
+                  0.20,
+                  widget.customerPrevBalance >= 0
+                      ? ColorManager.kButtonGreen
+                      : ColorManager.textColorRed,
+                ),
+                color: widget.customerPrevBalance >= 0
+                    ? ColorManager.kButtonGreen
+                    : ColorManager.textColorRed,
+              ),
+
               const SizedBox(height: 8),
-              buildColumnWidgetForTextFields(
-                controller: toCustomerCreditController,
-                size: size,
-                width: 600,
-                height: size.height * .06,
-                hintText: 'Enter amount to add as customer credit',
-                focusNode: toCustomerCreditFocusNode,
-                onTap: () {
-                  Provider.of<KeyboardProvider>(context, listen: false).show(
-                    'number',
-                    toCustomerCreditController,
-                    replaceOnFirstInput: true,
+              const Divider(thickness: 1),
+              const SizedBox(height: 8),
+
+              // To Customer Credit - toggle + optional input
+              Row(
+                children: [
+                  Text(
+                    'billing.to_customer_credit'.tr,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s14,
+                      0.20,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  Switch(
+                    value: toCustomerCreditEnabled,
+                    activeColor: ColorManager.kPrimaryColor,
+                    onChanged: (value) {
+                      setState(() {
+                        debugPrint('=== TOGGLE TO CUSTOMER CREDIT ===');
+                        debugPrint('Toggle value changed to: $value');
+
+                        toCustomerCreditEnabled = value;
+                        if (toCustomerCreditEnabled) {
+                          debugPrint(
+                              '📈 TOGGLE ON - Enabling customer credit functionality');
+
+                          // Calculate current state
+                          final currentBaseBalance = _computeBaseBalance();
+                          final cashAmount =
+                              double.tryParse(cashAmountController.text) ?? 0.0;
+                          final cardAmount =
+                              double.tryParse(cardAmountController.text) ?? 0.0;
+                          final upiAmount =
+                              double.tryParse(upiAmountController.text) ?? 0.0;
+                          final totalCollected =
+                              cashAmount + cardAmount + upiAmount;
+                          final netDueWithToggle =
+                              widget.cartTotal - widget.customerPrevBalance;
+                          final netDueWithoutToggle = widget.cartTotal;
+
+                          debugPrint('💰 Current Payment State:');
+                          debugPrint(
+                              '  - Cash: ₹${cashAmount.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - Card: ₹${cardAmount.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - UPI: ₹${upiAmount.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+                          debugPrint('');
+                          debugPrint('🎯 Purchase & Balance Info:');
+                          debugPrint(
+                              '  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - Net Due (Toggle OFF): ₹${netDueWithoutToggle.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - Net Due (Toggle ON): ₹${netDueWithToggle.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+                          debugPrint('');
+
+                          // Auto-fill logic with debt settlement priority
+                          // Calculate transaction excess (money beyond purchase total)
+                          final transactionExcess =
+                              totalCollected - widget.cartTotal;
+
+                          if (transactionExcess > 0) {
+                            double prefillAmount;
+
+                            if (widget.customerPrevBalance < 0) {
+                              // Customer owes money - prioritize debt settlement
+                              final customerDebt = widget.customerPrevBalance
+                                  .abs(); // Convert negative to positive
+
+                              debugPrint('💳 DEBT SETTLEMENT PRIORITY:');
+                              debugPrint(
+                                  '  - Customer Debt: ₹${customerDebt.toStringAsFixed(2)}');
+                              debugPrint(
+                                  '  - Transaction Excess: ₹${transactionExcess.toStringAsFixed(2)}');
+                              debugPrint(
+                                  '  - Available Base Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+
+                              if (customerDebt <= transactionExcess) {
+                                // Can settle full debt from transaction excess - auto-fill with debt amount
+                                prefillAmount = customerDebt;
+                                debugPrint(
+                                    '  - Auto-filling with debt amount: ₹${prefillAmount.toStringAsFixed(2)} (can settle full debt)');
+                              } else {
+                                // Can't settle full debt - auto-fill with available transaction excess
+                                prefillAmount = transactionExcess;
+                                debugPrint(
+                                    '  - Auto-filling with transaction excess: ₹${prefillAmount.toStringAsFixed(2)} (partial debt settlement)');
+                              }
+                            } else {
+                              // Customer has positive/zero balance - use available base balance as before
+                              prefillAmount = currentBaseBalance;
+                              debugPrint(
+                                  '  - Customer has credit/zero balance - auto-filling with base balance: ₹${prefillAmount.toStringAsFixed(2)}');
+                            }
+
+                            toCustomerCreditController.text =
+                                prefillAmount.toStringAsFixed(2);
+                            toCustomerCredit = prefillAmount;
+                            debugPrint(
+                                '✅ Auto-filled toCustomerCredit: ₹${prefillAmount.toStringAsFixed(2)}');
+                          } else {
+                            toCustomerCreditController.clear();
+                            toCustomerCredit = 0.0;
+                            debugPrint(
+                                'ℹ️ No excess money available - field left empty');
+                          }
+                        } else {
+                          debugPrint(
+                              '📉 TOGGLE OFF - Disabling customer credit functionality');
+                          debugPrint('  - Clearing toCustomerCredit field');
+                          debugPrint(
+                              '  - All excess money will go to cash balance');
+
+                          toCustomerCreditController.clear();
+                          toCustomerCredit = 0.0;
+                        }
+
+                        debugPrint('');
+                        _calculateBalance();
+                        debugPrint('=== END TOGGLE OPERATION ===\n');
+                      });
+                    },
+                  ),
+                ],
+              ),
+              if (toCustomerCreditEnabled) ...[
+                const SizedBox(height: 8),
+                buildColumnWidgetForTextFields(
+                  controller: toCustomerCreditController,
+                  size: size,
+                  width: 600,
+                  height: size.height * .06,
+                  hintText: 'Enter amount to add as customer credit',
+                  focusNode: toCustomerCreditFocusNode,
+                  onTap: () {
+                    Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number',
+                      toCustomerCreditController,
+                      replaceOnFirstInput: true,
+                    );
+                  },
+                  onchanged: (value) => _handleAmountControllerChange(
+                      'toCustomerCredit', toCustomerCreditController),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              BuildPaymentRow(
+                amount: '$currency ${balanceAmount.toStringAsFixed(2)}',
+                title: 'billing.cash_balance'.tr,
+                secondRowTextStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s15,
+                  0.18,
+                  balanceAmount > 0
+                      ? ColorManager.kButtonGreen
+                      : ColorManager.textColor,
+                ),
+                firstRowTextStyle: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s15,
+                  0.23,
+                  balanceAmount > 0
+                      ? ColorManager.kButtonGreen
+                      : ColorManager.textColor,
+                ),
+                color: balanceAmount > 0
+                    ? ColorManager.kButtonGreen
+                    : ColorManager.textColor,
+              ),
+
+              const SizedBox(height: 20),
+              CustomRoundButton(
+                title: widget.customButtonTitle ??
+                    'billing.apply_payment_methods'.tr,
+                fct: () {
+                  // Map To Customer Credit to legacy debit params for callback compatibility
+                  final double mappedCredit =
+                      double.tryParse(toCustomerCreditController.text) ?? 0.0;
+                  final bool mappedIsDebitSelected =
+                      toCustomerCreditEnabled && mappedCredit > 0;
+                  final String mappedDebitAmount = mappedIsDebitSelected
+                      ? mappedCredit.toStringAsFixed(2)
+                      : '';
+
+                  widget.onPaymentMethodSelected(
+                    isCashSelected,
+                    isCardSelected,
+                    isUpiSelected,
+                    mappedIsDebitSelected,
+                    cashAmountController.text,
+                    cardAmountController.text,
+                    upiAmountController.text,
+                    mappedDebitAmount,
+                    transactionNumberController.text,
+                    toCustomerCreditEnabled,
+                    cashMethodId: _cashPaymentMethodId,
+                    cardMethodId: _cardPaymentMethodId,
+                    upiMethodId: _upiPaymentMethodId,
                   );
+                  Navigator.of(context).pop();
+
+                  // Execute the callback function if provided (e.g., _saveOrder, _confirmOrder)
+                  if (widget.onAfterApply != null) {
+                    // Use a small delay to ensure the modal is fully closed before executing the callback
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      widget.onAfterApply!();
+                    });
+                  }
                 },
-                onchanged: (value) => _handleAmountControllerChange(
-                    'toCustomerCredit', toCustomerCreditController),
+                fontSize: FontSize.s14,
+                height: 45,
+                width: double.infinity,
               ),
-              const SizedBox(height: 12),
             ],
-
-            BuildPaymentRow(
-              amount: '$currency ${balanceAmount.toStringAsFixed(2)}',
-              title: 'billing.cash_balance'.tr,
-              secondRowTextStyle: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s15,
-                0.18,
-                balanceAmount > 0
-                    ? ColorManager.kButtonGreen
-                    : ColorManager.textColor,
-              ),
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s15,
-                0.23,
-                balanceAmount > 0
-                    ? ColorManager.kButtonGreen
-                    : ColorManager.textColor,
-              ),
-              color: balanceAmount > 0
-                  ? ColorManager.kButtonGreen
-                  : ColorManager.textColor,
-            ),
-
-            const SizedBox(height: 20),
-            CustomRoundButton(
-              title: widget.customButtonTitle ?? 'billing.apply_payment_methods'.tr,
-              fct: () {
-                // Map To Customer Credit to legacy debit params for callback compatibility
-                final double mappedCredit =
-                    double.tryParse(toCustomerCreditController.text) ?? 0.0;
-                final bool mappedIsDebitSelected =
-                    toCustomerCreditEnabled && mappedCredit > 0;
-                final String mappedDebitAmount = mappedIsDebitSelected
-                    ? mappedCredit.toStringAsFixed(2)
-                    : '';
-
-                widget.onPaymentMethodSelected(
-                  isCashSelected,
-                  isCardSelected,
-                  isUpiSelected,
-                  mappedIsDebitSelected,
-                  cashAmountController.text,
-                  cardAmountController.text,
-                  upiAmountController.text,
-                  mappedDebitAmount,
-                  transactionNumberController.text,
-                  toCustomerCreditEnabled,
-                );
-                Navigator.of(context).pop();
-                
-                // Execute the callback function if provided (e.g., _saveOrder, _confirmOrder)
-                if (widget.onAfterApply != null) {
-                  // Use a small delay to ensure the modal is fully closed before executing the callback
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    widget.onAfterApply!();
-                  });
-                }
-              },
-              fontSize: FontSize.s14,
-              height: 45,
-              width: double.infinity,
-            ),
-          ],
-        ),
           ),
+        ),
       ),
     );
   }
@@ -1226,6 +1316,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       ),
     );
   }
+
   String _formatSignedWithCurrency(double value) {
     final currency = Provider.of<AppSettingsProvider>(context, listen: false)
             .appSettings

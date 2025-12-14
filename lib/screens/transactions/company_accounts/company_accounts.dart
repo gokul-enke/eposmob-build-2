@@ -11,6 +11,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
@@ -613,9 +614,9 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                                           ),
                                         ),
                                         _buildTableCell(
-                                            "₹${account.formattedReceived}"),
+                                            "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${account.formattedReceived}"),
                                         _buildTableCell(
-                                            "₹${account.formattedSent}"),
+                                            "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${account.formattedSent}"),
                                         TableCell(
                                           verticalAlignment:
                                               TableCellVerticalAlignment.middle,

@@ -6,6 +6,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:provider/provider.dart';
 
@@ -33,7 +34,6 @@ class _CouponModalState extends State<CouponModal> {
   late bool isCouponApplied;
 
   @override
-
   void initState() {
     super.initState();
     couponController = TextEditingController(text: widget.initialCouponCode);
@@ -68,8 +68,11 @@ class _CouponModalState extends State<CouponModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LocalProductProvider>(
-      builder: (context, localProductProvider, child) {
+    return Consumer2<LocalProductProvider, AppSettingsProvider>(
+      builder: (context, localProductProvider, appSettingsProvider, child) {
+        // Get currency symbol from app settings
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
         // Calculate totals directly from the provider's price summary
         final priceSummary = localProductProvider.priceSummary;
         final originalSubTotal = priceSummary?.originalSubTotal ?? 0.0;
@@ -331,7 +334,7 @@ class _CouponModalState extends State<CouponModal> {
                             ),
                           ),
                           Text(
-                            'INR ${AmountHelper.formatAmount(originalSubTotal)}',
+                            '$currency ${AmountHelper.formatAmount(originalSubTotal)}',
                             style: buildCustomStyle(
                               FontWeightManager.bold,
                               FontSize.s15,
@@ -357,7 +360,7 @@ class _CouponModalState extends State<CouponModal> {
                           Row(
                             children: [
                               Text(
-                                'INR ${AmountHelper.formatAmount(totalDiscount)}',
+                                '$currency ${AmountHelper.formatAmount(totalDiscount)}',
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   FontSize.s15,
@@ -393,7 +396,7 @@ class _CouponModalState extends State<CouponModal> {
                             ),
                           ),
                           Text(
-                            'INR ${AmountHelper.formatAmount(newTotal)}',
+                            '$currency ${AmountHelper.formatAmount(newTotal)}',
                             style: buildCustomStyle(
                               FontWeightManager.bold,
                               FontSize.s15,

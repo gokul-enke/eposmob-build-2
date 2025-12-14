@@ -479,7 +479,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       debugPrint("  - You Saved: $youSaved");
 
       // Get active store name
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
       Navigator.push(
@@ -544,6 +545,20 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     );
   }
 
+  /// Helper function to convert payment method ID or value to display name
+  static String _getPaymentMethodDisplayName(String methodIdOrName) {
+    // If it's a numeric ID, try to convert to a display name
+    // This handles both legacy string names (CASH, CARD, UPI) and new numeric IDs
+    if (RegExp(r'^\d+$').hasMatch(methodIdOrName)) {
+      // It's a numeric ID - for now just show the ID with a label
+      // Ideally we would look up from cached payment methods
+      // Common IDs might be: 1=CASH, 2=CARD, 3=UPI, etc.
+      return "Payment #$methodIdOrName";
+    }
+    // It's already a name (CASH, CARD, UPI, etc.)
+    return methodIdOrName;
+  }
+
   static Widget _buildPaymentMethodInfo(
       String paymentMethodJsonOrString, String currency) {
     try {
@@ -562,11 +577,13 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             double amountValue = double.tryParse(amount.toString()) ?? 0.0;
             if (amountValue > 0) {
               totalPaid += amountValue;
+              // Convert method ID/name to display name
+              String displayName = _getPaymentMethodDisplayName(method);
               methodWidgets.add(
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, top: 4.0),
                   child: _buildInfoRow(
-                    "$method Payment",
+                    "$displayName Payment",
                     "$currency${amountValue.toStringAsFixed(2)}",
                     valueStyle: const TextStyle(
                       color: Colors.green,
@@ -607,6 +624,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       debugPrint("Error parsing payment method JSON: $e");
     }
     // Fallback for single payment method or parsing error
+    // Convert ID to display name if needed
+    String displayName =
+        _getPaymentMethodDisplayName(paymentMethodJsonOrString);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -619,7 +639,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _buildInfoRow("Method", paymentMethodJsonOrString,
+        _buildInfoRow("Method", displayName,
             valueStyle: const TextStyle(
               color: Colors.green,
               fontWeight: FontWeight.w600,

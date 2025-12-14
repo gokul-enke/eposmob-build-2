@@ -79,7 +79,8 @@ class OrderDetailsModelData {
         ordersId: json["orders_id"],
         storeId: json["store_id"],
         // Use cart store name as fallback when order store name is not available
-        storeName: json["store_name"] ?? (json["cart"] != null ? (json["cart"] as Map)["store_name"] : null),
+        storeName: json["store_name"] ??
+            (json["cart"] != null ? (json["cart"] as Map)["store_name"] : null),
         orderDate: json["order_date"],
         deliveryDate: json["delivery_date"],
         deliveryTime: json["delivery_time"],
@@ -108,18 +109,24 @@ class OrderDetailsModelData {
                 .map((x) => OrderDetailsModelDataOrderProp.fromJson(x))),
         deliveryMethodId: json["delivery_method_id"]?.toString(),
         deliveryMethodName: json["delivery_method_name"]?.toString(),
-        orderReturns: json["order_returns"] == null
-            ? null
-            : OrderReturns.fromJson(
-                json["order_returns"] is Map<String, dynamic>
-                    ? json["order_returns"]
-                    : {},
-              ),
+        orderReturns: _parseOrderReturns(json["order_returns"]),
         points: json["points"],
-        payments: json["payments"] is Map<String, dynamic> 
+        payments: json["payments"] is Map<String, dynamic>
             ? Map<String, dynamic>.from(json["payments"])
             : null,
       );
+
+  // Helper method to handle order_returns which can be null, empty List, or Map
+  static OrderReturns? _parseOrderReturns(dynamic orderReturns) {
+    if (orderReturns == null) return null;
+    // If it's an empty list [], return null (no returns)
+    if (orderReturns is List && orderReturns.isEmpty) return null;
+    // If it's a Map, parse it
+    if (orderReturns is Map<String, dynamic>) {
+      return OrderReturns.fromJson(orderReturns);
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         "orders_id": ordersId,
@@ -344,6 +351,7 @@ class OrderDetailsModelDataPriceSummary {
   final num? savedTotal;
   final num? discount;
   final num? netPayable;
+  final num? totalMrp;
 
   OrderDetailsModelDataPriceSummary({
     this.subTotal,
@@ -352,18 +360,29 @@ class OrderDetailsModelDataPriceSummary {
     this.savedTotal,
     this.discount,
     this.netPayable,
+    this.totalMrp,
   });
 
   factory OrderDetailsModelDataPriceSummary.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPriceSummary(
-        subTotal: json["sub_total"] is num ? json["sub_total"] : null,
-        totalTax: json["total_tax"] is num ? json["total_tax"] : null,
-        netTotal: json["net_total"] is num ? json["net_total"] : null,
-        savedTotal: json["total_saved"] is num ? json["total_saved"] : null,
-        discount: num.tryParse(json["discount"]?.toString() ?? ""),
-        netPayable: num.tryParse(json["net_payable"]?.toString() ?? ""),
+        // Handle both num and String types for all numeric fields
+        subTotal: _parseNum(json["sub_total"]),
+        totalTax: _parseNum(json["total_tax"]),
+        netTotal: _parseNum(json["net_total"]),
+        savedTotal: _parseNum(json["total_saved"]),
+        discount: _parseNum(json["discount"]),
+        netPayable: _parseNum(json["net_payable"]),
+        totalMrp: _parseNum(json["total_mrp"]),
       );
+
+  // Helper method to parse num from either num or String
+  static num? _parseNum(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value);
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         "sub_total": subTotal,
@@ -372,6 +391,7 @@ class OrderDetailsModelDataPriceSummary {
         "total_saved": savedTotal,
         "discount": discount,
         "net_payable": netPayable,
+        "total_mrp": totalMrp,
       };
 }
 
@@ -425,7 +445,8 @@ class OrderDetailsModelDataOrderProp {
       OrderDetailsModelDataOrderProp(
         propsId: json["props_id"],
         propsCode: json["props_code"],
-        propsValue: _parsePropsValue(json["props_value"]), // Handle different types
+        propsValue:
+            _parsePropsValue(json["props_value"]), // Handle different types
       );
 
   // Helper method to handle props_value which can be String, Map, or other types
@@ -447,7 +468,7 @@ class OrderDetailsModelDataOrderProp {
 }
 
 class OrderDetailsModelDataPaymentDetails {
-  final int? paymentId; // Nullable int for payment_id
+  final String? paymentId; // Changed to String to handle List of IDs joined
   final String? paymentStatus; // String for payment_status
   final int? transactionId; // Nullable int for transaction_id
   final String? paymentMethod; // String for payment_method
@@ -462,13 +483,28 @@ class OrderDetailsModelDataPaymentDetails {
   factory OrderDetailsModelDataPaymentDetails.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPaymentDetails(
-        paymentId: json["payment_id"], // This can be null
+        paymentId:
+            _parsePaymentId(json["payment_id"]), // Handle int, String, or List
         paymentStatus: json["payment_status"], // This is a String
         transactionId: json["transaction_id"] is int
             ? json["transaction_id"]
-            : null, // Ensure it's an int or null
-        paymentMethod: _parsePaymentMethod(json["payment_method"]), // Handle both String and List
+            : int.tryParse(json["transaction_id"]?.toString() ??
+                ''), // Handle both int and String
+        paymentMethod: _parsePaymentMethod(
+            json["payment_method"]), // Handle both String and List
       );
+
+  // Helper method to handle payment_id which can be int, String, or List
+  static String? _parsePaymentId(dynamic paymentId) {
+    if (paymentId == null) return null;
+    if (paymentId is int) return paymentId.toString();
+    if (paymentId is String) return paymentId;
+    if (paymentId is List && paymentId.isNotEmpty) {
+      // Join all payment IDs with commas for multiple payments
+      return paymentId.map((id) => id.toString()).join(', ');
+    }
+    return null;
+  }
 
   // Helper method to handle payment_method which can be String or List<String>
   static String? _parsePaymentMethod(dynamic paymentMethod) {

@@ -53,8 +53,11 @@ class PaymentCoordinator {
           upiAmount,
           debitAmount,
           transactionNumber,
-          toCustomerCredit,
-        ) {
+          toCustomerCredit, {
+          String? cashMethodId,
+          String? cardMethodId,
+          String? upiMethodId,
+        }) {
           bp.updatePaymentFromModal(
             isCash: isCash,
             isCard: isCard,
@@ -66,6 +69,9 @@ class PaymentCoordinator {
             debitAmount: debitAmount,
             transactionNumber: transactionNumber,
             toCustomerCredit: toCustomerCredit,
+            cashMethodId: cashMethodId,
+            cardMethodId: cardMethodId,
+            upiMethodId: upiMethodId,
           );
           // Recalculate balance with current cart total
           final netTotal =

@@ -13,6 +13,8 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:provider/provider.dart';
@@ -135,12 +137,16 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
   List<Invoice> _invoiceList = [];
   bool _isLoadingInvoices = false;
 
+  // Payment methods from API
+  List<MasterDataValue> _paymentMethods = [];
+  bool _isLoadingPaymentMethods = false;
+
   @override
   void initState() {
     super.initState();
     // Set default values
     _totalAmountController.text = "0.00";
-    _selectedPaymentMethod = "Cash";
+    // Payment method will be set dynamically in _loadPaymentMethods
 
     // Initialize new item card
     _newItemCard = ReceiptItemCard(defaultDescription: "Item 1");
@@ -148,9 +154,10 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     // Add listener to new item card's amount controller
     _newItemCard.amountController.addListener(_calculateTotalAmount);
 
-    // Load customers and invoices
+    // Load customers, invoices, and payment methods
     _loadCustomers();
     _loadInvoices();
+    _loadPaymentMethods();
 
     // Focus on Payment Method field on load
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -217,6 +224,50 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         context: context,
         message: 'Error loading customers: $e',
       );
+    }
+  }
+
+  // Load payment methods from API
+  void _loadPaymentMethods() async {
+    setState(() {
+      _isLoadingPaymentMethods = true;
+    });
+
+    try {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+
+      final paymentMethods = await masterDataProvider.fetchPaymentMethods();
+
+      if (mounted && paymentMethods != null) {
+        setState(() {
+          _paymentMethods = paymentMethods;
+          _isLoadingPaymentMethods = false;
+          // Set default payment method if available
+          if (_paymentMethods.isNotEmpty && _selectedPaymentMethod == null) {
+            // Try to set CASH or COD as default, otherwise use first available
+            final cashMethod =
+                _paymentMethods.where((m) => m.value == 'CASH').firstOrNull;
+            final codMethod =
+                _paymentMethods.where((m) => m.value == 'COD').firstOrNull;
+            if (cashMethod != null) {
+              _selectedPaymentMethod = 'CASH';
+            } else if (codMethod != null) {
+              _selectedPaymentMethod = 'COD';
+            } else {
+              _selectedPaymentMethod = _paymentMethods.first.value;
+            }
+          }
+        });
+        debugPrint(
+            '📋 [Receipt Modal] Payment methods loaded: $_paymentMethods');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Error loading payment methods: $e');
+      setState(() {
+        _isLoadingPaymentMethods = false;
+      });
     }
   }
 
@@ -330,7 +381,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         showScaffoldError(
           context: context,
           message:
-              'Paid amount (₹${paid.toStringAsFixed(2)}) cannot exceed balance (₹${balance.toStringAsFixed(2)}).',
+              'Paid amount (${paid.toStringAsFixed(2)}) cannot exceed balance (${balance.toStringAsFixed(2)}).',
         );
         return;
       }
@@ -504,7 +555,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         'paid_amount': double.tryParse(card.amountController.text) ?? 0.0,
         'status': 'paid',
         'payment_date': card.paymentDateController.text,
-        'payment_method': _getPaymentMethodKey(_selectedPaymentMethod),
+        'payment_method': _getPaymentMethodId(_selectedPaymentMethod),
         'description': card.descriptionController.text.isNotEmpty
             ? card.descriptionController.text
             : 'General Payment',
@@ -1040,21 +1091,16 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     );
   }
 
-  // Helper method to map display payment method names to backend keys
-  String _getPaymentMethodKey(String? displayName) {
-    switch (displayName) {
-      case 'Cash':
-        return 'CASH';
-      case 'Card':
-        return 'CARD';
-      case 'UPI':
-        return 'UPI';
-      case 'Cheque':
-        return 'CHEQUE';
-      case 'Bank Transfer':
-        return 'BANK_TRANSFER';
-      default:
-        return 'CASH';
+  // Helper method to get payment method ID for API
+  // Finds the ID for the given payment method value
+  int? _getPaymentMethodId(String? paymentMethodValue) {
+    if (paymentMethodValue == null || _paymentMethods.isEmpty) return null;
+    try {
+      return _paymentMethods
+          .firstWhere((m) => m.value == paymentMethodValue)
+          .id;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -1130,16 +1176,13 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             _buildLabel("Payment Method", isRequired: true),
                             const SizedBox(height: 4),
                             CustomDropDownWithSearch<String>(
-                              hintText: "Payment Method",
+                              hintText: _isLoadingPaymentMethods
+                                  ? "Loading..."
+                                  : "Payment Method",
                               title: "",
                               value: _selectedPaymentMethod,
-                              items: const [
-                                "Cash",
-                                "Card",
-                                "UPI",
-                                "Bank Transfer",
-                                "Cheque"
-                              ],
+                              items:
+                                  _paymentMethods.map((m) => m.value).toList(),
                               focusNode: _paymentMethodFocus,
                               onChanged: (value) {
                                 setState(() {
@@ -1149,7 +1192,15 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                 FocusScope.of(context)
                                     .requestFocus(_customerFocus);
                               },
-                              displayText: (item) => item,
+                              displayText: (item) {
+                                try {
+                                  return _paymentMethods
+                                      .firstWhere((m) => m.value == item)
+                                      .description;
+                                } catch (e) {
+                                  return item;
+                                }
+                              },
                               showName: false,
                               height: 48,
                             ),

@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_pagination_control.dart'
     as pagination;
 import 'package:pos_machine/models/supplier_voucher.dart';
 import 'package:pos_machine/providers/supplier_voucher_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
@@ -151,16 +152,15 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       children: [
         Text(
           "Supplier Voucher List",
-          style: buildCustomStyle(FontWeightManager.semiBold,
-              FontSize.s20, 0.30, ColorManager.textColor),
+          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+              0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
           title: "Create Supplier Voucher",
           fct: () {
             final controller = Get.find<SideBarController>();
             // If this list was opened via Transactions alias (75), go to 76. Otherwise go to 73.
-            controller.index.value =
-                (controller.index.value == 75) ? 76 : 73;
+            controller.index.value = (controller.index.value == 75) ? 76 : 73;
           },
           fontSize: FontSize.s12,
           height: 45,
@@ -476,10 +476,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                 border: null,
                                 defaultVerticalAlignment:
                                     TableCellVerticalAlignment.middle,
-                                children: voucherList
-                                    .asMap()
-                                    .entries
-                                    .map((entry) {
+                                children:
+                                    voucherList.asMap().entries.map((entry) {
                                   final int index = entry.key;
                                   final voucher = entry.value;
                                   return TableRow(
@@ -495,7 +493,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                       _buildTableCell(voucher.voucherDate),
                                       _buildTableCell(voucher.dueDate),
                                       _buildTableCell(voucher.paymentMethod),
-                                      _buildTableCell('₹${voucher.amount}'),
+                                      _buildTableCell(
+                                          '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}'),
                                       Center(
                                         child: _buildStatusChip(voucher.status),
                                       ),
@@ -507,9 +506,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                             children: [
                                               const SizedBox(width: 8),
                                               BuildBoxShadowContainer(
-                                                margin:
-                                                    const EdgeInsets.only(
-                                                        left: 5, right: 5),
+                                                margin: const EdgeInsets.only(
+                                                    left: 5, right: 5),
                                                 circleRadius: 5,
                                                 child: IconButton(
                                                   icon: Icon(
@@ -531,9 +529,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                                 ),
                                               ),
                                               BuildBoxShadowContainer(
-                                                margin:
-                                                    const EdgeInsets.only(
-                                                        left: 5, right: 5),
+                                                margin: const EdgeInsets.only(
+                                                    left: 5, right: 5),
                                                 circleRadius: 5,
                                                 child: IconButton(
                                                   icon: Icon(
@@ -758,14 +755,19 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildDetailRow('Voucher Number', voucher.voucherNumber),
-                              _buildDetailRow('Supplier Name', voucher.supplier.name),
-                              _buildDetailRow('Supplier Phone', voucher.supplier.phone),
+                              _buildDetailRow(
+                                  'Voucher Number', voucher.voucherNumber),
+                              _buildDetailRow(
+                                  'Supplier Name', voucher.supplier.name),
+                              _buildDetailRow(
+                                  'Supplier Phone', voucher.supplier.phone),
                               _buildDetailRow('Type', voucher.type),
-                              _buildDetailRow('Voucher Date', voucher.voucherDate),
+                              _buildDetailRow(
+                                  'Voucher Date', voucher.voucherDate),
                               _buildDetailRow('Due Date', voucher.dueDate),
                               _buildDetailRow('Status', voucher.status),
-                              _buildDetailRow('Payment Method', voucher.paymentMethod),
+                              _buildDetailRow(
+                                  'Payment Method', voucher.paymentMethod),
                             ],
                           ),
                         ),
@@ -860,7 +862,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '₹${voucher.amount}',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}',
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   FontSize.s18,

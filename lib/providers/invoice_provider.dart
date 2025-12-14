@@ -790,14 +790,16 @@ class InvoiceProvider extends ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      debugPrint("[InvoiceProvider] Payment methods response: ${response.statusCode}");
+      debugPrint(
+          "[InvoiceProvider] Payment methods response: ${response.statusCode}");
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         debugPrint("[InvoiceProvider] Payment methods data: $jsonData");
         GetPaymentMethodsModel getPaymentMethodsModel =
             GetPaymentMethodsModel.fromJson(jsonData);
 
-        paymentList = getPaymentMethodsModel.paymentList;
+        // Use paymentListAsMap for backwards compatibility with Map<String, String>
+        paymentList = getPaymentMethodsModel.paymentListAsMap;
         debugPrint("[InvoiceProvider] Payment list parsed: $paymentList");
 
         notifyListeners();
@@ -888,7 +890,8 @@ class InvoiceProvider extends ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      debugPrint("[InvoiceProvider] Account types response: ${response.statusCode}");
+      debugPrint(
+          "[InvoiceProvider] Account types response: ${response.statusCode}");
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         debugPrint("[InvoiceProvider] Account types data: $jsonData");
@@ -897,7 +900,8 @@ class InvoiceProvider extends ChangeNotifier {
 
         getInvoiceAccountTypesModelData =
             getInvoiceAccountTypesModel.getInvoiceAccountTypesModelData;
-        debugPrint("[InvoiceProvider] Account types parsed: $getInvoiceAccountTypesModelData");
+        debugPrint(
+            "[InvoiceProvider] Account types parsed: $getInvoiceAccountTypesModelData");
 
         notifyListeners();
       } else {
@@ -1268,8 +1272,8 @@ class InvoiceProvider extends ChangeNotifier {
         'per_page': '1000',
       };
 
-      final uri =
-          Uri.parse(APPUrl.listAllInvoices).replace(queryParameters: queryParams);
+      final uri = Uri.parse(APPUrl.listAllInvoices)
+          .replace(queryParameters: queryParams);
       debugPrint(
           'refreshSingleInvoiceFromServer: fetching invoices for merge from: $uri');
 
@@ -1325,7 +1329,7 @@ class InvoiceProvider extends ChangeNotifier {
 
       // Merge into paginated view
       if (invoiceListDetails != null && invoiceListDetails!.isNotEmpty) {
-        for (var i = 0; i <invoiceListDetails!.length; i++) {
+        for (var i = 0; i < invoiceListDetails!.length; i++) {
           if (invoiceListDetails![i].id == invoiceId) {
             invoiceListDetails![i] = updatedInvoice;
             break;
@@ -1514,8 +1518,7 @@ class InvoiceProvider extends ChangeNotifier {
 
       debugPrint(
           '📥 [InvoiceProvider] Response status: ${response.statusCode}');
-      debugPrint(
-          '📥 [InvoiceProvider] Response body: ${response.body}');
+      debugPrint('📥 [InvoiceProvider] Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
