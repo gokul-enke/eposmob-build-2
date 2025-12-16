@@ -10,6 +10,7 @@ class AppSettings {
   final bool priceRoundOff;
   final bool discountAndCoupon;
   final bool autoAssignDefaultCustomer;
+  final String autoAssignDefaultCustomerPhone;
   final String currency;
   final bool zatcaPhase1Enabled;
   final bool zatcaPhase2Enabled;
@@ -24,6 +25,7 @@ class AppSettings {
     required this.priceRoundOff,
     required this.discountAndCoupon,
     required this.autoAssignDefaultCustomer,
+    required this.autoAssignDefaultCustomerPhone,
     required this.currency,
     required this.zatcaPhase1Enabled,
     required this.zatcaPhase2Enabled,
@@ -83,6 +85,8 @@ class AppSettings {
       discountAndCoupon: settingsMap['DISCOUNT_AND_COUPON']?['status'] ?? false,
       autoAssignDefaultCustomer:
           settingsMap['AUTO_ASSIGN_DEFAULT_CUSTOMER']?['status'] ?? false,
+      autoAssignDefaultCustomerPhone:
+          settingsMap['AUTO_ASSIGN_DEFAULT_CUSTOMER']?['value'] ?? "",
       currency: settingsMap['CURRENCY']?['value'] ?? "",
       zatcaPhase1Enabled: settingsMap['ZATCA_PHASE_1']?['status'] ?? false,
       zatcaPhase2Enabled: settingsMap['ZATCA_PHASE_2']?['status'] ?? false,

@@ -46,13 +46,13 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
   final countryTextController = TextEditingController();
   final stateSearchController = TextEditingController();
   final districtSearchController = TextEditingController();
-  final balanceTextController = TextEditingController();
+  final balanceTextController = TextEditingController(text: '0');
   final altPhoneTextController = TextEditingController();
   final dobTextController = TextEditingController();
   final crNumberController = TextEditingController();
   final vatNumberController = TextEditingController();
 
-  PaymentType selectedPaymentType = PaymentType.none;
+  PaymentType selectedPaymentType = PaymentType.toReceive;
   String? selectedStateId;
   String? selectedDistrictId;
   String? selectedPincodeId;
@@ -85,7 +85,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
     Size size = MediaQuery.of(context).size;
     final locationProvider = Provider.of<LocationProvider>(context);
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
 
     return Form(
@@ -764,7 +765,6 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
   Future<void> _submitForm(
       LocationProvider locationProvider, String? accessToken) async {
     if (_formKey.currentState!.validate()) {
-
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -802,11 +802,17 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             (storeProvider.activeStore?.storeId ?? 1).toString();
 
         // ZATCA Phase 1 handling: if disabled, force B2C and clear CR/VAT
-        final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-        final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
-        final String customerTypeToSend = isZatcaPhase1Enabled ? selectedCustomerType : 'B2C';
-        final String crToSend = isZatcaPhase1Enabled ? crNumberController.text.trim() : '';
-        final String vatToSend = isZatcaPhase1Enabled ? vatNumberController.text.trim() : '';
+        final appSettings =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings;
+        final bool isZatcaPhase1Enabled =
+            appSettings?.zatcaPhase1Enabled ?? false;
+        final String customerTypeToSend =
+            isZatcaPhase1Enabled ? selectedCustomerType : 'B2C';
+        final String crToSend =
+            isZatcaPhase1Enabled ? crNumberController.text.trim() : '';
+        final String vatToSend =
+            isZatcaPhase1Enabled ? vatNumberController.text.trim() : '';
 
         await CustomerProvider()
             .addCustomer(

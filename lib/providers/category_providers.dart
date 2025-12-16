@@ -154,7 +154,7 @@ class CategoryProvider extends ChangeNotifier {
       queryParameters['filter_parent'] = filterParent;
     }
 
-    final uri = Uri.parse(APPUrl.categoryListUrl)
+    final uri = Uri.parse(APPUrl.getSellableCategoryListUrl)
         .replace(queryParameters: queryParameters);
 
     // Get API key from SharedPreferences
@@ -277,7 +277,7 @@ class CategoryProvider extends ChangeNotifier {
       queryParameters['filter_parent'] = filterParent;
     }
 
-    final uri = Uri.parse(APPUrl.categoryListUrl)
+    final uri = Uri.parse(APPUrl.getSellableCategoryListUrl)
         .replace(queryParameters: queryParameters);
 
     // Get API key from SharedPreferences

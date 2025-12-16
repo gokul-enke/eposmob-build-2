@@ -143,8 +143,16 @@ class _RestaurantPageState extends State<RestaurantPage> {
             activeTableId: _activeTableId,
             onSelect: (id) {
               _autoSaveCurrentTableBeforeSwitch();
+              // Get table name from provider for desktop mode
+              final tableProvider =
+                  Provider.of<TableProvider>(context, listen: false);
+              final selectedTable = tableProvider.tables.firstWhere(
+                (table) => table.id == id,
+                orElse: () => tableProvider.tables.first,
+              );
               setState(() {
                 _activeTableId = id;
+                _selectedTableName = selectedTable.name;
               });
             },
             screenSize: screenSize,
@@ -612,7 +620,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         couponId: null, // Not applicable
         comment: currentComment.isNotEmpty
             ? currentComment
-            : "Order for Table $_activeTableId", // Add a comment for context
+            : "Order for Table ${_selectedTableName ?? _activeTableId}", // Use table name for clarity
         deliveryMethodId:
             Provider.of<DeliveryMethodsProvider>(context, listen: false)
                     .defaultDeliveryMethod
