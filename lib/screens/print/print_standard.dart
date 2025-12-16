@@ -492,6 +492,7 @@ class StandardPrinter {
                 customerAddress,
                 subheaderStyle,
                 bodyStyle,
+                isRtl: isRtl,
               ),
 
             // Items table - minimal design without borders
@@ -534,7 +535,10 @@ class StandardPrinter {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('ORDER SUMMARY', style: subheaderStyle),
+                    pw.Text('ORDER SUMMARY',
+                        style: subheaderStyle,
+                        textAlign:
+                            isRtl ? pw.TextAlign.right : pw.TextAlign.left),
                     pw.SizedBox(height: 5), // Reduced from 10
                     _buildPdfSummary(
                         summaryStyle,
@@ -557,19 +561,11 @@ class StandardPrinter {
                       pw.Column(
                         children: [
                           pw.SizedBox(height: 5),
-                          pw.Row(
-                            mainAxisAlignment:
-                                pw.MainAxisAlignment.spaceBetween,
-                            children: [
-                              pw.Text('Amount in words:', style: summaryStyle),
-                              pw.Expanded(
-                                child: pw.Text(
-                                  '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
-                                  style: summaryStyle,
-                                  textAlign: pw.TextAlign.right,
-                                ),
-                              ),
-                            ],
+                          _buildLabelValueRow(
+                            'Amount in words:',
+                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                            summaryStyle,
+                            isRtl: isRtl,
                           ),
                         ],
                       ),
@@ -605,6 +601,7 @@ class StandardPrinter {
                 isFromLocalStorage,
                 updatedSettings, // Pass displayConfig
                 billDocumentConfig, // Pass billDocumentConfig for resolved_labels
+                isRtl: isRtl,
               ),
             ],
 
@@ -1339,8 +1336,9 @@ class StandardPrinter {
     String? customerEmail,
     String? customerAddress,
     pw.TextStyle headerStyle,
-    pw.TextStyle bodyStyle,
-  ) {
+    pw.TextStyle bodyStyle, {
+    bool isRtl = false,
+  }) {
     // Create a larger style for customer details
     final customerDetailStyle = pw.TextStyle(
       fontSize:
@@ -1353,7 +1351,8 @@ class StandardPrinter {
       padding: const pw.EdgeInsets.symmetric(
           vertical: 8, horizontal: 8), // Increased vertical padding
       child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        crossAxisAlignment:
+            isRtl ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
         children: [
           // Add a header for customer details
           // pw.Text(
@@ -1400,7 +1399,9 @@ class StandardPrinter {
     bool isFromLocalStorage,
     Map<String, DisplayOption>? displayConfig,
     DocumentConfig? billDocumentConfig, // Add this parameter
-  ) {
+    {
+    bool isRtl = false,
+  }) {
     // Create headers for the return table using configuration
     final List<String> tableHeaders = [];
     final Map<int, pw.Alignment> cellAlignmentsMap = {};
@@ -1605,6 +1606,33 @@ class StandardPrinter {
       tableData.add(rowData);
     }
 
+    // Apply RTL column reversal if needed
+    final finalHeaders = isRtl ? tableHeaders.reversed.toList() : tableHeaders;
+    final finalData = isRtl
+        ? tableData.map((row) => row.reversed.toList()).toList()
+        : tableData;
+    final finalColumnWidths =
+        isRtl ? columnWidths.reversed.toList() : columnWidths;
+
+    // Remap cell alignments for RTL (swap left/right alignments and reverse order)
+    final Map<int, pw.Alignment> finalCellAlignments = {};
+    if (isRtl) {
+      final numCols = tableHeaders.length;
+      cellAlignmentsMap.forEach((key, value) {
+        final newKey = numCols - 1 - key;
+        // Swap left and right alignments
+        if (value == pw.Alignment.centerLeft) {
+          finalCellAlignments[newKey] = pw.Alignment.centerRight;
+        } else if (value == pw.Alignment.centerRight) {
+          finalCellAlignments[newKey] = pw.Alignment.centerLeft;
+        } else {
+          finalCellAlignments[newKey] = value;
+        }
+      });
+    } else {
+      finalCellAlignments.addAll(cellAlignmentsMap);
+    }
+
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
       child: pw.Column(
@@ -1615,8 +1643,8 @@ class StandardPrinter {
           // Return Items Table
           if (tableHeaders.isNotEmpty && tableData.isNotEmpty)
             pw.Table.fromTextArray(
-              headers: tableHeaders,
-              data: tableData,
+              headers: finalHeaders,
+              data: finalData,
               headerStyle: tableHeaderStyle,
               headerDecoration: const pw.BoxDecoration(
                 color: PdfColors.grey200,
@@ -1624,7 +1652,7 @@ class StandardPrinter {
               headerHeight: 20,
               cellStyle: bodyStyle,
               cellHeight: 18,
-              cellAlignments: cellAlignmentsMap,
+              cellAlignments: finalCellAlignments,
               cellPadding: const pw.EdgeInsets.all(3),
               border: const pw.TableBorder(
                 top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
@@ -1637,8 +1665,8 @@ class StandardPrinter {
                     pw.BorderSide(color: PdfColors.grey700, width: 0.5),
               ),
               columnWidths: {
-                for (var i in columnWidths.asMap().keys)
-                  i: pw.FlexColumnWidth(columnWidths[i])
+                for (var i in finalColumnWidths.asMap().keys)
+                  i: pw.FlexColumnWidth(finalColumnWidths[i])
               },
             )
           else
@@ -1655,39 +1683,24 @@ class StandardPrinter {
                 pw.SizedBox(height: 3),
                 // Display Item Count
                 if (displayConfig?['showReturnItemsCount']?.visible == true)
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('Total Items:', style: summaryStyle),
-                      pw.Text(orderReturns.returnItems!.length.toString(),
-                          style: summaryStyle),
-                    ],
-                  ),
+                  _buildLabelValueRow('Total Items:',
+                      orderReturns.returnItems!.length.toString(), summaryStyle,
+                      isRtl: isRtl),
                 if (displayConfig?['showReturnItemsCount']?.visible == true)
                   pw.SizedBox(height: 2),
                 // Display Total MRP
                 if (displayConfig?['showReturnTotalAmount']?.visible == true)
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('Total MRP:', style: summaryStyle),
-                      pw.Text(calculatedReturnTotal.toStringAsFixed(2),
-                          style: summaryStyle),
-                    ],
-                  ),
+                  _buildLabelValueRow('Total MRP:',
+                      calculatedReturnTotal.toStringAsFixed(2), summaryStyle,
+                      isRtl: isRtl),
                 if (displayConfig?['showReturnTotalAmount']?.visible == true)
                   pw.SizedBox(height: 2),
                 // Display Net Total
                 if (displayConfig?['showReturnNetAmount']?.visible == true) ...[
                   pw.Divider(color: PdfColors.black),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('Net Total:', style: netTotalStyle),
-                      pw.Text(calculatedReturnTotal.toStringAsFixed(2),
-                          style: netTotalStyle),
-                    ],
-                  ),
+                  _buildLabelValueRow('Net Total:',
+                      calculatedReturnTotal.toStringAsFixed(2), netTotalStyle,
+                      isRtl: isRtl),
                 ],
               ],
             ),
@@ -2023,8 +2036,20 @@ class StandardPrinter {
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
 
-      // Define styles with adjustments for A5 vs A4 - optimized for space and professional look
+      // Load Arabic fonts for multilingual support
+      final arabicFont = await _loadArabicFont();
+      final arabicFontBold = await _loadArabicFontBold();
+
+      // Determine text direction based on selected app language
+      final isRtl = LocalizationService.locale.languageCode == 'ar';
+      final textDirection = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+      debugPrint(
+          'PDF (Share) - Language: ${LocalizationService.locale.languageCode}, RTL: $isRtl');
+
+      // Define styles with Arabic font for multilingual support
+      // Use fontBold parameter for styles that need bold rendering
       final headerStyle = pw.TextStyle(
+        font: arabicFontBold,
         fontSize: selectedPaperSize == 'A5'
             ? 16.0
             : 18.0, // Increased for better hierarchy
@@ -2032,6 +2057,7 @@ class StandardPrinter {
         color: PdfColors.black,
       );
       final subheaderStyle = pw.TextStyle(
+        font: arabicFontBold,
         fontSize: selectedPaperSize == 'A5'
             ? 9.0
             : 11.0, // Reduced for better proportion
@@ -2039,16 +2065,21 @@ class StandardPrinter {
         color: PdfColors.black,
       );
       final bodyStyle = pw.TextStyle(
+        font: arabicFont,
+        fontBold: arabicFontBold,
         fontSize: selectedPaperSize == 'A5'
             ? 6.0
             : 8.0, // Reduced for smaller table text
         color: PdfColors.black,
       );
       final smallStyle = pw.TextStyle(
+        font: arabicFont,
+        fontBold: arabicFontBold,
         fontSize: selectedPaperSize == 'A5' ? 5.0 : 7.0, // Reduced further
         color: PdfColors.black,
       );
       final tableHeaderStyle = pw.TextStyle(
+        font: arabicFontBold,
         fontSize: selectedPaperSize == 'A5'
             ? 6.0
             : 8.0, // Reduced for smaller table headers
@@ -2056,6 +2087,7 @@ class StandardPrinter {
         color: PdfColors.black,
       );
       final summaryStyle = pw.TextStyle(
+        font: arabicFontBold,
         fontSize: selectedPaperSize == 'A5'
             ? 8.0
             : 10.0, // Reduced for better proportion
@@ -2063,6 +2095,7 @@ class StandardPrinter {
         color: PdfColors.black,
       );
       final netTotalStyle = pw.TextStyle(
+        font: arabicFontBold,
         fontSize: selectedPaperSize == 'A5'
             ? 9.0
             : 11.0, // Reduced for better proportion
@@ -2074,6 +2107,7 @@ class StandardPrinter {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: pageFormat,
+          textDirection: textDirection,
           margin: const pw.EdgeInsets.all(15), // Reduced from 30
           footer: (context) => pw.Padding(
             padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
@@ -2168,31 +2202,56 @@ class StandardPrinter {
                         vertical: 0, horizontal: 8), // Reduced padding
                     child: pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (updatedSettings?['showInvoiceTitle']?.visible ==
-                            true)
-                          pw.Text(
-                              updatedSettings?['showInvoiceTitle']?.value
-                                      as String? ??
-                                  billDocumentConfig.header ??
-                                  'INVOICE',
-                              style: subheaderStyle),
-                        if (updatedSettings?['showInvoiceNumber']?.visible ==
-                            true)
-                          pw.Text(
-                              (billDocumentConfig.numberPrefix != null &&
-                                      billDocumentConfig
-                                          .numberPrefix!.isNotEmpty)
-                                  ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                  : 'No: $orderNumber',
-                              style: subheaderStyle),
-                      ],
+                      children: isRtl
+                          ? [
+                              if (updatedSettings?['showInvoiceNumber']
+                                      ?.visible ==
+                                  true)
+                                pw.Text(
+                                    (billDocumentConfig.numberPrefix != null &&
+                                            billDocumentConfig
+                                                .numberPrefix!.isNotEmpty)
+                                        ? '${billDocumentConfig.numberPrefix}$orderNumber'
+                                        : 'No: $orderNumber',
+                                    style: subheaderStyle),
+                              if (updatedSettings?['showInvoiceTitle']
+                                      ?.visible ==
+                                  true)
+                                pw.Text(
+                                    updatedSettings?['showInvoiceTitle']?.value
+                                            as String? ??
+                                        billDocumentConfig.header ??
+                                        'INVOICE',
+                                    style: subheaderStyle),
+                            ]
+                          : [
+                              if (updatedSettings?['showInvoiceTitle']
+                                      ?.visible ==
+                                  true)
+                                pw.Text(
+                                    updatedSettings?['showInvoiceTitle']?.value
+                                            as String? ??
+                                        billDocumentConfig.header ??
+                                        'INVOICE',
+                                    style: subheaderStyle),
+                              if (updatedSettings?['showInvoiceNumber']
+                                      ?.visible ==
+                                  true)
+                                pw.Text(
+                                    (billDocumentConfig.numberPrefix != null &&
+                                            billDocumentConfig
+                                                .numberPrefix!.isNotEmpty)
+                                        ? '${billDocumentConfig.numberPrefix}$orderNumber'
+                                        : 'No: $orderNumber',
+                                    style: subheaderStyle),
+                            ],
                     ),
                   ),
 
                 // Date and Time Row - minimal design
                 _buildDateTimeRowPDF(
-                    selectedPaperSize, orderDate, isFromLocalStorage),
+                    selectedPaperSize, orderDate, isFromLocalStorage,
+                    isRtl: isRtl),
 
                 // Customer Information Section - if available
                 if (customerName != null ||
@@ -2207,6 +2266,7 @@ class StandardPrinter {
                     customerAddress,
                     subheaderStyle,
                     bodyStyle,
+                    isRtl: isRtl,
                   ),
 
                 // Items table - minimal design without borders
@@ -2228,14 +2288,16 @@ class StandardPrinter {
                             updatedSettings,
                             cartItems,
                             isFromLocalStorage,
-                            billDocumentConfig),
+                            billDocumentConfig,
+                            isRtl: isRtl),
                       ],
                     ),
                   ),
 
                 // Cart Total Row - added after items table
                 _buildCartTotalRow(selectedPaperSize, cartItems,
-                    isFromLocalStorage, summaryStyle),
+                    isFromLocalStorage, summaryStyle,
+                    isRtl: isRtl),
 
                 pw.SizedBox(height: 5), // Reduced from 8
 
@@ -2251,7 +2313,10 @@ class StandardPrinter {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('ORDER SUMMARY', style: subheaderStyle),
+                        pw.Text('ORDER SUMMARY',
+                            style: subheaderStyle,
+                            textAlign:
+                                isRtl ? pw.TextAlign.right : pw.TextAlign.left),
                         pw.SizedBox(height: 5), // Reduced from 10
                         _buildPdfSummary(
                             summaryStyle,
@@ -2263,7 +2328,8 @@ class StandardPrinter {
                             cartItems.length,
                             billDocumentConfig,
                             customerOldBalance,
-                            customerCurrentBalance),
+                            customerCurrentBalance,
+                            isRtl: isRtl),
                       ],
                     ),
                   ),
@@ -2284,6 +2350,7 @@ class StandardPrinter {
                     isFromLocalStorage,
                     updatedSettings,
                     billDocumentConfig, // Pass billDocumentConfig for resolved_labels
+                    isRtl: isRtl,
                   ),
                 ],
 
@@ -2300,6 +2367,7 @@ class StandardPrinter {
                     summaryStyle,
                     netTotalStyle,
                     updatedSettings,
+                    isRtl: isRtl,
                   ),
                 ],
 
@@ -2312,21 +2380,11 @@ class StandardPrinter {
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 0, horizontal: 8), // Same padding as summary
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          'Amount in words:',
-                          style:
-                              summaryStyle, // Same style as other summary items
-                        ),
-                        pw.Text(
-                          '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
-                          style:
-                              summaryStyle, // Same style as other summary items
-                          textAlign: pw.TextAlign.right,
-                        ),
-                      ],
+                    child: _buildLabelValueRow(
+                      'Amount in words:',
+                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                      summaryStyle,
+                      isRtl: isRtl,
                     ),
                   ),
 
@@ -2342,6 +2400,7 @@ class StandardPrinter {
                       customerCurrentBalance,
                       paidAmount,
                       bodyStyle,
+                      isRtl: isRtl,
                     ),
                   ),
 
@@ -2411,7 +2470,8 @@ class StandardPrinter {
                       if (_hasTermsData(
                           updatedSettings, billDocumentConfig)) ...[
                         _buildTermsConditionsBoxPDF(selectedPaperSize,
-                            updatedSettings, billDocumentConfig),
+                            updatedSettings, billDocumentConfig,
+                            isRtl: isRtl),
                       ],
                     ],
                   ],

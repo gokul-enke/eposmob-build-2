@@ -16,6 +16,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/resources/localization_service.dart';
 
 class ThermalPrinter {
   final BuildContext context;
@@ -32,19 +33,33 @@ class ThermalPrinter {
 
   ThermalPrinter(this.context);
 
-  String _sanitizeTextForThermalPrinter(String text) {
-    return text
-        // Replace em dash with regular hyphen
-        .replaceAll('–', '-')
-        .replaceAll('—', '-') // en dash as well
-        // Replace other problematic Unicode characters
-        .replaceAll('“', '"') // smart quotes to regular quotes
-        .replaceAll('”', '"')
-        .replaceAll('‘', "'") // smart apostrophes
-        .replaceAll('’', "'")
-        .replaceAll('…', '...') // ellipsis
-        // Remove any remaining non-printable characters except basic punctuation
-        .replaceAll(RegExp(r'[^\x20-\x7E]'), '');
+  String _sanitizeTextForThermalPrinter(String text, {bool isArabic = false}) {
+    if (isArabic) {
+      // For Arabic: only replace problematic special chars, preserve Arabic Unicode (U+0600-U+06FF)
+      return text
+          .replaceAll('–', '-')
+          .replaceAll('—', '-')
+          .replaceAll('“', '"')
+          .replaceAll('”', '"')
+          .replaceAll('‘', "'")
+          .replaceAll('’', "'")
+          .replaceAll('…', '...');
+      // Keep Arabic text intact - no final regex cleanup
+    } else {
+      // For non-Arabic: use original strict sanitization
+      return text
+          // Replace em dash with regular hyphen
+          .replaceAll('–', '-')
+          .replaceAll('—', '-') // en dash as well
+          // Replace other problematic Unicode characters
+          .replaceAll('“', '"') // smart quotes to regular quotes
+          .replaceAll('”', '"')
+          .replaceAll('‘', "'") // smart apostrophes
+          .replaceAll('’', "'")
+          .replaceAll('…', '...') // ellipsis
+          // Remove any remaining non-printable characters except basic punctuation
+          .replaceAll(RegExp(r'[^\x20-\x7E]'), '');
+    }
   }
 
   // Removed _maskPhone - now using StringHelper.maskStringShowLast4
@@ -226,7 +241,9 @@ class ThermalPrinter {
         }
 
         // Add Customer Balance after Amount in words
-        if (customerOldBalance != null || customerCurrentBalance != null || paidAmount != null) {
+        if (customerOldBalance != null ||
+            customerCurrentBalance != null ||
+            paidAmount != null) {
           bytes += _buildCustomerBalance(
             generator,
             customerOldBalance,
@@ -1360,10 +1377,14 @@ class ThermalPrinter {
       PosFontType fontType) {
     List<int> bytes = [];
 
+    // Determine if language is Arabic for text sanitization
+    final isArabic = LocalizationService.locale.languageCode == 'ar';
+
     debugPrint("===== BUILD CART ITEMS DEBUG =====");
     debugPrint("Cart items count: ${cartItems.length}");
     debugPrint("Selected paper size: $selectedPaperSize");
     debugPrint("Is from local storage: $isFromLocalStorage");
+    debugPrint("Is Arabic: $isArabic");
 
     // Determine if we're using 58mm paper for font size adjustment
     bool is58mm = selectedPaperSize == '58mm';
@@ -1576,13 +1597,14 @@ class ThermalPrinter {
             displayConfig?['showParticulars']?.visible == true) {
           // Both SL and product name
           leftColumnText =
-              '$slNumber ${_sanitizeTextForThermalPrinter(productName)}';
+              '$slNumber ${_sanitizeTextForThermalPrinter(productName, isArabic: isArabic)}';
         } else if (displayConfig?['showSLNumber']?.visible == true) {
           // Only SL number
           leftColumnText = slNumber;
         } else {
           // Only product name
-          leftColumnText = _sanitizeTextForThermalPrinter(productName);
+          leftColumnText =
+              _sanitizeTextForThermalPrinter(productName, isArabic: isArabic);
         }
 
         debugPrint(
