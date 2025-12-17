@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -38,6 +39,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:websafe_svg/websafe_svg.dart';
 
 /// Hive box name for draft stock items persistence
 const String _kDraftStockBoxName = 'draft_stock_items';
@@ -273,7 +275,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     int visibleIndex = 0;
     for (int i = 0; i < stockItems.length; i++) {
-      if (!stockItems[i].isHidden) {
+      if (!stockItems[i].isHidden && stockItems[i].isSuccessfullyAdded) {
         _cachedVisibleItems.add(stockItems[i]);
         _visibleToOriginalIndexMap[visibleIndex] = i;
         visibleIndex++;
@@ -2238,16 +2240,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       // Header Section (non-scrollable header content)
                       SliverToBoxAdapter(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          // crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeaderSection(size),
+                            const SizedBox(height: 20),
+                            // Input Section - Sticky at top (visually below header)
+                            _buildInputSection(),
                             const SizedBox(height: 20),
                             _buildStockTableHeader(),
                             const SizedBox(height: 10),
                           ],
                         ),
                       ),
-                      // Stock Items List - Virtualized for performance
+
+                      // Stock Items List - Virtualized for performance (Below input)
                       _buildOptimizedStockList(),
                       // Footer Section (payment and action buttons)
                       SliverToBoxAdapter(
@@ -2524,18 +2530,28 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       ),
       child: Row(
         children: [
-          _buildHeaderCell("No.", flex: 0, width: 40),
+          _buildHeaderCell("No.", flex: 1, width: 40),
           _buildHeaderCell("Barcode", flex: 2),
-          _buildHeaderCell("Category", flex: 2),
-          _buildHeaderCell("Product", flex: 3),
-          _buildHeaderCell("Qty", flex: 1),
-          _buildHeaderCell("Actions", flex: 0, width: 150),
+          _buildHeaderCell("Product", flex: 4),
+          _buildHeaderCell("Unit", flex: 1),
+          _buildHeaderCell("Qty", flex: 1, width: 40),
+          _buildHeaderCell("Purchase Rate", flex: 2),
+          _buildHeaderCell("Retail Price", flex: 2),
+          _buildHeaderCell("MRP", flex: 1),
+          _buildHeaderCell("Actions", flex: 2, isLast: true),
+          // _buildHeaderCell("No.", flex: 0, width: 40),
+          // _buildHeaderCell("Barcode", flex: 2),
+          // _buildHeaderCell("Category", flex: 2),
+          // _buildHeaderCell("Product", flex: 3),
+          // _buildHeaderCell("Qty", flex: 1),
+          // _buildHeaderCell("Actions", flex: 0, width: 150),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderCell(String title, {int flex = 1, double? width}) {
+  Widget _buildHeaderCell(String title,
+      {int flex = 1, double? width, bool isLast = false}) {
     if (flex == 0) {
       return SizedBox(
         width: width,
@@ -2549,11 +2565,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
     return Expanded(
       flex: flex,
-      child: Text(
-        title,
-        style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12, 0.27,
-            ColorManager.kPrimaryColor),
-        textAlign: TextAlign.center,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: Text(
+          title,
+          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+              0.27, ColorManager.kPrimaryColor),
+          textAlign: isLast ? TextAlign.end : TextAlign.start,
+        ),
       ),
     );
   }
@@ -2586,9 +2605,167 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           if (originalIndex < 0) return const SizedBox.shrink();
 
           // Use RepaintBoundary to isolate repaints for each row
-          return RepaintBoundary(
-            child: _buildStockRow(originalIndex, visibleIndex,
-                key: ValueKey('stock_row_$originalIndex')),
+          // return RepaintBoundary(
+          //   child: _buildStockRow(originalIndex, visibleIndex,
+          //       key: ValueKey('stock_row_$originalIndex')),
+          // );
+
+//---------------------------------------------------------------------------------------
+          final item = stockItems[visibleIndex];
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Container(
+              color: visibleIndex.isEven ? Colors.white : Colors.grey.shade50,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 2, horizontal: 10),
+                child: InkWell(
+                  onTap: () => _showProductDetailsModal(visibleIndex),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          '${visibleIndex + 1}',
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.barcode,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          item.product,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          item.unit,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          item.quantity,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.purchaseRate,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.salePrice,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          item.mrp,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                          flex: 2,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              IconButton(
+                                onPressed: () {},
+                                icon: const Icon(
+                                  Icons.edit,
+                                  size: 15,
+                                  color: ColorManager.kPrimaryColor,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              const SizedBox(
+                                width: 20,
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  _deleteStockItem(visibleIndex);
+                                },
+                                icon: WebsafeSvg.asset(
+                                  ImageAssets.oderlistCloseIcon,
+                                  width: 15,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           );
         },
         childCount: visibleItems.length,
@@ -2599,19 +2776,35 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  // Legacy method - kept for reference but no longer used
-  Widget _buildStockTable() {
-    final visibleItems = visibleStockItems;
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: visibleItems.length,
-      itemBuilder: (context, visibleIndex) {
-        int originalIndex = getOriginalIndex(visibleIndex);
-        // Add key for better performance - prevents unnecessary rebuilds
-        return _buildStockRow(originalIndex, visibleIndex,
-            key: ValueKey('stock_row_$originalIndex'));
-      },
+  Widget _buildInputSection() {
+    // Determine the number of successfully added items to calculate the correct index for the new item.
+    int addedCount = stockItems
+        .where((item) => item.isSuccessfullyAdded && !item.isHidden)
+        .length;
+
+    // Find indices of items that are NOT successfully added (input forms)
+    final inputItemsIndices = <int>[];
+    for (int i = 0; i < stockItems.length; i++) {
+      if (!stockItems[i].isHidden && !stockItems[i].isSuccessfullyAdded) {
+        inputItemsIndices.add(i);
+      }
+    }
+
+    if (inputItemsIndices.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: inputItemsIndices.map((originalIndex) {
+        // We pass 'addedCount' as the visible index so the row number continues sequentially.
+        // If there are multiple input rows (rare), we increment the count.
+        int currentVisibleIndex =
+            addedCount + inputItemsIndices.indexOf(originalIndex);
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+          child: _buildStockRow(originalIndex, currentVisibleIndex,
+              key: ValueKey('input_stock_row_$originalIndex')),
+        );
+      }).toList(),
     );
   }
 
@@ -3030,6 +3223,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildStockRow(int index, int visibleIndex, {Key? key}) {
+    debugPrint("visible index: $visibleIndex index is $index");
     final item = stockItems[index];
 
     return BuildBoxShadowContainer(
