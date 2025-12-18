@@ -177,6 +177,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final List<StockItem> _cachedVisibleItems = [];
   final Map<int, int> _visibleToOriginalIndexMap = {};
   bool _needsIndexRebuild = true;
+  // Track which item index is being edited (null if adding new)
+  int? _editingItemIndex;
 
   // Clear product cache when category changes
   void _clearProductCache() {
@@ -1199,6 +1201,78 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Future<void> _addStockForSingleItem(int index) async {
     debugPrint('🔄 LOCAL STOCK ADDITION PROCESS STARTED FOR ITEM ${index + 1}');
 
+    // Store the editing index before we modify anything
+    int? editingIndex = _editingItemIndex;
+
+    // Check if we're in edit mode
+    if (editingIndex != null) {
+      debugPrint(
+          '✏️ UPDATE MODE: Checking if item at index $editingIndex was modified');
+      final oldItem = stockItems[editingIndex];
+      final currentItem = stockItems[index];
+
+      // Check if any values actually changed
+      bool hasChanges = oldItem.barcode != currentItem.barcode ||
+          oldItem.product != currentItem.product ||
+          oldItem.category != currentItem.category ||
+          oldItem.quantity != currentItem.quantity ||
+          oldItem.salePrice != currentItem.salePrice ||
+          oldItem.mrp != currentItem.mrp ||
+          oldItem.wholesale != currentItem.wholesale ||
+          oldItem.purchaseRate != currentItem.purchaseRate ||
+          oldItem.batchNumber != currentItem.batchNumber ||
+          oldItem.rack != currentItem.rack ||
+          oldItem.selectedUnit != currentItem.selectedUnit ||
+          oldItem.expDate != currentItem.expDate;
+
+      if (!hasChanges) {
+        // No changes detected - just cancel edit mode
+        debugPrint('ℹ️ No changes detected - canceling edit mode');
+        setState(() {
+          _editingItemIndex = null;
+          // Remove the input row that was created for editing
+          stockItems.removeAt(index);
+          _markIndexCacheDirty();
+        });
+        showScaffold(
+          context: context,
+          message: 'No changes made - edit cancelled',
+        );
+        return; // Exit early - don't add anything
+      }
+
+      // Changes detected - proceed with update
+      debugPrint('✏️ Changes detected - proceeding with update');
+
+      // Remove from pending storage
+      if (oldItem.apiResponse != null &&
+          oldItem.apiResponse!['localId'] != null) {
+        final stockProvider =
+            Provider.of<StockProvider>(context, listen: false);
+        stockProvider.removeStockItemLocally(oldItem.apiResponse!['localId']);
+        debugPrint('🗑️ Removed old item from pending storage');
+      }
+
+      // Adjust the current index if needed (if we're removing an item before the current one)
+      if (editingIndex < index) {
+        index = index - 1;
+        debugPrint(
+            '📊 Adjusted index from ${index + 1} to $index after removal');
+      }
+
+      // Remove old item from list
+      setState(() {
+        stockItems.removeAt(editingIndex);
+        _markIndexCacheDirty();
+      });
+
+      debugPrint('🗑️ Removed old item from list at index $editingIndex');
+
+      // Clear editing mode
+      _editingItemIndex = null;
+      debugPrint('✅ Cleared editing mode - will add updated item');
+    }
+
     if (selectedStore == null) {
       debugPrint('❌ STORE VALIDATION FAILED: No store selected');
       showScaffoldError(context: context, message: 'Please select a store');
@@ -1412,6 +1486,96 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     debugPrint('✅ FORM FIELDS RESET COMPLETED');
   }
 
+  /// Edit a successfully added stock item - populate input section with values
+  void _editStockItem(int index) {
+    final item = stockItems[index];
+
+    if (!item.isSuccessfullyAdded) {
+      return;
+    }
+
+    setState(() {
+      // Store which item we're editing
+      _editingItemIndex = index;
+
+      // Find the input row (first non-successfully-added item)
+      int inputIndex = stockItems
+          .indexWhere((item) => !item.isSuccessfullyAdded && !item.isHidden);
+
+      if (inputIndex == -1) {
+        // No input row exists, create one at the beginning
+        stockItems.insert(0, StockItem());
+        inputIndex = 0;
+        _markIndexCacheDirty();
+      }
+
+      // Copy all values to the input row
+      stockItems[inputIndex] = StockItem(
+        barcode: item.barcode,
+        category: item.category,
+        product: item.product,
+        quantity: item.quantity,
+        salePrice: item.salePrice,
+        mrp: item.mrp,
+        wholesale: item.wholesale,
+        purchaseRate: item.purchaseRate,
+        unit: item.unit,
+        rack: item.rack,
+        expDate: item.expDate,
+        batchNumber: item.batchNumber,
+        productData: item.productData,
+        categoryData: item.categoryData,
+        selectedUnit: item.selectedUnit,
+        selectedRack: item.selectedRack,
+        taxInclude: item.taxInclude,
+        retailPriceTax: item.retailPriceTax,
+        wholesalePriceTax: item.wholesalePriceTax,
+        calculatedTaxData: item.calculatedTaxData,
+        isExpanded: true,
+      );
+
+      // Update controllers
+      _getBarcodeController(inputIndex).text = item.barcode;
+      _getQuantityController(inputIndex).text = item.quantity;
+      _getPurchaseRateController(inputIndex).text = item.purchaseRate;
+      _getRetailPriceController(inputIndex).text = item.salePrice;
+      _getMrpController(inputIndex).text = item.mrp;
+      _getWholesaleController(inputIndex).text = item.wholesale;
+      _getBatchNumberController(inputIndex).text = item.batchNumber;
+    });
+
+    // showScaffold(
+    //   context: context,
+    //   message: 'Editing item. Modify values and click Add to update.',
+    // );
+  }
+
+  /// Cancel edit mode and remove the input row
+  void _cancelEditMode() {
+    if (_editingItemIndex == null) return;
+
+    setState(() {
+      // Find the input row
+      int inputIndex = stockItems
+          .indexWhere((item) => !item.isSuccessfullyAdded && !item.isHidden);
+
+      if (inputIndex != -1) {
+        // Remove the input row
+        stockItems.removeAt(inputIndex);
+        _markIndexCacheDirty();
+      }
+
+      // Clear editing mode
+      _editingItemIndex = null;
+    });
+
+    showScaffold(
+      context: context,
+      message: 'Edit cancelled',
+    );
+    debugPrint('🔄 Edit mode cancelled');
+  }
+
   void _toggleExpanded(int index) {
     setState(() {
       stockItems[index].isExpanded = !stockItems[index].isExpanded;
@@ -1434,6 +1598,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       _getMrpController(index).clear();
       _getWholesaleController(index).clear();
       _getBatchNumberController(index).clear();
+
+      // Cancel edit mode if we're clearing the input row
+      if (_editingItemIndex != null) {
+        debugPrint('🔄 Cancelled edit mode - clearing fields');
+        _editingItemIndex = null;
+      }
     });
     debugPrint('🧹 CLEARED STOCK ITEM AT INDEX $index');
   }
@@ -2611,7 +2781,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           // );
 
 //---------------------------------------------------------------------------------------
-          final item = stockItems[visibleIndex];
+          final item = stockItems[originalIndex];
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -2734,7 +2904,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               IconButton(
-                                onPressed: () {},
+                                onPressed: () => _editStockItem(originalIndex),
                                 icon: const Icon(
                                   Icons.edit,
                                   size: 15,
@@ -2748,9 +2918,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 width: 20,
                               ),
                               IconButton(
-                                onPressed: () {
-                                  _deleteStockItem(visibleIndex);
-                                },
+                                onPressed: () =>
+                                    _deleteStockItem(originalIndex),
                                 icon: WebsafeSvg.asset(
                                   ImageAssets.oderlistCloseIcon,
                                   width: 15,
