@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TableRow;
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:get/get.dart';
@@ -17,6 +17,8 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:pos_machine/utils/arabic_printer_helper.dart';
+import 'package:image/image.dart' as img;
 
 class ThermalPrinter {
   final BuildContext context;
@@ -360,6 +362,745 @@ class ThermalPrinter {
       debugPrint("Disconnecting from printer...");
       await _disconnectPrinter(selectedPrinter);
       debugPrint("==========================");
+    }
+  }
+
+  /// Image-based printing method for Arabic/English support.
+  /// Uses the same parameters as printReceipt() but renders the receipt as images.
+  Future<void> printReceiptAsImage({
+    required BluetoothPrinter selectedPrinter,
+    required List<dynamic> cartItems,
+    required String formattedTotal,
+    required String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    required bool isFromLocalStorage,
+    required String selectedPaperSize,
+    required DocumentConfig? billDocumentConfig,
+    required String customerCareNumber,
+    required String customerCareEmail,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    OrderReturns? orderReturns,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
+  }) async {
+    debugPrint("===== IMAGE-BASED THERMAL PRINTING ====");
+
+    if (billDocumentConfig == null) {
+      debugPrint("ERROR: Bill document configuration not loaded yet.");
+      return;
+    }
+
+    debugPrint(
+        "Printer: ${selectedPrinter.deviceName}, Paper: $selectedPaperSize");
+
+    final displayConfig = billDocumentConfig.displayConfiguration?.options;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final appSettings = appSettingsProvider.appSettings;
+
+    try {
+      debugPrint("Connecting to printer...");
+      await _connectToPrinter(selectedPrinter);
+      debugPrint("Connected successfully.");
+
+      // Determine language direction
+      final isEnglish = LocalizationService.locale.languageCode == 'en';
+      final textDirection = isEnglish ? TextDirection.ltr : TextDirection.rtl;
+      debugPrint(
+          "Language: ${isEnglish ? 'English' : 'Arabic'} ($textDirection)");
+
+      // Setup print parameters
+      final double printWidth = selectedPaperSize == '58mm' ? 384.0 : 576.0;
+      final double baseFontSize = 20.0;
+
+      // Build receipt rows
+      List<ReceiptRow> part1Rows = [];
+      List<ReceiptRow> part2Rows = [];
+
+      // ========== PART 1: Header, Customer, Items, Totals ==========
+
+      // --- HEADER SECTION ---
+      // Store Name
+      if (displayConfig?['showStoreName']?.visible == true) {
+        final storeName = displayConfig?['showStoreName']?.value as String? ??
+            billDocumentConfig.header ??
+            'STORE NAME';
+        part1Rows.add(TextRow(storeName.isNotEmpty ? storeName : 'STORE NAME',
+            isBold: true, scale: 2.0));
+      }
+
+      // Description/Subheader
+      if (displayConfig?['showDescription']?.visible == true) {
+        final description =
+            displayConfig?['showDescription']?.value as String? ??
+                billDocumentConfig.subheader ??
+                '';
+        if (description.isNotEmpty) {
+          part1Rows.add(TextRow(description, scale: 0.9));
+        }
+      }
+
+      // Store Address
+      if (displayConfig?['showStoreAddress']?.visible == true) {
+        final storeAddress =
+            displayConfig?['showStoreAddress']?.value as String?;
+        if (storeAddress != null && storeAddress.isNotEmpty) {
+          part1Rows.add(TextRow(storeAddress, scale: 0.9));
+        }
+      }
+
+      // FSSAI Info
+      if (displayConfig?['showFssaiInfo']?.visible == true) {
+        final fssaiInfo = displayConfig?['showFssaiInfo']?.value as String?;
+        if (fssaiInfo != null && fssaiInfo.isNotEmpty) {
+          part1Rows.add(TextRow(fssaiInfo, scale: 0.9));
+        }
+      }
+
+      // Telephone
+      if (displayConfig?['showTel']?.visible == true) {
+        final telephone = displayConfig?['showTel']?.value as String? ??
+            appSettings?.customerCarePhone ??
+            '';
+        if (telephone.isNotEmpty) {
+          part1Rows.add(TextRow('TEL: $telephone', scale: 0.8));
+        }
+      }
+
+      // Email
+      if (displayConfig?['showEmail']?.visible == true) {
+        final email = displayConfig?['showEmail']?.value as String? ??
+            appSettings?.customerCareEmail ??
+            '';
+        if (email.isNotEmpty) {
+          part1Rows.add(TextRow('Email: $email', scale: 0.8));
+        }
+      }
+
+      part1Rows.add(SpacingRow(10));
+
+      // Invoice Title
+      if (displayConfig?['showInvoiceTitle']?.visible == true) {
+        final invoiceTitle =
+            displayConfig?['showInvoiceTitle']?.value as String? ??
+                billDocumentConfig.header ??
+                appSettings?.printTitle ??
+                'INVOICE';
+        part1Rows.add(TextRow(
+            invoiceTitle.isNotEmpty ? invoiceTitle : 'INVOICE',
+            isBold: true,
+            scale: 1.2));
+      }
+
+      // Invoice Number
+      if (displayConfig?['showInvoiceNumber']?.visible == true) {
+        final invoiceNumberText = billDocumentConfig.numberPrefix != null &&
+                billDocumentConfig.numberPrefix!.isNotEmpty
+            ? '${billDocumentConfig.numberPrefix}$orderNumber'
+            : 'INV No: $orderNumber';
+        part1Rows.add(TextRow(invoiceNumberText, isBold: true));
+      }
+
+      part1Rows.add(DividerRow());
+
+      // --- CUSTOMER DETAILS SECTION ---
+      if (customerName != null || customerPhone != null) {
+        if (isEnglish) {
+          // English: Label: Value format
+          if (customerName != null && customerName.isNotEmpty) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn("Customer:",
+                  weight: 0.35, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(customerName,
+                  weight: 0.65, align: TextAlign.left),
+            ]));
+          }
+          if (customerPhone != null && customerPhone.isNotEmpty) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn("Phone:",
+                  weight: 0.35, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(
+                  StringHelper.maskStringShowLast4(customerPhone),
+                  weight: 0.65,
+                  align: TextAlign.left),
+            ]));
+          }
+        } else {
+          // Arabic: Value :Label format (RTL)
+          if (customerName != null && customerName.isNotEmpty) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(customerName,
+                  weight: 0.7, align: TextAlign.right),
+              ReceiptTableColumn("العميل:",
+                  weight: 0.3, align: TextAlign.left, isBold: true),
+            ]));
+          }
+          if (customerPhone != null && customerPhone.isNotEmpty) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(
+                  StringHelper.maskStringShowLast4(customerPhone),
+                  weight: 0.7,
+                  align: TextAlign.right),
+              ReceiptTableColumn("الهاتف:",
+                  weight: 0.3, align: TextAlign.left, isBold: true),
+            ]));
+          }
+        }
+        if (customerAddress != null && customerAddress.isNotEmpty) {
+          part1Rows.add(TextRow(customerAddress, scale: 0.9));
+        }
+        part1Rows.add(DividerRow());
+      }
+
+      // --- CART ITEMS SECTION ---
+      // Table Header
+      if (isEnglish) {
+        List<ReceiptTableColumn> headerCols = [];
+        if (displayConfig?['showParticulars']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("Item",
+              weight: 0.40, align: TextAlign.left, isBold: true));
+        }
+        if (displayConfig?['showMRP']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("MRP",
+              weight: 0.15, align: TextAlign.center, isBold: true));
+        }
+        if (displayConfig?['showQty']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("Qty",
+              weight: 0.10, align: TextAlign.center, isBold: true));
+        }
+        if (displayConfig?['showRate']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("Rate",
+              weight: 0.15, align: TextAlign.right, isBold: true));
+        }
+        if (displayConfig?['showTotal']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("Total",
+              weight: 0.20, align: TextAlign.right, isBold: true));
+        }
+        if (headerCols.isNotEmpty) {
+          part1Rows.add(ReceiptTableRow(headerCols));
+          part1Rows.add(DividerRow());
+        }
+      } else {
+        // Arabic header (RTL - columns in visual left-to-right order)
+        List<ReceiptTableColumn> headerCols = [];
+        if (displayConfig?['showTotal']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("الإجمالي",
+              weight: 0.2, align: TextAlign.right, isBold: true));
+        }
+        if (displayConfig?['showRate']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("السعر",
+              weight: 0.2, align: TextAlign.right, isBold: true));
+        }
+        if (displayConfig?['showQty']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("الكمية",
+              weight: 0.15, align: TextAlign.right, isBold: true));
+        }
+        if (displayConfig?['showMRP']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("MRP",
+              weight: 0.15, align: TextAlign.right, isBold: true));
+        }
+        if (displayConfig?['showParticulars']?.visible == true) {
+          headerCols.add(ReceiptTableColumn("الصنف",
+              weight: 0.3, align: TextAlign.right, isBold: true));
+        }
+        if (headerCols.isNotEmpty) {
+          part1Rows.add(ReceiptTableRow(headerCols));
+          part1Rows.add(DividerRow());
+        }
+      }
+
+      // Cart Items
+      for (var i = 0; i < cartItems.length; i++) {
+        var item = cartItems[i];
+        String productName = '';
+        String mrp = '';
+        String quantity = '';
+        String unitPrice = '';
+        String totalPrice = '';
+
+        if (isFromLocalStorage) {
+          productName = item['productName'] ?? '';
+          mrp = (double.tryParse(item['mrp']?.toString() ?? '0') ?? 0.0)
+              .toStringAsFixed(2);
+          quantity = item['quantity'] ?? '0';
+          unitPrice =
+              (double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+          totalPrice =
+              (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+        } else {
+          productName = item.productName ?? '';
+          mrp = (double.tryParse(item.mrp?.toString() ?? '0') ?? 0.0)
+              .toStringAsFixed(2);
+          quantity = item.quantity?.toString() ?? '0';
+          unitPrice =
+              (double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+          totalPrice =
+              (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+        }
+
+        String slNumber = (i + 1).toString();
+
+        if (isEnglish) {
+          // Product name row
+          if (displayConfig?['showParticulars']?.visible == true ||
+              displayConfig?['showSLNumber']?.visible == true) {
+            String itemText = displayConfig?['showSLNumber']?.visible == true
+                ? '$slNumber. $productName'
+                : productName;
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left),
+            ]));
+          }
+          // Price details row
+          List<ReceiptTableColumn> priceCols = [];
+          priceCols.add(
+              ReceiptTableColumn("", weight: 0.40)); // Empty for item column
+          if (displayConfig?['showMRP']?.visible == true) {
+            priceCols.add(
+                ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.center));
+          }
+          if (displayConfig?['showQty']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(quantity,
+                weight: 0.10, align: TextAlign.center));
+          }
+          if (displayConfig?['showRate']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(unitPrice,
+                weight: 0.15, align: TextAlign.right));
+          }
+          if (displayConfig?['showTotal']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(totalPrice,
+                weight: 0.20, align: TextAlign.right));
+          }
+          if (priceCols.length > 1) {
+            part1Rows.add(ReceiptTableRow(priceCols));
+          }
+        } else {
+          // Arabic: RTL layout
+          if (displayConfig?['showParticulars']?.visible == true ||
+              displayConfig?['showSLNumber']?.visible == true) {
+            String itemText = displayConfig?['showSLNumber']?.visible == true
+                ? '$slNumber. $productName'
+                : productName;
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
+            ]));
+          }
+          // Price details row (RTL order)
+          List<ReceiptTableColumn> priceCols = [];
+          if (displayConfig?['showTotal']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(totalPrice,
+                weight: 0.2, align: TextAlign.right));
+          }
+          if (displayConfig?['showRate']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(unitPrice,
+                weight: 0.2, align: TextAlign.right));
+          }
+          if (displayConfig?['showQty']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(quantity,
+                weight: 0.15, align: TextAlign.right));
+          }
+          if (displayConfig?['showMRP']?.visible == true) {
+            priceCols.add(
+                ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.right));
+          }
+          priceCols.add(
+              ReceiptTableColumn("", weight: 0.3)); // Empty for item column
+          if (priceCols.length > 1) {
+            part1Rows.add(ReceiptTableRow(priceCols));
+          }
+        }
+      }
+
+      part1Rows.add(SpacingRow(5));
+      part1Rows.add(DividerRow());
+
+      // --- TOTALS SECTION ---
+      double saved = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
+      double total = double.tryParse(formattedTotal) ?? 0.0;
+      double discountAmountValue =
+          double.tryParse(discountAmount ?? '0.0') ?? 0.0;
+      double totalMrp = saved + total;
+
+      // Calculate total quantity
+      double totalQuantity = 0.0;
+      for (var item in cartItems) {
+        if (isFromLocalStorage) {
+          totalQuantity +=
+              double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        } else {
+          totalQuantity +=
+              double.tryParse(item.quantity?.toString() ?? '0') ?? 0.0;
+        }
+      }
+
+      if (isEnglish) {
+        // Summary rows (English)
+        if (displayConfig?['showItemsCount']?.visible == true) {
+          part1Rows.add(ReceiptTableRow([
+            ReceiptTableColumn("Items:", weight: 0.25, align: TextAlign.left),
+            ReceiptTableColumn(cartItems.length.toString(),
+                weight: 0.25, align: TextAlign.left),
+            ReceiptTableColumn(" ", weight: 0.05),
+            ReceiptTableColumn("Discount:",
+                weight: 0.25, align: TextAlign.right),
+            ReceiptTableColumn(discountAmountValue.toStringAsFixed(2),
+                weight: 0.20, align: TextAlign.right),
+          ]));
+        }
+
+        part1Rows.add(ReceiptTableRow([
+          ReceiptTableColumn("Total Qty:", weight: 0.25, align: TextAlign.left),
+          ReceiptTableColumn(
+              totalQuantity % 1 == 0
+                  ? totalQuantity.toInt().toString()
+                  : totalQuantity.toStringAsFixed(2),
+              weight: 0.25,
+              align: TextAlign.left),
+          ReceiptTableColumn(" ", weight: 0.50),
+        ]));
+
+        if (displayConfig?['showMRPTotal']?.visible == true) {
+          part1Rows.add(ReceiptTableRow([
+            ReceiptTableColumn("Total MRP:",
+                weight: 0.25, align: TextAlign.left),
+            ReceiptTableColumn(totalMrp.toStringAsFixed(2),
+                weight: 0.25, align: TextAlign.left),
+            ReceiptTableColumn(" ", weight: 0.50),
+          ]));
+        }
+
+        part1Rows.add(SpacingRow(5));
+
+        // Net Total
+        if (displayConfig?['showNetAmount']?.visible == true) {
+          part1Rows.add(ReceiptTableRow([
+            ReceiptTableColumn("Net Total:",
+                weight: 0.5, align: TextAlign.center, isBold: true),
+            ReceiptTableColumn(total.toStringAsFixed(2),
+                weight: 0.5, align: TextAlign.center, isBold: true),
+          ]));
+        }
+      } else {
+        // Summary rows (Arabic - RTL)
+        if (displayConfig?['showItemsCount']?.visible == true) {
+          part1Rows.add(ReceiptTableRow([
+            ReceiptTableColumn(discountAmountValue.toStringAsFixed(2),
+                weight: 0.25, align: TextAlign.right),
+            ReceiptTableColumn(":الخصم", weight: 0.25, align: TextAlign.left),
+            ReceiptTableColumn(" ", weight: 0.05),
+            ReceiptTableColumn(cartItems.length.toString(),
+                weight: 0.2, align: TextAlign.right),
+            ReceiptTableColumn("الأصناف:", weight: 0.25, align: TextAlign.left),
+          ]));
+        }
+
+        part1Rows.add(ReceiptTableRow([
+          ReceiptTableColumn(" ", weight: 0.5),
+          ReceiptTableColumn(" ", weight: 0.05),
+          ReceiptTableColumn(
+              totalQuantity % 1 == 0
+                  ? totalQuantity.toInt().toString()
+                  : totalQuantity.toStringAsFixed(2),
+              weight: 0.2,
+              align: TextAlign.right),
+          ReceiptTableColumn("إجمالي الكمية:",
+              weight: 0.25, align: TextAlign.left),
+        ]));
+
+        if (displayConfig?['showMRPTotal']?.visible == true) {
+          part1Rows.add(ReceiptTableRow([
+            ReceiptTableColumn(" ", weight: 0.5),
+            ReceiptTableColumn(" ", weight: 0.05),
+            ReceiptTableColumn(totalMrp.toStringAsFixed(2),
+                weight: 0.2, align: TextAlign.right),
+            ReceiptTableColumn("إجمالي MRP:",
+                weight: 0.25, align: TextAlign.left),
+          ]));
+        }
+
+        part1Rows.add(SpacingRow(5));
+
+        // Net Total (Arabic)
+        if (displayConfig?['showNetAmount']?.visible == true) {
+          part1Rows.add(ReceiptTableRow([
+            ReceiptTableColumn(total.toStringAsFixed(2),
+                weight: 0.5, align: TextAlign.center, isBold: true),
+            ReceiptTableColumn("الإجمالي الصافي:",
+                weight: 0.5, align: TextAlign.center, isBold: true),
+          ]));
+        }
+      }
+
+      // You Saved
+      if (displayConfig?['showSaved']?.visible == true && saved > 0) {
+        part1Rows.add(SpacingRow(5));
+        part1Rows.add(TextRow(
+          isEnglish
+              ? "You Saved: ${saved.toStringAsFixed(2)}"
+              : "لقد وفرت: ${saved.toStringAsFixed(2)} ريال",
+          isBold: true,
+          scale: 0.9,
+        ));
+      }
+
+      part1Rows.add(DividerRow());
+
+      // Amount in Words
+      if (displayConfig?['showAmountInWords']?.visible == true) {
+        final amountInWords =
+            '${AmountHelper().convertNumberToWords(total)} Only.';
+        part1Rows.add(TextRow(amountInWords, scale: 0.9, isBold: true));
+        part1Rows.add(DividerRow());
+      }
+
+      // Customer Balance
+      if (customerOldBalance != null ||
+          customerCurrentBalance != null ||
+          paidAmount != null) {
+        if (isEnglish) {
+          if (customerOldBalance != null) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn("Old Balance:",
+                  weight: 0.5, align: TextAlign.left),
+              ReceiptTableColumn(customerOldBalance.toStringAsFixed(2),
+                  weight: 0.5, align: TextAlign.right),
+            ]));
+          }
+          if (paidAmount != null) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn("Paid Amount:",
+                  weight: 0.5, align: TextAlign.left),
+              ReceiptTableColumn(paidAmount.toStringAsFixed(2),
+                  weight: 0.5, align: TextAlign.right),
+            ]));
+          }
+          if (customerCurrentBalance != null) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn("Current Balance:",
+                  weight: 0.5, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(customerCurrentBalance.toStringAsFixed(2),
+                  weight: 0.5, align: TextAlign.right, isBold: true),
+            ]));
+          }
+        } else {
+          // Arabic balance display
+          if (customerOldBalance != null) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(customerOldBalance.toStringAsFixed(2),
+                  weight: 0.3, align: TextAlign.right),
+              ReceiptTableColumn("الرصيد السابق:",
+                  weight: 0.3, align: TextAlign.left),
+              ReceiptTableColumn(" ", weight: 0.4),
+            ]));
+          }
+          if (paidAmount != null) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(paidAmount.toStringAsFixed(2),
+                  weight: 0.3, align: TextAlign.right),
+              ReceiptTableColumn("المدفوع:",
+                  weight: 0.3, align: TextAlign.left),
+              ReceiptTableColumn(" ", weight: 0.4),
+            ]));
+          }
+          if (customerCurrentBalance != null) {
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(customerCurrentBalance.toStringAsFixed(2),
+                  weight: 0.3, align: TextAlign.right, isBold: true),
+              ReceiptTableColumn("الرصيد الحالي:",
+                  weight: 0.3, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(" ", weight: 0.4),
+            ]));
+          }
+        }
+        part1Rows.add(SpacingRow(10));
+      }
+
+      // ========== PART 2: Footer (QR, Date, Terms, Thank You) ==========
+
+      part2Rows.add(SpacingRow(10));
+
+      // QR Code
+      if (displayConfig?['showQRCode']?.visible == true) {
+        final paymentGatewaysProvider =
+            Provider.of<PaymentGatewaysProvider>(context, listen: false);
+        final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+            .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+                orElse: () => PaymentGateway(
+                      id: 0,
+                      name: "",
+                      code: "",
+                      label: "",
+                      link: "",
+                      image: "",
+                      status: "",
+                      isWebActive: 0,
+                      isAndroidActive: 0,
+                      isIosActive: 0,
+                      contactEmail: "",
+                      contactPhone: "",
+                      createdAt: "",
+                      updatedAt: "",
+                    ));
+
+        String qrData = manualPaymentGateway.link;
+        if (qrData.isNotEmpty) {
+          if (qrData.contains('{formattedTotal}') ||
+              qrData.contains('{orderNumber}')) {
+            qrData = qrData
+                .replaceAll('{formattedTotal}', formattedTotal)
+                .replaceAll('{orderNumber}', orderNumber);
+          } else if (qrData.contains('@')) {
+            qrData =
+                'upi://pay?pa=$qrData&am=$formattedTotal&tn=$orderNumber&cu=INR';
+          }
+
+          final qrMessage =
+              displayConfig?['showQRCode']?.value as String? ?? 'Scan to Pay';
+          part2Rows.add(TextRow(isEnglish ? qrMessage : "امسح الرمز للدفع",
+              isBold: true, scale: 0.9));
+          part2Rows.add(QrRow(qrData, size: 200));
+        }
+      }
+
+      part2Rows.add(SpacingRow(15));
+
+      // Date and Time
+      String formattedDate = isFromLocalStorage
+          ? DateHelper.formatToISODateOnlyFromISO(orderDate)
+          : DateHelper.formatISODate(orderDate);
+      String formattedTime = isFromLocalStorage
+          ? DateHelper.formatToISODateFromIST(orderDate)
+          : DateHelper.formatISODateToIST(orderDate);
+
+      part2Rows.add(ReceiptTableRow([
+        ReceiptTableColumn(isEnglish ? "Date:" : "التاريخ:",
+            weight: 0.5, align: isEnglish ? TextAlign.left : TextAlign.left),
+        ReceiptTableColumn("$formattedDate $formattedTime",
+            weight: 0.5, align: isEnglish ? TextAlign.right : TextAlign.right),
+      ]));
+
+      part2Rows.add(SpacingRow(5));
+
+      // Invoice number for barcode reference
+      part2Rows.add(TextRow('#$orderNumber', scale: 0.8));
+
+      part2Rows.add(SpacingRow(5));
+
+      // Terms & Conditions
+      if (displayConfig?['showTermsConditions']?.visible == true) {
+        String? terms = displayConfig?['showTermsConditions']?.value as String?;
+        if (terms == null || terms.trim().isEmpty) {
+          terms = billDocumentConfig.terms;
+        }
+        if (terms != null && terms.trim().isNotEmpty) {
+          part2Rows.add(TextRow(terms.trim(), scale: 0.8));
+        }
+      }
+
+      part2Rows.add(SpacingRow(5));
+
+      // Thank You Message
+      if (displayConfig?['showThankYouMessage']?.visible == true) {
+        final message =
+            displayConfig?['showThankYouMessage']?.value as String? ??
+                'Thank You... Visit Again';
+        part2Rows.add(TextRow(
+          isEnglish
+              ? (message.isNotEmpty ? message : 'Thank You... Visit Again')
+              : "شكراً لزيارتكم! نأمل رؤيتكم قريباً",
+          isBold: true,
+        ));
+      }
+
+      part2Rows.add(SpacingRow(20));
+
+      // ========== RENDER IMAGES ==========
+      debugPrint("Rendering receipt images...");
+
+      final img.Image imagePart1 =
+          await ArabicPrinterHelper.renderReceiptToImage(
+        rows: part1Rows,
+        width: printWidth,
+        fontSize: baseFontSize,
+        textDirection: textDirection,
+      );
+
+      final img.Image imagePart2 =
+          await ArabicPrinterHelper.renderReceiptToImage(
+        rows: part2Rows,
+        width: printWidth,
+        fontSize: baseFontSize,
+        textDirection: textDirection,
+      );
+
+      // ========== GENERATE ESC/POS BYTES ==========
+      debugPrint("Generating ESC/POS bytes...");
+      final profile = await CapabilityProfile.load();
+      final generator = Generator(
+          selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80,
+          profile);
+      List<int> bytes = [];
+
+      // Print images
+      bytes += generator.image(imagePart1);
+      bytes += generator.image(imagePart2);
+
+      // Print native barcode (works well natively)
+      String cleanOrderNumber =
+          orderNumber.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9\-]'), '');
+      if (cleanOrderNumber.isNotEmpty) {
+        try {
+          List<String> code39Data = cleanOrderNumber.split("");
+          bytes += generator.barcode(
+            Barcode.code39(code39Data),
+            width: 2,
+            height: 50,
+            textPos: BarcodeText.none,
+            align: PosAlign.center,
+          );
+        } catch (e) {
+          debugPrint("Barcode error: $e");
+        }
+      }
+
+      // Feed and Cut
+      bytes += generator.feed(2);
+      bytes += generator.drawer();
+      bytes += generator.cut();
+
+      // ========== SEND TO PRINTER ==========
+      debugPrint("Sending ${bytes.length} bytes to printer...");
+      await printerManager.send(
+          type: selectedPrinter.typePrinter, bytes: bytes);
+      debugPrint("Print job sent successfully.");
+
+      if (context.mounted) {
+        showScaffold(context: context, message: "Print job sent successfully");
+        Navigator.pop(context);
+        SideBarController sideBarController = Get.put(SideBarController());
+        sideBarController.index.value = 46;
+      }
+    } catch (e, stacktrace) {
+      debugPrint("ERROR in Image-Based Print: $e");
+      debugPrint("Stacktrace: $stacktrace");
+      if (context.mounted) {
+        showScaffoldError(
+            context: context, message: "Error printing: ${e.toString()}");
+      }
+    } finally {
+      debugPrint("Disconnecting from printer...");
+      await _disconnectPrinter(selectedPrinter);
+      debugPrint("===== END IMAGE-BASED PRINTING =====");
     }
   }
 

@@ -571,15 +571,23 @@ class StandardPrinter {
                       ),
 
                     // Add Customer Balance after Amount in words (small, aligned)
-                    if (customerOldBalance != null ||
-                        customerCurrentBalance != null ||
-                        paidAmount != null)
+                    if ((updatedSettings?['showCustomerPrevBalance']?.visible ==
+                                true &&
+                            customerOldBalance != null) ||
+                        (updatedSettings?['showCustomerCurrentBalance']
+                                    ?.visible ==
+                                true &&
+                            customerCurrentBalance != null) ||
+                        (updatedSettings?['showCustomerPaidAmount']?.visible ==
+                                true &&
+                            paidAmount != null))
                       _buildCustomerBalancePdf(
                         selectedPaperSize,
                         customerOldBalance,
                         customerCurrentBalance,
                         paidAmount,
                         bodyStyle,
+                        displayConfig: updatedSettings,
                       ),
                   ],
                 ),
@@ -1143,6 +1151,7 @@ class StandardPrinter {
   }
 
   // Helper method for customer balance display (3 lines with spacing)
+  // Now respects displayConfig visibility flags for each balance line
   pw.Widget _buildCustomerBalancePdf(
     String selectedPaperSize,
     double? oldBalance,
@@ -1150,6 +1159,7 @@ class StandardPrinter {
     double? paidAmount,
     pw.TextStyle style, {
     bool isRtl = false,
+    Map<String, DisplayOption>? displayConfig,
   }) {
     // Use smaller font size for balance display
     final balanceStyle = pw.TextStyle(
@@ -1162,22 +1172,30 @@ class StandardPrinter {
       color: PdfColors.black,
     );
 
+    // Check visibility flags from displayConfig
+    final showPrevBalance =
+        displayConfig?['showCustomerPrevBalance']?.visible ?? true;
+    final showPaidAmount =
+        displayConfig?['showCustomerPaidAmount']?.visible ?? true;
+    final showCurrentBalance =
+        displayConfig?['showCustomerCurrentBalance']?.visible ?? true;
+
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 5),
       child: pw.Column(
         children: [
-          // Old Balance line
-          if (oldBalance != null)
+          // Old Balance line - respects showCustomerPrevBalance visibility
+          if (oldBalance != null && showPrevBalance)
             _buildLabelValueRow(
                 'Old Bal:', oldBalance.toStringAsFixed(2), balanceStyle,
                 isRtl: isRtl),
-          // Paid Amount line
-          if (paidAmount != null)
+          // Paid Amount line - respects showCustomerPaidAmount visibility
+          if (paidAmount != null && showPaidAmount)
             _buildLabelValueRow(
                 'Paid Amt:', paidAmount.toStringAsFixed(2), balanceStyle,
                 isRtl: isRtl),
-          // Current Balance line
-          if (currentBalance != null)
+          // Current Balance line - respects showCustomerCurrentBalance visibility
+          if (currentBalance != null && showCurrentBalance)
             _buildLabelValueRow(
                 'Cur Bal:', currentBalance.toStringAsFixed(2), balanceBoldStyle,
                 isRtl: isRtl),
@@ -2389,9 +2407,15 @@ class StandardPrinter {
                   ),
 
                 // Add Customer Balance after Amount in words (small, aligned)
-                if (customerOldBalance != null ||
-                    customerCurrentBalance != null ||
-                    paidAmount != null)
+                if ((updatedSettings?['showCustomerPrevBalance']?.visible ==
+                            true &&
+                        customerOldBalance != null) ||
+                    (updatedSettings?['showCustomerCurrentBalance']?.visible ==
+                            true &&
+                        customerCurrentBalance != null) ||
+                    (updatedSettings?['showCustomerPaidAmount']?.visible ==
+                            true &&
+                        paidAmount != null))
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(horizontal: 8),
                     child: _buildCustomerBalancePdf(
@@ -2401,6 +2425,7 @@ class StandardPrinter {
                       paidAmount,
                       bodyStyle,
                       isRtl: isRtl,
+                      displayConfig: updatedSettings,
                     ),
                   ),
 

@@ -61,6 +61,69 @@ class DocumentConfigProvider extends ChangeNotifier {
     }
   }
 
+  /// Fetch document configuration with type and language parameters.
+  /// This returns localized configuration based on the selected language.
+  ///
+  /// [type] - Document type: "bill", "sales_and_return_bill", etc.
+  /// [language] - Language code: "en", "ar", etc.
+  Future<DocumentConfig?> fetchDocumentConfigByTypeAndLanguage({
+    required String accessToken,
+    required String type,
+    required String language,
+  }) async {
+    debugPrint("📄 Fetching document config: type=$type, language=$language");
+
+    final url =
+        Uri.parse('${APPUrl.documentConfigs}?type=$type&language=$language');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint("✅ Document config API response received");
+
+        // Parse the response - the config is nested under document_configurations
+        final documentConfigs = jsonData['document_configurations'];
+        if (documentConfigs != null && documentConfigs is Map) {
+          // Get the first (and likely only) config from the response
+          // The key could be "Bill", "Sales and Return Bill", etc.
+          final firstKey = documentConfigs.keys.first;
+          if (firstKey != null) {
+            final configJson = documentConfigs[firstKey];
+            final config = DocumentConfig.fromJson(configJson);
+            debugPrint("✅ Parsed config for: $firstKey");
+            return config;
+          }
+        }
+
+        debugPrint("❌ No document configuration found in response");
+        return null;
+      } else {
+        debugPrint("❌ API error: ${response.statusCode}");
+        throw Exception(
+            'Failed to load document config: ${response.statusCode}');
+      }
+    } catch (error) {
+      debugPrint("❌ Error fetching document config: $error");
+      rethrow;
+    }
+  }
+
   // You can add more helper getters or methods here
   // For example, a getter to easily access a specific document config
   DocumentConfig? getDocumentConfig(String type) {
@@ -86,26 +149,31 @@ class DocumentConfigProvider extends ChangeNotifier {
     debugPrint("Has configurations: ${_documentConfigurations != null}");
     debugPrint("Error message: $_errorMessage");
     debugPrint("Is loading: $isLoading");
-    
+
     if (_documentConfigurations != null) {
       // Check for Customer Statement config (for transaction reports)
-      final customerStatementConfig = _documentConfigurations!.documentConfigurations?['Customer Statement'];
+      final customerStatementConfig = _documentConfigurations!
+          .documentConfigurations?['Customer Statement'];
       if (customerStatementConfig != null) {
         debugPrint("\n📄 CURRENT CUSTOMER STATEMENT CONFIG:");
         debugPrint("- ID: ${customerStatementConfig.id}");
         debugPrint("- Updated At: ${customerStatementConfig.updatedAt}");
-        debugPrint("- Has Display Config: ${customerStatementConfig.displayConfiguration != null}");
-        
-        final displayConfig = customerStatementConfig.displayConfiguration?.options;
+        debugPrint(
+            "- Has Display Config: ${customerStatementConfig.displayConfiguration != null}");
+
+        final displayConfig =
+            customerStatementConfig.displayConfiguration?.options;
         if (displayConfig != null) {
           debugPrint("- Display Config Options Count: ${displayConfig.length}");
           debugPrint("- Display Config Keys: ${displayConfig.keys.toList()}");
-          
+
           // Show a few key options
-          ['showHeader', 'showSubheader', 'showFooter', 'showCustomerName'].forEach((key) {
+          ['showHeader', 'showSubheader', 'showFooter', 'showCustomerName']
+              .forEach((key) {
             if (displayConfig.containsKey(key)) {
               final option = displayConfig[key];
-              debugPrint("  * $key: visible=${option?.visible}, value=${option?.value}");
+              debugPrint(
+                  "  * $key: visible=${option?.visible}, value=${option?.value}");
             }
           });
         } else {
@@ -113,18 +181,21 @@ class DocumentConfigProvider extends ChangeNotifier {
         }
       } else {
         debugPrint("❌ Customer Statement config not found");
-        debugPrint("Available configs: ${_documentConfigurations!.documentConfigurations?.keys.toList()}");
+        debugPrint(
+            "Available configs: ${_documentConfigurations!.documentConfigurations?.keys.toList()}");
       }
-      
+
       // Also check for Bill config (legacy)
-      final billConfig = _documentConfigurations!.documentConfigurations?['Bill'];
+      final billConfig =
+          _documentConfigurations!.documentConfigurations?['Bill'];
       if (billConfig != null) {
         debugPrint("\n📄 CURRENT BILL CONFIG:");
         debugPrint("- ID: ${billConfig.id}");
         debugPrint("- Updated At: ${billConfig.updatedAt}");
-        
+
         final displayConfig = billConfig.displayConfiguration?.options;
-        if (displayConfig != null && displayConfig.containsKey('showDiscount')) {
+        if (displayConfig != null &&
+            displayConfig.containsKey('showDiscount')) {
           final showDiscount = displayConfig['showDiscount'];
           debugPrint("\n🔍 CURRENT showDiscount:");
           debugPrint("  * visible: ${showDiscount?.visible}");
@@ -149,19 +220,24 @@ class DocumentConfigProvider extends ChangeNotifier {
     try {
       final jsonData = json.decode(rawJson);
       debugPrint("✅ JSON decode successful");
-      
+
       final model = DocumentConfigurationsModel.fromJson(jsonData);
       debugPrint("✅ Model parsing successful");
-      
-      final customerStatement = model.documentConfigurations?['Customer Statement'];
+
+      final customerStatement =
+          model.documentConfigurations?['Customer Statement'];
       if (customerStatement != null) {
         debugPrint("✅ Customer Statement config found");
-        debugPrint("Display config exists: ${customerStatement.displayConfiguration != null}");
-        debugPrint("Display config options count: ${customerStatement.displayConfiguration?.options?.length ?? 0}");
-        
+        debugPrint(
+            "Display config exists: ${customerStatement.displayConfiguration != null}");
+        debugPrint(
+            "Display config options count: ${customerStatement.displayConfiguration?.options?.length ?? 0}");
+
         if (customerStatement.displayConfiguration?.options != null) {
-          customerStatement.displayConfiguration!.options!.forEach((key, value) {
-            debugPrint("  $key: visible=${value.visible}, value=${value.value}");
+          customerStatement.displayConfiguration!.options!
+              .forEach((key, value) {
+            debugPrint(
+                "  $key: visible=${value.visible}, value=${value.value}");
           });
         }
       } else {
