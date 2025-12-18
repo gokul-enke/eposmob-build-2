@@ -1226,13 +1226,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           oldItem.expDate != currentItem.expDate;
 
       if (!hasChanges) {
-        // No changes detected - just cancel edit mode
+        // No changes detected - clear the input row and cancel edit mode
         debugPrint('ℹ️ No changes detected - canceling edit mode');
         setState(() {
           _editingItemIndex = null;
-          // Remove the input row that was created for editing
-          stockItems.removeAt(index);
-          _markIndexCacheDirty();
+          // Clear the input row instead of removing it
+          _clearStockItem(index);
         });
         showScaffold(
           context: context,
