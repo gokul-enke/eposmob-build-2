@@ -243,7 +243,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                     // First row of filters - Name, Category, Price, Barcode
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         // Name filter
                         Expanded(
