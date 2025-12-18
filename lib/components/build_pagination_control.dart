@@ -20,18 +20,21 @@ class PaginationControl extends StatelessWidget {
     debugPrint('Total Pages: $totalPages');
     debugPrint('Previous Button Enabled: ${currentPage > 1}');
     debugPrint('Next Button Enabled: ${currentPage < totalPages}');
-    
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0, top: 20),
+      padding: const EdgeInsets.only(bottom: 4.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _PaginationButton(
             title: "Previous",
-            onPressed: currentPage > 1 ? () {
-              debugPrint('Previous button pressed - going to page ${currentPage - 1}');
-              onPageChanged(currentPage - 1);
-            } : null,
+            onPressed: currentPage > 1
+                ? () {
+                    debugPrint(
+                        'Previous button pressed - going to page ${currentPage - 1}');
+                    onPageChanged(currentPage - 1);
+                  }
+                : null,
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -39,10 +42,13 @@ class PaginationControl extends StatelessWidget {
           ),
           _PaginationButton(
             title: "Next",
-            onPressed: currentPage < totalPages ? () {
-              debugPrint('Next button pressed - going to page ${currentPage + 1}');
-              onPageChanged(currentPage + 1);
-            } : null,
+            onPressed: currentPage < totalPages
+                ? () {
+                    debugPrint(
+                        'Next button pressed - going to page ${currentPage + 1}');
+                    onPageChanged(currentPage + 1);
+                  }
+                : null,
           ),
         ],
       ),
@@ -62,15 +68,16 @@ class _PaginationButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.blue,
-        backgroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        textStyle: const TextStyle(fontSize: 12),
+    return InkWell(
+      onTap: onPressed,
+      child: Text(
+        title,
+        style: const TextStyle(
+            color: Colors.blue,
+            fontSize: 12,
+            decoration: TextDecoration.underline,
+            decorationColor: Colors.blue),
       ),
-      child: Text(title),
     );
   }
 }

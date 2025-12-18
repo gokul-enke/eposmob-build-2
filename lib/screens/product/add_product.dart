@@ -76,13 +76,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
       });
 
       // Load categories from CategoryProvider with caching (same as sidebar and stock)
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint("📥 Loading categories from API...");
         await categoryProvider.listAllCategory();
         debugPrint("✅ Categories loaded and cached");
       } else {
-        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+        debugPrint(
+            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
       }
 
       LocalProductProvider localProductProvider =
@@ -188,7 +190,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
@@ -204,8 +206,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
             children: [
               // Fixed Header Section
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 20.0, horizontal: 20.0),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -237,7 +239,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 15),
 
                     // First row of filters - Name, Category, Price, Barcode
                     Row(
@@ -249,15 +251,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Name",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
+                              // Text(
+                              //   "Name",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
                               const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
@@ -279,16 +281,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Category",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Category",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               Consumer<CategoryProvider>(
                                 builder: (context, categoryProvider, child) {
                                   List<Category>? categoryList =
@@ -350,16 +352,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Price",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Price",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
                                 onchanged: (value) {
@@ -380,16 +382,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Barcode",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Barcode",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
                                 onchanged: (value) {
@@ -406,7 +408,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
 
                     // Second row of filters - HSN Code, Properties, Store, Supplier, Reset Button
                     Row(
@@ -418,16 +420,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "HSN Code",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "HSN Code",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
                                 onchanged: (value) {
@@ -448,16 +450,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Product Properties",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Product Properties",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               BuildDropDownWithSearch<String>(
                                 title: null,
                                 showName: false,
@@ -487,16 +489,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Store",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Store",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               Consumer<PurchaseProvider>(
                                 builder: (context, purchaseProvider, child) {
                                   List<GetStoreModelData> stores =
@@ -539,16 +541,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Supplier",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Supplier",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               Consumer<PurchaseProvider>(
                                 builder: (context, purchaseProvider, child) {
                                   List<GetSuppliersModelData> suppliers =
@@ -571,7 +573,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         searchProducts(1);
                                       }
                                     },
-                                    displayText: (supplier) => supplier.displayName,
+                                    displayText: (supplier) =>
+                                        supplier.displayName,
                                     searchController: supplierSearchController,
                                     height: 45,
                                     margin: const EdgeInsets.symmetric(
@@ -789,19 +792,36 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         "${product.mrp ?? 'N/A'}"),
                                                     _buildTableCell(() {
                                                       // Debug purchase price resolution
-                                                      final productPurchasePrice = product.purchasePrice;
-                                                      final stockPurchasePrice = product.stock != null && product.stock!.isNotEmpty 
-                                                          ? product.stock!.first.purchasePrice 
-                                                          : null;
-                                                      final finalPrice = productPurchasePrice ?? stockPurchasePrice ?? 'N/A';
-                                                      
-                                                      debugPrint("🔍 PURCHASE PRICE DEBUG for ${product.productName}:");
-                                                      debugPrint("  - Product Purchase Price: $productPurchasePrice");
-                                                      debugPrint("  - Stock Purchase Price: $stockPurchasePrice");
-                                                      debugPrint("  - Final Display Price: $finalPrice");
-                                                      debugPrint("  - Stock Count: ${product.stock?.length ?? 0}");
-                                                      
-                                                      return finalPrice.toString();
+                                                      final productPurchasePrice =
+                                                          product.purchasePrice;
+                                                      final stockPurchasePrice =
+                                                          product.stock !=
+                                                                      null &&
+                                                                  product.stock!
+                                                                      .isNotEmpty
+                                                              ? product
+                                                                  .stock!
+                                                                  .first
+                                                                  .purchasePrice
+                                                              : null;
+                                                      final finalPrice =
+                                                          productPurchasePrice ??
+                                                              stockPurchasePrice ??
+                                                              'N/A';
+
+                                                      debugPrint(
+                                                          "🔍 PURCHASE PRICE DEBUG for ${product.productName}:");
+                                                      debugPrint(
+                                                          "  - Product Purchase Price: $productPurchasePrice");
+                                                      debugPrint(
+                                                          "  - Stock Purchase Price: $stockPurchasePrice");
+                                                      debugPrint(
+                                                          "  - Final Display Price: $finalPrice");
+                                                      debugPrint(
+                                                          "  - Stock Count: ${product.stock?.length ?? 0}");
+
+                                                      return finalPrice
+                                                          .toString();
                                                     }()),
                                                     _buildTableCell(
                                                         product.unit ?? 'N/A'),
@@ -864,7 +884,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     // Pagination Always at Bottom
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 10.0, horizontal: 20.0),
+                          horizontal: 20.0, vertical: 10),
                       child: Consumer<LocalProductProvider>(
                         builder: (context, productProvider, child) {
                           if (productProvider.paginatedProducts.isEmpty) {
