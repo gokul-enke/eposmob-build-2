@@ -1489,6 +1489,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   /// Edit a successfully added stock item - populate input section with values
   void _editStockItem(int index) {
     final item = stockItems[index];
+    _getBarcodeFocusNode(0).requestFocus();
 
     if (!item.isSuccessfullyAdded) {
       return;
