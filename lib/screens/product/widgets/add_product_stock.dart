@@ -2447,7 +2447,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           color: Colors.white,
         ),
         child: Padding(
-          padding: const EdgeInsets.only(top: 10.0, left: 10, right: 10),
+          padding: const EdgeInsets.only(top: 5.0, left: 5, right: 5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2470,9 +2470,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       size: 24.0,
                     ),
                   ),
-                  const SizedBox(
-                    width: 10,
-                  ),
+                  // const SizedBox(
+                  //   width: 10,
+                  // ),
                   Text(
                     'Add Product Stock',
                     style: buildCustomStyle(
@@ -2495,10 +2495,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           // crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeaderSection(size),
-                            const SizedBox(height: 20),
+                            // const SizedBox(height: 20),
                             // Input Section - Sticky at top (visually below header)
                             _buildInputSection(),
-                            const SizedBox(height: 20),
+                            // const SizedBox(height: 20),
                             _buildStockTableHeader(),
                             const SizedBox(height: 10),
                           ],
@@ -3464,7 +3464,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return BuildBoxShadowContainer(
       key: key,
       circleRadius: 7,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 8,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
         children: [
