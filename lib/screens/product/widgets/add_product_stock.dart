@@ -40,6 +40,7 @@ import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 
 /// Hive box name for draft stock items persistence
 const String _kDraftStockBoxName = 'draft_stock_items';
@@ -169,7 +170,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   // Debounce timer for quantity input
   Timer? _quantityDebounceTimer;
-
+  Timer? _inlineEditDebounceTimer;
   // Cache for filtered products per category
   final Map<int?, List<GetProduct>> _filteredProductsCache = {};
 
@@ -1549,6 +1550,37 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     // );
   }
 
+  void _toggleExpanded(int index) {
+    setState(() {
+      stockItems[index].isExpanded = !stockItems[index].isExpanded;
+    });
+  }
+
+  void _clearStockItem(int index) {
+    setState(() {
+      stockItems[index] = StockItem(); // Reset to empty item
+
+      // Clear controllers for this index
+      _getCategorySearchController(index).clear();
+      _getProductSearchController(index).clear();
+      _getBarcodeController(index).clear();
+      _getQuantityController(index).text = '1';
+
+      // Clear expanded field controllers
+      _getPurchaseRateController(index).clear();
+      _getRetailPriceController(index).clear();
+      _getMrpController(index).clear();
+      _getWholesaleController(index).clear();
+      _getBatchNumberController(index).clear();
+
+      // Cancel edit mode if we're clearing the input row
+      if (_editingItemIndex != null) {
+        _cancelEditMode();
+      }
+    });
+    debugPrint('🧹 CLEARED STOCK ITEM AT INDEX $index');
+  }
+
   /// Cancel edit mode and remove the input row
   void _cancelEditMode() {
     if (_editingItemIndex == null) return;
@@ -1575,36 +1607,87 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     debugPrint('🔄 Edit mode cancelled');
   }
 
-  void _toggleExpanded(int index) {
+  void _updateStockItemFieldInline(int index, String field, String value) {
+    if (index < 0 || index >= stockItems.length) return;
+
+    final item = stockItems[index];
+
+    // Update the local item object field immediately for UI responsiveness
     setState(() {
-      stockItems[index].isExpanded = !stockItems[index].isExpanded;
-    });
-  }
-
-  void _clearStockItem(int index) {
-    setState(() {
-      stockItems[index] = StockItem(); // Reset to empty item
-
-      // Clear controllers for this index
-      _getCategorySearchController(index).clear();
-      _getProductSearchController(index).clear();
-      _getBarcodeController(index).clear();
-      _getQuantityController(index).text = '1';
-
-      // Clear expanded field controllers
-      _getPurchaseRateController(index).clear();
-      _getRetailPriceController(index).clear();
-      _getMrpController(index).clear();
-      _getWholesaleController(index).clear();
-      _getBatchNumberController(index).clear();
-
-      // Cancel edit mode if we're clearing the input row
-      if (_editingItemIndex != null) {
-        debugPrint('🔄 Cancelled edit mode - clearing fields');
-        _editingItemIndex = null;
+      if (field == 'quantity') {
+        item.quantity = value;
+      } else if (field == 'salePrice') {
+        item.salePrice = value;
+      } else if (field == 'mrp') {
+        item.mrp = value;
+      } else if (field == 'purchaseRate') {
+        item.purchaseRate = value;
       }
+      // Mark for recalculation so the summary updates in next build
+      _markForRecalculation();
     });
-    debugPrint('🧹 CLEARED STOCK ITEM AT INDEX $index');
+
+    // Debounce the heavy operations (Persistence & Tax)
+    _inlineEditDebounceTimer?.cancel();
+    _inlineEditDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+
+      // Update in local storage (StockProvider)
+      if (item.apiResponse != null && item.apiResponse!['localId'] != null) {
+        final localId = item.apiResponse!['localId'];
+        final stockProvider =
+            Provider.of<StockProvider>(context, listen: false);
+
+        // Map containing updated fields
+        final Map<String, dynamic> updatedData = {
+          'productId': item.productData?.productId,
+          'categoryId': item.categoryData?.categoryId,
+          'quantity': item.quantity,
+          'retailPrice': item.salePrice,
+          'purchaseRate': item.purchaseRate,
+          'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
+          'wholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : '',
+          'unit': item.selectedUnit,
+          'supplierId': selectedSupplier?.id ?? item.supplierId,
+          'storeId':
+              selectedStore?.id ?? 1, // Default store ID if none selected
+          'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
+          'userId': 1,
+          'taxAmountRetail': item.calculatedTaxData?['retailTaxAmount'],
+          'taxAmountWholesale': item.calculatedTaxData?['wholesaleTaxAmount'],
+          'wholesaleMinUnit':
+              item.batchNumber.isNotEmpty ? item.batchNumber : '1',
+          'rack': item.rack,
+          'barcode': item.barcode,
+          'batchNumber': item.batchNumber,
+          'date': DateFormat('yyyy-MM-dd').format(selectedDate),
+          'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
+          'taxInclude': item.taxInclude,
+          'initialRetailPrice': item.salePrice,
+          'initialWholesalePrice':
+              item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
+          'retailPriceTax':
+              item.calculatedTaxData?['price_including_tax_retail'],
+          'wholesalePriceTax':
+              item.calculatedTaxData?['price_including_tax_wholesale'],
+          'productName': item.product,
+          'categoryName': item.category,
+          'supplierName': selectedSupplier?.name ?? item.supplier,
+          'storeName': selectedStore?.name ?? '',
+        };
+
+        stockProvider.updateStockItemLocally(localId, updatedData);
+      }
+
+      // If price fields were changed, recalculate tax
+      if (field == 'salePrice' || field == 'mrp') {
+        _calculateTaxForStockItem(index, isRetail: true);
+        _calculateTaxForStockItem(index, isRetail: false);
+      }
+
+      // Finally, update the total stock value for the Finish button validation
+      _calculateTotalStockValue();
+    });
   }
 
   /// Show Add Product Modal with barcode generation enabled
@@ -2847,54 +2930,38 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       ),
                       Expanded(
                         flex: 1,
-                        child: Text(
-                          item.quantity,
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            11,
-                            0.21,
-                            ColorManager.textColor,
-                          ),
-                          textAlign: TextAlign.start,
+                        child: _InlineEditableField(
+                          value: item.quantity,
+                          hintText: 'Qty',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'quantity', val),
                         ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text(
-                          item.purchaseRate,
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            11,
-                            0.21,
-                            ColorManager.textColor,
-                          ),
-                          textAlign: TextAlign.start,
+                        child: _InlineEditableField(
+                          value: item.purchaseRate,
+                          hintText: 'Rate',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'purchaseRate', val),
                         ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text(
-                          item.salePrice,
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            11,
-                            0.21,
-                            ColorManager.textColor,
-                          ),
-                          textAlign: TextAlign.start,
+                        child: _InlineEditableField(
+                          value: item.salePrice,
+                          hintText: 'Price',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'salePrice', val),
                         ),
                       ),
                       Expanded(
                         flex: 1,
-                        child: Text(
-                          item.mrp,
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            11,
-                            0.21,
-                            ColorManager.textColor,
-                          ),
-                          textAlign: TextAlign.start,
+                        child: _InlineEditableField(
+                          value: item.mrp,
+                          hintText: 'MRP',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'mrp', val),
                         ),
                       ),
                       Expanded(
@@ -5553,6 +5620,89 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           textColor: ColorManager.kPrimaryColor,
         ),
       ],
+    );
+  }
+}
+
+class _InlineEditableField extends StatefulWidget {
+  final String value;
+  final Function(String) onChanged;
+  final String hintText;
+
+  const _InlineEditableField({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.hintText = '',
+  });
+
+  @override
+  State<_InlineEditableField> createState() => _InlineEditableFieldState();
+}
+
+class _InlineEditableFieldState extends State<_InlineEditableField> {
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(_InlineEditableField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_focusNode.hasFocus && oldWidget.value != widget.value) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      focusNode: _focusNode,
+      keyboardType: TextInputType.number,
+      textAlign: TextAlign.start,
+      style: buildCustomStyle(
+        FontWeightManager.regular,
+        11,
+        0.21,
+        ColorManager.textColor,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        border: InputBorder.none,
+        hintText: widget.hintText,
+        hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+      ),
+      onTap: () {
+        // Use a post-frame callback to ensure text selection happens after the tap is processed
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_controller.text.isNotEmpty && _focusNode.hasFocus) {
+            _controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _controller.text.length,
+            );
+          }
+        });
+        Provider.of<KeyboardProvider>(context, listen: false).show(
+          'number',
+          _controller,
+          replaceOnFirstInput: true,
+        );
+      },
+      onChanged: widget.onChanged,
     );
   }
 }
