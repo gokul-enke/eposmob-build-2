@@ -150,7 +150,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
               leading: CircleAvatar(
                 radius: 18,
                 backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
-                child: Icon(Icons.send, color: ColorManager.kPrimaryColor),
+                child:
+                    const Icon(Icons.send, color: ColorManager.kPrimaryColor),
               ),
               title: const Text('Send Credit Note to ZATCA'),
               onTap: () async {
@@ -195,11 +196,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     try {
       final String? token =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Send With PDF] Start for voucher ' +
-          voucher.voucherNumber +
-          ' (ID: ' +
-          voucher.id.toString() +
-          ')');
+      debugPrint(
+          '[ZATCA][Phase2 Send With PDF] Start for voucher ${voucher.voucherNumber} (ID: ${voucher.id})');
       if (token == null || token.isEmpty) {
         debugPrint(
             '[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
@@ -218,8 +216,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         accessToken: token,
       );
 
-      debugPrint(
-          '[ZATCA][Phase2 Send With PDF] Response: ' + result.toString());
+      debugPrint('[ZATCA][Phase2 Send With PDF] Response: $result');
       if (result is Map &&
           ((result['status'] == 'success') ||
               (result['success'] == true) ||
@@ -234,18 +231,17 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         }
         showScaffold(
           context: context,
-          message:
-              'Voucher ' + voucherNumber + ' processed under ZATCA Phase 2.',
+          message: 'Voucher $voucherNumber processed under ZATCA Phase 2.',
         );
       } else {
         final msg = (result is Map ? result['message'] : null) ??
             'Failed to process ZATCA Phase 2';
-        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: ' + msg.toString());
+        debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: $msg');
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: ' + e.toString());
-      showScaffoldError(context: context, message: 'Error: ' + e.toString());
+      debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: $e');
+      showScaffoldError(context: context, message: 'Error: $e');
     } finally {
       hideLoadingOverlay();
     }
@@ -255,11 +251,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     try {
       final String? token =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('[ZATCA][Phase2 Send] Start for voucher ' +
-          voucher.voucherNumber +
-          ' (ID: ' +
-          voucher.id.toString() +
-          ')');
+      debugPrint(
+          '[ZATCA][Phase2 Send] Start for voucher ${voucher.voucherNumber} (ID: ${voucher.id})');
       if (token == null || token.isEmpty) {
         debugPrint('[ZATCA][Phase2 Send] ERROR: Missing authentication token');
         showScaffoldError(
@@ -277,7 +270,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         accessToken: token,
       );
 
-      debugPrint('[ZATCA][Phase2 Send] Response: ' + result.toString());
+      debugPrint('[ZATCA][Phase2 Send] Response: $result');
       if (result is Map &&
           ((result['status'] == 'success') ||
               (result['success'] == true) ||
@@ -288,18 +281,17 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         // Do NOT open PDF here per requirement. Just inform the user.
         showScaffold(
           context: context,
-          message:
-              'Voucher ' + voucherNumber + ' submitted to ZATCA successfully.',
+          message: 'Voucher $voucherNumber submitted to ZATCA successfully.',
         );
       } else {
         final msg = (result is Map ? result['message'] : null) ??
             'Failed to send to ZATCA';
-        debugPrint('[ZATCA][Phase2 Send] ERROR: ' + msg.toString());
+        debugPrint('[ZATCA][Phase2 Send] ERROR: $msg');
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
-      debugPrint('[ZATCA][Phase2 Send] EXCEPTION: ' + e.toString());
-      showScaffoldError(context: context, message: 'Error: ' + e.toString());
+      debugPrint('[ZATCA][Phase2 Send] EXCEPTION: $e');
+      showScaffoldError(context: context, message: 'Error: $e');
     } finally {
       hideLoadingOverlay();
     }
@@ -335,8 +327,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       await OpenFile.open(savePath);
       showScaffold(context: context, message: 'PDF downloaded');
     } catch (e) {
-      debugPrint(
-          '[ZATCA][PDF] ERROR while downloading/opening: ' + e.toString());
+      debugPrint('[ZATCA][PDF] ERROR while downloading/opening: $e');
       try {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
       } catch (_) {}
@@ -366,15 +357,14 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
-                const SizedBox(height: 15),
+                // const SizedBox(height: 10),
                 _buildSearchBar(size),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
                 _buildVoucherTable(),
                 const SizedBox(height: 10),
                 _buildPaginationControls(),
@@ -409,7 +399,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        const SizedBox(height: 10),
       ],
     );
   }
@@ -419,7 +409,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       children: [
         // First row of search fields
         SizedBox(
-          height: 90,
+          height: 55,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -441,21 +431,19 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         ),
         // Second row with reset button
         SizedBox(
-          height: 60,
+          height: 46,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 10, right: 10),
-                child: CustomRoundButton(
-                  title: "Reset",
-                  boxColor: Colors.white,
-                  textColor: ColorManager.kPrimaryColor,
-                  fct: resetSearch,
-                  height: 45,
-                  width: 150,
-                  fontSize: FontSize.s12,
-                ),
+              CustomRoundButton(
+                title: "Reset",
+                boxColor: Colors.white,
+                textColor: ColorManager.kPrimaryColor,
+                fct: resetSearch,
+                height: 45,
+                width: 150,
+                fontSize: FontSize.s12,
               ),
             ],
           ),
@@ -470,15 +458,15 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Customer Name",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Customer Name",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
@@ -510,15 +498,15 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Voucher No",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Voucher No",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
@@ -550,15 +538,15 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Type",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Type",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           Consumer<CustomerVoucherProvider>(
             builder: (context, voucherProvider, child) {
               List<String> typeOptions = voucherProvider.getTypeOptions();
@@ -593,15 +581,15 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Status",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Status",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           Consumer<CustomerVoucherProvider>(
             builder: (context, voucherProvider, child) {
               List<String> statusOptions = voucherProvider.getStatusOptions();

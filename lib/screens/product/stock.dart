@@ -753,7 +753,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
               Column(
                 children: [
                   // First row with 4 fields
@@ -958,6 +958,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
                   // Second row with 4 fields
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       // Store Filter dropdown
                       Expanded(
@@ -1039,8 +1040,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(
-                                height: 35), // Space to align with other fields
+                            // const SizedBox(
+                            //     height: 35), // Space to align with other fields
                             CustomRoundButton(
                               title: "Reset",
                               boxColor: Colors.white,
@@ -1210,7 +1211,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                               stock.barCode ??
                                                                   'N/A';
                                                           debugPrint(
-                                                              '🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
+                                                              '🔍 DISPLAY BARCODE: "$barcode" for product: ${stock.productName}');
                                                           return barcode;
                                                         }()), // Updated to show actual barcode
                                                         _buildTableCell(
@@ -1310,7 +1311,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                         ),
                                                       ],
                                                     );
-                                                  }).toList(),
+                                                  }),
                                                 ],
                                               ),
                                             ),
