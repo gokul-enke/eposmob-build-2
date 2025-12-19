@@ -21,7 +21,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/screens/print/print_thermal.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/arabic_print_demo.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -1061,44 +1060,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                               textColor: Colors.white,
                             ),
                             const SizedBox(width: 16),
-                            CustomRoundButton(
-                              fct: () async {
-                                if (selectedPrinter == null) {
-                                  showScaffoldError(
-                                    context: context,
-                                    message: "Please select a printer first",
-                                  );
-                                  return;
-                                }
-                                try {
-                                  await ArabicPrintDemo.printDemoReceipt(
-                                    selectedPrinter: selectedPrinter!,
-                                    paperSize: selectedPaperSize,
-                                  );
-                                  if (mounted) {
-                                    showScaffold(
-                                      context: context,
-                                      message:
-                                          "Arabic demo receipt sent to printer",
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (mounted) {
-                                    showScaffoldError(
-                                      context: context,
-                                      message: "Error: ${e.toString()}",
-                                    );
-                                  }
-                                }
-                              },
-                              title: 'Print Arabic Demo',
-                              height: 44,
-                              width: 180,
-                              fontSize: 14,
-                              borderColor: Colors.green,
-                              boxColor: Colors.green,
-                              textColor: Colors.white,
-                            ),
                           ],
                         ),
                       ],

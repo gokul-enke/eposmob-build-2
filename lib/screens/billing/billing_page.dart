@@ -18,6 +18,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -1442,6 +1443,23 @@ class BillingPageState extends State<BillingPage>
                 }
               },
             ),
+            // Font size toggle button
+            Consumer<AppFontProvider>(
+              builder: (context, fontProvider, child) {
+                return IconButton(
+                  icon: Icon(
+                    Icons.text_fields,
+                    color: fontProvider.fontSizeLevel > 0
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade600,
+                  ),
+                  tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                  onPressed: () {
+                    fontProvider.cycleFontSize();
+                  },
+                );
+              },
+            ),
             // Sync button next to keyboard icon
             const SyncButton(
               showTooltip: true,
@@ -1923,6 +1941,8 @@ class BillingPageState extends State<BillingPage>
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         List<LocalCartItem> cartItems = localProductProvider.getCartItems();
+        final fontProvider =
+            Provider.of<AppFontProvider>(context, listen: true);
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -1990,7 +2010,7 @@ class BillingPageState extends State<BillingPage>
                                         '${index + 1}',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          11,
+                                          fontProvider.billingTableItemSize,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -2021,7 +2041,8 @@ class BillingPageState extends State<BillingPage>
                                                     'general.unknown'.tr,
                                                 style: buildCustomStyle(
                                                   FontWeightManager.regular,
-                                                  11,
+                                                  fontProvider
+                                                      .billingTableItemSize,
                                                   0.21,
                                                   ColorManager.textColor,
                                                 ),
@@ -2065,7 +2086,7 @@ class BillingPageState extends State<BillingPage>
                                         item.product.unit ?? '-',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          11,
+                                          fontProvider.billingTableItemSize,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -2142,7 +2163,9 @@ class BillingPageState extends State<BillingPage>
                                         child: Text(
                                           AmountHelper.formatAmount(
                                               (item.price! * item.quantity)),
-                                          style: const TextStyle(fontSize: 11),
+                                          style: TextStyle(
+                                              fontSize: fontProvider
+                                                  .billingTableItemSize),
                                           textAlign: TextAlign.left,
                                         ),
                                       ),
@@ -2193,6 +2216,7 @@ class BillingPageState extends State<BillingPage>
 
   Widget _buildHeaderCell(String text,
       {required int flex, required Alignment alignment}) {
+    final fontProvider = Provider.of<AppFontProvider>(context, listen: true);
     return Expanded(
       flex: flex,
       child: Container(
@@ -2204,7 +2228,7 @@ class BillingPageState extends State<BillingPage>
               alignment == Alignment.center ? TextAlign.center : TextAlign.left,
           style: buildCustomStyle(
             FontWeightManager.bold,
-            12,
+            fontProvider.billingTableHeaderSize,
             0.21,
             ColorManager.textColor,
           ),

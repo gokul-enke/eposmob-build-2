@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
 DocumentConfigurationsModel documentConfigurationsModelFromJson(String str) =>
     DocumentConfigurationsModel.fromJson(json.decode(str));
@@ -64,6 +65,7 @@ class DocumentConfig {
   final dynamic updatedBy; // Can be null
   final dynamic createdAt; // Can be null
   final String? updatedAt;
+  final String? language; // Added language field
   final DisplayConfiguration? displayConfiguration; // Nested object
   final ResolvedLabels? resolvedLabels; // Nested object
 
@@ -91,6 +93,7 @@ class DocumentConfig {
     this.updatedBy,
     this.createdAt,
     this.updatedAt,
+    this.language, // Added to constructor
     this.displayConfiguration,
     this.resolvedLabels,
   });
@@ -121,9 +124,8 @@ class DocumentConfig {
       itemName: json["item_name"] == null
           ? null
           : ItemName.fromJson(json["item_name"]),
-      taxName: json["tax_name"] == null
-          ? null
-          : ItemName.fromJson(json["tax_name"]),
+      taxName:
+          json["tax_name"] == null ? null : ItemName.fromJson(json["tax_name"]),
       unitName: json["unit_name"] == null
           ? null
           : ItemName.fromJson(json["unit_name"]),
@@ -137,6 +139,7 @@ class DocumentConfig {
       updatedBy: json["updated_by"],
       createdAt: json["created_at"],
       updatedAt: json["updated_at"],
+      language: json["language"], // Parse language from JSON
       displayConfiguration: displayConfiguration,
       resolvedLabels: json["resolved_labels"] == null
           ? null
@@ -168,6 +171,7 @@ class DocumentConfig {
         "updated_by": updatedBy,
         "created_at": createdAt,
         "updated_at": updatedAt,
+        "language": language,
         "display_configuration": displayConfiguration?.toJson(),
         "resolved_labels": resolvedLabels?.toJson(),
       };
@@ -203,14 +207,14 @@ class DisplayConfiguration {
     if (json.isEmpty) {
       return DisplayConfiguration(options: null);
     }
-    
+
     try {
       final options = Map.from(json).map((k, v) =>
           MapEntry<String, DisplayOption>(k, DisplayOption.fromJson(v)));
-      
+
       return DisplayConfiguration(options: options);
     } catch (e) {
-      print("❌ DisplayConfiguration.fromJson - error parsing: $e");
+      debugPrint("❌ DisplayConfiguration.fromJson - error parsing: $e");
       return DisplayConfiguration(options: null);
     }
   }
@@ -317,7 +321,8 @@ class ResolvedLabels {
         balance: json["balance"],
         status: json["status"],
         tax: json["tax"],
-        item: json["item"], // Supplier Statement uses 'item' instead of 'item_name'
+        item: json[
+            "item"], // Supplier Statement uses 'item' instead of 'item_name'
         particulars: json["particulars"],
         mrp: json["mrp"],
         qty: json["qty"],

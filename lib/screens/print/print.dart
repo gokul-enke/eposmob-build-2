@@ -15,10 +15,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/print_thermal.dart';
+import 'package:pos_machine/screens/print/thermal/thermal_printer.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/resources/localization_service.dart';
+// import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -315,7 +315,7 @@ class _PrintPageState extends State<PrintPage> {
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
       // Get current language from LocalizationService
-      final language = LocalizationService.locale.languageCode;
+      // final language = LocalizationService.locale.languageCode;
 
       // Determine type based on orderReturns
       final hasReturns = widget.orderReturns != null &&
@@ -324,7 +324,7 @@ class _PrintPageState extends State<PrintPage> {
 
       final type = hasReturns ? 'sales_and_return_bill' : 'bill';
 
-      debugPrint("Loading document config: type=$type, language=$language");
+      // debugPrint("Loading document config: type=$type, language=$language");
 
       if (accessToken != null) {
         // Use new language-aware API
@@ -332,12 +332,12 @@ class _PrintPageState extends State<PrintPage> {
             await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
           accessToken: accessToken,
           type: type,
-          language: language,
+          // language: language,
         );
 
         if (_billDocumentConfig != null) {
-          debugPrint(
-              "SUCCESS: Document configuration loaded with language=$language");
+          // debugPrint(
+          //     "SUCCESS: Document configuration loaded with language=$language");
         } else {
           debugPrint(
               "WARNING: Could not load document config, falling back to cached");

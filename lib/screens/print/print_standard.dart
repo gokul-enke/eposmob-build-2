@@ -279,11 +279,15 @@ class StandardPrinter {
       final arabicFont = await _loadArabicFont();
       final arabicFontBold = await _loadArabicFontBold();
 
-      // Determine text direction based on selected app language
-      final isRtl = LocalizationService.locale.languageCode == 'ar';
+      // Determine text direction based on configuration or app language
+      final configLanguage = billDocumentConfig.language;
+      final isRtl = configLanguage != null
+          ? configLanguage == 'ar'
+          : LocalizationService.locale.languageCode == 'ar';
+
       final textDirection = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
       debugPrint(
-          'PDF generation - Language: ${LocalizationService.locale.languageCode}, RTL: $isRtl');
+          'PDF generation - Language: ${configLanguage ?? LocalizationService.locale.languageCode}, Source: ${configLanguage != null ? 'Config' : 'App Locale'}, RTL: $isRtl');
 
       // Define styles with Arabic font for multilingual support
       // Use fontBold parameter for styles that need bold rendering
@@ -2058,11 +2062,15 @@ class StandardPrinter {
       final arabicFont = await _loadArabicFont();
       final arabicFontBold = await _loadArabicFontBold();
 
-      // Determine text direction based on selected app language
-      final isRtl = LocalizationService.locale.languageCode == 'ar';
+      // Determine text direction based on configuration or app language
+      final configLanguage = billDocumentConfig.language;
+      final isRtl = configLanguage != null
+          ? configLanguage == 'ar'
+          : LocalizationService.locale.languageCode == 'ar';
+
       final textDirection = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
       debugPrint(
-          'PDF (Share) - Language: ${LocalizationService.locale.languageCode}, RTL: $isRtl');
+          'PDF (Share) - Language: ${configLanguage ?? LocalizationService.locale.languageCode}, Source: ${configLanguage != null ? 'Config' : 'App Locale'}, RTL: $isRtl');
 
       // Define styles with Arabic font for multilingual support
       // Use fontBold parameter for styles that need bold rendering

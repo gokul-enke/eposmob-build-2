@@ -69,12 +69,15 @@ class DocumentConfigProvider extends ChangeNotifier {
   Future<DocumentConfig?> fetchDocumentConfigByTypeAndLanguage({
     required String accessToken,
     required String type,
-    required String language,
+    String? language,
   }) async {
     debugPrint("📄 Fetching document config: type=$type, language=$language");
 
-    final url =
-        Uri.parse('${APPUrl.documentConfigs}?type=$type&language=$language');
+    String urlString = '${APPUrl.documentConfigs}?type=$type';
+    if (language != null && language.isNotEmpty) {
+      urlString += '&language=$language';
+    }
+    final url = Uri.parse(urlString);
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');

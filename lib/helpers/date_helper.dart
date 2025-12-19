@@ -30,6 +30,18 @@ class DateHelper {
     return formatter.format(istDate);
   }
 
+  static String formatISOTimeOnlyToIST(String isoDateString) {
+    // Parse the incoming ISO date string
+    DateTime utcDate = DateTime.parse(isoDateString);
+
+    // Convert UTC to IST by adding 5 hours 30 minutes
+    DateTime istDate = utcDate.add(const Duration(hours: 5, minutes: 30));
+
+    // Format time only
+    final DateFormat formatter = DateFormat('hh:mm a');
+    return formatter.format(istDate);
+  }
+
   // To Print Local to Local Date and Time
   static String formatToISODateFromIST(String isoDateString) {
     final DateTime local = DateTime.parse(isoDateString).toLocal();
