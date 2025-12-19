@@ -162,10 +162,10 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             child: ListView(
               children: [
                 _buildHeader(size),
-                const SizedBox(height: 15),
+                const SizedBox(height: 10),
                 _buildSearchBar(size),
-                const SizedBox(height: 15),
-                Container(
+                // const SizedBox(height: 10),
+                SizedBox(
                   height: size.height * 0.6,
                   child: _buildReceiptTable(),
                 ),
@@ -293,7 +293,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       children: [
         // First row with exactly 4 fields
         SizedBox(
-          height: 90,
+          height: 55,
           child: Row(
             children: [
               // first field
@@ -325,8 +325,9 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
 
         // Second row with the 5th field and reset button
         SizedBox(
-          height: 90,
+          height: 55,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Fifth field
               Expanded(
@@ -352,7 +353,9 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               Expanded(
                 flex: 1,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 10.0, top: 42),
+                  padding: const EdgeInsets.only(
+                    left: 10.0,
+                  ),
                   child: CustomRoundButton(
                     title: "Reset",
                     boxColor: Colors.white,
@@ -377,15 +380,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Phone",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Phone",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
@@ -413,87 +416,81 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   Widget _buildEmailSearch() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Email",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Padding(
+        //   padding: const EdgeInsets.all(8.0),
+        //   child: Text(
+        //     "Email",
+        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+        //         0.27, Colors.black.withOpacity(0.6)),
+        //   ),
+        // ),
+        // const SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: emailController,
+            onChanged: (value) {
+              searchReceipts();
+            },
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Email Address",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
             ),
           ),
-          SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: emailController,
-              onChanged: (value) {
-                searchReceipts();
-              },
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: decoration.copyWith(
-                hintText: "Email Address",
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                prefixIconColor: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
 // Update all field widgets to use full width
   Widget _buildReceiptNumberSearch() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Receipt Number",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Padding(
+        //   padding: const EdgeInsets.all(8.0),
+        //   child: Text(
+        //     "Receipt Number",
+        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+        //         0.27, Colors.black.withOpacity(0.6)),
+        //   ),
+        // ),
+        // SizedBox(
+        //   height: 8,
+        // ),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity, // Take full available width
+          circleRadius: 7,
+          child: TextFormField(
+            controller: receiptNumberController,
+            onChanged: (value) {
+              searchReceipts();
+            },
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Receipt No.",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
             ),
           ),
-          SizedBox(
-            height: 8,
-          ),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity, // Take full available width
-            circleRadius: 7,
-            child: TextFormField(
-              controller: receiptNumberController,
-              onChanged: (value) {
-                searchReceipts();
-              },
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: decoration.copyWith(
-                hintText: "Receipt No.",
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                prefixIconColor: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -503,15 +500,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Payment Reference",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Payment Reference",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // SizedBox(height: 8),
           BuildBoxShadowContainer(
             circleRadius: 7,
             height: 45,
@@ -544,15 +541,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Status",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Status",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           Consumer<InvoiceProvider>(
             builder: (context, invoiceProvider, child) {
               List<String> statusOptions =
@@ -589,15 +586,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Payment Method",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Payment Method",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           Consumer<InvoiceProvider>(
             builder: (context, invoiceProvider, child) {
               List<String> paymentMethodOptions =
@@ -634,17 +631,17 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Name",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          SizedBox(
-            height: 8,
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Name",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // SizedBox(
+          //   height: 8,
+          // ),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity, // Take full available width
@@ -713,7 +710,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              
+
               // Two-column layout for main details
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -723,13 +720,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildInfoField('Receipt Number:', receipt.receiptNumber),
+                        _buildInfoField(
+                            'Receipt Number:', receipt.receiptNumber),
                         const SizedBox(height: 24),
                         _buildInfoField('Amount:', receipt.amount),
                         const SizedBox(height: 24),
                         _buildInfoField('Status:', receipt.receiptStatus),
                         const SizedBox(height: 24),
-                        _buildInfoField('Payment Reference:', receipt.paymentReference),
+                        _buildInfoField(
+                            'Payment Reference:', receipt.paymentReference),
                       ],
                     ),
                   ),
@@ -739,7 +738,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildInfoField('Customer:', receipt.customer.user.name),
+                        _buildInfoField(
+                            'Customer:', receipt.customer.user.name),
                         const SizedBox(height: 24),
                         _buildInfoField('Company:', receipt.company.name),
                       ],
@@ -747,9 +747,9 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Payment details table
               Expanded(
                 child: SingleChildScrollView(
@@ -758,7 +758,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                     children: [
                       // Table header
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           borderRadius: const BorderRadius.only(
@@ -832,7 +833,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                           ],
                         ),
                       ),
-                      
+
                       // Table rows
                       Container(
                         decoration: BoxDecoration(
@@ -844,24 +845,26 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                         ),
                         child: Column(
                           children: [
-                            ...receipt.receiptPayments.map((p) => _buildPaymentRow(
-                                  DateHelper.formatDate(
-                                      DateTime.tryParse(p.paymentDate) ?? receipt.createdAt),
-                                  p.invoiceId != null
-                                      ? 'INV-${p.invoiceId}'
-                                      : (p.description?.isNotEmpty == true
-                                          ? p.description!
-                                          : 'General Payment'),
-                                  p.paymentMethod,
-                                  p.status,
-                                  p.paidAmount,
-                                )),
+                            ...receipt.receiptPayments
+                                .map((p) => _buildPaymentRow(
+                                      DateHelper.formatDate(
+                                          DateTime.tryParse(p.paymentDate) ??
+                                              receipt.createdAt),
+                                      p.invoiceId != null
+                                          ? 'INV-${p.invoiceId}'
+                                          : (p.description?.isNotEmpty == true
+                                              ? p.description!
+                                              : 'General Payment'),
+                                      p.paymentMethod,
+                                      p.status,
+                                      p.paidAmount,
+                                    )),
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Summary section (hide Balance as requested)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -900,9 +903,9 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Close button
               Align(
                 alignment: Alignment.centerLeft,
@@ -923,7 +926,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       ),
     );
   }
-  
+
   Widget _buildInfoField(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -950,7 +953,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       ],
     );
   }
-  
+
   Widget _buildPaymentRow(
     String date,
     String invoice,
@@ -1215,7 +1218,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                       2: FlexColumnWidth(1.5), // Amount
                                       3: FlexColumnWidth(1.5), // Type
                                       4: FlexColumnWidth(1.5), // Status
-                                      5: FlexColumnWidth(2.0), // Payment Reference
+                                      5: FlexColumnWidth(
+                                          2.0), // Payment Reference
                                       6: FlexColumnWidth(1.0), // Action
                                     },
                                     border: null,
@@ -1242,8 +1246,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                                 .toString()),
                                             _buildTableCell(receipt.amount),
                                             Center(
-                                                child: _buildTypeChip(
-                                                    receipt)),
+                                                child: _buildTypeChip(receipt)),
                                             Center(
                                                 child: _buildStatusChip(
                                                     receipt.receiptStatus)),
@@ -1288,7 +1291,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                             ),
                                           ],
                                         );
-                                      }).toList(),
+                                      }),
                                     ],
                                   ),
                                 ),

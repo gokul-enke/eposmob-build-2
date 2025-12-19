@@ -601,7 +601,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 _buildHeader(size),
                 const SizedBox(height: 10),
                 _buildSearchBar(size),
-                const SizedBox(height: 10),
+                // const SizedBox(height: 10),
                 _buildInvoiceTable(),
                 const SizedBox(height: 10),
                 _buildPaginationControls(),
@@ -719,41 +719,38 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Widget _buildInvoiceNumberSearch() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Invoice No",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: invoiceNumberController,
-              onChanged: (value) => searchInvoices(),
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: decoration.copyWith(
-                hintText: "Invoice No",
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                prefixIconColor: Colors.black,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Padding(
+        //   padding: const EdgeInsets.all(8.0),
+        //   child: Text(
+        //     "Invoice No",
+        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+        //         0.27, Colors.black.withOpacity(0.6)),
+        //   ),
+        // ),
+        // const SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: invoiceNumberController,
+            onChanged: (value) => searchInvoices(),
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Invoice No",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -937,54 +934,51 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Widget _buildStatusFilter() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Status",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          Consumer<InvoiceProvider>(
-            builder: (context, invoiceProvider, child) {
-              List<String> statusOptions = invoiceProvider.getStatusOptions();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Padding(
+        //   padding: const EdgeInsets.all(8.0),
+        //   child: Text(
+        //     "Status",
+        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+        //         0.27, Colors.black.withOpacity(0.6)),
+        //   ),
+        // ),
+        // const SizedBox(height: 8),
+        Consumer<InvoiceProvider>(
+          builder: (context, invoiceProvider, child) {
+            List<String> statusOptions = invoiceProvider.getStatusOptions();
 
-              // Find the display text for the currently selected status
-              String? selectedStatusDisplay;
-              if (selectedStatus != null) {
-                selectedStatusDisplay = statusOptions.contains(selectedStatus)
-                    ? selectedStatus
-                    : "All Status";
-              }
+            // Find the display text for the currently selected status
+            String? selectedStatusDisplay;
+            if (selectedStatus != null) {
+              selectedStatusDisplay = statusOptions.contains(selectedStatus)
+                  ? selectedStatus
+                  : "All Status";
+            }
 
-              return BuildDropDownWithSearch<String>(
-                title: null,
-                showName: false,
-                hintText: 'All Status',
-                value: selectedStatus,
-                items: statusOptions
-                    .where((status) => status != "All Status")
-                    .toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedStatus = newValue;
-                  });
-                  searchInvoices();
-                },
-                displayText: (status) => status.toUpperCase(),
-                height: 45,
-                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              );
-            },
-          ),
-        ],
-      ),
+            return BuildDropDownWithSearch<String>(
+              title: null,
+              showName: false,
+              hintText: 'All Status',
+              value: selectedStatus,
+              items: statusOptions
+                  .where((status) => status != "All Status")
+                  .toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedStatus = newValue;
+                });
+                searchInvoices();
+              },
+              displayText: (status) => status.toUpperCase(),
+              height: 45,
+              margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            );
+          },
+        ),
+      ],
     );
   }
 
