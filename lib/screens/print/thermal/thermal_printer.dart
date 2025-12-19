@@ -397,7 +397,8 @@ class ThermalPrinter {
 
       // Setup print parameters
       final double printWidth = selectedPaperSize == '58mm' ? 384.0 : 576.0;
-      final double baseFontSize = 20.0;
+      // Dynamic font size: larger for 80mm to maintain proportional appearance
+      final double baseFontSize = selectedPaperSize == '80mm' ? 28.0 : 20.0;
 
       // Build receipt rows
       List<ReceiptRow> part1Rows = [];
