@@ -116,14 +116,19 @@ class PaymentCoordinator {
   }
 
   static void showCouponModal(BuildContext context) {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final bp = Provider.of<BillingProvider>(context, listen: false);
+    final currentDiscounts = localProductProvider.getCurrentDiscount();
+
     showDialog(
       context: context,
       builder: (context) => CouponModal(
-        initialCouponCode: Provider.of<BillingProvider>(context, listen: false)
-            .coupenCodeTextController
-            .text,
-        isCouponApplied: Provider.of<BillingProvider>(context, listen: false)
-            .isCouponApplied,
+        subTotal: localProductProvider.subTotalBeforeDiscount,
+        initialFlatDiscount: currentDiscounts['flatDiscount'],
+        initialPercentageDiscount: currentDiscounts['percentageDiscount'],
+        initialCouponCode: bp.coupenCodeTextController.text,
+        isCouponApplied: bp.isCouponApplied,
         onCouponAction: (
           couponCode,
           shouldApply, {

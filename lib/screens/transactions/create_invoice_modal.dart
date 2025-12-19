@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
@@ -14,6 +15,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:provider/provider.dart';
 
 Future<dynamic> showCreateInvoiceModal(BuildContext context, Size size) {
@@ -137,6 +139,15 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
   final List<InvoiceItemCard> _invoiceItemCards = [];
   late InvoiceItemCard _newItemCard;
 
+  // Financial Summary Totals
+  double _netTotal = 0.0;
+  double _totalTax = 0.0;
+  double _totalPayable = 0.0;
+  double _discount = 0.0;
+  double _discountPercentage = 0.0;
+  String _couponCode = "";
+  bool _isCouponApplied = false;
+
   @override
   void initState() {
     super.initState();
@@ -221,11 +232,34 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
   }
 
   void _calculateInvoiceTotal() {
-    double total = 0;
+    double netTotal = 0;
+    double totalTax = 0;
+
     for (var card in _invoiceItemCards) {
-      total += double.tryParse(card.totalController.text) ?? 0;
+      final unitAmount = double.tryParse(card.unitAmountController.text) ?? 0;
+      final tax = double.tryParse(card.taxController.text) ?? 0;
+      final quantity = double.tryParse(card.quantityController.text) ?? 1;
+
+      netTotal += unitAmount * quantity;
+      totalTax += tax * quantity;
     }
-    _totalAmountController.text = total.toStringAsFixed(2);
+
+    setState(() {
+      _netTotal = netTotal;
+      _totalTax = totalTax;
+
+      // Calculate discount amount if it's a percentage
+      if (_discountPercentage > 0) {
+        _discount = (_netTotal + _totalTax) * (_discountPercentage / 100);
+      }
+
+      // Total Payable = Net Total + Total Tax - Discount + Customer Balance
+      double balance = _getCustomerBalance(_selectedCustomer);
+      _totalPayable = (_netTotal + _totalTax - _discount) + balance;
+
+      _totalAmountController.text =
+          (_netTotal + _totalTax - _discount).toStringAsFixed(2);
+    });
   }
 
   void _addNewInvoiceItemCard() {
@@ -309,7 +343,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
     return Expanded(
       flex: flex,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Text(
           text,
           style: buildCustomStyle(
@@ -320,6 +354,57 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Builds a standard summary row with dimmed labels and medium values.
+  Widget _buildSummaryRow(String label, double value,
+      {bool isDiscount = false}) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: isDiscount ? Colors.green[400] : Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          '${value.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontSize: 14,
+            color: isDiscount ? Colors.green[400] : Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the highlighted final total row.
+  Widget _buildNetTotalRow(String label, double value) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value.toStringAsFixed(2),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent, // Or use your brand color
+          ),
+        ),
+      ],
     );
   }
 
@@ -487,6 +572,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
+                      flex: 1,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -511,33 +597,124 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    // Expanded(
+                    //   child: Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.start,
+                    //     children: [
+                    //       _buildLabel("Total Invoice Amount"),
+                    //       const SizedBox(height: 4),
+                    //       Container(
+                    //         height: 48,
+                    //         decoration: BoxDecoration(
+                    //           color: Colors.grey.shade100,
+                    //           borderRadius: BorderRadius.circular(8),
+                    //           border: Border.all(color: Colors.grey.shade300),
+                    //         ),
+                    //         alignment: Alignment.centerLeft,
+                    //         padding: const EdgeInsets.symmetric(horizontal: 12),
+                    //         child: Text(
+                    //           _totalAmountController.text.isEmpty
+                    //               ? "0"
+                    //               : _totalAmountController.text,
+                    //           style: buildCustomStyle(
+                    //             FontWeightManager.regular,
+                    //             FontSize.s14,
+                    //             0.27,
+                    //             ColorManager.textColor,
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
+
                     Expanded(
-                      child: Column(
+                      flex: 3,
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel("Total Invoice Amount"),
-                          const SizedBox(height: 4),
-                          Container(
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              _totalAmountController.text.isEmpty
-                                  ? "0"
-                                  : _totalAmountController.text,
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                ColorManager.textColor,
-                              ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Due date"),
+                                const SizedBox(height: 4),
+                                CustomCalendarPickerTableCell(
+                                  initialDate: DateTime.tryParse(
+                                          _dueDateController.text) ??
+                                      DateTime.now()
+                                          .add(const Duration(days: 30)),
+                                  onDateSelected: (date) {
+                                    setState(() {
+                                      _dueDateController.text =
+                                          date.toIso8601String().split('T')[0];
+                                    });
+                                    FocusScope.of(context)
+                                        .requestFocus(_invoiceDateFocus);
+                                  },
+                                  hintText: "Select due date",
+                                  height: 48,
+                                  focusNode: _dueDateFocus,
+                                ),
+                              ],
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Invoice date"),
+                                const SizedBox(height: 4),
+                                CustomCalendarPickerTableCell(
+                                  initialDate: DateTime.tryParse(
+                                          _invoiceDateController.text) ??
+                                      DateTime.now(),
+                                  onDateSelected: (date) {
+                                    setState(() {
+                                      _invoiceDateController.text =
+                                          date.toIso8601String().split('T')[0];
+                                    });
+                                    FocusScope.of(context)
+                                        .requestFocus(_statusFocus);
+                                  },
+                                  hintText: "Select invoice date",
+                                  height: 48,
+                                  focusNode: _invoiceDateFocus,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // const SizedBox(width: 12),
+                          // Expanded(
+                          //   child: Column(
+                          //     crossAxisAlignment: CrossAxisAlignment.start,
+                          //     children: [
+                          //       _buildLabel("Status"),
+                          //       const SizedBox(height: 4),
+                          //       CustomDropDownWithSearch<String>(
+                          //         hintText: "Select status",
+                          //         title: "",
+                          //         value: _selectedStatus,
+                          //         items: const [
+                          //           "Pending",
+                          //           "Paid",
+                          //           "Overdue",
+                          //           "Cancelled"
+                          //         ],
+                          //         focusNode: _statusFocus,
+                          //         onChanged: (value) {
+                          //           setState(() => _selectedStatus = value);
+                          //           FocusScope.of(context)
+                          //               .requestFocus(_customerFocus);
+                          //         },
+                          //         displayText: (item) => item,
+                          //         showName: false,
+                          //         height: 48,
+                          //       ),
+                          //     ],
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
@@ -545,93 +722,6 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                 ),
                 const SizedBox(height: 12),
 
-                // Row 2: Due Date | Invoice Date | Status
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel("Due date"),
-                          const SizedBox(height: 4),
-                          CustomCalendarPickerTableCell(
-                            initialDate:
-                                DateTime.tryParse(_dueDateController.text) ??
-                                    DateTime.now()
-                                        .add(const Duration(days: 30)),
-                            onDateSelected: (date) {
-                              setState(() {
-                                _dueDateController.text =
-                                    date.toIso8601String().split('T')[0];
-                              });
-                              FocusScope.of(context)
-                                  .requestFocus(_invoiceDateFocus);
-                            },
-                            hintText: "Select due date",
-                            height: 48,
-                            focusNode: _dueDateFocus,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel("Invoice date"),
-                          const SizedBox(height: 4),
-                          CustomCalendarPickerTableCell(
-                            initialDate: DateTime.tryParse(
-                                    _invoiceDateController.text) ??
-                                DateTime.now(),
-                            onDateSelected: (date) {
-                              setState(() {
-                                _invoiceDateController.text =
-                                    date.toIso8601String().split('T')[0];
-                              });
-                              FocusScope.of(context).requestFocus(_statusFocus);
-                            },
-                            hintText: "Select invoice date",
-                            height: 48,
-                            focusNode: _invoiceDateFocus,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel("Status"),
-                          const SizedBox(height: 4),
-                          CustomDropDownWithSearch<String>(
-                            hintText: "Select status",
-                            title: "",
-                            value: _selectedStatus,
-                            items: const [
-                              "Pending",
-                              "Paid",
-                              "Overdue",
-                              "Cancelled"
-                            ],
-                            focusNode: _statusFocus,
-                            onChanged: (value) {
-                              setState(() => _selectedStatus = value);
-                              FocusScope.of(context)
-                                  .requestFocus(_customerFocus);
-                            },
-                            displayText: (item) => item,
-                            showName: false,
-                            height: 48,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 12),
 
                 // Row 3: Customer (with balance display)
@@ -650,6 +740,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                       focusNode: _customerFocus,
                       onChanged: (value) {
                         setState(() => _selectedCustomer = value);
+                        _calculateInvoiceTotal(); // Recalculate with new balance
                         FocusScope.of(context)
                             .requestFocus(_newItemCard.itemNameFocus);
                       },
@@ -694,7 +785,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
           if (_invoiceItemCards.isNotEmpty)
             CustomBoxShadowContainer(
               circleRadius: 12,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
               child: Column(
                 children: [
                   // Items list
@@ -702,7 +793,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                     int index = entry.key;
                     InvoiceItemCard card = entry.value;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.only(top: 5),
                       child: Row(
                         children: [
                           _buildInputCell(
@@ -754,7 +845,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
           // Inline Add Form
           CustomBoxShadowContainer(
             circleRadius: 12,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -768,7 +859,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                     _buildTableHeader("Total"),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 5),
 
                 // Input row
                 Row(
@@ -822,22 +913,193 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                       hintText: "0",
                       readOnly: true,
                     ),
+                    InkWell(
+                      onTap: () {
+                        _addNewInvoiceItemCard();
+                      },
+                      child: Container(
+                        height: 40,
+                        width: 40,
+                        decoration: BoxDecoration(
+                          color: ColorManager.kPrimaryColor,
+                          borderRadius: BorderRadius.circular(5),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: ColorManager.boxShadowColor,
+                              blurRadius: 3,
+                              offset: Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
                   ],
                 ),
-                const SizedBox(height: 12),
+                // const SizedBox(height: 12),
 
-                Center(
-                  child: CustomRoundButtonAdvanced(
-                    title: "Add to invoice items",
-                    fct: _addNewInvoiceItemCard,
-                    width: 180,
-                    height: 40,
-                    fontSize: 14,
-                  ),
+                // Center(
+                //   child: CustomRoundButtonAdvanced(
+                //     title: "Add to invoice items",
+                //     fct: _addNewInvoiceItemCard,
+                //     width: 180,
+                //     height: 40,
+                //     fontSize: 14,
+                //   ),
+                // ),
+                const SizedBox(height: 20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildLabel("Status"),
+                                const SizedBox(height: 4),
+                                CustomDropDownWithSearch<String>(
+                                  hintText: "Select status",
+                                  title: "",
+                                  value: _selectedStatus,
+                                  items: const [
+                                    "Pending",
+                                    "Paid",
+                                    "Overdue",
+                                    "Cancelled"
+                                  ],
+                                  focusNode: _statusFocus,
+                                  onChanged: (value) {
+                                    setState(() => _selectedStatus = value);
+                                    FocusScope.of(context)
+                                        .requestFocus(_customerFocus);
+                                  },
+                                  displayText: (item) => item,
+                                  showName: false,
+                                  height: 48,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: InkWell(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => CouponModal(
+                                    subTotal: _netTotal + _totalTax,
+                                    initialFlatDiscount: _discount,
+                                    initialPercentageDiscount:
+                                        _discountPercentage,
+                                    initialCouponCode: _couponCode,
+                                    isCouponApplied: _isCouponApplied,
+                                    onCouponAction: (couponCode, shouldApply,
+                                        {double? flatDiscount,
+                                        double? percentageDiscount}) async {
+                                      if (shouldApply) {
+                                        setState(() {
+                                          _couponCode = couponCode;
+                                          _isCouponApplied = true;
+                                          if (percentageDiscount != null &&
+                                              percentageDiscount > 0) {
+                                            _discountPercentage =
+                                                percentageDiscount;
+                                            _discount = 0; // Recalculated below
+                                          } else {
+                                            _discountPercentage = 0;
+                                            _discount = flatDiscount ?? 0;
+                                          }
+                                        });
+                                        _calculateInvoiceTotal();
+                                      } else {
+                                        setState(() {
+                                          _couponCode = "";
+                                          _isCouponApplied = false;
+                                          _discount = 0;
+                                          _discountPercentage = 0;
+                                        });
+                                        _calculateInvoiceTotal();
+                                      }
+                                    },
+                                  ),
+                                );
+                              },
+                              child: BuildBoxShadowContainer(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 8),
+                                blurRadius: 4,
+                                circleRadius: 5,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 5, horizontal: 15),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.discount_outlined,
+                                            size: 18,
+                                            color: Colors.blue,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            'Discount',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s12,
+                                              0.14,
+                                              Colors.blue,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Expanded(flex: 2, child: SizedBox()),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildSummaryRow('Total Amount', _netTotal),
+                          const SizedBox(height: 5),
+                          _buildSummaryRow('All Tax Amount', _totalTax),
+                          const SizedBox(height: 5),
+                          _buildSummaryRow('Discount', -_discount,
+                              isDiscount: true),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10.0),
+                            child: Divider(thickness: 1, height: 1),
+                          ),
+                          _buildNetTotalRow('Total Payable', _totalPayable),
+                        ],
+                      ),
+                    )
+                  ],
                 ),
               ],
             ),
           ),
+
           const SizedBox(height: 20),
 
           // Action Buttons
