@@ -593,8 +593,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
