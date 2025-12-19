@@ -9,6 +9,8 @@ export 'qr_code_section.dart';
 export 'barcode_section.dart';
 export 'balance_section.dart';
 export 'cart_items_section.dart';
+export 'base_totals_section.dart';
 export 'totals_section.dart';
+export 'bilingual_totals_section.dart';
 export 'returns_section.dart';
 export 'total_summary_section.dart';

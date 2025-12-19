@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import '../font_config.dart';
+import 'base_totals_section.dart';
 
 /// Builds the totals section of the thermal receipt
 /// Includes: Items count, total qty, MRP total, discount, net amount
-class TotalsSectionBuilder {
+class TotalsSectionBuilder implements TotalsSection {
+  @override
   List<int> build(
     Generator generator,
     Map<String, DisplayOption>? displayConfig,
@@ -20,6 +22,7 @@ class TotalsSectionBuilder {
     PaperSize paperSize,
     double? customerOldBalance,
     double? customerCurrentBalance,
+    double taxAmount,
   ) {
     List<int> bytes = [];
 
@@ -78,8 +81,13 @@ class TotalsSectionBuilder {
     }
 
     if (displayConfig?['showDiscount']?.visible == true) {
+      final discountLabel =
+          (displayConfig?['showDiscount']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showDiscount']!.value as String
+              : 'Discount';
+
       rightSideItems.add({
-        'label': 'Discount',
+        'label': discountLabel,
         'value': discountAmountValue.toStringAsFixed(2),
         'textSize': 'small',
         'bold': 'false',
@@ -87,9 +95,33 @@ class TotalsSectionBuilder {
       });
     }
 
-    if (displayConfig?['showNetAmount']?.visible == true) {
+    // Add Tax row if visible
+    if (displayConfig?['showTax']?.visible == true) {
+      final taxLabel =
+          (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showTax']!.value as String
+              : (billDocumentConfig?.resolvedLabels?.tax?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.tax!
+                  : 'Tax');
+
       rightSideItems.add({
-        'label': 'Net Total',
+        'label': taxLabel,
+        'value': taxAmount.toStringAsFixed(2),
+        'textSize': 'small',
+        'bold': 'false',
+        'fontType': 'fontA'
+      });
+    }
+
+    if (displayConfig?['showNetAmount']?.visible == true) {
+      final netTotalLabel =
+          (displayConfig?['showNetAmount']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showNetAmount']!.value as String
+              : 'Net Total';
+
+      rightSideItems.add({
+        'label': netTotalLabel,
         'value': total.toStringAsFixed(2),
         'textSize': 'big',
         'bold': 'true',
