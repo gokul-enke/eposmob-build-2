@@ -791,17 +791,17 @@ class _CreateCustomerVoucherScreenState
               ),
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                'Tax',
-                textAlign: TextAlign.center,
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s11, 0.18, ColorManager.kPrimaryColor),
-              ),
-            ),
-          ),
+          // Expanded(
+          //   child: Padding(
+          //     padding: const EdgeInsets.all(12.0),
+          //     child: Text(
+          //       'Tax',
+          //       textAlign: TextAlign.center,
+          //       style: buildCustomStyle(FontWeightManager.semiBold,
+          //           FontSize.s11, 0.18, ColorManager.kPrimaryColor),
+          //     ),
+          //   ),
+          // ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -904,39 +904,39 @@ class _CreateCustomerVoucherScreenState
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: BuildBoxShadowContainer(
-                height: 45,
-                circleRadius: 7,
-                child: TextFormField(
-                  initialValue: item.tax,
-                  focusNode: item.taxFocus,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  onChanged: (value) {
-                    setState(() => item.tax = value);
-                    _calculateTotal();
-                  },
-                  onFieldSubmitted: (_) {
-                    FocusScope.of(context).requestFocus(item.quantityFocus);
-                  },
-                  onTap: () {
-                    // Select all text when focused
-                    final controller = TextEditingController(text: item.tax);
-                    controller.selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: item.tax.length,
-                    );
-                  },
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '0',
-                    contentPadding: const EdgeInsets.only(left: 15),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
+            // Expanded(
+            //   child: BuildBoxShadowContainer(
+            //     height: 45,
+            //     circleRadius: 7,
+            //     child: TextFormField(
+            //       initialValue: item.tax,
+            //       focusNode: item.taxFocus,
+            //       keyboardType: TextInputType.number,
+            //       textInputAction: TextInputAction.next,
+            //       onChanged: (value) {
+            //         setState(() => item.tax = value);
+            //         _calculateTotal();
+            //       },
+            //       onFieldSubmitted: (_) {
+            //         FocusScope.of(context).requestFocus(item.quantityFocus);
+            //       },
+            //       onTap: () {
+            //         // Select all text when focused
+            //         final controller = TextEditingController(text: item.tax);
+            //         controller.selection = TextSelection(
+            //           baseOffset: 0,
+            //           extentOffset: item.tax.length,
+            //         );
+            //       },
+            //       decoration: InputDecoration(
+            //         border: InputBorder.none,
+            //         hintText: '0',
+            //         contentPadding: const EdgeInsets.only(left: 15),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(width: 8),
             Expanded(
               child: BuildBoxShadowContainer(
                 height: 45,
