@@ -149,7 +149,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     // Payment method will be set dynamically in _loadPaymentMethods
 
     // Initialize new item card
-    _newItemCard = ReceiptItemCard(defaultDescription: "Item 1");
+    _newItemCard = ReceiptItemCard(defaultDescription: "");
 
     // Add listener to new item card's amount controller
     _newItemCard.amountController.addListener(_calculateTotalAmount);
@@ -1173,64 +1173,6 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel("Payment Method", isRequired: true),
-                            const SizedBox(height: 4),
-                            CustomDropDownWithSearch<String>(
-                              hintText: _isLoadingPaymentMethods
-                                  ? "Loading..."
-                                  : "Payment Method",
-                              title: "",
-                              value: _selectedPaymentMethod,
-                              items:
-                                  _paymentMethods.map((m) => m.value).toList(),
-                              focusNode: _paymentMethodFocus,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedPaymentMethod = value;
-                                });
-                                // Move focus to customer
-                                FocusScope.of(context)
-                                    .requestFocus(_customerFocus);
-                              },
-                              displayText: (item) {
-                                try {
-                                  return _paymentMethods
-                                      .firstWhere((m) => m.value == item)
-                                      .description;
-                                } catch (e) {
-                                  return item;
-                                }
-                              },
-                              showName: false,
-                              height: 48,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildTextField(
-                          "Total Receipt Amount",
-                          _totalAmountController,
-                          TextInputType.number,
-                          widget.size,
-                          readOnly: true,
-                          placeholder: "Auto-calculated from items",
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // 2nd row: Customer | Status | Payment Reference
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
                             _buildLabel("Customer", isRequired: true),
                             const SizedBox(height: 4),
                             CustomDropDownWithSearch<String>(
@@ -1341,53 +1283,6 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: _buildTextField(
-                          "Payment Reference",
-                          _paymentReferenceController,
-                          TextInputType.text,
-                          widget.size,
-                          placeholder: "Enter payment reference (optional)",
-                          focusNode: _paymentReferenceFocus,
-                          textInputAction: TextInputAction.next,
-                          onFieldSubmitted: (_) {
-                            // Move focus to first receipt item's type
-                            if (_receiptItemCards.isNotEmpty) {
-                              FocusScope.of(context).requestFocus(
-                                  _receiptItemCards[0].itemTypeFocus);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Receipt items table
-            // Inline Add Item Form
-            CustomBoxShadowContainer(
-              circleRadius: 7,
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add Item',
-                    style: buildCustomStyle(
-                      FontWeightManager.semiBold,
-                      FontSize.s16,
-                      0.30,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1432,9 +1327,141 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Show Description field for General Payment
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel("Payment Date", isRequired: true),
+                            const SizedBox(height: 4),
+                            CustomCalendarPickerTableCell(
+                              initialDate: DateTime.tryParse(_newItemCard
+                                      .paymentDateController.text) ??
+                                  DateTime.now(),
+                              onDateSelected: (date) {
+                                setState(() {
+                                  _newItemCard.paymentDateController.text =
+                                      date.toIso8601String().split('T')[0];
+                                });
+                                // Move focus to amount
+                                FocusScope.of(context)
+                                    .requestFocus(_newItemCard.amountFocus);
+                              },
+                              hintText: "Select payment date",
+                              height: 48,
+                              focusNode: _newItemCard.paymentDateFocus,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Expanded(
+                      //   child: Column(
+                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                      //     children: [
+                      //       _buildLabel("Payment Method", isRequired: true),
+                      //       const SizedBox(height: 4),
+                      //       CustomDropDownWithSearch<String>(
+                      //         hintText: _isLoadingPaymentMethods
+                      //             ? "Loading..."
+                      //             : "Payment Method",
+                      //         title: "",
+                      //         value: _selectedPaymentMethod,
+                      //         items:
+                      //             _paymentMethods.map((m) => m.value).toList(),
+                      //         focusNode: _paymentMethodFocus,
+                      //         onChanged: (value) {
+                      //           setState(() {
+                      //             _selectedPaymentMethod = value;
+                      //           });
+                      //           // Move focus to customer
+                      //           FocusScope.of(context)
+                      //               .requestFocus(_customerFocus);
+                      //         },
+                      //         displayText: (item) {
+                      //           try {
+                      //             return _paymentMethods
+                      //                 .firstWhere((m) => m.value == item)
+                      //                 .description;
+                      //           } catch (e) {
+                      //             return item;
+                      //           }
+                      //         },
+                      //         showName: false,
+                      //         height: 48,
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+                      // const SizedBox(width: 8),
+                      // Expanded(
+                      //   child: _buildTextField(
+                      //     "Total Receipt Amount",
+                      //     _totalAmountController,
+                      //     TextInputType.number,
+                      //     widget.size,
+                      //     readOnly: true,
+                      //     placeholder: "Auto-calculated from items",
+                      //   ),
+                      // ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // 2nd row: Customer | Status | Payment Reference
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTextField(
+                          "Payment Reference",
+                          _paymentReferenceController,
+                          TextInputType.text,
+                          widget.size,
+                          placeholder: "Enter payment reference (optional)",
+                          focusNode: _paymentReferenceFocus,
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) {
+                            // Move focus to first receipt item's type
+                            if (_receiptItemCards.isNotEmpty) {
+                              FocusScope.of(context).requestFocus(
+                                  _receiptItemCards[0].itemTypeFocus);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Receipt items table
+            // Inline Add Item Form
+            CustomBoxShadowContainer(
+              circleRadius: 7,
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add Item',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s16,
+                      0.30,
+                      ColorManager.textColor,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
                       if (_newItemCard.selectedItemType == "General Payment")
                         Expanded(
+                          flex: 4,
                           child: _buildTextField(
                             "Description",
                             _newItemCard.descriptionController,
@@ -1452,6 +1479,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                       // Show Invoice dropdown for Invoice Payment
                       else
                         Expanded(
+                          flex: 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1532,16 +1560,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             ],
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                      const SizedBox(width: 8),
                       // Show Invoice Amount and Balance Amount only for Invoice Payment
                       if (_newItemCard.selectedItemType ==
                           "Invoice Payment") ...[
                         Expanded(
+                          flex: 2,
                           child: _buildTextField(
                             "Invoice Amount",
                             _newItemCard.invoiceAmountController,
@@ -1552,6 +1576,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
+                          flex: 2,
                           child: _buildTextField(
                             "Balance Amount",
                             _newItemCard.balanceAmountController,
@@ -1562,34 +1587,9 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         ),
                         const SizedBox(width: 8),
                       ],
+
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel("Payment Date", isRequired: true),
-                            const SizedBox(height: 4),
-                            CustomCalendarPickerTableCell(
-                              initialDate: DateTime.tryParse(_newItemCard
-                                      .paymentDateController.text) ??
-                                  DateTime.now(),
-                              onDateSelected: (date) {
-                                setState(() {
-                                  _newItemCard.paymentDateController.text =
-                                      date.toIso8601String().split('T')[0];
-                                });
-                                // Move focus to amount
-                                FocusScope.of(context)
-                                    .requestFocus(_newItemCard.amountFocus);
-                              },
-                              hintText: "Select payment date",
-                              height: 48,
-                              focusNode: _newItemCard.paymentDateFocus,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
+                        flex: 2,
                         child: _buildTextField(
                           "Amount",
                           _newItemCard.amountController,
@@ -1603,18 +1603,139 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                           },
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () {
+                          _addNewReceiptItemCard();
+                        },
+                        child: Container(
+                          height: 48,
+                          width: 48,
+                          decoration: BoxDecoration(
+                            color: ColorManager.kPrimaryColor,
+                            borderRadius: BorderRadius.circular(5),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: ColorManager.boxShadowColor,
+                                blurRadius: 3,
+                                offset: Offset(1, 1),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Center(
-                    child: CustomRoundButtonAdvanced(
-                      title: "Add to List",
-                      fct: _addNewReceiptItemCard,
-                      width: 150,
-                      height: 40,
-                      fontSize: 14,
-                    ),
-                  ),
+                  // Center(
+                  //   child: CustomRoundButtonAdvanced(
+                  //     title: "Add to List",
+                  //     fct: _addNewReceiptItemCard,
+                  //     width: 150,
+                  //     height: 40,
+                  //     fontSize: 14,
+                  //   ),
+                  // ),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel("Payment Method", isRequired: true),
+                            const SizedBox(height: 4),
+                            CustomDropDownWithSearch<String>(
+                              hintText: _isLoadingPaymentMethods
+                                  ? "Loading..."
+                                  : "Payment Method",
+                              title: "",
+                              value: _selectedPaymentMethod,
+                              items:
+                                  _paymentMethods.map((m) => m.value).toList(),
+                              focusNode: _paymentMethodFocus,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedPaymentMethod = value;
+                                });
+                                // Move focus to customer
+                                FocusScope.of(context)
+                                    .requestFocus(_customerFocus);
+                              },
+                              displayText: (item) {
+                                try {
+                                  return _paymentMethods
+                                      .firstWhere((m) => m.value == item)
+                                      .description;
+                                } catch (e) {
+                                  return item;
+                                }
+                              },
+                              showName: false,
+                              height: 48,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(flex: 1, child: SizedBox()),
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Items',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  "${_receiptItemCards.length}",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  'Total Amount',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  "${_totalAmountController.text}",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
                 ],
               ),
             ),
