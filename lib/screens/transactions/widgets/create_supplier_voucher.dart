@@ -70,6 +70,8 @@ class _CreateSupplierVoucherScreenState
   final SideBarController sideBarController = Get.put(SideBarController());
 
   // Form controllers
+  final TextEditingController netTotalController = TextEditingController();
+  final TextEditingController totalTaxController = TextEditingController();
   final TextEditingController totalAmountController = TextEditingController();
 
   // Date controllers
@@ -121,6 +123,17 @@ class _CreateSupplierVoucherScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(_typeFocus);
     });
+
+    // Add listeners to initial item
+    for (var item in voucherItems) {
+      _addItemListeners(item);
+    }
+  }
+
+  void _addItemListeners(VoucherItem item) {
+    item.unitAmountController.addListener(_calculateTotal);
+    item.taxController.addListener(_calculateTotal);
+    item.quantityController.addListener(_calculateTotal);
   }
 
   Future<void> _loadInitialData() async {
@@ -199,6 +212,8 @@ class _CreateSupplierVoucherScreenState
   }
 
   void _calculateTotal() {
+    double netTotal = 0;
+    double totalTax = 0;
     double total = 0;
     for (var item in voucherItems) {
       try {
@@ -206,14 +221,24 @@ class _CreateSupplierVoucherScreenState
             double.tryParse(item.unitAmountController.text) ?? 0;
         double quantity = double.tryParse(item.quantityController.text) ?? 1;
         double tax = double.tryParse(item.taxController.text) ?? 0;
-        double itemTotal = (unitAmount * quantity) + tax;
+        double itemNetTotal = unitAmount * quantity;
+        double itemTotal = itemNetTotal + tax;
         item.totalController.text = itemTotal.toStringAsFixed(2);
+        netTotal += itemNetTotal;
+        totalTax += tax;
         total += itemTotal;
       } catch (e) {
         debugPrint("Error calculating total: $e");
       }
     }
+    netTotalController.text = netTotal.toStringAsFixed(2);
+    totalTaxController.text = totalTax.toStringAsFixed(2);
     totalAmountController.text = total.toStringAsFixed(2);
+
+    // Trigger rebuild to update summary text fields
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _submitVoucher() async {
@@ -267,7 +292,8 @@ class _CreateSupplierVoucherScreenState
         type: selectedType!,
         amount: double.tryParse(totalAmountController.text) ?? 0,
         voucherDate: DateFormat('yyyy-MM-dd').format(selectedVoucherDate),
-        dueDate: DateFormat('yyyy-MM-dd').format(selectedDueDate),
+        dueDate: DateFormat('yyyy-MM-dd')
+            .format(selectedVoucherDate), //only voucher date
         status: selectedStatus!,
         paymentMethodId: _getPaymentMethodId(selectedPaymentMethod),
         voucherItems: items,
@@ -341,23 +367,21 @@ class _CreateSupplierVoucherScreenState
                       Row(
                         children: [
                           Expanded(
-                            child: _buildTypeDropdown(),
+                            child: _buildSupplierDropdown(),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: _buildTextField(
-                              'Total Voucher Amount',
-                              totalAmountController,
-                              '0',
-                              readOnly: true,
-                            ),
+                            child: _buildTypeDropdown(),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Second row: Voucher Date, Due Date, Status
-                      Row(
-                        children: [
+                          const SizedBox(width: 16),
+                          // Expanded(
+                          //   child: _buildTextField(
+                          //     'Total Voucher Amount',
+                          //     totalAmountController,
+                          //     '0',
+                          //     readOnly: true,
+                          //   ),
+                          // ),
                           Expanded(
                             child: _buildDateField(
                               'Voucher date',
@@ -366,61 +390,160 @@ class _CreateSupplierVoucherScreenState
                                   setState(() => selectedVoucherDate = date),
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDateField(
-                              'Due date',
-                              selectedDueDate,
-                              (DateTime date) =>
-                                  setState(() => selectedDueDate = date),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildStatusDropdown(),
-                          ),
                         ],
                       ),
+                      // const SizedBox(height: 16),
+                      // Second row: Voucher Date, Due Date, Status
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: _buildDateField(
+                      //         'Voucher date',
+                      //         selectedVoucherDate,
+                      //         (DateTime date) =>
+                      //             setState(() => selectedVoucherDate = date),
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Expanded(
+                      //       child: _buildDateField(
+                      //         'Due date',
+                      //         selectedDueDate,
+                      //         (DateTime date) =>
+                      //             setState(() => selectedDueDate = date),
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Expanded(
+                      //       child: _buildStatusDropdown(),
+                      //     ),
+                      //   ],
+                      // ),
                       const SizedBox(height: 16),
                       // Third row: Payment Method, Supplier
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildPaymentMethodDropdown(),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildSupplierDropdown(),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: _buildPaymentMethodDropdown(),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Expanded(
+                      //       child: _buildSupplierDropdown(),
+                      //     ),
+                      //   ],
+                      // ),
+                      // const SizedBox(height: 24),
                       Text(
                         'Voucher items',
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s16, 0.27, Colors.black),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       _buildItemsTableHeader(),
                       const SizedBox(height: 8),
                       ..._buildItemRows(),
                       const SizedBox(height: 16),
-                      Center(
-                        child: CustomRoundButton(
-                          title: "Add to voucher items",
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          borderColor: ColorManager.kPrimaryColor,
-                          fct: () {
-                            setState(() {
-                              voucherItems.add(VoucherItem());
-                            });
-                          },
-                          height: 45,
-                          width: 200,
-                          fontSize: FontSize.s12,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildPaymentMethodDropdown()),
+                          Expanded(flex: 2, child: const SizedBox()),
+                          Expanded(
+                              child: Column(
+                            children: [
+                              Divider(),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Net Total',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    netTotalController.text.toString().isEmpty
+                                        ? '0'
+                                        : netTotalController.text.toString(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Total Tax',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    totalTaxController.text.toString().isEmpty
+                                        ? '0'
+                                        : totalTaxController.text.toString(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Total Payable',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    totalAmountController.text
+                                            .toString()
+                                            .isEmpty
+                                        ? '0'
+                                        : totalAmountController.text.toString(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          )),
+                        ],
                       ),
+                      // Center(
+                      // child: CustomRoundButton(
+                      //   title: "Add to voucher items",
+                      //   boxColor: Colors.white,
+                      //   textColor: ColorManager.kPrimaryColor,
+                      //   borderColor: ColorManager.kPrimaryColor,
+                      //   fct: () {
+                      // setState(() {
+                      //   voucherItems.add(VoucherItem());
+                      // });
+                      //   },
+                      //   height: 45,
+                      //   width: 200,
+                      //   fontSize: FontSize.s12,
+                      // ),
+                      // ),
                     ],
                   ),
                 ),
@@ -753,13 +876,6 @@ class _CreateSupplierVoucherScreenState
       VoucherItem item = entry.value;
       bool isLastItem = index == voucherItems.length - 1;
 
-      // Add auto-calculation listeners
-      if (!item.unitAmountController.hasListeners) {
-        item.unitAmountController.addListener(_calculateTotal);
-        item.taxController.addListener(_calculateTotal);
-        item.quantityController.addListener(_calculateTotal);
-      }
-
       return Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
         child: Row(
@@ -880,7 +996,9 @@ class _CreateSupplierVoucherScreenState
                     // When Enter is pressed on quantity field, add new item and focus on its name field
                     if (isLastItem && item.itemNameController.text.isNotEmpty) {
                       setState(() {
-                        voucherItems.add(VoucherItem());
+                        var newItem = VoucherItem();
+                        _addItemListeners(newItem);
+                        voucherItems.add(newItem);
                       });
                       // Focus on the new item's name field after a short delay
                       Future.delayed(const Duration(milliseconds: 100), () {
@@ -919,20 +1037,51 @@ class _CreateSupplierVoucherScreenState
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                setState(() {
-                  // Clean up listeners before removing
-                  item.unitAmountController.removeListener(_calculateTotal);
-                  item.taxController.removeListener(_calculateTotal);
-                  item.quantityController.removeListener(_calculateTotal);
-                  item.dispose();
-                  voucherItems.removeAt(index);
-                  _calculateTotal();
-                });
-              },
-            ),
+            voucherItems.length <= 1 || voucherItems.length == index + 1
+                ? InkWell(
+                    onTap: () {
+                      setState(() {
+                        var newItem = VoucherItem();
+                        _addItemListeners(newItem);
+                        voucherItems.add(newItem);
+                      });
+                    },
+                    child: Container(
+                      height: 40,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: ColorManager.kPrimaryColor,
+                        borderRadius: BorderRadius.circular(5),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: ColorManager.boxShadowColor,
+                            blurRadius: 3,
+                            offset: Offset(1, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.add,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      setState(() {
+                        // Clean up listeners before removing
+                        item.unitAmountController
+                            .removeListener(_calculateTotal);
+                        item.taxController.removeListener(_calculateTotal);
+                        item.quantityController.removeListener(_calculateTotal);
+                        item.dispose();
+                        voucherItems.removeAt(index);
+                        _calculateTotal();
+                      });
+                    },
+                  ),
           ],
         ),
       );
@@ -941,6 +1090,8 @@ class _CreateSupplierVoucherScreenState
 
   @override
   void dispose() {
+    netTotalController.dispose();
+    totalTaxController.dispose();
     totalAmountController.dispose();
 
     // Dispose focus nodes
