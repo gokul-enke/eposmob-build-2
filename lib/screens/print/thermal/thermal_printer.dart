@@ -801,6 +801,24 @@ class ThermalPrinter {
           ]));
         }
 
+        // Tax Amount (English)
+        final String taxLabel =
+            (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
+                ? displayConfig!['showTax']!.value as String
+                : (billDocumentConfig.resolvedLabels?.tax?.isNotEmpty == true
+                    ? billDocumentConfig.resolvedLabels!.tax!
+                    : "Tax :");
+        double taxAmount = 0.0;
+        for (var item in cartItems) {
+          if (isFromLocalStorage) {
+            taxAmount +=
+                double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+          } else {
+            taxAmount +=
+                double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+          }
+        }
+
         // Total Qty label - use Qty label from table header
         final String totalQtyLabel = "$qtyLabel Total:";
         part1Rows.add(ReceiptTableRow([
@@ -812,7 +830,10 @@ class ThermalPrinter {
                   : totalQuantity.toStringAsFixed(2),
               weight: 0.25,
               align: TextAlign.left),
-          ReceiptTableColumn(" ", weight: 0.50),
+          ReceiptTableColumn(" ", weight: 0.05),
+          ReceiptTableColumn(taxLabel, weight: 0.25, align: TextAlign.right),
+          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+              weight: 0.20, align: TextAlign.right),
         ]));
 
         if (displayConfig?['showMRPTotal']?.visible == true) {
@@ -824,6 +845,14 @@ class ThermalPrinter {
             ReceiptTableColumn(" ", weight: 0.50),
           ]));
         }
+
+        // Always show tax for now (since showTax option doesn't exist in config)
+        part1Rows.add(ReceiptTableRow([
+          ReceiptTableColumn(taxLabel, weight: 0.25, align: TextAlign.right),
+          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+              weight: 0.25, align: TextAlign.right),
+          ReceiptTableColumn(" ", weight: 0.50),
+        ]));
 
         part1Rows.add(SpacingRow(5));
 
@@ -872,7 +901,7 @@ class ThermalPrinter {
                 ? displayConfig!['showTax']!.value as String
                 : (billDocumentConfig.resolvedLabels?.tax?.isNotEmpty == true
                     ? billDocumentConfig.resolvedLabels!.tax!
-                    : "Tax");
+                    : "Tax Amount : ");
 
         double taxAmount = 0.0;
         for (var item in cartItems) {

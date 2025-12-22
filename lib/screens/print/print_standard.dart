@@ -555,7 +555,9 @@ class StandardPrinter {
                         billDocumentConfig,
                         customerOldBalance,
                         customerCurrentBalance,
-                        isRtl: isRtl),
+                        isRtl: isRtl,
+                        cartItems: cartItems,
+                        isFromLocalStorage: isFromLocalStorage),
 
                     // Add Amount in words under order summary when there are no returns
                     if (updatedSettings?['showAmountInWords']?.visible ==
@@ -1094,12 +1096,27 @@ class StandardPrinter {
       DocumentConfig? billDocumentConfig,
       double? customerOldBalance,
       double? customerCurrentBalance,
-      {bool isRtl = false}) {
+      {bool isRtl = false,
+      List<dynamic>? cartItems,
+      bool isFromLocalStorage = false}) {
     double savedTotalValue = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
     double formattedTotalValue = double.tryParse(formattedTotal) ?? 0.0;
     double discountAmountValue =
         double.tryParse(discountAmount ?? '0.0') ?? 0.0;
     double totalMRP = savedTotalValue + formattedTotalValue;
+
+    // Calculate total tax from cart items
+    double totalTax = 0.0;
+    if (cartItems != null) {
+      for (var item in cartItems) {
+        if (isFromLocalStorage) {
+          totalTax +=
+              double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+        } else {
+          totalTax += double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+        }
+      }
+    }
 
     List<pw.Widget> summaryWidgets = [];
 
@@ -1140,6 +1157,13 @@ class StandardPrinter {
       );
       summaryWidgets.add(pw.SizedBox(height: 3));
     }
+
+    // Display Tax Amount - always show for now (since showTax option doesn't exist in config)
+    summaryWidgets.add(
+      _buildLabelValueRow('Tax Amount:', totalTax.toStringAsFixed(2), style,
+          isRtl: isRtl),
+    );
+    summaryWidgets.add(pw.SizedBox(height: 3));
 
     // Display Net Total (Amount)
     if (displayConfig?['showNetAmount']?.visible == true) {
@@ -2355,7 +2379,9 @@ class StandardPrinter {
                             billDocumentConfig,
                             customerOldBalance,
                             customerCurrentBalance,
-                            isRtl: isRtl),
+                            isRtl: isRtl,
+                            cartItems: cartItems,
+                            isFromLocalStorage: isFromLocalStorage),
                       ],
                     ),
                   ),
