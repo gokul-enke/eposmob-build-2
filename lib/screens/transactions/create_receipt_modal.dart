@@ -1405,32 +1405,6 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                       // ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  // 2nd row: Customer | Status | Payment Reference
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildTextField(
-                          "Payment Reference",
-                          _paymentReferenceController,
-                          TextInputType.text,
-                          widget.size,
-                          placeholder: "Enter payment reference (optional)",
-                          focusNode: _paymentReferenceFocus,
-                          textInputAction: TextInputAction.next,
-                          onFieldSubmitted: (_) {
-                            // Move focus to first receipt item's type
-                            if (_receiptItemCards.isNotEmpty) {
-                              FocusScope.of(context).requestFocus(
-                                  _receiptItemCards[0].itemTypeFocus);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -1641,101 +1615,6 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                   //     fontSize: 14,
                   //   ),
                   // ),
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel("Payment Method", isRequired: true),
-                            const SizedBox(height: 4),
-                            CustomDropDownWithSearch<String>(
-                              hintText: _isLoadingPaymentMethods
-                                  ? "Loading..."
-                                  : "Payment Method",
-                              title: "",
-                              value: _selectedPaymentMethod,
-                              items:
-                                  _paymentMethods.map((m) => m.value).toList(),
-                              focusNode: _paymentMethodFocus,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedPaymentMethod = value;
-                                });
-                                // Move focus to customer
-                                FocusScope.of(context)
-                                    .requestFocus(_customerFocus);
-                              },
-                              displayText: (item) {
-                                try {
-                                  return _paymentMethods
-                                      .firstWhere((m) => m.value == item)
-                                      .description;
-                                } catch (e) {
-                                  return item;
-                                }
-                              },
-                              showName: false,
-                              height: 48,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(flex: 1, child: SizedBox()),
-                      Expanded(
-                        flex: 1,
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Items',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  "${_receiptItemCards.length}",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text(
-                                  'Total Amount',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  "${_totalAmountController.text}",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
                 ],
               ),
             ),
@@ -1859,6 +1738,122 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
               ),
             ),
 
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel("Payment Method", isRequired: true),
+                      const SizedBox(height: 4),
+                      CustomDropDownWithSearch<String>(
+                        hintText: _isLoadingPaymentMethods
+                            ? "Loading..."
+                            : "Payment Method",
+                        title: "",
+                        value: _selectedPaymentMethod,
+                        items: _paymentMethods.map((m) => m.value).toList(),
+                        focusNode: _paymentMethodFocus,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedPaymentMethod = value;
+                          });
+                          // Move focus to customer
+                          FocusScope.of(context).requestFocus(_customerFocus);
+                        },
+                        displayText: (item) {
+                          try {
+                            return _paymentMethods
+                                .firstWhere((m) => m.value == item)
+                                .description;
+                          } catch (e) {
+                            return item;
+                          }
+                        },
+                        showName: false,
+                        height: 48,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: _buildTextField(
+                    "Payment Reference",
+                    _paymentReferenceController,
+                    TextInputType.text,
+                    widget.size,
+                    placeholder: "Enter payment reference (optional)",
+                    focusNode: _paymentReferenceFocus,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      // Move focus to first receipt item's type
+                      if (_receiptItemCards.isNotEmpty) {
+                        FocusScope.of(context)
+                            .requestFocus(_receiptItemCards[0].itemTypeFocus);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: SizedBox()),
+                Expanded(child: SizedBox(width: 16)),
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Items',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            "${_receiptItemCards.length}",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            'Total Amount',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            "${_totalAmountController.text}",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // Action buttons
