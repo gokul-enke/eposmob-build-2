@@ -57,13 +57,15 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       mrp: fields[3] as double?,
       serializedProduct: fields[4] as HiveStringValue,
       serializedSelectedStock: fields[5] as HiveStringValue?,
+      taxAmount: fields[6] as double?,
+      taxRate: fields[7] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveLocalCartItem obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -75,7 +77,11 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       ..writeByte(4)
       ..write(obj.serializedProduct)
       ..writeByte(5)
-      ..write(obj.serializedSelectedStock);
+      ..write(obj.serializedSelectedStock)
+      ..writeByte(6)
+      ..write(obj.taxAmount)
+      ..writeByte(7)
+      ..write(obj.taxRate);
   }
 
   @override
@@ -268,13 +274,15 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       isSelected: fields[16] as bool,
       offerPrice: fields[17] as String?,
       productLocation: fields[18] as String?,
+      totalTaxRate: fields[19] as String?,
+      taxes: (fields[20] as List?)?.cast<HiveProductTax>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveGetProduct obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -312,7 +320,11 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       ..writeByte(17)
       ..write(obj.offerPrice)
       ..writeByte(18)
-      ..write(obj.productLocation);
+      ..write(obj.productLocation)
+      ..writeByte(19)
+      ..write(obj.totalTaxRate)
+      ..writeByte(20)
+      ..write(obj.taxes);
   }
 
   @override
@@ -561,6 +573,52 @@ class HiveParentCategoryAdapter extends TypeAdapter<HiveParentCategory> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is HiveParentCategoryAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class HiveProductTaxAdapter extends TypeAdapter<HiveProductTax> {
+  @override
+  final int typeId = 10;
+
+  @override
+  HiveProductTax read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return HiveProductTax(
+      id: fields[0] as int?,
+      name: fields[1] as String?,
+      code: fields[2] as String?,
+      rate: fields[3] as String?,
+      source: fields[4] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, HiveProductTax obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.name)
+      ..writeByte(2)
+      ..write(obj.code)
+      ..writeByte(3)
+      ..write(obj.rate)
+      ..writeByte(4)
+      ..write(obj.source);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HiveProductTaxAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

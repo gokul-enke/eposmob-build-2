@@ -1941,6 +1941,9 @@ class BillingPageState extends State<BillingPage>
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         List<LocalCartItem> cartItems = localProductProvider.getCartItems();
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: true);
+        final appSettings = appSettingsProvider.appSettings;
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
 
@@ -1966,8 +1969,12 @@ class BillingPageState extends State<BillingPage>
                             flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_qty'.tr,
                             flex: 2, alignment: Alignment.center),
-                        _buildHeaderCell('billing.table_mrp'.tr,
-                            flex: 1, alignment: Alignment.centerLeft),
+                        if (appSettings?.showTaxPos == true)
+                          _buildHeaderCell('billing.table_tax'.tr,
+                              flex: 1, alignment: Alignment.centerLeft),
+                        if (appSettings?.showMrpPos == true)
+                          _buildHeaderCell('billing.table_mrp'.tr,
+                              flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_price'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_total'.tr,
@@ -2096,7 +2103,6 @@ class BillingPageState extends State<BillingPage>
                                     flex: 1,
                                     alignment: Alignment.centerLeft,
                                   ),
-
                                   // Qty
                                   _buildContentCell(
                                     Center(
@@ -2117,23 +2123,43 @@ class BillingPageState extends State<BillingPage>
                                     alignment: Alignment.center,
                                   ),
 
-                                  // MRP
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: MrpTextField(
-                                          item: item,
-                                          localProductProvider:
-                                              localProductProvider,
+                                  // Tax
+                                  if (appSettings?.showTaxPos == true)
+                                    _buildContentCell(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: SizedBox(
+                                          width: 60,
+                                          child: TaxTextField(
+                                            item: item,
+                                            localProductProvider:
+                                                localProductProvider,
+                                          ),
                                         ),
                                       ),
+                                      flex: 1,
+                                      alignment: Alignment.centerLeft,
                                     ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
+
+                                  // MRP
+                                  if (appSettings?.showMrpPos == true)
+                                    _buildContentCell(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: SizedBox(
+                                          width: 70,
+                                          child: MrpTextField(
+                                            item: item,
+                                            localProductProvider:
+                                                localProductProvider,
+                                          ),
+                                        ),
+                                      ),
+                                      flex: 1,
+                                      alignment: Alignment.centerLeft,
+                                    ),
 
                                   // Price
                                   _buildContentCell(
@@ -2317,6 +2343,55 @@ class BillingPageState extends State<BillingPage>
               ColorManager.textColor,
             ),
           ),
+          // Tax Amount (Optional based on toggle)
+          if (Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.showTaxPos ==
+              true)
+            BuildPaymentRow(
+              amount:
+                  "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
+              title: "billing.tax_amount".tr,
+              color: ColorManager.textColor,
+              firstRowTextStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s15,
+                0.18,
+                ColorManager.textColor,
+              ),
+              secondRowTextStyle: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s15,
+                0.18,
+                ColorManager.textColor,
+              ),
+            ),
+
+          // 📊 Dynamic Tax Breakdown
+          if (Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.showTaxPos ==
+              true)
+            ...localProductProvider.taxBreakdown.entries.map((entry) {
+              return BuildPaymentRow(
+                amount: "$currency ${AmountHelper.formatAmount(entry.value)}",
+                title: entry.key, // Tax Name (e.g. GST, VAT)
+                color: ColorManager.textColor,
+                firstRowTextStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s15,
+                  0.18,
+                  ColorManager.textColor,
+                ),
+                secondRowTextStyle: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s15,
+                  0.18,
+                  ColorManager.textColor,
+                ),
+              );
+            }),
+
           (Provider.of<AppSettingsProvider>(context, listen: false)
                       .appSettings
                       ?.priceRoundOff ==
@@ -2357,6 +2432,7 @@ class BillingPageState extends State<BillingPage>
                     ColorManager.kButtonGreen,
                   ),
                 ),
+
           const Divider(thickness: 2),
           BuildPaymentRow(
             amount:
@@ -2444,7 +2520,7 @@ class BillingPageState extends State<BillingPage>
           child: BuildPaymentRow(
             amount:
                 "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
-            title: "billing.gst".tr,
+            title: "billing.tax_amount".tr,
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {

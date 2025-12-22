@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 GetProductModel getProductModelFromJson(String str) =>
     GetProductModel.fromJson(json.decode(str));
@@ -21,21 +22,32 @@ class GetProductModel {
     this.pagination,
   });
 
-  factory GetProductModel.fromJson(Map<String, dynamic> json) =>
-      GetProductModel(
-        product: json["product"] == null
+  factory GetProductModel.fromJson(Map<String, dynamic> json) {
+    try {
+      final productData = json["product"] ?? json["products"] ?? json["data"];
+      if (productData == null) {
+        debugPrint(
+            "⚠️ [GetProductModel] No 'product', 'products', or 'data' key found in JSON.");
+        debugPrint("🔑 [GetProductModel] Available keys: ${json.keys}");
+      }
+      return GetProductModel(
+        product: productData == null
             ? []
             : List<GetProduct>.from(
-                json["product"].map((x) => GetProduct.fromJson(x))),
-        status: json["status"], // Assuming there should be a status field
-        links: json["links"] == null
-            ? null
-            : Links.fromJson(json["links"]), // Assuming this exists in your API
+                productData.map((x) => GetProduct.fromJson(x))),
+        status: json["status"]?.toString(),
+        links: json["links"] == null ? null : Links.fromJson(json["links"]),
         meta: json["meta"] == null ? null : Meta.fromJson(json["meta"]),
         pagination: json["pagination"] == null
             ? null
             : Pagination.fromJson(json["pagination"]),
       );
+    } catch (e, stack) {
+      debugPrint("❌ GetProductModel.fromJson error: $e");
+      debugPrint("🔗 StackTrace: $stack");
+      rethrow;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         "product": product == null
@@ -62,6 +74,7 @@ class GetProduct {
   final dynamic description;
   final ProductPrice? price;
   final dynamic mrp;
+  final List<ProductTax>? taxes; // Restore taxes list
   final String? purchasePrice;
   final List<Attachment>? attachment;
   bool isSelected = false;
@@ -85,6 +98,7 @@ class GetProduct {
     this.rating,
     this.price,
     this.mrp,
+    this.taxes, // Restore taxes list
     this.purchasePrice,
     this.unit,
     this.currency,
@@ -100,49 +114,90 @@ class GetProduct {
     this.hsnCode, // Added HSN code field
   });
 
-  factory GetProduct.fromJson(Map<String, dynamic> json) => GetProduct(
-        productId: json["product_id"] is String
-            ? int.tryParse(json["product_id"])
-            : json["product_id"],
-        categoryId: json["category_id"] is String
-            ? int.tryParse(json["category_id"])
-            : json["category_id"],
-        productName: json["product_name"],
-        productSlug: json["product_slug"],
+  factory GetProduct.fromJson(Map<String, dynamic> json) {
+    try {
+      return GetProduct(
+        productId: (() {
+          final pid = json["product_id"] ?? json["id"];
+          if (pid == null) return null;
+          if (pid is int) return pid;
+          if (pid is String) return int.tryParse(pid);
+          return null;
+        })(),
+        categoryId: (() {
+          final cid = json["category_id"] ?? json["categoryId"];
+          if (cid == null) return null;
+          if (cid is int) return cid;
+          if (cid is String) return int.tryParse(cid);
+          return null;
+        })(),
+        productName: json["product_name"] ?? json["name"] ?? json["title"],
+        productSlug: json["product_slug"] ?? json["slug"],
         barcode: json["barcode"],
         category: json["category"] == null
             ? null
             : ProductCategory.fromJson(json["category"]),
         numberOfProductsAvailable:
             json["number_of_products_available"]?.toString(),
-        rating: json["rating"],
+        rating: json["rating"]?.toString(),
         unit: json["unit"],
         currency: json["currency"],
         description: json["description"],
-        price:
-            json["price"] == null ? null : ProductPrice.fromJson(json["price"]),
-        mrp: json["mrp"] ?? "",
-        purchasePrice: json["purchase_price"]?.toString(),
+        price: (() {
+          final p = json["price"];
+          if (p == null) {
+            final bp = json["base_price"] ?? json["selling_price"];
+            return bp != null ? ProductPrice(price: bp.toString()) : null;
+          }
+          if (p is Map<String, dynamic>) {
+            return ProductPrice.fromJson(p);
+          }
+          if (p is String || p is num) {
+            return ProductPrice(price: p.toString());
+          }
+          return null;
+        })(),
+        mrp: json["mrp"]?.toString() ?? "",
+        taxes: json["taxes"] == null
+            ? []
+            : List<ProductTax>.from((json["taxes"] as List)
+                .map((x) => ProductTax.fromJson(x as Map<String, dynamic>))),
+        purchasePrice: json["purchase_price"]?.toString() ??
+            json["purchase_rate"]?.toString(),
         attachment: json["attachment"] == null
             ? []
-            : List<Attachment>.from(
-                json["attachment"]!.map((x) => Attachment.fromJson(x))),
+            : List<Attachment>.from((json["attachment"] as List)
+                .map((x) => Attachment.fromJson(x as Map<String, dynamic>))),
         names: json["names"],
         productProps: json["product_props"] == null
             ? []
-            : List<ProductProp>.from(
-                json["product_props"]!.map((x) => ProductProp.fromJson(x))),
+            : List<ProductProp>.from((json["product_props"] as List)
+                .map((x) => ProductProp.fromJson(x as Map<String, dynamic>))),
         weightInfo: json["weight_info"] == null
             ? null
             : WeightInfo.fromJson(json["weight_info"]),
         stock: json["stock"] == null
             ? []
-            : List<Stock>.from(json["stock"]!.map((x) => Stock.fromJson(x))),
+            : List<Stock>.from((json["stock"] as List)
+                .map((x) => Stock.fromJson(x as Map<String, dynamic>))),
         sku: json["sku"],
-        offerPrice: json["offer_price"],
+        offerPrice: json["offer_price"]?.toString(),
         productLocation: json["product_location"],
-        hsnCode: json["hsn_code"], // Added HSN code field
+        hsnCode: json["hsn_code"],
       );
+    } catch (e, stack) {
+      debugPrint("❌ GetProduct.fromJson error: $e");
+      debugPrint("📄 JSON causing error: $json");
+      debugPrint("🔗 StackTrace: $stack");
+      rethrow;
+    }
+  }
+
+  double get totalTaxRate {
+    if (taxes == null || taxes!.isEmpty) return 0.0;
+    return taxes!.fold(
+        0.0, (sum, tax) => sum + (double.tryParse(tax.rate ?? "0") ?? 0.0));
+  }
 
   Map<String, dynamic> toJson() => {
         "product_id": productId,
@@ -155,6 +210,9 @@ class GetProduct {
         "rating": rating,
         "price": price?.toJson(),
         "mrp": mrp,
+        "taxes": taxes == null
+            ? []
+            : List<dynamic>.from(taxes!.map((x) => x.toJson())),
         "purchase_price": purchasePrice,
         "unit": unit,
         "currency": currency,
@@ -303,8 +361,8 @@ class ProductPrice {
   });
 
   factory ProductPrice.fromJson(Map<String, dynamic> json) => ProductPrice(
-        oldPrice: json["old_price"],
-        price: json["base_price"],
+        oldPrice: json["old_price"] ?? json["original_price"],
+        price: json["base_price"] ?? json["price"] ?? json["selling_price"],
         percentage: json["percentage"],
         totalPrice: json["total_price"],
       );
@@ -535,5 +593,37 @@ class Pagination {
         "last_page": lastPage,
         "per_page": perPage,
         "total": total,
+      };
+}
+
+class ProductTax {
+  final int? id;
+  final String? name;
+  final String? code;
+  final String? rate;
+  final String? source;
+
+  ProductTax({
+    this.id,
+    this.name,
+    this.code,
+    this.rate,
+    this.source,
+  });
+
+  factory ProductTax.fromJson(Map<String, dynamic> json) => ProductTax(
+        id: json["id"],
+        name: json["name"],
+        code: json["code"],
+        rate: json["rate"]?.toString(),
+        source: json["source"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "name": name,
+        "code": code,
+        "rate": rate,
+        "source": source,
       };
 }
