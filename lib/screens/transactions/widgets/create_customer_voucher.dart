@@ -261,7 +261,8 @@ class _CreateCustomerVoucherScreenState
         type: selectedType!,
         amount: double.tryParse(totalAmountController.text) ?? 0,
         voucherDate: DateFormat('yyyy-MM-dd').format(selectedVoucherDate),
-        dueDate: DateFormat('yyyy-MM-dd').format(selectedDueDate),
+        dueDate: DateFormat('yyyy-MM-dd')
+            .format(selectedVoucherDate), //only using voucher date
         status: selectedStatus!,
         paymentMethodId: _getPaymentMethodId(selectedPaymentMethod),
         customerId: selectedCustomerId!,
@@ -294,7 +295,7 @@ class _CreateCustomerVoucherScreenState
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           boxShadow: const [
@@ -337,23 +338,9 @@ class _CreateCustomerVoucherScreenState
                       Row(
                         children: [
                           Expanded(
-                            child: _buildTypeDropdown(),
+                            child: _buildCustomerDropdown(),
                           ),
                           const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              'Total Voucher Amount',
-                              totalAmountController,
-                              '0',
-                              readOnly: true,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Second row: Voucher Date, Due Date, Status
-                      Row(
-                        children: [
                           Expanded(
                             child: _buildDateField(
                               'Voucher date',
@@ -364,32 +351,61 @@ class _CreateCustomerVoucherScreenState
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: _buildDateField(
-                              'Due date',
-                              selectedDueDate,
-                              (DateTime date) =>
-                                  setState(() => selectedDueDate = date),
-                            ),
+                            child: _buildTypeDropdown(),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildStatusDropdown(),
-                          ),
+
+                          // Expanded(
+                          //   child: _buildTypeDropdown(),
+                          // ),
+
+                          // Expanded(
+                          //   child: _buildTextField(
+                          //     'Total Voucher Amount',
+                          //     totalAmountController,
+                          //     '0',
+                          //     readOnly: true,
+                          //   ),
+                          // ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      // Second row: Voucher Date, Due Date, Status
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: _buildDateField(
+                      //         'Voucher date',
+                      //         selectedVoucherDate,
+                      //         (DateTime date) =>
+                      //             setState(() => selectedVoucherDate = date),
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Expanded(
+                      //       child: _buildDateField(
+                      //         'Due date',
+                      //         selectedDueDate,
+                      //         (DateTime date) =>
+                      //             setState(() => selectedDueDate = date),
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Expanded(
+                      //       child: _buildStatusDropdown(),
+                      //     ),
+                      //   ],
+                      // ),
                       // Third row: Payment Method, Customer
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildPaymentMethodDropdown(),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildCustomerDropdown(),
-                          ),
-                        ],
-                      ),
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: _buildPaymentMethodDropdown(),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     // Expanded(
+                      //     //   child: _buildCustomerDropdown(),
+                      //     // ),
+                      //   ],
+                      // ),
                       const SizedBox(height: 24),
                       // Voucher Items Section
                       Text(
@@ -404,28 +420,89 @@ class _CreateCustomerVoucherScreenState
                       // Items list
                       ..._buildItemRows(),
                       const SizedBox(height: 16),
-                      // Add item button
-                      Center(
-                        child: CustomRoundButton(
-                          title: "Add to voucher items",
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          borderColor: ColorManager.kPrimaryColor,
-                          fct: () {
-                            setState(() {
-                              voucherItems.add(VoucherItem());
-                            });
-                          },
-                          height: 45,
-                          width: 200,
-                          fontSize: FontSize.s12,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(child: _buildPaymentMethodDropdown()),
+                          Expanded(flex: 2, child: const SizedBox()),
+                          Expanded(
+                              child: Column(
+                            children: [
+                              Divider(),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Items',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    voucherItems.length.toString(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Total Amount',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    totalAmountController.text
+                                            .toString()
+                                            .isEmpty
+                                        ? '0'
+                                        : totalAmountController.text.toString(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          )),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+                      // Add item button`
+                      // Center(
+                      //   child: CustomRoundButton(
+                      //     title: "Add to voucher items",
+                      //     boxColor: Colors.white,
+                      //     textColor: ColorManager.kPrimaryColor,
+                      //     borderColor: ColorManager.kPrimaryColor,
+                      //     fct: () {
+                      // setState(() {
+                      //   voucherItems.add(VoucherItem());
+                      // });
+                      //     },
+                      //     height: 45,
+                      //     width: 200,
+                      //     fontSize: FontSize.s12,
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
+
               // Footer buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -714,17 +791,17 @@ class _CreateCustomerVoucherScreenState
               ),
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                'Tax',
-                textAlign: TextAlign.center,
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s11, 0.18, ColorManager.kPrimaryColor),
-              ),
-            ),
-          ),
+          // Expanded(
+          //   child: Padding(
+          //     padding: const EdgeInsets.all(12.0),
+          //     child: Text(
+          //       'Tax',
+          //       textAlign: TextAlign.center,
+          //       style: buildCustomStyle(FontWeightManager.semiBold,
+          //           FontSize.s11, 0.18, ColorManager.kPrimaryColor),
+          //     ),
+          //   ),
+          // ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -827,39 +904,39 @@ class _CreateCustomerVoucherScreenState
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: BuildBoxShadowContainer(
-                height: 45,
-                circleRadius: 7,
-                child: TextFormField(
-                  initialValue: item.tax,
-                  focusNode: item.taxFocus,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  onChanged: (value) {
-                    setState(() => item.tax = value);
-                    _calculateTotal();
-                  },
-                  onFieldSubmitted: (_) {
-                    FocusScope.of(context).requestFocus(item.quantityFocus);
-                  },
-                  onTap: () {
-                    // Select all text when focused
-                    final controller = TextEditingController(text: item.tax);
-                    controller.selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: item.tax.length,
-                    );
-                  },
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '0',
-                    contentPadding: const EdgeInsets.only(left: 15),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
+            // Expanded(
+            //   child: BuildBoxShadowContainer(
+            //     height: 45,
+            //     circleRadius: 7,
+            //     child: TextFormField(
+            //       initialValue: item.tax,
+            //       focusNode: item.taxFocus,
+            //       keyboardType: TextInputType.number,
+            //       textInputAction: TextInputAction.next,
+            //       onChanged: (value) {
+            //         setState(() => item.tax = value);
+            //         _calculateTotal();
+            //       },
+            //       onFieldSubmitted: (_) {
+            //         FocusScope.of(context).requestFocus(item.quantityFocus);
+            //       },
+            //       onTap: () {
+            //         // Select all text when focused
+            //         final controller = TextEditingController(text: item.tax);
+            //         controller.selection = TextSelection(
+            //           baseOffset: 0,
+            //           extentOffset: item.tax.length,
+            //         );
+            //       },
+            //       decoration: InputDecoration(
+            //         border: InputBorder.none,
+            //         hintText: '0',
+            //         contentPadding: const EdgeInsets.only(left: 15),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(width: 8),
             Expanded(
               child: BuildBoxShadowContainer(
                 height: 45,
@@ -918,16 +995,44 @@ class _CreateCustomerVoucherScreenState
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                setState(() {
-                  item.dispose();
-                  voucherItems.removeAt(index);
-                  _calculateTotal();
-                });
-              },
-            ),
+            voucherItems.length <= 1 || voucherItems.length == index + 1
+                ? InkWell(
+                    onTap: () {
+                      setState(() {
+                        voucherItems.add(VoucherItem());
+                      });
+                    },
+                    child: Container(
+                      height: 40,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: ColorManager.kPrimaryColor,
+                        borderRadius: BorderRadius.circular(5),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: ColorManager.boxShadowColor,
+                            blurRadius: 3,
+                            offset: Offset(1, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.add,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      setState(() {
+                        item.dispose();
+                        voucherItems.removeAt(index);
+                        _calculateTotal();
+                      });
+                    },
+                  ),
           ],
         ),
       );

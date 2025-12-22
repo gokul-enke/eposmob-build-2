@@ -717,7 +717,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     final bool isSmallScreen = size.width < 600;
     return SafeArea(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
@@ -730,7 +730,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
             ],
             color: Colors.white),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+          padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -753,7 +753,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
               Column(
                 children: [
                   // First row with 4 fields
@@ -764,16 +764,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Stock Name",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Stock Name",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
@@ -814,16 +814,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Category",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Category",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildDropDownWithSearch<String>(
                               title: null,
                               showName: false,
@@ -859,16 +859,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Barcode",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Barcode",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
@@ -909,16 +909,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Rack Search",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Rack Search",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
@@ -954,26 +954,27 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
                   // Second row with 4 fields
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       // Store Filter dropdown
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Store Filter",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Store Filter",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildDropDownWithSearch<String>(
                               title: null,
                               showName: false,
@@ -1039,8 +1040,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(
-                                height: 35), // Space to align with other fields
+                            // const SizedBox(
+                            //     height: 35), // Space to align with other fields
                             CustomRoundButton(
                               title: "Reset",
                               boxColor: Colors.white,
@@ -1059,7 +1060,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Expanded(
                 child: Column(
                   children: [
@@ -1210,7 +1211,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                               stock.barCode ??
                                                                   'N/A';
                                                           debugPrint(
-                                                              '🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
+                                                              '🔍 DISPLAY BARCODE: "$barcode" for product: ${stock.productName}');
                                                           return barcode;
                                                         }()), // Updated to show actual barcode
                                                         _buildTableCell(
@@ -1310,7 +1311,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                         ),
                                                       ],
                                                     );
-                                                  }).toList(),
+                                                  }),
                                                 ],
                                               ),
                                             ),

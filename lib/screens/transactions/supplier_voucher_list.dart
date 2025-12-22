@@ -126,15 +126,14 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
-                const SizedBox(height: 15),
+                const SizedBox(height: 10),
                 _buildSearchBar(size),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
                 _buildVoucherTable(),
                 const SizedBox(height: 10),
                 _buildPaginationControls(),
@@ -174,7 +173,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
     return Column(
       children: [
         SizedBox(
-          height: 90,
+          height: 55,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -189,21 +188,19 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
           ),
         ),
         SizedBox(
-          height: 60,
+          height: 46,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 10, right: 10),
-                child: CustomRoundButton(
-                  title: "Reset",
-                  boxColor: Colors.white,
-                  textColor: ColorManager.kPrimaryColor,
-                  fct: resetSearch,
-                  height: 45,
-                  width: 150,
-                  fontSize: FontSize.s12,
-                ),
+              CustomRoundButton(
+                title: "Reset",
+                boxColor: Colors.white,
+                textColor: ColorManager.kPrimaryColor,
+                fct: resetSearch,
+                height: 45,
+                width: 150,
+                fontSize: FontSize.s12,
               ),
             ],
           ),
@@ -227,15 +224,15 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  "Supplier",
-                  style: buildCustomStyle(FontWeightManager.regular,
-                      FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-                ),
-              ),
-              const SizedBox(height: 8),
+              // Padding(
+              //   padding: const EdgeInsets.all(8.0),
+              //   child: Text(
+              //     "Supplier",
+              //     style: buildCustomStyle(FontWeightManager.regular,
+              //         FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+              //   ),
+              // ),
+              // const SizedBox(height: 8),
               BuildDropDownWithSearch<int>(
                 title: null,
                 showName: false,
@@ -268,15 +265,15 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Voucher No",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Voucher No",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
@@ -308,15 +305,15 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Type",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Type",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           Consumer<SupplierVoucherProvider>(
             builder: (context, voucherProvider, child) {
               List<String> typeOptions = voucherProvider.getTypeOptions();
@@ -351,15 +348,15 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Status",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     "Status",
+          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+          //         0.27, Colors.black.withOpacity(0.6)),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
           Consumer<SupplierVoucherProvider>(
             builder: (context, voucherProvider, child) {
               List<String> statusOptions = voucherProvider.getStatusOptions();

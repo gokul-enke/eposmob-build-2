@@ -568,6 +568,14 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  double get subTotalBeforeDiscount {
+    double total = 0.0;
+    for (var item in _cartItems) {
+      total += (item.price ?? 0) * item.quantity;
+    }
+    return total;
+  }
+
   double get cartTotal {
     double subTotal = 0.0;
     double totalTax = 0.0; // Assuming you have a way to calculate tax

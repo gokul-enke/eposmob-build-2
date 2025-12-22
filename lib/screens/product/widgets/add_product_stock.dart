@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -38,6 +39,8 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 
 /// Hive box name for draft stock items persistence
 const String _kDraftStockBoxName = 'draft_stock_items';
@@ -167,14 +170,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   // Debounce timer for quantity input
   Timer? _quantityDebounceTimer;
-
+  Timer? _inlineEditDebounceTimer;
   // Cache for filtered products per category
   final Map<int?, List<GetProduct>> _filteredProductsCache = {};
 
   // Performance optimization: Cache visible items and index mapping
-  List<StockItem> _cachedVisibleItems = [];
-  Map<int, int> _visibleToOriginalIndexMap = {};
+  final List<StockItem> _cachedVisibleItems = [];
+  final Map<int, int> _visibleToOriginalIndexMap = {};
   bool _needsIndexRebuild = true;
+  // Track which item index is being edited (null if adding new)
+  int? _editingItemIndex;
 
   // Clear product cache when category changes
   void _clearProductCache() {
@@ -273,7 +278,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     int visibleIndex = 0;
     for (int i = 0; i < stockItems.length; i++) {
-      if (!stockItems[i].isHidden) {
+      if (!stockItems[i].isHidden && stockItems[i].isSuccessfullyAdded) {
         _cachedVisibleItems.add(stockItems[i]);
         _visibleToOriginalIndexMap[visibleIndex] = i;
         visibleIndex++;
@@ -568,87 +573,87 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     _draftSaveDebouncer?.cancel();
 
     // Dispose all search controllers safely
-    categorySearchControllers.values.forEach((controller) {
+    for (var controller in categorySearchControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing category search controller: $e');
       }
-    });
-    productSearchControllers.values.forEach((controller) {
+    }
+    for (var controller in productSearchControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing product search controller: $e');
       }
-    });
-    barcodeControllers.values.forEach((controller) {
+    }
+    for (var controller in barcodeControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing barcode controller: $e');
       }
-    });
-    quantityControllers.values.forEach((controller) {
+    }
+    for (var controller in quantityControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing quantity controller: $e');
       }
-    });
+    }
 
     // Dispose expanded field controllers safely
-    purchaseRateControllers.values.forEach((controller) {
+    for (var controller in purchaseRateControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing purchase rate controller: $e');
       }
-    });
-    retailPriceControllers.values.forEach((controller) {
+    }
+    for (var controller in retailPriceControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing retail price controller: $e');
       }
-    });
-    mrpControllers.values.forEach((controller) {
+    }
+    for (var controller in mrpControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing MRP controller: $e');
       }
-    });
-    wholesaleControllers.values.forEach((controller) {
+    }
+    for (var controller in wholesaleControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing wholesale controller: $e');
       }
-    });
-    batchNumberControllers.values.forEach((controller) {
+    }
+    for (var controller in batchNumberControllers.values) {
       try {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing batch number controller: $e');
       }
-    });
+    }
 
     // Dispose all focus nodes safely
-    barcodeFocusNodes.values.forEach((focusNode) {
+    for (var focusNode in barcodeFocusNodes.values) {
       try {
         focusNode.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing barcode focus node: $e');
       }
-    });
-    quantityFocusNodes.values.forEach((focusNode) {
+    }
+    for (var focusNode in quantityFocusNodes.values) {
       try {
         focusNode.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing quantity focus node: $e');
       }
-    });
+    }
 
     try {
       supplierSearchController.dispose();
@@ -1086,8 +1091,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       final categoryList = categoryProvider.category;
       if (categoryList != null && categoryList.isNotEmpty) {
         final dynamic categoryNameDyn = pendingData['categoryName'];
-        final String? categoryName =
-            categoryNameDyn != null ? categoryNameDyn.toString() : null;
+        final String? categoryName = categoryNameDyn?.toString();
         final dynamic categoryIdDyn = pendingData['categoryId'];
         final int? categoryId = categoryIdDyn is int
             ? categoryIdDyn
@@ -1197,6 +1201,77 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   Future<void> _addStockForSingleItem(int index) async {
     debugPrint('🔄 LOCAL STOCK ADDITION PROCESS STARTED FOR ITEM ${index + 1}');
+
+    // Store the editing index before we modify anything
+    int? editingIndex = _editingItemIndex;
+
+    // Check if we're in edit mode
+    if (editingIndex != null) {
+      debugPrint(
+          '✏️ UPDATE MODE: Checking if item at index $editingIndex was modified');
+      final oldItem = stockItems[editingIndex];
+      final currentItem = stockItems[index];
+
+      // Check if any values actually changed
+      bool hasChanges = oldItem.barcode != currentItem.barcode ||
+          oldItem.product != currentItem.product ||
+          oldItem.category != currentItem.category ||
+          oldItem.quantity != currentItem.quantity ||
+          oldItem.salePrice != currentItem.salePrice ||
+          oldItem.mrp != currentItem.mrp ||
+          oldItem.wholesale != currentItem.wholesale ||
+          oldItem.purchaseRate != currentItem.purchaseRate ||
+          oldItem.batchNumber != currentItem.batchNumber ||
+          oldItem.rack != currentItem.rack ||
+          oldItem.selectedUnit != currentItem.selectedUnit ||
+          oldItem.expDate != currentItem.expDate;
+
+      if (!hasChanges) {
+        // No changes detected - clear the input row and cancel edit mode
+        debugPrint('ℹ️ No changes detected - canceling edit mode');
+        setState(() {
+          _editingItemIndex = null;
+          // Clear the input row instead of removing it
+          _clearStockItem(index);
+        });
+        showScaffold(
+          context: context,
+          message: 'No changes made - edit cancelled',
+        );
+        return; // Exit early - don't add anything
+      }
+
+      // Changes detected - proceed with update
+      debugPrint('✏️ Changes detected - proceeding with update');
+
+      // Remove from pending storage
+      if (oldItem.apiResponse != null &&
+          oldItem.apiResponse!['localId'] != null) {
+        final stockProvider =
+            Provider.of<StockProvider>(context, listen: false);
+        stockProvider.removeStockItemLocally(oldItem.apiResponse!['localId']);
+        debugPrint('🗑️ Removed old item from pending storage');
+      }
+
+      // Adjust the current index if needed (if we're removing an item before the current one)
+      if (editingIndex < index) {
+        index = index - 1;
+        debugPrint(
+            '📊 Adjusted index from ${index + 1} to $index after removal');
+      }
+
+      // Remove old item from list
+      setState(() {
+        stockItems.removeAt(editingIndex);
+        _markIndexCacheDirty();
+      });
+
+      debugPrint('🗑️ Removed old item from list at index $editingIndex');
+
+      // Clear editing mode
+      _editingItemIndex = null;
+      debugPrint('✅ Cleared editing mode - will add updated item');
+    }
 
     if (selectedStore == null) {
       debugPrint('❌ STORE VALIDATION FAILED: No store selected');
@@ -1366,11 +1441,18 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     // Clear all search controllers
     debugPrint('🧹 CLEARING SEARCH CONTROLLERS...');
     supplierSearchController.clear();
-    categorySearchControllers.values
-        .forEach((controller) => controller.clear());
-    productSearchControllers.values.forEach((controller) => controller.clear());
-    barcodeControllers.values.forEach((controller) => controller.clear());
-    quantityControllers.values.forEach((controller) => controller.clear());
+    for (var controller in categorySearchControllers.values) {
+      controller.clear();
+    }
+    for (var controller in productSearchControllers.values) {
+      controller.clear();
+    }
+    for (var controller in barcodeControllers.values) {
+      controller.clear();
+    }
+    for (var controller in quantityControllers.values) {
+      controller.clear();
+    }
     debugPrint('✅ SEARCH CONTROLLERS CLEARED');
 
     // Clear pending stock items from provider
@@ -1404,6 +1486,71 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     debugPrint('✅ FORM FIELDS RESET COMPLETED');
   }
 
+  /// Edit a successfully added stock item - populate input section with values
+  void _editStockItem(int index) {
+    final item = stockItems[index];
+    _getBarcodeFocusNode(0).requestFocus();
+
+    if (!item.isSuccessfullyAdded) {
+      return;
+    }
+
+    setState(() {
+      // Store which item we're editing
+      _editingItemIndex = index;
+
+      // Find the input row (first non-successfully-added item)
+      int inputIndex = stockItems
+          .indexWhere((item) => !item.isSuccessfullyAdded && !item.isHidden);
+
+      if (inputIndex == -1) {
+        // No input row exists, create one at the beginning
+        stockItems.insert(0, StockItem());
+        inputIndex = 0;
+        _markIndexCacheDirty();
+      }
+
+      // Copy all values to the input row
+      stockItems[inputIndex] = StockItem(
+        barcode: item.barcode,
+        category: item.category,
+        product: item.product,
+        quantity: item.quantity,
+        salePrice: item.salePrice,
+        mrp: item.mrp,
+        wholesale: item.wholesale,
+        purchaseRate: item.purchaseRate,
+        unit: item.unit,
+        rack: item.rack,
+        expDate: item.expDate,
+        batchNumber: item.batchNumber,
+        productData: item.productData,
+        categoryData: item.categoryData,
+        selectedUnit: item.selectedUnit,
+        selectedRack: item.selectedRack,
+        taxInclude: item.taxInclude,
+        retailPriceTax: item.retailPriceTax,
+        wholesalePriceTax: item.wholesalePriceTax,
+        calculatedTaxData: item.calculatedTaxData,
+        isExpanded: true,
+      );
+
+      // Update controllers
+      _getBarcodeController(inputIndex).text = item.barcode;
+      _getQuantityController(inputIndex).text = item.quantity;
+      _getPurchaseRateController(inputIndex).text = item.purchaseRate;
+      _getRetailPriceController(inputIndex).text = item.salePrice;
+      _getMrpController(inputIndex).text = item.mrp;
+      _getWholesaleController(inputIndex).text = item.wholesale;
+      _getBatchNumberController(inputIndex).text = item.batchNumber;
+    });
+
+    // showScaffold(
+    //   context: context,
+    //   message: 'Editing item. Modify values and click Add to update.',
+    // );
+  }
+
   void _toggleExpanded(int index) {
     setState(() {
       stockItems[index].isExpanded = !stockItems[index].isExpanded;
@@ -1426,8 +1573,122 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       _getMrpController(index).clear();
       _getWholesaleController(index).clear();
       _getBatchNumberController(index).clear();
+
+      // Cancel edit mode if we're clearing the input row
+      if (_editingItemIndex != null) {
+        _cancelEditMode();
+      }
     });
     debugPrint('🧹 CLEARED STOCK ITEM AT INDEX $index');
+  }
+
+  /// Cancel edit mode and remove the input row
+  void _cancelEditMode() {
+    if (_editingItemIndex == null) return;
+
+    setState(() {
+      // Find the input row
+      int inputIndex = stockItems
+          .indexWhere((item) => !item.isSuccessfullyAdded && !item.isHidden);
+
+      if (inputIndex != -1) {
+        // Remove the input row
+        stockItems.removeAt(inputIndex);
+        _markIndexCacheDirty();
+      }
+
+      // Clear editing mode
+      _editingItemIndex = null;
+    });
+
+    showScaffold(
+      context: context,
+      message: 'Edit cancelled',
+    );
+    debugPrint('🔄 Edit mode cancelled');
+  }
+
+  void _updateStockItemFieldInline(int index, String field, String value) {
+    if (index < 0 || index >= stockItems.length) return;
+
+    final item = stockItems[index];
+
+    // Update the local item object field immediately for UI responsiveness
+    setState(() {
+      if (field == 'quantity') {
+        item.quantity = value;
+      } else if (field == 'salePrice') {
+        item.salePrice = value;
+      } else if (field == 'mrp') {
+        item.mrp = value;
+      } else if (field == 'purchaseRate') {
+        item.purchaseRate = value;
+      }
+      // Mark for recalculation so the summary updates in next build
+      _markForRecalculation();
+    });
+
+    // Debounce the heavy operations (Persistence & Tax)
+    _inlineEditDebounceTimer?.cancel();
+    _inlineEditDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+
+      // Update in local storage (StockProvider)
+      if (item.apiResponse != null && item.apiResponse!['localId'] != null) {
+        final localId = item.apiResponse!['localId'];
+        final stockProvider =
+            Provider.of<StockProvider>(context, listen: false);
+
+        // Map containing updated fields
+        final Map<String, dynamic> updatedData = {
+          'productId': item.productData?.productId,
+          'categoryId': item.categoryData?.categoryId,
+          'quantity': item.quantity,
+          'retailPrice': item.salePrice,
+          'purchaseRate': item.purchaseRate,
+          'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
+          'wholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : '',
+          'unit': item.selectedUnit,
+          'supplierId': selectedSupplier?.id ?? item.supplierId,
+          'storeId':
+              selectedStore?.id ?? 1, // Default store ID if none selected
+          'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
+          'userId': 1,
+          'taxAmountRetail': item.calculatedTaxData?['retailTaxAmount'],
+          'taxAmountWholesale': item.calculatedTaxData?['wholesaleTaxAmount'],
+          'wholesaleMinUnit':
+              item.batchNumber.isNotEmpty ? item.batchNumber : '1',
+          'rack': item.rack,
+          'barcode': item.barcode,
+          'batchNumber': item.batchNumber,
+          'date': DateFormat('yyyy-MM-dd').format(selectedDate),
+          'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
+          'taxInclude': item.taxInclude,
+          'initialRetailPrice': item.salePrice,
+          'initialWholesalePrice':
+              item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
+          'retailPriceTax':
+              item.calculatedTaxData?['price_including_tax_retail'],
+          'wholesalePriceTax':
+              item.calculatedTaxData?['price_including_tax_wholesale'],
+          'productName': item.product,
+          'categoryName': item.category,
+          'supplierName': selectedSupplier?.name ?? item.supplier,
+          'storeName': selectedStore?.name ?? '',
+        };
+
+        stockProvider.updateStockItemLocally(localId, updatedData);
+      }
+
+      // If price fields were changed, recalculate tax
+      if (field == 'salePrice' || field == 'mrp') {
+        _calculateTaxForStockItem(index, isRetail: true);
+        _calculateTaxForStockItem(index, isRetail: false);
+      }
+
+      // Finally, update the total stock value for the Finish button validation
+      _calculateTotalStockValue();
+    });
   }
 
   /// Show Add Product Modal with barcode generation enabled
@@ -2187,24 +2448,42 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           color: Colors.white,
         ),
         child: Padding(
-          padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
+          padding: const EdgeInsets.only(top: 5.0, left: 5, right: 5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CustomBackButton(
-                onPressed: () {
-                  sideBarController.index.value = 15;
-                },
-                text: 'All Stocks',
-              ),
-              Text(
-                'Add Product Stock',
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s20,
-                  0.30,
-                  ColorManager.textColor,
-                ),
+              // CustomBackButton(
+              //   onPressed: () {
+              //     sideBarController.index.value = 15;
+              //   },
+              //   text: 'All Stocks',
+              // ),
+
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      sideBarController.index.value = 15;
+                    },
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: ColorManager.kPrimaryColor,
+                      size: 24.0,
+                    ),
+                  ),
+                  // const SizedBox(
+                  //   width: 10,
+                  // ),
+                  Text(
+                    'Add Product Stock',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s20,
+                      0.30,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                ],
               ),
               Expanded(
                 child: Form(
@@ -2214,16 +2493,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       // Header Section (non-scrollable header content)
                       SliverToBoxAdapter(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          // crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeaderSection(size),
-                            const SizedBox(height: 20),
+                            // const SizedBox(height: 20),
+                            // Input Section - Sticky at top (visually below header)
+                            _buildInputSection(),
+                            // const SizedBox(height: 20),
                             _buildStockTableHeader(),
                             const SizedBox(height: 10),
                           ],
                         ),
                       ),
-                      // Stock Items List - Virtualized for performance
+
+                      // Stock Items List - Virtualized for performance (Below input)
                       _buildOptimizedStockList(),
                       // Footer Section (payment and action buttons)
                       SliverToBoxAdapter(
@@ -2273,17 +2556,17 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        BuildTextTile(
-          isStarRed: true,
-          isTextField: true,
-          title: title,
-          textStyle: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
-          ),
-        ),
+        // BuildTextTile(
+        //   isStarRed: true,
+        //   isTextField: true,
+        //   title: title,
+        //   textStyle: buildCustomStyle(
+        //     FontWeightManager.regular,
+        //     FontSize.s14,
+        //     0.27,
+        //     Colors.black.withOpacity(0.6),
+        //   ),
+        // ),
         BuildBoxShadowContainer(
           circleRadius: 7,
           alignment: Alignment.centerLeft,
@@ -2311,17 +2594,17 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        BuildTextTile(
-          isStarRed: true,
-          isTextField: true,
-          title: 'Store',
-          textStyle: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
-          ),
-        ),
+        // BuildTextTile(
+        //   isStarRed: true,
+        //   isTextField: true,
+        //   title: 'Store',
+        //   textStyle: buildCustomStyle(
+        //     FontWeightManager.regular,
+        //     FontSize.s14,
+        //     0.27,
+        //     Colors.black.withOpacity(0.6),
+        //   ),
+        // ),
         BuildBoxShadowContainer(
           circleRadius: 7,
           alignment: Alignment.centerLeft,
@@ -2377,7 +2660,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               children: [
                 Expanded(
                   child: BuildDropDownWithSearch<Supplier>(
-                    title: "Supplier",
+                    // title: "Supplier",
                     hintText: "Select Supplier",
                     value: selectedSupplier,
                     items: supplierList,
@@ -2500,18 +2783,28 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       ),
       child: Row(
         children: [
-          _buildHeaderCell("No.", flex: 0, width: 40),
+          _buildHeaderCell("No.", flex: 1, width: 40),
           _buildHeaderCell("Barcode", flex: 2),
-          _buildHeaderCell("Category", flex: 2),
-          _buildHeaderCell("Product", flex: 3),
-          _buildHeaderCell("Qty", flex: 1),
-          _buildHeaderCell("Actions", flex: 0, width: 150),
+          _buildHeaderCell("Product", flex: 4),
+          _buildHeaderCell("Unit", flex: 1),
+          _buildHeaderCell("Qty", flex: 1, width: 40),
+          _buildHeaderCell("Purchase Rate", flex: 2),
+          _buildHeaderCell("Retail Price", flex: 2),
+          _buildHeaderCell("MRP", flex: 1),
+          _buildHeaderCell("Actions", flex: 2, isLast: true),
+          // _buildHeaderCell("No.", flex: 0, width: 40),
+          // _buildHeaderCell("Barcode", flex: 2),
+          // _buildHeaderCell("Category", flex: 2),
+          // _buildHeaderCell("Product", flex: 3),
+          // _buildHeaderCell("Qty", flex: 1),
+          // _buildHeaderCell("Actions", flex: 0, width: 150),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderCell(String title, {int flex = 1, double? width}) {
+  Widget _buildHeaderCell(String title,
+      {int flex = 1, double? width, bool isLast = false}) {
     if (flex == 0) {
       return SizedBox(
         width: width,
@@ -2525,11 +2818,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
     return Expanded(
       flex: flex,
-      child: Text(
-        title,
-        style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12, 0.27,
-            ColorManager.kPrimaryColor),
-        textAlign: TextAlign.center,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: Text(
+          title,
+          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+              0.27, ColorManager.kPrimaryColor),
+          textAlign: isLast ? TextAlign.end : TextAlign.start,
+        ),
       ),
     );
   }
@@ -2562,9 +2858,150 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           if (originalIndex < 0) return const SizedBox.shrink();
 
           // Use RepaintBoundary to isolate repaints for each row
-          return RepaintBoundary(
-            child: _buildStockRow(originalIndex, visibleIndex,
-                key: ValueKey('stock_row_$originalIndex')),
+          // return RepaintBoundary(
+          //   child: _buildStockRow(originalIndex, visibleIndex,
+          //       key: ValueKey('stock_row_$originalIndex')),
+          // );
+
+//---------------------------------------------------------------------------------------
+          final item = stockItems[originalIndex];
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Container(
+              color: visibleIndex.isEven ? Colors.white : Colors.grey.shade50,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 2, horizontal: 10),
+                child: InkWell(
+                  onTap: () => _showProductDetailsModal(visibleIndex),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          '${visibleIndex + 1}',
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.barcode,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          item.product,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          item.unit,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            11,
+                            0.21,
+                            ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: _InlineEditableField(
+                          value: item.quantity,
+                          hintText: 'Qty',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'quantity', val),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: _InlineEditableField(
+                          value: item.purchaseRate,
+                          hintText: 'Rate',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'purchaseRate', val),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: _InlineEditableField(
+                          value: item.salePrice,
+                          hintText: 'Price',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'salePrice', val),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: _InlineEditableField(
+                          value: item.mrp,
+                          hintText: 'MRP',
+                          onChanged: (val) => _updateStockItemFieldInline(
+                              originalIndex, 'mrp', val),
+                        ),
+                      ),
+                      Expanded(
+                          flex: 2,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              IconButton(
+                                onPressed: () => _editStockItem(originalIndex),
+                                icon: const Icon(
+                                  Icons.edit,
+                                  size: 15,
+                                  color: ColorManager.kPrimaryColor,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              const SizedBox(
+                                width: 20,
+                              ),
+                              IconButton(
+                                onPressed: () =>
+                                    _deleteStockItem(originalIndex),
+                                icon: WebsafeSvg.asset(
+                                  ImageAssets.oderlistCloseIcon,
+                                  width: 15,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           );
         },
         childCount: visibleItems.length,
@@ -2575,19 +3012,35 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  // Legacy method - kept for reference but no longer used
-  Widget _buildStockTable() {
-    final visibleItems = visibleStockItems;
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: visibleItems.length,
-      itemBuilder: (context, visibleIndex) {
-        int originalIndex = getOriginalIndex(visibleIndex);
-        // Add key for better performance - prevents unnecessary rebuilds
-        return _buildStockRow(originalIndex, visibleIndex,
-            key: ValueKey('stock_row_$originalIndex'));
-      },
+  Widget _buildInputSection() {
+    // Determine the number of successfully added items to calculate the correct index for the new item.
+    int addedCount = stockItems
+        .where((item) => item.isSuccessfullyAdded && !item.isHidden)
+        .length;
+
+    // Find indices of items that are NOT successfully added (input forms)
+    final inputItemsIndices = <int>[];
+    for (int i = 0; i < stockItems.length; i++) {
+      if (!stockItems[i].isHidden && !stockItems[i].isSuccessfullyAdded) {
+        inputItemsIndices.add(i);
+      }
+    }
+
+    if (inputItemsIndices.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: inputItemsIndices.map((originalIndex) {
+        // We pass 'addedCount' as the visible index so the row number continues sequentially.
+        // If there are multiple input rows (rare), we increment the count.
+        int currentVisibleIndex =
+            addedCount + inputItemsIndices.indexOf(originalIndex);
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+          child: _buildStockRow(originalIndex, currentVisibleIndex,
+              key: ValueKey('input_stock_row_$originalIndex')),
+        );
+      }).toList(),
     );
   }
 
@@ -3006,12 +3459,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildStockRow(int index, int visibleIndex, {Key? key}) {
+    debugPrint("visible index: $visibleIndex index is $index");
     final item = stockItems[index];
 
     return BuildBoxShadowContainer(
       key: key,
       circleRadius: 7,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 8,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
         children: [
@@ -3800,7 +4256,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               stockItems[index].quantity = initialQuantityStr!;
             });
             // Update controller immediately so post-autofill focus selects the correct text
-            _getQuantityController(index).text = initialQuantityStr!;
+            _getQuantityController(index).text = initialQuantityStr;
           }
 
           final String newBarcode = createdProduct.barcode ?? barcode;
@@ -4561,7 +5017,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           });
                           _updatePendingStockItem(index);
                         },
-                        activeColor: ColorManager.kPrimaryColor,
+                        activeThumbColor: ColorManager.kPrimaryColor,
                         inactiveThumbColor: Colors.white,
                         inactiveTrackColor: Colors.grey.shade300,
                       ),
@@ -5167,6 +5623,89 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           textColor: ColorManager.kPrimaryColor,
         ),
       ],
+    );
+  }
+}
+
+class _InlineEditableField extends StatefulWidget {
+  final String value;
+  final Function(String) onChanged;
+  final String hintText;
+
+  const _InlineEditableField({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.hintText = '',
+  });
+
+  @override
+  State<_InlineEditableField> createState() => _InlineEditableFieldState();
+}
+
+class _InlineEditableFieldState extends State<_InlineEditableField> {
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(_InlineEditableField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_focusNode.hasFocus && oldWidget.value != widget.value) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      focusNode: _focusNode,
+      keyboardType: TextInputType.number,
+      textAlign: TextAlign.start,
+      style: buildCustomStyle(
+        FontWeightManager.regular,
+        11,
+        0.21,
+        ColorManager.textColor,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        border: InputBorder.none,
+        hintText: widget.hintText,
+        hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+      ),
+      onTap: () {
+        // Use a post-frame callback to ensure text selection happens after the tap is processed
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_controller.text.isNotEmpty && _focusNode.hasFocus) {
+            _controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _controller.text.length,
+            );
+          }
+        });
+        Provider.of<KeyboardProvider>(context, listen: false).show(
+          'number',
+          _controller,
+          replaceOnFirstInput: true,
+        );
+      },
+      onChanged: widget.onChanged,
     );
   }
 }

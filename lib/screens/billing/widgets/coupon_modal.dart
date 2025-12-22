@@ -11,17 +11,23 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:provider/provider.dart';
 
 class CouponModal extends StatefulWidget {
+  final double? subTotal;
+  final double? initialFlatDiscount;
+  final double? initialPercentageDiscount;
   final String initialCouponCode;
   final bool isCouponApplied;
   final Function(String, bool,
       {double? flatDiscount, double? percentageDiscount}) onCouponAction;
 
   const CouponModal({
-    Key? key,
+    super.key,
+    this.subTotal,
+    this.initialFlatDiscount,
+    this.initialPercentageDiscount,
     required this.initialCouponCode,
     required this.isCouponApplied,
     required this.onCouponAction,
-  }) : super(key: key);
+  });
 
   @override
   State<CouponModal> createState() => _CouponModalState();
@@ -42,14 +48,16 @@ class _CouponModalState extends State<CouponModal> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final currentDiscounts = localProductProvider.getCurrentDiscount();
 
+    final initialFlat =
+        widget.initialFlatDiscount ?? currentDiscounts['flatDiscount'] ?? 0.0;
+    final initialPercentage = widget.initialPercentageDiscount ??
+        currentDiscounts['percentageDiscount'] ??
+        0.0;
+
     flatDiscountController = TextEditingController(
-        text: currentDiscounts['flatDiscount'] == 0.0
-            ? ''
-            : currentDiscounts['flatDiscount']?.toString());
+        text: initialFlat == 0.0 ? '' : initialFlat.toString());
     percentageDiscountController = TextEditingController(
-        text: currentDiscounts['percentageDiscount'] == 0.0
-            ? ''
-            : currentDiscounts['percentageDiscount']?.toString());
+        text: initialPercentage == 0.0 ? '' : initialPercentage.toString());
 
     isCouponApplied = widget.isCouponApplied;
 
@@ -73,9 +81,10 @@ class _CouponModalState extends State<CouponModal> {
         // Get currency symbol from app settings
         final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
 
-        // Calculate totals directly from the provider's price summary
+        // Calculate totals directly from the provider's price summary or passed subTotal
         final priceSummary = localProductProvider.priceSummary;
-        final originalSubTotal = priceSummary?.originalSubTotal ?? 0.0;
+        final originalSubTotal =
+            widget.subTotal ?? priceSummary?.originalSubTotal ?? 0.0;
         final currentFlatDiscount =
             double.tryParse(flatDiscountController.text) ?? 0.0;
         final currentPercentageDiscount =

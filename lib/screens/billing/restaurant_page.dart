@@ -7118,6 +7118,9 @@ class _RestaurantCouponModalWrapperState
     return ChangeNotifierProvider<LocalProductProvider>.value(
       value: _mockProvider,
       child: CouponModal(
+        subTotal: widget.orderSubTotal,
+        initialFlatDiscount: widget.initialFlatDiscount,
+        initialPercentageDiscount: widget.initialPercentageDiscount,
         initialCouponCode: widget.initialCouponCode,
         isCouponApplied: widget.isCouponApplied,
         onCouponAction: widget.onCouponAction,

@@ -5012,9 +5012,16 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         '  - discountAndCoupon enabled: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.discountAndCoupon}');
 
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final currentDiscounts = localProductProvider.getCurrentDiscount();
+
     showDialog(
       context: context,
       builder: (context) => CouponModal(
+        subTotal: localProductProvider.subTotalBeforeDiscount,
+        initialFlatDiscount: currentDiscounts['flatDiscount'],
+        initialPercentageDiscount: currentDiscounts['percentageDiscount'],
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
         onCouponAction: (couponCode, shouldApply,
