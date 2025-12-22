@@ -13,10 +13,10 @@ git push build1 v0.1.0-dev.259
 
 
 
-
-
 saleseexe2@gmail.com
 CLOUDPOS_Z2IcS8wMtPlfNsaK1kKbcpMZcv2B10RO
 123456
 
 CYCLOPEDIA_lss7VsbctNSByFd7h2vszA0eMHHXi2fj
+salesexecutive2@cyclopedia.in
+123456
