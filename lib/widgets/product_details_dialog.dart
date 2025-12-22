@@ -69,6 +69,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _unitController;
   late TextEditingController _priceController;
   late TextEditingController _mrpController;
+  late TextEditingController _taxController; // Restore tax controller
   late TextEditingController _purchasePriceController;
   late TextEditingController _rackController;
 
@@ -94,6 +95,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _priceController = TextEditingController();
     _mrpController = TextEditingController();
     _purchasePriceController = TextEditingController();
+    _taxController = TextEditingController(); // Init tax controller
     _rackController = TextEditingController();
     if (widget.product != null) {
       selectedProduct = widget.product;
@@ -236,6 +238,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.text = product.unit ?? '';
     _priceController.text = _valueToString(product.price?.price);
     _mrpController.text = _valueToString(product.mrp);
+    // 🔧 FIX: Revert to Tax Rate (Percentage) as requested
+    // We display the static rate, no longer the calculated amount
+    _taxController.text = _valueToString(product.totalTaxRate);
     _purchasePriceController.text = product.purchasePrice ??
         (product.stock != null && product.stock!.isNotEmpty
             ? product.stock!.first.purchasePrice
@@ -297,6 +302,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final double priceForApi = updatedPriceString.isEmpty
         ? double.tryParse(product.price?.price?.toString() ?? '') ?? 0
         : double.tryParse(updatedPriceString) ?? 0;
+
     final double mrpForApi = updatedMrpString.isEmpty
         ? double.tryParse(product.mrp?.toString() ?? '') ?? 0
         : double.tryParse(updatedMrpString) ?? 0;
@@ -428,6 +434,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         description: product.description,
         price: updatedProductPrice,
         mrp: updatedMrpString.isEmpty ? product.mrp : updatedMrpString,
+        taxes: [
+          ProductTax(
+              rate: (double.tryParse(_taxController.text) ?? 0.0).toString(),
+              name: "Tax",
+              code: "TAX",
+              source: "manual")
+        ],
         purchasePrice: updatedPurchasePrice.isEmpty
             ? product.purchasePrice
             : updatedPurchasePrice,
@@ -444,10 +457,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
       localProductProvider.updateProduct(updatedProduct);
 
+      final updatedTaxValue = double.tryParse(_taxController.text) ?? 0.0;
       localProductProvider.updateProductPricingInCart(
         updatedProduct.productId ?? 0,
         updatedPriceValue,
         updatedMrpValue,
+        updatedTaxValue,
       );
 
       if (!mounted) return;
@@ -485,6 +500,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
+    _taxController.dispose(); // Restore dispose
     _purchasePriceController.dispose();
     _rackController.dispose();
     super.dispose();
@@ -547,6 +563,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   _buildDetailRow('Category', product.category?.name ?? 'N/A'),
                   _buildDetailRow('Barcode', product.barcode ?? 'N/A'),
                   _buildDetailRow('Unit', product.unit ?? 'N/A'),
+                  if (product.taxes != null && product.taxes!.isNotEmpty)
+                    ...product.taxes!.map((tax) => _buildDetailRow(
+                          tax.name ?? 'Tax',
+                          '${tax.rate ?? 0}%',
+                        )),
                 ],
               ),
             ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -17,14 +18,18 @@ class LocalCartItem {
   final GetProduct product;
   double? price;
   double? mrp;
+  double? taxRate; // Percentage (sum of all taxes)
+  double? taxAmount; // Calculated amount per unit
   num quantity;
   final Stock? selectedStock;
 
   LocalCartItem({
     required this.product,
-    this.quantity = 1,
     this.price,
     this.mrp,
+    this.taxRate,
+    this.taxAmount,
+    this.quantity = 1,
     this.selectedStock,
   });
 }
@@ -163,6 +168,52 @@ class LocalProductProvider extends ChangeNotifier {
 
   PriceSummary? priceSummary;
 
+  // 📊 Tax Breakdown Logic
+  Map<String, double> get taxBreakdown {
+    final breakdown = <String, double>{};
+
+    for (var item in _cartItems) {
+      final double totalTaxAmount = (item.taxAmount ?? 0.0) * item.quantity;
+      if (totalTaxAmount <= 0) continue;
+
+      final double currentTaxRate = item.taxRate ?? 0.0;
+      final double productTotalTaxRate = item.product.totalTaxRate;
+
+      // Check if the current rate matches the product's defined tax structure
+      // Check if the current rate matches the product's defined tax structure
+      // We use a small epsilon for float comparison
+      if ((currentTaxRate - productTotalTaxRate).abs() < 0.01 &&
+          (item.product.taxes?.isNotEmpty ?? false)) {
+        // Distribute proportional to distinct taxes
+        for (var tax in (item.product.taxes ?? [])) {
+          if (productTotalTaxRate > 0) {
+            // Parse rate from string to double
+            final double taxRateVal = double.tryParse(tax.rate ?? "0") ?? 0.0;
+            // Calculate share: (Individual Rate / Total Rate) * Total Tax Amount
+            final double share =
+                (taxRateVal / productTotalTaxRate) * totalTaxAmount;
+
+            final String key = tax.name ?? "Tax";
+            breakdown[key] = (breakdown[key] ?? 0.0) + share;
+          }
+        }
+      } else {
+        // Fallback: Rate doesn't match or no breakdown available
+        // Assign to generic "Tax" or specific label if only 1 tax exists
+        String key = "Tax";
+        if ((item.product.taxes?.isNotEmpty ?? false) &&
+            item.product.taxes!.length == 1) {
+          key = item.product.taxes!.first.name ?? "Tax";
+        }
+
+        // If it was manually edited to a custom rate, we just show it as "Tax"
+        // unless it happens to match the single tax name.
+        breakdown[key] = (breakdown[key] ?? 0.0) + totalTaxAmount;
+      }
+    }
+    return breakdown;
+  }
+
   // Add pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
@@ -239,8 +290,9 @@ class LocalProductProvider extends ChangeNotifier {
             product: product,
             quantity: hiveCartItem.quantity,
             price: hiveCartItem.price,
-            mrp: hiveCartItem
-                .mrp, // 🔧 FIX: Include MRP when loading confirmed orders from Hive
+            mrp: hiveCartItem.mrp,
+            taxAmount: hiveCartItem.taxAmount,
+            taxRate: hiveCartItem.taxRate,
             selectedStock: selectedStock,
           );
         }).toList();
@@ -302,8 +354,9 @@ class LocalProductProvider extends ChangeNotifier {
             productId: item.product.productId!,
             quantity: item.quantity,
             price: item.price,
-            mrp: item
-                .mrp, // 🔧 FIX: Include MRP when saving confirmed orders to Hive
+            mrp: item.mrp,
+            taxAmount: item.taxAmount,
+            taxRate: item.taxRate,
             serializedProduct:
                 HiveStringValue(json.encode(item.product.toJson())),
             serializedSelectedStock: serializedStock,
@@ -382,8 +435,9 @@ class LocalProductProvider extends ChangeNotifier {
         product: product,
         quantity: hiveCartItem.quantity,
         price: hiveCartItem.price,
-        mrp:
-            hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading cart from Hive
+        mrp: hiveCartItem.mrp,
+        taxAmount: hiveCartItem.taxAmount,
+        taxRate: hiveCartItem.taxRate,
         selectedStock: selectedStock,
       ));
     }
@@ -414,8 +468,9 @@ class LocalProductProvider extends ChangeNotifier {
           product: product,
           quantity: hiveCartItem.quantity,
           price: hiveCartItem.price,
-          mrp: hiveCartItem
-              .mrp, // 🔧 FIX: Include MRP when loading saved orders from Hive
+          mrp: hiveCartItem.mrp,
+          taxAmount: hiveCartItem.taxAmount,
+          taxRate: hiveCartItem.taxRate,
           selectedStock: selectedStock,
         );
       }).toList();
@@ -498,7 +553,9 @@ class LocalProductProvider extends ChangeNotifier {
         productId: cartItem.product.productId!,
         quantity: cartItem.quantity,
         price: cartItem.price,
-        mrp: cartItem.mrp, // 🔧 FIX: Include MRP when saving cart to Hive
+        mrp: cartItem.mrp,
+        taxAmount: cartItem.taxAmount,
+        taxRate: cartItem.taxRate,
         serializedProduct:
             HiveStringValue(json.encode(cartItem.product.toJson())),
         serializedSelectedStock: serializedStock,
@@ -527,7 +584,9 @@ class LocalProductProvider extends ChangeNotifier {
           productId: item.product.productId!,
           quantity: item.quantity,
           price: item.price,
-          mrp: item.mrp, // 🔧 FIX: Include MRP when saving saved orders to Hive
+          mrp: item.mrp,
+          taxAmount: item.taxAmount,
+          taxRate: item.taxRate,
           serializedProduct:
               HiveStringValue(json.encode(item.product.toJson())),
           serializedSelectedStock: serializedStock,
@@ -578,11 +637,12 @@ class LocalProductProvider extends ChangeNotifier {
 
   double get cartTotal {
     double subTotal = 0.0;
-    double totalTax = 0.0; // Assuming you have a way to calculate tax
+    double totalTax = 0.0; // Restore totalTax declaration
 
-    // Calculate subtotal from all cart items
+    // Calculate subtotal and total tax from all cart items
     for (var item in _cartItems) {
       subTotal += (item.price ?? 0) * item.quantity;
+      totalTax += (item.taxAmount ?? 0) * item.quantity;
     }
 
     // Calculate discount amounts
@@ -708,6 +768,7 @@ class LocalProductProvider extends ChangeNotifier {
 
           if (response.statusCode == 200) {
             dynamic jsonData;
+            log(response.body);
             try {
               jsonData = json.decode(response.body);
             } catch (e) {
@@ -1150,6 +1211,16 @@ class LocalProductProvider extends ChangeNotifier {
         final cartItem = _cartItems.removeAt(index);
         _cartItems.insert(0, cartItem);
       }
+
+      // 🔧 FIX: Recalculate tax when price changes
+      if (price != null) {
+        final taxRate = product.totalTaxRate;
+        // If we moved it to 0, update at 0, otherwise update at index
+        final targetIndex =
+            !isIncreamentUsingCompactQuantityControl! ? 0 : index;
+        _cartItems[targetIndex].taxRate = taxRate;
+        _cartItems[targetIndex].taxAmount = (price * taxRate) / 100;
+      }
     } else {
       debugPrint("🆕 Adding new product to cart");
 
@@ -1177,6 +1248,10 @@ class LocalProductProvider extends ChangeNotifier {
         productMrp = double.tryParse(product.mrp!) ?? 0.0;
       }
 
+      // Calculate initial tax
+      final double taxRate = product.totalTaxRate;
+      final double calculatedTax = (productPrice * taxRate) / 100;
+
       // Insert at the beginning of the array instead of appending
       _cartItems.insert(
           0,
@@ -1185,6 +1260,8 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: cartQuantity,
             price: productPrice,
             mrp: productMrp,
+            taxRate: taxRate,
+            taxAmount: calculatedTax,
             selectedStock: selectedStock,
           ));
     }
@@ -1244,6 +1321,11 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (index != -1) {
       _cartItems[index].price = newPrice;
+
+      // 🔧 FIX: Recalculate taxAmount when price changes
+      final double taxRate = _cartItems[index].taxRate ?? 0.0;
+      _cartItems[index].taxAmount = (newPrice * taxRate) / 100;
+
       _saveCartToHive();
       notifyListeners();
     }
@@ -1263,13 +1345,32 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  void updateItemTax(int productId, Stock? selectedStock, double newTaxRate) {
+    // Update tax rate and recalculate amount
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+
+    if (index != -1) {
+      _cartItems[index].taxRate = newTaxRate;
+      _cartItems[index].taxAmount =
+          ((_cartItems[index].price ?? 0.0) * newTaxRate) / 100;
+      _saveCartToHive();
+      notifyListeners();
+    }
+  }
+
   void updateProductPricingInCart(
-      int productId, double newPrice, double newMrp) {
+      int productId, double newPrice, double newMrp, double newTax) {
     bool cartUpdated = false;
     for (var item in _cartItems) {
       if (item.product.productId == productId) {
         item.price = newPrice;
         item.mrp = newMrp;
+        item.taxRate = newTax; // Changed from item.tax to item.taxRate
+        // 🔧 FIX: Recalculate taxAmount
+        item.taxAmount = (newPrice * newTax) / 100;
         cartUpdated = true;
       }
     }
@@ -1466,8 +1567,6 @@ class LocalProductProvider extends ChangeNotifier {
           rack: existingStock.rack,
           hsnCode: existingStock.hsnCode,
         );
-        debugPrint(
-            "📦 Updated existing stock entry - New quantity: ${updatedStock[stockIndex].quantity}");
       } else {
         // Add new stock entry
         Stock newStock = Stock(
@@ -1673,7 +1772,9 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
-              mrp: item.mrp, // 🔧 FIX: Include MRP when saving confirmed order
+              mrp: item.mrp,
+              taxRate: item.taxRate,
+              taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
             ))
         .toList();
@@ -1856,7 +1957,9 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
-              mrp: item.mrp, // 🔧 FIX: Include MRP when saving order
+              mrp: item.mrp,
+              taxRate: item.taxRate,
+              taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
             ))
         .toList();
@@ -1956,7 +2059,9 @@ class LocalProductProvider extends ChangeNotifier {
           product: item.product,
           quantity: item.quantity,
           price: item.price,
-          mrp: item.mrp, // 🔧 FIX: Include MRP when loading order for editing
+          mrp: item.mrp,
+          taxAmount: item.taxAmount,
+          taxRate: item.taxRate,
           selectedStock: item.selectedStock,
         ));
       }
@@ -2016,7 +2121,9 @@ class LocalProductProvider extends ChangeNotifier {
                 product: item.product,
                 quantity: item.quantity,
                 price: item.price,
-                mrp: item.mrp, // 🔧 FIX: Include MRP when updating saved order
+                mrp: item.mrp,
+                taxRate: item.taxRate,
+                taxAmount: item.taxAmount,
                 selectedStock: item.selectedStock,
               ))
           .toList();
