@@ -2330,11 +2330,29 @@ class BillingPageState extends State<BillingPage>
                 "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
             title: "billing.net_amount".tr,
             color: ColorManager.textColor,
-            firstRowTextStyle: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s15,
-              0.18,
-              ColorManager.textColor,
+            titleWidget: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: "billing.net_amount".tr,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s15,
+                      0.18,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                  TextSpan(
+                    text: " ${"billing.incl_tax".tr}",
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s11, // Smaller font for "(incl. tax)"
+                      0.18,
+                      ColorManager.kGreyColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.semiBold,
@@ -2379,13 +2397,13 @@ class BillingPageState extends State<BillingPage>
                 color: ColorManager.textColor,
                 firstRowTextStyle: buildCustomStyle(
                   FontWeightManager.medium,
-                  FontSize.s15,
+                  FontSize.s14,
                   0.18,
                   ColorManager.textColor,
                 ),
                 secondRowTextStyle: buildCustomStyle(
                   FontWeightManager.semiBold,
-                  FontSize.s15,
+                  FontSize.s14,
                   0.18,
                   ColorManager.textColor,
                 ),
@@ -2480,11 +2498,29 @@ class BillingPageState extends State<BillingPage>
               "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
           title: "billing.net_amount".tr,
           color: ColorManager.textColor,
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s15,
-            0.18,
-            ColorManager.textColor,
+          titleWidget: RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: "billing.net_amount".tr,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s15,
+                    0.18,
+                    ColorManager.textColor,
+                  ),
+                ),
+                TextSpan(
+                  text: " ${"billing.incl_tax".tr}",
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s11, // Smaller font for "(incl. tax)"
+                    0.18,
+                    ColorManager.kGreyColor,
+                  ),
+                ),
+              ],
+            ),
           ),
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.semiBold,

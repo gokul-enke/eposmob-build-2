@@ -78,6 +78,7 @@
     "new_order": "New Order",
     "payment_summary": "Payment Summary",
     "net_amount": "Net amount",
+    "incl_tax": "(incl. tax)",
     "phone_number_hint": "Phone Number",
     "enter_mobile_hint": "Enter mobile number",
     "customer_cleared": "Customer Details Cleared Successfully",
