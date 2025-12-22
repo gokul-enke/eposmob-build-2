@@ -40,6 +40,7 @@ import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
@@ -137,7 +138,8 @@ Future<void> _initializeHiveBoxes() async {
     try {
       if (Hive.isBoxOpen(boxName)) {
         final box = Hive.box(boxName);
-        debugPrint('⚠️ Box $boxName was open during initialization. Clearing and closing before reset.');
+        debugPrint(
+            '⚠️ Box $boxName was open during initialization. Clearing and closing before reset.');
         await box.clear();
         await box.close();
       }
@@ -145,7 +147,8 @@ Future<void> _initializeHiveBoxes() async {
       final exists = await Hive.boxExists(boxName);
 
       if (exists) {
-        debugPrint('🧹 Clearing existing data for $boxName box before initialization');
+        debugPrint(
+            '🧹 Clearing existing data for $boxName box before initialization');
         await Hive.deleteBoxFromDisk(boxName);
         debugPrint('✅ Cleared $boxName box from disk');
       } else {
@@ -318,6 +321,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RoleProvider()),
         ChangeNotifierProvider(create: (_) => CustomerVoucherProvider()),
         ChangeNotifierProvider(create: (_) => SupplierVoucherProvider()),
+        ChangeNotifierProvider(create: (_) => AppFontProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(

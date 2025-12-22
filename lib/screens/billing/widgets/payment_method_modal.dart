@@ -282,7 +282,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       // Assign IDs based on value field
       for (final method in sortedMethods) {
         final value = method.value.toUpperCase();
-        if (value == 'CASH' || value == 'COD') {
+        if (value == 'CASH') {
           _cashPaymentMethodId = method.id.toString();
           debugPrint('💵 CASH ID: $_cashPaymentMethodId');
         } else if (value == 'CARD') {

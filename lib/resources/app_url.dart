@@ -6,8 +6,8 @@ class APPUrl {
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
   // static String baseURL = "https://eposdemo.yougoit.in";
-  // static String baseURL = "https://eeezeeerp.cloudposai.com";
-  static String baseURL = "https://eposdemo.yougoit.in";
+  static String baseURL = "https://eeezeeerp.cloudposai.com";
+  // static String baseURL = "https://eposdemo.yougoit.in";
   // static String baseURL = "https://eeezee.enke.ae";
   // static String baseURL = "https://actdemo.yougoit.in";
   // static String baseURL = "https://epos.hypersouq.in";
@@ -21,6 +21,8 @@ class APPUrl {
 
   static String verifyApiKey = '$baseURL/api/v1/verify-api-key';
   static String categoryListUrl = '$baseURL/api/v1/category/list-category';
+  static String getSellableCategoryListUrl =
+      '$baseURL/api/v1/category/list-category?type=sellable';
   static String viewCategoryListUrl = '$baseURL/api/v1/category-details';
   static String addCategoryUrl = '$baseURL/api/v1/category/add-category';
   static String editCategoryUrl = '$baseURL/api/v1/category/edit-category';

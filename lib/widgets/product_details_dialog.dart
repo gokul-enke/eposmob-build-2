@@ -579,7 +579,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       product.offerPrice != null
                           ? '$currency ${product.offerPrice}'
                           : 'N/A'),
-                  _buildDetailRow('Currency', product.currency ?? 'N/A'),
                   _buildDetailRow('SKU', product.sku ?? 'Not Available'),
                 ],
               ),

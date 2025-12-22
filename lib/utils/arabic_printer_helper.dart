@@ -1,0 +1,263 @@
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
+import 'package:qr/qr.dart';
+
+class ArabicPrinterHelper {
+  static const String fontFamily = 'NotoSansArabic';
+
+  /// Renders a list of rows into a single image for thermal printing.
+  /// Each row can have multiple columns with specified widths and alignments.
+  /// Renders a list of rows into a single image for thermal printing.
+  /// Each row can have multiple columns with specified widths and alignments.
+  static Future<img.Image> renderReceiptToImage({
+    required List<ReceiptRow> rows,
+    double width = 580, // Default for 80mm printers
+    double fontSize = 24,
+    TextDirection textDirection = TextDirection.rtl, // Default to RTL
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint()..color = Colors.white;
+
+    // First pass: calculate total height
+    double currentY = 0;
+    for (var row in rows) {
+      currentY += row.calculateHeight(width, fontSize, textDirection);
+    }
+
+    // Draw background
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, currentY), paint);
+
+    // Second pass: render rows
+    double drawY = 0;
+    for (var row in rows) {
+      row.render(canvas, drawY, width, fontSize, textDirection);
+      drawY += row.calculateHeight(width, fontSize, textDirection);
+    }
+
+    final picture = recorder.endRecording();
+    final uiImage = await picture.toImage(width.toInt(), currentY.toInt());
+    final byteData = await uiImage.toByteData(format: ui.ImageByteFormat.png);
+
+    if (byteData == null)
+      throw Exception("Failed to convert image to byte data");
+
+    return img.decodeImage(byteData.buffer.asUint8List())!;
+  }
+}
+
+abstract class ReceiptRow {
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection);
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection);
+}
+
+class TextRow extends ReceiptRow {
+  final String text;
+  final TextAlign align;
+  final bool isBold;
+  final double scale;
+
+  TextRow(this.text,
+      {this.align = TextAlign.center, this.isBold = false, this.scale = 1.0});
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    final tp = _createPainter(width, fontSize, textDirection);
+    return tp.height + 10;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final tp = _createPainter(width, fontSize, textDirection);
+    double x = 0;
+    if (align == TextAlign.center) {
+      x = (width - tp.width) / 2;
+    } else if (align == TextAlign.right) {
+      x = width - tp.width;
+    }
+    // For specific alignment with LTR vs RTL
+    // If LTR & TextAlign.left, x=0
+    // If RTL & TextAlign.right, x = width - tp.width
+    // TextPainter handles internal alignment, but offset needs manual calculation if we want precise column placement
+
+    tp.paint(canvas, Offset(x, y + 5));
+  }
+
+  TextPainter _createPainter(
+      double width, double fontSize, TextDirection textDirection) {
+    return TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: fontSize * scale,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: textDirection,
+      textAlign: align,
+    )..layout(maxWidth: width);
+  }
+}
+
+class ReceiptTableRow extends ReceiptRow {
+  final List<ReceiptTableColumn> columns;
+
+  ReceiptTableRow(this.columns);
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    double maxHeight = 0;
+    for (var col in columns) {
+      final tp = col.createPainter(width, fontSize, textDirection);
+      if (tp.height > maxHeight) maxHeight = tp.height;
+    }
+    return maxHeight + 10;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    double currentX = 0;
+
+    // For LTR, render 0..N. For RTL, logical list is usually 0..N but displayed Right to Left
+    // Actually, ReceiptTableRow defines columns in logical reading order manually usually.
+    // In our Arabic demo: [Total, Price, Qty, MRP, Item] -> Displayed Right to Left?
+    // Let's assume columns are defined in visual order from Left to Right?
+    // Code says: currentX += colWidth. So it renders Left to Right.
+    // In Arabic Demo: Col 0 is "Total", Col 4 is "Item".
+    // If we render LTR: Total(Left) ... Item(Right).
+    // But Arabic wants Item on Right.
+    // So distinct lists might be needed OR we just rely on visual order of definition.
+    // Since we are refactoring, let's keep it simple: Columns are rendered Left to Right.
+    // The Caller defines the order they want.
+
+    for (var col in columns) {
+      final colWidth = width * col.weight;
+      final tp = col.createPainter(width, fontSize, textDirection);
+
+      double xOffset = 0;
+      if (col.align == TextAlign.center) {
+        xOffset = (colWidth - tp.width) / 2;
+      } else if (col.align == TextAlign.right) {
+        xOffset = colWidth - tp.width;
+      } else if (col.align == TextAlign.left) {
+        xOffset = 0;
+      }
+
+      tp.paint(canvas, Offset(currentX + xOffset, y + 5));
+      currentX += colWidth;
+    }
+  }
+}
+
+class ReceiptTableColumn {
+  final String text;
+  final double weight; // percentage of width (0.0 to 1.0)
+  final TextAlign align;
+  final bool isBold;
+
+  ReceiptTableColumn(this.text,
+      {required this.weight,
+      this.align = TextAlign.right,
+      this.isBold = false});
+
+  TextPainter createPainter(
+      double totalWidth, double fontSize, TextDirection textDirection) {
+    return TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: fontSize,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: textDirection,
+      textAlign: align,
+    )..layout(maxWidth: totalWidth * weight);
+  }
+}
+
+class DividerRow extends ReceiptRow {
+  @override
+  double calculateHeight(
+          double width, double fontSize, TextDirection textDirection) =>
+      10;
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 2;
+    canvas.drawLine(Offset(0, y + 5), Offset(width, y + 5), paint);
+  }
+}
+
+class SpacingRow extends ReceiptRow {
+  final double height;
+
+  SpacingRow(this.height);
+
+  @override
+  double calculateHeight(
+          double width, double fontSize, TextDirection textDirection) =>
+      height;
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    // No rendering, just space
+  }
+}
+
+class QrRow extends ReceiptRow {
+  final String data;
+  final double size;
+
+  QrRow(this.data, {this.size = 200});
+
+  @override
+  double calculateHeight(
+          double width, double fontSize, TextDirection textDirection) =>
+      size + 10;
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    // Generate QR Code
+    final qrCode = QrCode(4, QrErrorCorrectLevel.L)..addData(data);
+    final qrImage = QrImage(qrCode);
+
+    // Calculate position to center
+    final double x = (width - size) / 2;
+
+    final paint = Paint()..color = Colors.black;
+    final double moduleSize = size / qrImage.moduleCount;
+
+    for (int ix = 0; ix < qrImage.moduleCount; ix++) {
+      for (int iy = 0; iy < qrImage.moduleCount; iy++) {
+        if (qrImage.isDark(iy, ix)) {
+          canvas.drawRect(
+            Rect.fromLTWH(
+              x + (ix * moduleSize),
+              y + 5 + (iy * moduleSize),
+              moduleSize,
+              moduleSize,
+            ),
+            paint,
+          );
+        }
+      }
+    }
+  }
+}

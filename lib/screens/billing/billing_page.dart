@@ -18,6 +18,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -671,66 +672,92 @@ class BillingPageState extends State<BillingPage>
             return; // Exit early, only customer list is fetched
           }
 
-          CustomerListModelData? salesCustomer;
+          CustomerListModelData? defaultCustomer;
 
           if (customerList!.isNotEmpty) {
-            // Get current sales executive's information
-            final salesExecutiveProvider =
-                Provider.of<SalesExecutiveProvider>(context, listen: false);
-            final currentExecutive =
-                salesExecutiveProvider.getCurrentUser(context);
+            // Get the default customer phone from app settings
+            final defaultPhone = appSettingsProvider
+                    .appSettings?.autoAssignDefaultCustomerPhone ??
+                "";
 
             debugPrint(
-                "🏢 BILLING: Setting up default customer from sales executive");
-            debugPrint("  - Current executive: ${currentExecutive?.name}");
-            debugPrint("  - Executive phone: ${currentExecutive?.phone}");
+                "🏢 BILLING: Setting up default customer from app settings phone");
+            debugPrint("  - Default phone from settings: '$defaultPhone'");
             debugPrint(
                 "  - Available customers in list: ${customerList!.length}");
-
-            if (currentExecutive != null) {
-              // Create a virtual customer using sales executive's information
-              salesCustomer = CustomerListModelData(
-                id: currentExecutive.id, // Use executive ID
-                name: currentExecutive.name,
-                phone: currentExecutive.phone,
-                email: currentExecutive.email,
-                createdAt: currentExecutive.createdAt,
-                updatedAt: currentExecutive.updatedAt,
-              );
+            // Debug: print first 5 customer phones for comparison
+            debugPrint("  - First 5 customer phones in list:");
+            for (int i = 0; i < customerList!.length && i < 5; i++) {
               debugPrint(
-                  "✅ Created virtual customer from sales executive: ${salesCustomer.name} (${salesCustomer.phone})");
-            } else {
-              debugPrint(
-                  "⚠️ No current executive found, falling back to first customer");
-              salesCustomer = customerList![0];
+                  "    [$i] ${customerList![i].name}: '${customerList![i].phone}'");
             }
 
-            debugPrint(
-                "🎯 Selected default customer: ${salesCustomer.name} (${salesCustomer.phone})");
+            if (defaultPhone.isNotEmpty) {
+              // Try to find customer by phone number
+              try {
+                defaultCustomer = customerList!.firstWhere(
+                  (customer) => customer.phone == defaultPhone,
+                );
+                debugPrint(
+                    "✅ Found customer by phone: ${defaultCustomer.name} (${defaultCustomer.phone})");
 
-            debugPrint("📝 SETTING DEFAULT CUSTOMER STATE:");
-            salesExecutivemobileNumberText = salesCustomer.phone!;
-            mobileNumberText = salesCustomer.phone!;
-            mobileNumberTextController.text =
-                "${salesCustomer.name!} ${salesCustomer.phone!}";
+                debugPrint(
+                    "🎯 Selected default customer: ${defaultCustomer.name} (${defaultCustomer.phone})");
 
-            debugPrint(
-                "  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-            debugPrint("  - Set mobileNumberText: '$mobileNumberText'");
-            debugPrint(
-                "  - Set mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+                debugPrint("📝 SETTING DEFAULT CUSTOMER STATE:");
+                salesExecutivemobileNumberText = defaultCustomer.phone ?? "";
+                mobileNumberText = defaultCustomer.phone ?? "";
+                mobileNumberTextController.text =
+                    "${defaultCustomer.name ?? ''} ${defaultCustomer.phone ?? ''}"
+                        .trim();
 
-            // Set the default customer in the global provider and mark as default
-            Provider.of<CustomerSelectionProvider>(context, listen: false)
-                .setSelectedCustomer(salesCustomer, isDefault: true);
+                debugPrint(
+                    "  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+                debugPrint("  - Set mobileNumberText: '$mobileNumberText'");
+                debugPrint(
+                    "  - Set mobileNumberTextController.text: '${mobileNumberTextController.text}'");
 
-            selectedCustomerID = salesCustomer.id!;
-            selectedCustomerPhone = salesCustomer.phone;
-            selectedCustomer = salesCustomer;
+                // Set the default customer in the global provider and mark as default
+                Provider.of<CustomerSelectionProvider>(context, listen: false)
+                    .setSelectedCustomer(defaultCustomer, isDefault: true);
 
-            debugPrint("  - Set selectedCustomerID: $selectedCustomerID");
-            debugPrint("  - Set selectedCustomerPhone: $selectedCustomerPhone");
-            debugPrint("  - Set selectedCustomer: ${selectedCustomer?.name}");
+                selectedCustomerID = defaultCustomer.id;
+                selectedCustomerPhone = defaultCustomer.phone;
+                selectedCustomer = defaultCustomer;
+
+                debugPrint("  - Set selectedCustomerID: $selectedCustomerID");
+                debugPrint(
+                    "  - Set selectedCustomerPhone: $selectedCustomerPhone");
+                debugPrint(
+                    "  - Set selectedCustomer: ${selectedCustomer?.name}");
+              } catch (e) {
+                // Customer not found - just show the phone number from settings
+                debugPrint(
+                    "⚠️ No customer found with phone '$defaultPhone', using phone number only");
+
+                debugPrint("📝 SETTING PHONE NUMBER ONLY (no customer found):");
+                salesExecutivemobileNumberText = defaultPhone;
+                mobileNumberText = defaultPhone;
+                mobileNumberTextController.text = defaultPhone;
+
+                // Clear any previous customer selection
+                selectedCustomerID = null;
+                selectedCustomerPhone = defaultPhone;
+                selectedCustomer = null;
+
+                // Clear the provider selection
+                Provider.of<CustomerSelectionProvider>(context, listen: false)
+                    .clearSelectedCustomer();
+
+                debugPrint(
+                    "  - Set mobileNumberTextController.text: '$defaultPhone'");
+                debugPrint("  - Cleared selectedCustomerID");
+              }
+            } else {
+              debugPrint(
+                  "⚠️ No default phone configured, leaving customer field empty");
+              // Don't set any customer - leave the field empty
+            }
           }
         });
       }
@@ -1416,6 +1443,23 @@ class BillingPageState extends State<BillingPage>
                 }
               },
             ),
+            // Font size toggle button
+            Consumer<AppFontProvider>(
+              builder: (context, fontProvider, child) {
+                return IconButton(
+                  icon: Icon(
+                    Icons.text_fields,
+                    color: fontProvider.fontSizeLevel > 0
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade600,
+                  ),
+                  tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                  onPressed: () {
+                    fontProvider.cycleFontSize();
+                  },
+                );
+              },
+            ),
             // Sync button next to keyboard icon
             const SyncButton(
               showTooltip: true,
@@ -1897,6 +1941,8 @@ class BillingPageState extends State<BillingPage>
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         List<LocalCartItem> cartItems = localProductProvider.getCartItems();
+        final fontProvider =
+            Provider.of<AppFontProvider>(context, listen: true);
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -1964,7 +2010,7 @@ class BillingPageState extends State<BillingPage>
                                         '${index + 1}',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          11,
+                                          fontProvider.billingTableItemSize,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -1995,7 +2041,8 @@ class BillingPageState extends State<BillingPage>
                                                     'general.unknown'.tr,
                                                 style: buildCustomStyle(
                                                   FontWeightManager.regular,
-                                                  11,
+                                                  fontProvider
+                                                      .billingTableItemSize,
                                                   0.21,
                                                   ColorManager.textColor,
                                                 ),
@@ -2039,7 +2086,7 @@ class BillingPageState extends State<BillingPage>
                                         item.product.unit ?? '-',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          11,
+                                          fontProvider.billingTableItemSize,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -2116,7 +2163,9 @@ class BillingPageState extends State<BillingPage>
                                         child: Text(
                                           AmountHelper.formatAmount(
                                               (item.price! * item.quantity)),
-                                          style: const TextStyle(fontSize: 11),
+                                          style: TextStyle(
+                                              fontSize: fontProvider
+                                                  .billingTableItemSize),
                                           textAlign: TextAlign.left,
                                         ),
                                       ),
@@ -2167,6 +2216,7 @@ class BillingPageState extends State<BillingPage>
 
   Widget _buildHeaderCell(String text,
       {required int flex, required Alignment alignment}) {
+    final fontProvider = Provider.of<AppFontProvider>(context, listen: true);
     return Expanded(
       flex: flex,
       child: Container(
@@ -2178,7 +2228,7 @@ class BillingPageState extends State<BillingPage>
               alignment == Alignment.center ? TextAlign.center : TextAlign.left,
           style: buildCustomStyle(
             FontWeightManager.bold,
-            12,
+            fontProvider.billingTableHeaderSize,
             0.21,
             ColorManager.textColor,
           ),

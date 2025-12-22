@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -85,20 +86,24 @@ class _PriceTextFieldState extends State<PriceTextField> {
           });
         }
 
+        final fontProvider =
+            Provider.of<AppFontProvider>(context, listen: true);
+
         return TextField(
           textAlign: TextAlign.left,
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 11),
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: fontProvider.billingTableInputSize),
+          decoration: InputDecoration(
             isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             border: InputBorder.none,
             hintText: 'Price',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 11,
+              fontSize: fontProvider.billingTableInputSize,
             ),
           ),
           onTap: () {
@@ -236,20 +241,24 @@ class _MrpTextFieldState extends State<MrpTextField> {
           });
         }
 
+        final fontProvider =
+            Provider.of<AppFontProvider>(context, listen: true);
+
         return TextField(
           textAlign: TextAlign.left,
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 11),
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: fontProvider.billingTableInputSize),
+          decoration: InputDecoration(
             isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             border: InputBorder.none,
             hintText: 'MRP',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 11,
+              fontSize: fontProvider.billingTableInputSize,
             ),
           ),
           onTap: () {

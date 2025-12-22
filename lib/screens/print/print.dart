@@ -15,9 +15,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/print_thermal.dart';
+import 'package:pos_machine/screens/print/thermal/thermal_printer.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'package:pos_machine/models/order_details.dart';
+// import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -311,48 +312,52 @@ class _PrintPageState extends State<PrintPage> {
     try {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
+      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
-      debugPrint("Loading document configurations from provider...");
-      
-      // Check if orderReturns data is available
-      if (widget.orderReturns != null && 
-          widget.orderReturns!.returnItems != null && 
-          widget.orderReturns!.returnItems!.isNotEmpty) {
-        debugPrint("Order has returns, trying to load 'Sales Return Bill' configuration...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales and Return Bill");
-        
+      // Get current language from LocalizationService
+      // final language = LocalizationService.locale.languageCode;
+
+      // Determine type based on orderReturns
+      final hasReturns = widget.orderReturns != null &&
+          widget.orderReturns!.returnItems != null &&
+          widget.orderReturns!.returnItems!.isNotEmpty;
+
+      final type = hasReturns ? 'sales_and_return_bill' : 'bill';
+
+      // debugPrint("Loading document config: type=$type, language=$language");
+
+      if (accessToken != null) {
+        // Use new language-aware API
+        _billDocumentConfig =
+            await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
+          accessToken: accessToken,
+          type: type,
+          // language: language,
+        );
+
         if (_billDocumentConfig != null) {
-          debugPrint("SUCCESS: Sales Return Bill configuration loaded");
+          // debugPrint(
+          //     "SUCCESS: Document configuration loaded with language=$language");
         } else {
-          debugPrint("Sales Return Bill configuration not found, falling back to Bill configuration");
-          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+          debugPrint(
+              "WARNING: Could not load document config, falling back to cached");
+          // Fallback to cached config
+          _billDocumentConfig = hasReturns
+              ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+              : docConfigProvider.getDocumentConfig("Bill");
         }
       } else {
-        debugPrint("No returns in order, loading 'Bill' configuration...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      }
-
-      if (_billDocumentConfig == null) {
-        debugPrint(
-            "WARNING: Bill document configuration not found in provider, may need to load manually");
-        // Fallback: try to load if not available
-        String? accessToken =
-            Provider.of<AuthModel>(context, listen: false).token;
-        if (accessToken != null) {
-          
-          debugPrint("Fetching document configurations from API...");
-          await _loadDocumentConfigurations(accessToken);
-          return;
-        }
-      } else {
-        debugPrint("SUCCESS: Bill document configuration loaded from provider");
+        debugPrint("No access token, using cached config");
+        _billDocumentConfig = hasReturns
+            ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+            : docConfigProvider.getDocumentConfig("Bill");
       }
 
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("ERROR getting document configurations from provider: $e");
+      debugPrint("ERROR getting document configurations: $e");
       setState(() {
         _isLoading = false;
       });
@@ -368,16 +373,20 @@ class _PrintPageState extends State<PrintPage> {
           accessToken: accessToken);
 
       // Check if orderReturns data is available and load appropriate config
-      if (widget.orderReturns != null && 
-          widget.orderReturns!.returnItems != null && 
+      if (widget.orderReturns != null &&
+          widget.orderReturns!.returnItems != null &&
           widget.orderReturns!.returnItems!.isNotEmpty) {
-        debugPrint("Order has returns, loading 'Sales Return Bill' configuration from API...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Sales and Return Bill");
-        
+        debugPrint(
+            "Order has returns, loading 'Sales Return Bill' configuration from API...");
+        _billDocumentConfig =
+            docConfigProvider.getDocumentConfig("Sales and Return Bill");
+
         if (_billDocumentConfig != null) {
-          debugPrint("SUCCESS: Sales Return Bill configuration loaded from API");
+          debugPrint(
+              "SUCCESS: Sales Return Bill configuration loaded from API");
         } else {
-          debugPrint("Sales Return Bill not found, falling back to Bill configuration");
+          debugPrint(
+              "Sales Return Bill not found, falling back to Bill configuration");
           _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
         }
       } else {
@@ -388,8 +397,7 @@ class _PrintPageState extends State<PrintPage> {
       if (_billDocumentConfig != null) {
         debugPrint("SUCCESS: Document configuration loaded from API");
       } else {
-        debugPrint(
-            "ERROR: Document configuration still null after API fetch");
+        debugPrint("ERROR: Document configuration still null after API fetch");
       }
 
       setState(() {
@@ -433,7 +441,8 @@ class _PrintPageState extends State<PrintPage> {
       String customerCareNumber, String customerCareEmail) async {
     final thermalPrinter = ThermalPrinter(context);
 
-    await thermalPrinter.printReceipt(
+    // Use image-based printing for proper Arabic/English support
+    await thermalPrinter.printReceiptAsImage(
       selectedPrinter: selectedPrinter!,
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
@@ -450,7 +459,7 @@ class _PrintPageState extends State<PrintPage> {
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
-      orderReturns: widget.orderReturns, // Add this line
+      orderReturns: widget.orderReturns,
       customerOldBalance: widget.customerOldBalance,
       customerCurrentBalance: widget.customerCurrentBalance,
       paidAmount: widget.paidAmount,
