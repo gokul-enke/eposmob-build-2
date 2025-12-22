@@ -2396,16 +2396,16 @@ class BillingPageState extends State<BillingPage>
                 title: entry.key, // Tax Name (e.g. GST, VAT)
                 color: ColorManager.textColor,
                 firstRowTextStyle: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s14,
+                  FontWeightManager.regular,
+                  FontSize.s12, // Smaller font for "(incl. tax)"
                   0.18,
-                  ColorManager.textColor,
+                  ColorManager.kGreyColor,
                 ),
                 secondRowTextStyle: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s14,
+                  FontWeightManager.regular,
+                  FontSize.s12,
                   0.18,
-                  ColorManager.textColor,
+                  ColorManager.kGreyColor,
                 ),
               );
             }),

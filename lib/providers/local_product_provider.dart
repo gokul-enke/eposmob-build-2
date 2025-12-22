@@ -169,6 +169,7 @@ class LocalProductProvider extends ChangeNotifier {
   PriceSummary? priceSummary;
 
   // 📊 Tax Breakdown Logic (for TAX-INCLUSIVE pricing)
+  // Returns Map with "TaxName @ Rate%" as key and amount as value
   Map<String, double> get taxBreakdown {
     final breakdown = <String, double>{};
 
@@ -198,17 +199,28 @@ class LocalProductProvider extends ChangeNotifier {
             final double share =
                 (taxRateVal / productTotalTaxRate) * totalTaxAmount;
 
-            final String key = tax.name ?? "Tax";
+            // Create key with rate: "GST @ 18%"
+            final String taxName = tax.name ?? "Tax";
+            final String rateStr = taxRateVal % 1 == 0
+                ? taxRateVal.toInt().toString()
+                : taxRateVal.toStringAsFixed(1);
+            final String key = "$taxName @$rateStr%";
             breakdown[key] = (breakdown[key] ?? 0.0) + share;
           }
         }
       } else {
         // Fallback: Rate doesn't match or no breakdown available
         // Assign to generic "Tax" or specific label if only 1 tax exists
-        String key = "Tax";
+        String key = "Tax @ ${currentTaxRate.toStringAsFixed(0)}%";
         if ((item.product.taxes?.isNotEmpty ?? false) &&
             item.product.taxes!.length == 1) {
-          key = item.product.taxes!.first.name ?? "Tax";
+          final tax = item.product.taxes!.first;
+          final taxName = tax.name ?? "Tax";
+          final taxRateVal = double.tryParse(tax.rate ?? "0") ?? currentTaxRate;
+          final String rateStr = taxRateVal % 1 == 0
+              ? taxRateVal.toInt().toString()
+              : taxRateVal.toStringAsFixed(1);
+          key = "$taxName @ $rateStr%";
         }
 
         // If it was manually edited to a custom rate, we just show it as "Tax"
