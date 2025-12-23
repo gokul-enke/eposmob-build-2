@@ -85,14 +85,6 @@ class _CreateSupplierVoucherScreenState
   int? selectedSupplierId;
   String? selectedSupplierName;
 
-  // Focus Nodes
-  final FocusNode _typeFocus = FocusNode();
-  final FocusNode _voucherDateFocus = FocusNode();
-  final FocusNode _dueDateFocus = FocusNode();
-  final FocusNode _statusFocus = FocusNode();
-  final FocusNode _paymentMethodFocus = FocusNode();
-  final FocusNode _supplierFocus = FocusNode();
-
   // Items list
   List<VoucherItem> voucherItems = [VoucherItem()];
 
@@ -118,11 +110,6 @@ class _CreateSupplierVoucherScreenState
   void initState() {
     super.initState();
     _loadInitialData();
-
-    // Auto-focus on Type dropdown when page loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).requestFocus(_typeFocus);
-    });
 
     // Add listeners to initial item
     for (var item in voucherItems) {
@@ -889,13 +876,6 @@ class _CreateSupplierVoucherScreenState
                   controller: item.itemNameController,
                   focusNode: item.itemNameFocus,
                   textInputAction: TextInputAction.next,
-                  onTap: () {
-                    // Select all text when field is focused
-                    item.itemNameController.selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: item.itemNameController.text.length,
-                    );
-                  },
                   onFieldSubmitted: (_) {
                     FocusScope.of(context).requestFocus(item.unitAmountFocus);
                   },
@@ -919,13 +899,6 @@ class _CreateSupplierVoucherScreenState
                   focusNode: item.unitAmountFocus,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
-                  onTap: () {
-                    // Select all text when field is focused
-                    item.unitAmountController.selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: item.unitAmountController.text.length,
-                    );
-                  },
                   onFieldSubmitted: (_) {
                     FocusScope.of(context).requestFocus(item.taxFocus);
                   },
@@ -952,13 +925,6 @@ class _CreateSupplierVoucherScreenState
                   focusNode: item.taxFocus,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
-                  onTap: () {
-                    // Select all text when field is focused
-                    item.taxController.selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: item.taxController.text.length,
-                    );
-                  },
                   onFieldSubmitted: (_) {
                     FocusScope.of(context).requestFocus(item.quantityFocus);
                   },
@@ -985,13 +951,6 @@ class _CreateSupplierVoucherScreenState
                   focusNode: item.quantityFocus,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.done,
-                  onTap: () {
-                    // Select all text when field is focused
-                    item.quantityController.selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: item.quantityController.text.length,
-                    );
-                  },
                   onFieldSubmitted: (_) {
                     // When Enter is pressed on quantity field, add new item and focus on its name field
                     if (isLastItem && item.itemNameController.text.isNotEmpty) {
@@ -1093,14 +1052,6 @@ class _CreateSupplierVoucherScreenState
     netTotalController.dispose();
     totalTaxController.dispose();
     totalAmountController.dispose();
-
-    // Dispose focus nodes
-    _typeFocus.dispose();
-    _voucherDateFocus.dispose();
-    _dueDateFocus.dispose();
-    _statusFocus.dispose();
-    _paymentMethodFocus.dispose();
-    _supplierFocus.dispose();
 
     // Dispose all voucher items
     for (var item in voucherItems) {
