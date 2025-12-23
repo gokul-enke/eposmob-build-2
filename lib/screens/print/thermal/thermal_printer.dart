@@ -580,28 +580,39 @@ class ThermalPrinter {
                   ? resolvedLabels!.total!
                   : (isEnglish ? "Total" : "الإجمالي"));
 
+      // Tax label for per-item tax column
+      final String taxLabel =
+          (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showTax']!.value as String
+              : (resolvedLabels?.tax?.isNotEmpty == true
+                  ? resolvedLabels!.tax!
+                  : (isEnglish ? "Tax" : "الضريبة"));
+
       // Table Header
       if (isEnglish) {
         List<ReceiptTableColumn> headerCols = [];
         if (displayConfig?['showParticulars']?.visible == true) {
           headerCols.add(ReceiptTableColumn(particularsLabel,
-              weight: 0.40, align: TextAlign.left, isBold: true));
+              weight: 0.35, align: TextAlign.left, isBold: true));
         }
         if (displayConfig?['showMRP']?.visible == true) {
           headerCols.add(ReceiptTableColumn(mrpLabel,
-              weight: 0.15, align: TextAlign.center, isBold: true));
+              weight: 0.13, align: TextAlign.center, isBold: true));
         }
         if (displayConfig?['showQty']?.visible == true) {
           headerCols.add(ReceiptTableColumn(qtyLabel,
-              weight: 0.10, align: TextAlign.center, isBold: true));
+              weight: 0.08, align: TextAlign.center, isBold: true));
         }
         if (displayConfig?['showRate']?.visible == true) {
           headerCols.add(ReceiptTableColumn(rateLabel,
-              weight: 0.15, align: TextAlign.right, isBold: true));
+              weight: 0.13, align: TextAlign.right, isBold: true));
         }
+        // Add Tax column header
+        headerCols.add(ReceiptTableColumn(taxLabel,
+            weight: 0.13, align: TextAlign.right, isBold: true));
         if (displayConfig?['showTotal']?.visible == true) {
           headerCols.add(ReceiptTableColumn(totalLabel,
-              weight: 0.20, align: TextAlign.right, isBold: true));
+              weight: 0.18, align: TextAlign.right, isBold: true));
         }
         if (headerCols.isNotEmpty) {
           part1Rows.add(ReceiptTableRow(headerCols));
@@ -612,23 +623,26 @@ class ThermalPrinter {
         List<ReceiptTableColumn> headerCols = [];
         if (displayConfig?['showTotal']?.visible == true) {
           headerCols.add(ReceiptTableColumn(totalLabel,
-              weight: 0.2, align: TextAlign.right, isBold: true));
+              weight: 0.17, align: TextAlign.right, isBold: true));
         }
+        // Add Tax column header for Arabic
+        headerCols.add(ReceiptTableColumn(taxLabel,
+            weight: 0.13, align: TextAlign.right, isBold: true));
         if (displayConfig?['showRate']?.visible == true) {
           headerCols.add(ReceiptTableColumn(rateLabel,
-              weight: 0.2, align: TextAlign.right, isBold: true));
+              weight: 0.15, align: TextAlign.right, isBold: true));
         }
         if (displayConfig?['showQty']?.visible == true) {
           headerCols.add(ReceiptTableColumn(qtyLabel,
-              weight: 0.15, align: TextAlign.right, isBold: true));
+              weight: 0.10, align: TextAlign.right, isBold: true));
         }
         if (displayConfig?['showMRP']?.visible == true) {
           headerCols.add(ReceiptTableColumn(mrpLabel,
-              weight: 0.15, align: TextAlign.right, isBold: true));
+              weight: 0.13, align: TextAlign.right, isBold: true));
         }
         if (displayConfig?['showParticulars']?.visible == true) {
           headerCols.add(ReceiptTableColumn(particularsLabel,
-              weight: 0.3, align: TextAlign.right, isBold: true));
+              weight: 0.32, align: TextAlign.right, isBold: true));
         }
         if (headerCols.isNotEmpty) {
           part1Rows.add(ReceiptTableRow(headerCols));
@@ -644,6 +658,7 @@ class ThermalPrinter {
         String quantity = '';
         String unitPrice = '';
         String totalPrice = '';
+        String itemTaxAmount = '';
 
         if (isFromLocalStorage) {
           productName = item['productName'] ?? '';
@@ -656,6 +671,9 @@ class ThermalPrinter {
           totalPrice =
               (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0)
                   .toStringAsFixed(2);
+          itemTaxAmount =
+              (double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
         } else {
           productName = item.productName ?? '';
           mrp = (double.tryParse(item.mrp?.toString() ?? '0') ?? 0.0)
@@ -666,6 +684,9 @@ class ThermalPrinter {
                   .toStringAsFixed(2);
           totalPrice =
               (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
+                  .toStringAsFixed(2);
+          itemTaxAmount =
+              (double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0)
                   .toStringAsFixed(2);
         }
 
@@ -685,22 +706,25 @@ class ThermalPrinter {
           // Price details row
           List<ReceiptTableColumn> priceCols = [];
           priceCols.add(
-              ReceiptTableColumn("", weight: 0.40)); // Empty for item column
+              ReceiptTableColumn("", weight: 0.35)); // Empty for item column
           if (displayConfig?['showMRP']?.visible == true) {
             priceCols.add(
-                ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.center));
+                ReceiptTableColumn(mrp, weight: 0.13, align: TextAlign.center));
           }
           if (displayConfig?['showQty']?.visible == true) {
             priceCols.add(ReceiptTableColumn(quantity,
-                weight: 0.10, align: TextAlign.center));
+                weight: 0.08, align: TextAlign.center));
           }
           if (displayConfig?['showRate']?.visible == true) {
             priceCols.add(ReceiptTableColumn(unitPrice,
-                weight: 0.15, align: TextAlign.right));
+                weight: 0.13, align: TextAlign.right));
           }
+          // Add Tax amount for the item
+          priceCols.add(ReceiptTableColumn(itemTaxAmount,
+              weight: 0.13, align: TextAlign.right));
           if (displayConfig?['showTotal']?.visible == true) {
             priceCols.add(ReceiptTableColumn(totalPrice,
-                weight: 0.20, align: TextAlign.right));
+                weight: 0.18, align: TextAlign.right));
           }
           if (priceCols.length > 1) {
             part1Rows.add(ReceiptTableRow(priceCols));
@@ -720,22 +744,25 @@ class ThermalPrinter {
           List<ReceiptTableColumn> priceCols = [];
           if (displayConfig?['showTotal']?.visible == true) {
             priceCols.add(ReceiptTableColumn(totalPrice,
-                weight: 0.2, align: TextAlign.right));
+                weight: 0.17, align: TextAlign.right));
           }
+          // Add Tax amount for the item (RTL)
+          priceCols.add(ReceiptTableColumn(itemTaxAmount,
+              weight: 0.13, align: TextAlign.right));
           if (displayConfig?['showRate']?.visible == true) {
             priceCols.add(ReceiptTableColumn(unitPrice,
-                weight: 0.2, align: TextAlign.right));
+                weight: 0.15, align: TextAlign.right));
           }
           if (displayConfig?['showQty']?.visible == true) {
             priceCols.add(ReceiptTableColumn(quantity,
-                weight: 0.15, align: TextAlign.right));
+                weight: 0.10, align: TextAlign.right));
           }
           if (displayConfig?['showMRP']?.visible == true) {
             priceCols.add(
-                ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.right));
+                ReceiptTableColumn(mrp, weight: 0.13, align: TextAlign.right));
           }
           priceCols.add(
-              ReceiptTableColumn("", weight: 0.3)); // Empty for item column
+              ReceiptTableColumn("", weight: 0.32)); // Empty for item column
           if (priceCols.length > 1) {
             part1Rows.add(ReceiptTableRow(priceCols));
           }
@@ -801,6 +828,24 @@ class ThermalPrinter {
           ]));
         }
 
+        // Tax Amount (English)
+        final String taxLabel =
+            (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
+                ? displayConfig!['showTax']!.value as String
+                : (billDocumentConfig.resolvedLabels?.tax?.isNotEmpty == true
+                    ? billDocumentConfig.resolvedLabels!.tax!
+                    : "Tax :");
+        double taxAmount = 0.0;
+        for (var item in cartItems) {
+          if (isFromLocalStorage) {
+            taxAmount +=
+                double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+          } else {
+            taxAmount +=
+                double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+          }
+        }
+
         // Total Qty label - use Qty label from table header
         final String totalQtyLabel = "$qtyLabel Total:";
         part1Rows.add(ReceiptTableRow([
@@ -812,7 +857,10 @@ class ThermalPrinter {
                   : totalQuantity.toStringAsFixed(2),
               weight: 0.25,
               align: TextAlign.left),
-          ReceiptTableColumn(" ", weight: 0.50),
+          ReceiptTableColumn(" ", weight: 0.05),
+          ReceiptTableColumn(taxLabel, weight: 0.25, align: TextAlign.right),
+          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+              weight: 0.20, align: TextAlign.right),
         ]));
 
         if (displayConfig?['showMRPTotal']?.visible == true) {
@@ -824,6 +872,14 @@ class ThermalPrinter {
             ReceiptTableColumn(" ", weight: 0.50),
           ]));
         }
+
+        // Always show tax for now (since showTax option doesn't exist in config)
+        part1Rows.add(ReceiptTableRow([
+          ReceiptTableColumn(taxLabel, weight: 0.25, align: TextAlign.right),
+          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+              weight: 0.25, align: TextAlign.right),
+          ReceiptTableColumn(" ", weight: 0.50),
+        ]));
 
         part1Rows.add(SpacingRow(5));
 
@@ -872,7 +928,7 @@ class ThermalPrinter {
                 ? displayConfig!['showTax']!.value as String
                 : (billDocumentConfig.resolvedLabels?.tax?.isNotEmpty == true
                     ? billDocumentConfig.resolvedLabels!.tax!
-                    : "Tax");
+                    : "Tax Amount : ");
 
         double taxAmount = 0.0;
         for (var item in cartItems) {

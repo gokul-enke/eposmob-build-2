@@ -78,6 +78,7 @@
     "new_order": "طلب جديد",
     "payment_summary": "ملخص الدفع",
     "net_amount": "المبلغ الصافي",
+    "incl_tax": "شامل الضريبة",
     "phone_number_hint": "رقم الهاتف",
     "enter_mobile_hint": "أدخل رقم الهاتف المحمول",
     "customer_cleared": "تم مسح تفاصيل العميل بنجاح",

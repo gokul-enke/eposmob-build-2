@@ -168,18 +168,24 @@ class LocalProductProvider extends ChangeNotifier {
 
   PriceSummary? priceSummary;
 
-  // 📊 Tax Breakdown Logic
+  // 📊 Tax Breakdown Logic (for TAX-INCLUSIVE pricing)
+  // Returns Map with "TaxName @ Rate%" as key and amount as value
   Map<String, double> get taxBreakdown {
     final breakdown = <String, double>{};
 
     for (var item in _cartItems) {
-      final double totalTaxAmount = (item.taxAmount ?? 0.0) * item.quantity;
-      if (totalTaxAmount <= 0) continue;
-
+      final double itemTotal = (item.price ?? 0.0) * item.quantity;
       final double currentTaxRate = item.taxRate ?? 0.0;
+
+      if (currentTaxRate <= 0 || itemTotal <= 0) continue;
+
+      // Extract total tax from tax-inclusive price
+      // Formula: Tax = Price × TaxRate / (100 + TaxRate)
+      final double totalTaxAmount =
+          itemTotal * currentTaxRate / (100 + currentTaxRate);
+
       final double productTotalTaxRate = item.product.totalTaxRate;
 
-      // Check if the current rate matches the product's defined tax structure
       // Check if the current rate matches the product's defined tax structure
       // We use a small epsilon for float comparison
       if ((currentTaxRate - productTotalTaxRate).abs() < 0.01 &&
@@ -193,17 +199,28 @@ class LocalProductProvider extends ChangeNotifier {
             final double share =
                 (taxRateVal / productTotalTaxRate) * totalTaxAmount;
 
-            final String key = tax.name ?? "Tax";
+            // Create key with rate: "GST @ 18%"
+            final String taxName = tax.name ?? "Tax";
+            final String rateStr = taxRateVal % 1 == 0
+                ? taxRateVal.toInt().toString()
+                : taxRateVal.toStringAsFixed(1);
+            final String key = "$taxName @$rateStr%";
             breakdown[key] = (breakdown[key] ?? 0.0) + share;
           }
         }
       } else {
         // Fallback: Rate doesn't match or no breakdown available
         // Assign to generic "Tax" or specific label if only 1 tax exists
-        String key = "Tax";
+        String key = "Tax @ ${currentTaxRate.toStringAsFixed(0)}%";
         if ((item.product.taxes?.isNotEmpty ?? false) &&
             item.product.taxes!.length == 1) {
-          key = item.product.taxes!.first.name ?? "Tax";
+          final tax = item.product.taxes!.first;
+          final taxName = tax.name ?? "Tax";
+          final taxRateVal = double.tryParse(tax.rate ?? "0") ?? currentTaxRate;
+          final String rateStr = taxRateVal % 1 == 0
+              ? taxRateVal.toInt().toString()
+              : taxRateVal.toStringAsFixed(1);
+          key = "$taxName @ $rateStr%";
         }
 
         // If it was manually edited to a custom rate, we just show it as "Tax"
@@ -637,12 +654,21 @@ class LocalProductProvider extends ChangeNotifier {
 
   double get cartTotal {
     double subTotal = 0.0;
-    double totalTax = 0.0; // Restore totalTax declaration
+    double totalTax = 0.0;
 
-    // Calculate subtotal and total tax from all cart items
+    // Calculate subtotal and extract tax from cart items
+    // NOTE: Prices are TAX-INCLUSIVE, so tax is extracted for display purposes only
     for (var item in _cartItems) {
-      subTotal += (item.price ?? 0) * item.quantity;
-      totalTax += (item.taxAmount ?? 0) * item.quantity;
+      final itemTotal = (item.price ?? 0) * item.quantity;
+      subTotal += itemTotal;
+
+      // Extract tax from the tax-inclusive price for display purposes
+      // Formula: Tax = Price × TaxRate / (100 + TaxRate)
+      final taxRate = item.taxRate ?? 0.0;
+      if (taxRate > 0) {
+        final extractedTax = itemTotal * taxRate / (100 + taxRate);
+        totalTax += extractedTax;
+      }
     }
 
     // Calculate discount amounts
@@ -655,22 +681,25 @@ class LocalProductProvider extends ChangeNotifier {
       totalDiscount = subTotal;
     }
 
+    // Net Payable = SubTotal - Discount (tax is already included in prices)
     double netPayable = subTotal - totalDiscount;
-    double netTotal = netPayable + totalTax;
+
+    // For tax-inclusive pricing: Total = Net Payable (NOT adding tax again)
+    double netTotal = netPayable;
 
     // Create a PriceSummary instance with discount details
     priceSummary = PriceSummary(
       discount: totalDiscount,
       netPayable: netPayable,
       subTotal: subTotal,
-      totalTax: totalTax,
+      totalTax: totalTax, // This is the extracted tax for display only
       netTotal: netTotal,
       flatDiscount: flatDiscountAmount,
       percentageDiscount: percentageDiscountAmount,
       originalSubTotal: subTotal,
     );
 
-    return netTotal; // Return the final total after discount
+    return netTotal; // Return the final total (tax already included)
   }
 
   /// Sets the selected product and optionally the selected stock for product details.

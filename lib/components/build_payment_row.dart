@@ -13,6 +13,8 @@ class BuildPaymentRow extends StatelessWidget {
   final TextStyle? secondRowTextStyle;
   final bool? isTextField;
   final Widget? child;
+  final Widget?
+      titleWidget; // Optional custom widget for title with mixed styles
   const BuildPaymentRow({
     Key? key,
     required this.title,
@@ -23,6 +25,7 @@ class BuildPaymentRow extends StatelessWidget {
     this.secondRowTextStyle,
     this.isTextField,
     this.child,
+    this.titleWidget,
   }) : super(key: key);
 
   @override
@@ -32,16 +35,17 @@ class BuildPaymentRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          BuildTitle(
-            title: title,
-            textStyle: firstRowTextStyle ??
-                buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s12,
-                  0.18,
-                  color,
-                ),
-          ),
+          titleWidget ??
+              BuildTitle(
+                title: title,
+                textStyle: firstRowTextStyle ??
+                    buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.18,
+                      color,
+                    ),
+              ),
           isTextField == false
               ? BuildTitle(
                   title: amount,

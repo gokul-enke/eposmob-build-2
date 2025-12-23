@@ -381,6 +381,8 @@ class StandardPrinter {
                           billDocumentConfig.subheader ??
                           '',
                       style: pw.TextStyle(
+                        font: arabicFont,
+                        fontBold: arabicFontBold,
                         fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
                       ),
                     ),
@@ -539,7 +541,9 @@ class StandardPrinter {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('ORDER SUMMARY',
+                    pw.Text(
+                        displayConfig?['showOrderSummary']?.value as String? ??
+                            (isRtl ? 'ملخص الطلب' : 'ORDER SUMMARY'),
                         style: subheaderStyle,
                         textAlign:
                             isRtl ? pw.TextAlign.right : pw.TextAlign.left),
@@ -555,7 +559,9 @@ class StandardPrinter {
                         billDocumentConfig,
                         customerOldBalance,
                         customerCurrentBalance,
-                        isRtl: isRtl),
+                        isRtl: isRtl,
+                        cartItems: cartItems,
+                        isFromLocalStorage: isFromLocalStorage),
 
                     // Add Amount in words under order summary when there are no returns
                     if (updatedSettings?['showAmountInWords']?.visible ==
@@ -566,7 +572,7 @@ class StandardPrinter {
                         children: [
                           pw.SizedBox(height: 5),
                           _buildLabelValueRow(
-                            'Amount in words:',
+                            isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:',
                             '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
                             summaryStyle,
                             isRtl: isRtl,
@@ -934,6 +940,17 @@ class StandardPrinter {
       columnWidths.add(1.5); // Slightly larger for total values
     }
 
+    // Add Tax column header - always visible to show per-item tax
+    final taxLabel =
+        (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showTax']!.value as String
+            : (billDocumentConfig?.resolvedLabels?.tax?.isNotEmpty == true
+                ? billDocumentConfig!.resolvedLabels!.tax!
+                : (isRtl ? 'الضريبة' : 'TAX'));
+    tableHeaders.add(taxLabel.toUpperCase());
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+    columnWidths.add(1.5); // Same width as other price columns
+
     // Create table data based on visibility with smart product name handling
     List<List<String>> tableData = [];
     for (var i = 0; i < cartItems.length; i++) {
@@ -944,6 +961,7 @@ class StandardPrinter {
       String quantity = '';
       String unitPrice = '';
       String totalPrice = '';
+      String itemTaxAmount = '';
 
       if (isFromLocalStorage) {
         productName = item['productName'] ?? '';
@@ -955,6 +973,9 @@ class StandardPrinter {
                 .toStringAsFixed(2);
         totalPrice =
             (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0)
+                .toStringAsFixed(2);
+        itemTaxAmount =
+            (double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0)
                 .toStringAsFixed(2);
       } else {
         // Handle different object types - check if it's a Map or an object
@@ -976,6 +997,11 @@ class StandardPrinter {
                       '0') ??
                   0.0)
               .toStringAsFixed(2);
+          itemTaxAmount = (double.tryParse(item['tax_amount']?.toString() ??
+                      item['taxAmount']?.toString() ??
+                      '0') ??
+                  0.0)
+              .toStringAsFixed(2);
         } else {
           // Handle object case (OrderDetailsModelDataCartItem or similar)
           try {
@@ -989,6 +1015,9 @@ class StandardPrinter {
             totalPrice =
                 (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
                     .toStringAsFixed(2);
+            itemTaxAmount =
+                (double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0)
+                    .toStringAsFixed(2);
           } catch (e) {
             debugPrint('Error accessing cart item properties: $e');
             debugPrint('Item type: ${item.runtimeType}');
@@ -999,6 +1028,7 @@ class StandardPrinter {
             quantity = '0';
             unitPrice = '0.00';
             totalPrice = '0.00';
+            itemTaxAmount = '0.00';
           }
         }
       }
@@ -1025,6 +1055,8 @@ class StandardPrinter {
       if (displayConfig?['showTotal']?.visible == true) {
         rowData.add(totalPrice);
       }
+      // Always add tax amount to match the header
+      rowData.add(itemTaxAmount);
 
       tableData.add(rowData);
     }
@@ -1094,19 +1126,39 @@ class StandardPrinter {
       DocumentConfig? billDocumentConfig,
       double? customerOldBalance,
       double? customerCurrentBalance,
-      {bool isRtl = false}) {
+      {bool isRtl = false,
+      List<dynamic>? cartItems,
+      bool isFromLocalStorage = false}) {
     double savedTotalValue = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
     double formattedTotalValue = double.tryParse(formattedTotal) ?? 0.0;
     double discountAmountValue =
         double.tryParse(discountAmount ?? '0.0') ?? 0.0;
     double totalMRP = savedTotalValue + formattedTotalValue;
 
+    // Calculate total tax from cart items
+    double totalTax = 0.0;
+    if (cartItems != null) {
+      for (var item in cartItems) {
+        if (isFromLocalStorage) {
+          totalTax +=
+              double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+        } else {
+          totalTax += double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+        }
+      }
+    }
+
     List<pw.Widget> summaryWidgets = [];
 
     // Display Item Count
     if (displayConfig?['showItemsCount']?.visible == true) {
+      final itemsLabel =
+          (displayConfig?['showItemsCount']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showItemsCount']!.value as String
+              : (isRtl ? 'إجمالي العناصر:' : 'Total Items:');
       summaryWidgets.add(
-        _buildLabelValueRow('Total Items:', itemCount.toString(), style,
+        _buildLabelValueRow(itemsLabel, itemCount.toString(), style,
             isRtl: isRtl),
       );
       summaryWidgets.add(pw.SizedBox(height: 3));
@@ -1114,8 +1166,12 @@ class StandardPrinter {
 
     // Display Total MRP
     if (displayConfig?['showMRPTotal']?.visible == true) {
+      final mrpLabel =
+          (displayConfig?['showMRPTotal']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showMRPTotal']!.value as String
+              : (isRtl ? 'إجمالي السعر:' : 'Total MRP:');
       summaryWidgets.add(
-        _buildLabelValueRow('Total MRP:', totalMRP.toStringAsFixed(2), style,
+        _buildLabelValueRow(mrpLabel, totalMRP.toStringAsFixed(2), style,
             isRtl: isRtl),
       );
       summaryWidgets.add(pw.SizedBox(height: 3));
@@ -1123,9 +1179,13 @@ class StandardPrinter {
 
     // Display You Saved - only show if value is greater than 0
     if (displayConfig?['showSaved']?.visible == true && savedTotalValue > 0) {
+      final savedLabel =
+          (displayConfig?['showSaved']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showSaved']!.value as String
+              : (isRtl ? 'لقد وفرت:' : 'You Saved:');
       summaryWidgets.add(
         _buildLabelValueRow(
-            'You Saved:', savedTotalValue.toStringAsFixed(2), style,
+            savedLabel, savedTotalValue.toStringAsFixed(2), style,
             isRtl: isRtl),
       );
       summaryWidgets.add(pw.SizedBox(height: 3));
@@ -1133,20 +1193,37 @@ class StandardPrinter {
 
     // Display Discount
     if (displayConfig?['showDiscount']?.visible == true) {
+      final discountLabel =
+          (displayConfig?['showDiscount']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showDiscount']!.value as String
+              : (isRtl ? 'الخصم:' : 'Discount:');
       summaryWidgets.add(
         _buildLabelValueRow(
-            'Discount:', discountAmountValue.toStringAsFixed(2), style,
+            discountLabel, discountAmountValue.toStringAsFixed(2), style,
             isRtl: isRtl),
       );
       summaryWidgets.add(pw.SizedBox(height: 3));
     }
 
+    // Display Tax Amount - always show for now (since showTax option doesn't exist in config)
+    final taxLabel = isRtl ? 'مبلغ الضريبة:' : 'Tax Amount:';
+    summaryWidgets.add(
+      _buildLabelValueRow(taxLabel, totalTax.toStringAsFixed(2), style,
+          isRtl: isRtl),
+    );
+    summaryWidgets.add(pw.SizedBox(height: 3));
+
     // Display Net Total (Amount)
     if (displayConfig?['showNetAmount']?.visible == true) {
+      final netLabel =
+          (displayConfig?['showNetAmount']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showNetAmount']!.value as String
+              : (isRtl ? 'المجموع الصافي:' : 'Net Total:');
       summaryWidgets.add(pw.Divider(color: PdfColors.black));
       summaryWidgets.add(
         _buildLabelValueRow(
-            'Net Total:', formattedTotalValue.toStringAsFixed(2), netTotalStyle,
+            netLabel, formattedTotalValue.toStringAsFixed(2), netTotalStyle,
             isRtl: isRtl),
       );
     }
@@ -1190,18 +1267,18 @@ class StandardPrinter {
         children: [
           // Old Balance line - respects showCustomerPrevBalance visibility
           if (oldBalance != null && showPrevBalance)
-            _buildLabelValueRow(
-                'Old Bal:', oldBalance.toStringAsFixed(2), balanceStyle,
+            _buildLabelValueRow(isRtl ? 'الرصيد السابق:' : 'Old Bal:',
+                oldBalance.toStringAsFixed(2), balanceStyle,
                 isRtl: isRtl),
           // Paid Amount line - respects showCustomerPaidAmount visibility
           if (paidAmount != null && showPaidAmount)
-            _buildLabelValueRow(
-                'Paid Amt:', paidAmount.toStringAsFixed(2), balanceStyle,
+            _buildLabelValueRow(isRtl ? 'المبلغ المدفوع:' : 'Paid Amt:',
+                paidAmount.toStringAsFixed(2), balanceStyle,
                 isRtl: isRtl),
           // Current Balance line - respects showCustomerCurrentBalance visibility
           if (currentBalance != null && showCurrentBalance)
-            _buildLabelValueRow(
-                'Cur Bal:', currentBalance.toStringAsFixed(2), balanceBoldStyle,
+            _buildLabelValueRow(isRtl ? 'الرصيد الحالي:' : 'Cur Bal:',
+                currentBalance.toStringAsFixed(2), balanceBoldStyle,
                 isRtl: isRtl),
         ],
       ),
@@ -1226,8 +1303,12 @@ class StandardPrinter {
       fontWeight: pw.FontWeight.bold,
     );
 
-    final dateWidget = pw.Text('Date: $formattedDate', style: dateTimeStyle);
-    final timeWidget = pw.Text('Time: $formattedTime', style: dateTimeStyle);
+    final dateLabel = isRtl ? 'التاريخ:' : 'Date:';
+    final timeLabel = isRtl ? 'الوقت:' : 'Time:';
+    final dateWidget =
+        pw.Text('$dateLabel $formattedDate', style: dateTimeStyle);
+    final timeWidget =
+        pw.Text('$timeLabel $formattedTime', style: dateTimeStyle);
 
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
@@ -1929,10 +2010,18 @@ class StandardPrinter {
             ? [
                 pw.Text('Rs. ${cartTotal.toStringAsFixed(2)}',
                     style: totalStyle),
-                pw.Text('TOTAL:', style: totalStyle),
+                pw.Text(
+                    isRtl
+                        ? '\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a:'
+                        : 'TOTAL:',
+                    style: totalStyle),
               ]
             : [
-                pw.Text('TOTAL:', style: totalStyle),
+                pw.Text(
+                    isRtl
+                        ? '\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a:'
+                        : 'TOTAL:',
+                    style: totalStyle),
                 pw.Text('Rs. ${cartTotal.toStringAsFixed(2)}',
                     style: totalStyle),
               ],
@@ -2355,7 +2444,9 @@ class StandardPrinter {
                             billDocumentConfig,
                             customerOldBalance,
                             customerCurrentBalance,
-                            isRtl: isRtl),
+                            isRtl: isRtl,
+                            cartItems: cartItems,
+                            isFromLocalStorage: isFromLocalStorage),
                       ],
                     ),
                   ),
