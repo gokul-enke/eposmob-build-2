@@ -8,6 +8,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
@@ -271,6 +272,11 @@ class StandardPrinter {
                     updatedAt: "",
                   ));
 
+      // Access App Settings Provider for currency symbol
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final currency = appSettingsProvider.appSettings?.currency ?? '';
+
       // Determine page format based on paper size
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
@@ -368,9 +374,13 @@ class StandardPrinter {
                   // Store name
                   if (updatedSettings?['showStoreName']?.visible == true)
                     pw.Text(
-                      updatedSettings?['showStoreName']?.value as String? ??
-                          billDocumentConfig.header ??
-                          'STORE NAME',
+                      (updatedSettings?['showStoreName']?.value as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? updatedSettings!['showStoreName']!.value as String
+                          : (billDocumentConfig.header?.isNotEmpty == true
+                              ? billDocumentConfig.header!
+                              : (isRtl ? 'اسم المتجر' : 'STORE NAME')),
                       style: headerStyle,
                     ),
 
@@ -447,25 +457,39 @@ class StandardPrinter {
                                         billDocumentConfig
                                             .numberPrefix!.isNotEmpty)
                                     ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                    : 'No: $orderNumber',
+                                    : (isRtl
+                                        ? 'رقم: $orderNumber'
+                                        : 'No: $orderNumber'),
                                 style: subheaderStyle),
                           if (updatedSettings?['showInvoiceTitle']?.visible ==
                               true)
                             pw.Text(
-                                updatedSettings?['showInvoiceTitle']?.value
-                                        as String? ??
-                                    billDocumentConfig.header ??
-                                    'INVOICE',
+                                (updatedSettings?['showInvoiceTitle']?.value
+                                                as String?)
+                                            ?.isNotEmpty ==
+                                        true
+                                    ? updatedSettings!['showInvoiceTitle']!
+                                        .value as String
+                                    : (billDocumentConfig.header?.isNotEmpty ==
+                                            true
+                                        ? billDocumentConfig.header!
+                                        : (isRtl ? 'فاتورة' : 'INVOICE')),
                                 style: subheaderStyle),
                         ]
                       : [
                           if (updatedSettings?['showInvoiceTitle']?.visible ==
                               true)
                             pw.Text(
-                                updatedSettings?['showInvoiceTitle']?.value
-                                        as String? ??
-                                    billDocumentConfig.header ??
-                                    'INVOICE',
+                                (updatedSettings?['showInvoiceTitle']?.value
+                                                as String?)
+                                            ?.isNotEmpty ==
+                                        true
+                                    ? updatedSettings!['showInvoiceTitle']!
+                                        .value as String
+                                    : (billDocumentConfig.header?.isNotEmpty ==
+                                            true
+                                        ? billDocumentConfig.header!
+                                        : (isRtl ? 'فاتورة' : 'INVOICE')),
                                 style: subheaderStyle),
                           if (updatedSettings?['showInvoiceNumber']?.visible ==
                               true)
@@ -474,7 +498,9 @@ class StandardPrinter {
                                         billDocumentConfig
                                             .numberPrefix!.isNotEmpty)
                                     ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                    : 'No: $orderNumber',
+                                    : (isRtl
+                                        ? 'رقم: $orderNumber'
+                                        : 'No: $orderNumber'),
                                 style: subheaderStyle),
                         ],
                 ),
@@ -483,7 +509,9 @@ class StandardPrinter {
             // Date and Time Row - minimal design
             _buildDateTimeRowPDF(
                 selectedPaperSize, orderDate, isFromLocalStorage,
-                isRtl: isRtl),
+                isRtl: isRtl,
+                arabicFontBold: arabicFontBold,
+                displayConfig: updatedSettings),
 
             // Customer Information Section - if available
             if (customerName != null ||
@@ -499,6 +527,7 @@ class StandardPrinter {
                 subheaderStyle,
                 bodyStyle,
                 isRtl: isRtl,
+                arabicFontBold: arabicFontBold,
               ),
 
             // Items table - minimal design without borders
@@ -525,7 +554,11 @@ class StandardPrinter {
             // Cart Total Row - added after items table
             _buildCartTotalRow(
                 selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle,
-                isRtl: isRtl),
+                isRtl: isRtl,
+                arabicFont: arabicFont,
+                arabicFontBold: arabicFontBold,
+                displayConfig: updatedSettings,
+                currency: currency),
 
             pw.SizedBox(height: 5), // Reduced from 8
 
@@ -572,7 +605,15 @@ class StandardPrinter {
                         children: [
                           pw.SizedBox(height: 5),
                           _buildLabelValueRow(
-                            isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:',
+                            (updatedSettings?['showAmountInWords']?.value
+                                            as String?)
+                                        ?.isNotEmpty ==
+                                    true
+                                ? updatedSettings!['showAmountInWords']!.value
+                                    as String
+                                : (isRtl
+                                    ? 'المبلغ بالكلمات:'
+                                    : 'Amount in words:'),
                             '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
                             summaryStyle,
                             isRtl: isRtl,
@@ -598,6 +639,9 @@ class StandardPrinter {
                         paidAmount,
                         bodyStyle,
                         displayConfig: updatedSettings,
+                        isRtl: isRtl,
+                        arabicFont: arabicFont,
+                        arabicFontBold: arabicFontBold,
                       ),
                   ],
                 ),
@@ -660,9 +704,13 @@ class StandardPrinter {
                         ),
                         pw.SizedBox(height: 3), // Reduced from 5
                         pw.Text(
-                          updatedSettings?['showQRCode']?.value as String? ??
-                              'Scan to Pay',
+                          (updatedSettings?['showQRCode']?.value as String?)
+                                      ?.isNotEmpty ==
+                                  true
+                              ? updatedSettings!['showQRCode']!.value as String
+                              : (isRtl ? 'امسح للدفع' : 'Scan to Pay'),
                           style: pw.TextStyle(
+                            font: arabicFontBold,
                             fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
                             fontWeight: pw.FontWeight.bold,
                           ),
@@ -680,10 +728,17 @@ class StandardPrinter {
                 if (updatedSettings?['showThankYouMessage']?.visible == true)
                   pw.Center(
                     child: pw.Text(
-                      updatedSettings?['showThankYouMessage']?.value
-                              as String? ??
-                          'Thank You... Visit Again',
+                      (updatedSettings?['showThankYouMessage']?.value
+                                      as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? updatedSettings!['showThankYouMessage']!.value
+                              as String
+                          : (isRtl
+                              ? 'شكراً لك... نتمنى زيارتكم مرة أخرى'
+                              : 'Thank You... Visit Again'),
                       style: pw.TextStyle(
+                        font: arabicFontBold,
                         fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
                         fontWeight: pw.FontWeight.bold,
                         color: PdfColors.black,
@@ -697,7 +752,9 @@ class StandardPrinter {
                   if (_hasTermsData(updatedSettings, billDocumentConfig)) ...[
                     _buildTermsConditionsBoxPDF(
                         selectedPaperSize, updatedSettings, billDocumentConfig,
-                        isRtl: isRtl),
+                        isRtl: isRtl,
+                        arabicFont: arabicFont,
+                        arabicFontBold: arabicFontBold),
                   ],
                 ],
               ],
@@ -940,16 +997,18 @@ class StandardPrinter {
       columnWidths.add(1.5); // Slightly larger for total values
     }
 
-    // Add Tax column header - always visible to show per-item tax
-    final taxLabel =
-        (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
-            ? displayConfig!['showTax']!.value as String
-            : (billDocumentConfig?.resolvedLabels?.tax?.isNotEmpty == true
-                ? billDocumentConfig!.resolvedLabels!.tax!
-                : (isRtl ? 'الضريبة' : 'TAX'));
-    tableHeaders.add(taxLabel.toUpperCase());
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-    columnWidths.add(1.5); // Same width as other price columns
+    // Add Tax column header - only if showTax is visible
+    if (displayConfig?['showTax']?.visible == true) {
+      final taxLabel =
+          (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showTax']!.value as String
+              : (billDocumentConfig?.resolvedLabels?.tax?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.tax!
+                  : (isRtl ? 'الضريبة' : 'TAX'));
+      tableHeaders.add(taxLabel.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5); // Same width as other price columns
+    }
 
     // Create table data based on visibility with smart product name handling
     List<List<String>> tableData = [];
@@ -1055,8 +1114,10 @@ class StandardPrinter {
       if (displayConfig?['showTotal']?.visible == true) {
         rowData.add(totalPrice);
       }
-      // Always add tax amount to match the header
-      rowData.add(itemTaxAmount);
+      // Add tax amount only if showTax is visible
+      if (displayConfig?['showTax']?.visible == true) {
+        rowData.add(itemTaxAmount);
+      }
 
       tableData.add(rowData);
     }
@@ -1205,13 +1266,20 @@ class StandardPrinter {
       summaryWidgets.add(pw.SizedBox(height: 3));
     }
 
-    // Display Tax Amount - always show for now (since showTax option doesn't exist in config)
-    final taxLabel = isRtl ? 'مبلغ الضريبة:' : 'Tax Amount:';
-    summaryWidgets.add(
-      _buildLabelValueRow(taxLabel, totalTax.toStringAsFixed(2), style,
-          isRtl: isRtl),
-    );
-    summaryWidgets.add(pw.SizedBox(height: 3));
+    // Display Tax Amount - only if showTax is visible
+    if (displayConfig?['showTax']?.visible == true) {
+      final taxLabel =
+          (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showTax']!.value as String
+              : (billDocumentConfig?.resolvedLabels?.tax?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.tax!
+                  : (isRtl ? 'مبلغ الضريبة:' : 'Tax Amount:'));
+      summaryWidgets.add(
+        _buildLabelValueRow(taxLabel, totalTax.toStringAsFixed(2), style,
+            isRtl: isRtl),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 3));
+    }
 
     // Display Net Total (Amount)
     if (displayConfig?['showNetAmount']?.visible == true) {
@@ -1241,13 +1309,18 @@ class StandardPrinter {
     pw.TextStyle style, {
     bool isRtl = false,
     Map<String, DisplayOption>? displayConfig,
+    pw.Font? arabicFont,
+    pw.Font? arabicFontBold,
   }) {
-    // Use smaller font size for balance display
+    // Use smaller font size for balance display with Arabic font support
     final balanceStyle = pw.TextStyle(
+      font: arabicFont,
+      fontBold: arabicFontBold,
       fontSize: selectedPaperSize == 'A5' ? 6.0 : 8.0,
       color: PdfColors.black,
     );
     final balanceBoldStyle = pw.TextStyle(
+      font: arabicFontBold,
       fontSize: selectedPaperSize == 'A5' ? 6.0 : 8.0,
       fontWeight: pw.FontWeight.bold,
       color: PdfColors.black,
@@ -1267,18 +1340,37 @@ class StandardPrinter {
         children: [
           // Old Balance line - respects showCustomerPrevBalance visibility
           if (oldBalance != null && showPrevBalance)
-            _buildLabelValueRow(isRtl ? 'الرصيد السابق:' : 'Old Bal:',
-                oldBalance.toStringAsFixed(2), balanceStyle,
+            _buildLabelValueRow(
+                (displayConfig?['showCustomerPrevBalance']?.value as String?)
+                            ?.isNotEmpty ==
+                        true
+                    ? displayConfig!['showCustomerPrevBalance']!.value as String
+                    : (isRtl ? 'الرصيد السابق:' : 'Old Bal:'),
+                oldBalance.toStringAsFixed(2),
+                balanceStyle,
                 isRtl: isRtl),
           // Paid Amount line - respects showCustomerPaidAmount visibility
           if (paidAmount != null && showPaidAmount)
-            _buildLabelValueRow(isRtl ? 'المبلغ المدفوع:' : 'Paid Amt:',
-                paidAmount.toStringAsFixed(2), balanceStyle,
+            _buildLabelValueRow(
+                (displayConfig?['showCustomerPaidAmount']?.value as String?)
+                            ?.isNotEmpty ==
+                        true
+                    ? displayConfig!['showCustomerPaidAmount']!.value as String
+                    : (isRtl ? 'المبلغ المدفوع:' : 'Paid Amt:'),
+                paidAmount.toStringAsFixed(2),
+                balanceStyle,
                 isRtl: isRtl),
           // Current Balance line - respects showCustomerCurrentBalance visibility
           if (currentBalance != null && showCurrentBalance)
-            _buildLabelValueRow(isRtl ? 'الرصيد الحالي:' : 'Cur Bal:',
-                currentBalance.toStringAsFixed(2), balanceBoldStyle,
+            _buildLabelValueRow(
+                (displayConfig?['showCustomerCurrentBalance']?.value as String?)
+                            ?.isNotEmpty ==
+                        true
+                    ? displayConfig!['showCustomerCurrentBalance']!.value
+                        as String
+                    : (isRtl ? 'الرصيد الحالي:' : 'Cur Bal:'),
+                currentBalance.toStringAsFixed(2),
+                balanceBoldStyle,
                 isRtl: isRtl),
         ],
       ),
@@ -1288,7 +1380,9 @@ class StandardPrinter {
   // Date and Time Row for PDF - minimal design
   pw.Widget _buildDateTimeRowPDF(
       String selectedPaperSize, String orderDate, bool isFromLocalStorage,
-      {bool isRtl = false}) {
+      {bool isRtl = false,
+      pw.Font? arabicFontBold,
+      Map<String, DisplayOption>? displayConfig}) {
     // Use appropriate date formatting based on source
     String formattedDate = isFromLocalStorage
         ? DateHelper.formatToISODateOnlyFromISO(orderDate)
@@ -1299,12 +1393,20 @@ class StandardPrinter {
         : DateHelper.formatISODateToIST(orderDate);
 
     final dateTimeStyle = pw.TextStyle(
+      font: arabicFontBold,
       fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
       fontWeight: pw.FontWeight.bold,
     );
 
-    final dateLabel = isRtl ? 'التاريخ:' : 'Date:';
-    final timeLabel = isRtl ? 'الوقت:' : 'Time:';
+    // Use displayConfig labels with fallback to RTL-aware defaults
+    final dateLabel =
+        (displayConfig?['showDateHeader']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showDateHeader']!.value as String
+            : (isRtl ? 'التاريخ:' : 'Date:');
+    final timeLabel =
+        (displayConfig?['showTimeHeader']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showTimeHeader']!.value as String
+            : (isRtl ? 'الوقت:' : 'Time:');
     final dateWidget =
         pw.Text('$dateLabel $formattedDate', style: dateTimeStyle);
     final timeWidget =
@@ -1359,7 +1461,9 @@ class StandardPrinter {
       String selectedPaperSize,
       Map<String, DisplayOption>? displayConfig,
       DocumentConfig billDocumentConfig,
-      {bool isRtl = false}) {
+      {bool isRtl = false,
+      pw.Font? arabicFont,
+      pw.Font? arabicFontBold}) {
     // Get terms from displayConfig value first, then fallback to billDocumentConfig
     String? terms = displayConfig?['showTermsConditions']?.value as String?;
     if (terms == null || terms.trim().isEmpty) {
@@ -1382,6 +1486,8 @@ class StandardPrinter {
               child: pw.Text(
                 term,
                 style: pw.TextStyle(
+                  font: arabicFont,
+                  fontBold: arabicFontBold,
                   fontSize: selectedPaperSize == 'A5'
                       ? 7.0
                       : 7.0, // Reduced font size
@@ -1441,9 +1547,11 @@ class StandardPrinter {
     pw.TextStyle headerStyle,
     pw.TextStyle bodyStyle, {
     bool isRtl = false,
+    pw.Font? arabicFontBold,
   }) {
-    // Create a larger style for customer details
+    // Create a larger style for customer details with Arabic font support
     final customerDetailStyle = pw.TextStyle(
+      font: arabicFontBold,
       fontSize:
           selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from bodyStyle
       fontWeight: pw.FontWeight.bold,
@@ -1736,12 +1844,29 @@ class StandardPrinter {
       finalCellAlignments.addAll(cellAlignmentsMap);
     }
 
+    // Get Returns section label from config with fallback
+    final returnsLabel =
+        (displayConfig?['showReturnsHeader']?.value as String?)?.isNotEmpty ==
+                true
+            ? displayConfig!['showReturnsHeader']!.value as String
+            : (billDocumentConfig?.resolvedLabels?.item?.isNotEmpty == true
+                ? 'RETURNS' // Keep default if no specific label
+                : (isRtl ? 'المرتجعات' : 'RETURNS'));
+
+    // Get Return Summary section label from config with fallback
+    final returnSummaryLabel =
+        (displayConfig?['showReturnSummaryHeader']?.value as String?)
+                    ?.isNotEmpty ==
+                true
+            ? displayConfig!['showReturnSummaryHeader']!.value as String
+            : (isRtl ? 'ملخص المرتجعات' : 'RETURN SUMMARY');
+
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text('RETURNS', style: subheaderStyle),
+          pw.Text(returnsLabel, style: subheaderStyle),
           pw.SizedBox(height: 10),
           // Return Items Table
           if (tableHeaders.isNotEmpty && tableData.isNotEmpty)
@@ -1782,27 +1907,49 @@ class StandardPrinter {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('RETURN SUMMARY', style: subheaderStyle),
+                pw.Text(returnSummaryLabel, style: subheaderStyle),
                 pw.SizedBox(height: 3),
                 // Display Item Count
                 if (displayConfig?['showReturnItemsCount']?.visible == true)
-                  _buildLabelValueRow('Total Items:',
-                      orderReturns.returnItems!.length.toString(), summaryStyle,
+                  _buildLabelValueRow(
+                      (displayConfig?['showReturnItemsCount']?.value as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? displayConfig!['showReturnItemsCount']!.value
+                              as String
+                          : (isRtl ? 'إجمالي العناصر:' : 'Total Items:'),
+                      orderReturns.returnItems!.length.toString(),
+                      summaryStyle,
                       isRtl: isRtl),
                 if (displayConfig?['showReturnItemsCount']?.visible == true)
                   pw.SizedBox(height: 2),
                 // Display Total MRP
                 if (displayConfig?['showReturnTotalAmount']?.visible == true)
-                  _buildLabelValueRow('Total MRP:',
-                      calculatedReturnTotal.toStringAsFixed(2), summaryStyle,
+                  _buildLabelValueRow(
+                      (displayConfig?['showReturnTotalAmount']?.value
+                                      as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? displayConfig!['showReturnTotalAmount']!.value
+                              as String
+                          : (isRtl ? 'إجمالي السعر:' : 'Total MRP:'),
+                      calculatedReturnTotal.toStringAsFixed(2),
+                      summaryStyle,
                       isRtl: isRtl),
                 if (displayConfig?['showReturnTotalAmount']?.visible == true)
                   pw.SizedBox(height: 2),
                 // Display Net Total
                 if (displayConfig?['showReturnNetAmount']?.visible == true) ...[
                   pw.Divider(color: PdfColors.black),
-                  _buildLabelValueRow('Net Total:',
-                      calculatedReturnTotal.toStringAsFixed(2), netTotalStyle,
+                  _buildLabelValueRow(
+                      (displayConfig?['showReturnNetAmount']?.value as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? displayConfig!['showReturnNetAmount']!.value
+                              as String
+                          : (isRtl ? 'المجموع الصافي:' : 'Net Total:'),
+                      calculatedReturnTotal.toStringAsFixed(2),
+                      netTotalStyle,
                       isRtl: isRtl),
                 ],
               ],
@@ -1898,20 +2045,34 @@ class StandardPrinter {
 
     double finalTotal = orderTotal - returnTotal;
 
+    // Get Final Summary section label from config with fallback
+    final finalSummaryLabel =
+        (displayConfig?['showFinalSummaryHeader']?.value as String?)
+                    ?.isNotEmpty ==
+                true
+            ? displayConfig!['showFinalSummaryHeader']!.value as String
+            : (isRtl ? 'الملخص النهائي' : 'FINAL SUMMARY');
+
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 0, horizontal: 8),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text('FINAL SUMMARY', style: subheaderStyle),
+          pw.Text(finalSummaryLabel, style: subheaderStyle),
           pw.SizedBox(height: 5),
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               // Display Order Total
               if (displayConfig?['showFinalPurchase']?.visible == true)
-                _buildLabelValueRow('Total Purchase:',
-                    orderTotal.toStringAsFixed(2), summaryStyle,
+                _buildLabelValueRow(
+                    (displayConfig?['showFinalPurchase']?.value as String?)
+                                ?.isNotEmpty ==
+                            true
+                        ? displayConfig!['showFinalPurchase']!.value as String
+                        : (isRtl ? 'إجمالي المشتريات:' : 'Total Purchase:'),
+                    orderTotal.toStringAsFixed(2),
+                    summaryStyle,
                     isRtl: isRtl),
               if (displayConfig?['showFinalPurchase']?.visible == true)
                 pw.SizedBox(height: 2),
@@ -1920,8 +2081,14 @@ class StandardPrinter {
                   orderReturns != null &&
                   orderReturns.returnItems != null &&
                   orderReturns.returnItems!.isNotEmpty)
-                _buildLabelValueRow('Total Return:',
-                    returnTotal.toStringAsFixed(2), summaryStyle,
+                _buildLabelValueRow(
+                    (displayConfig?['showFinalReturn']?.value as String?)
+                                ?.isNotEmpty ==
+                            true
+                        ? displayConfig!['showFinalReturn']!.value as String
+                        : (isRtl ? 'إجمالي المرتجعات:' : 'Total Return:'),
+                    returnTotal.toStringAsFixed(2),
+                    summaryStyle,
                     isRtl: isRtl),
               if (displayConfig?['showFinalReturn']?.visible == true &&
                   orderReturns != null &&
@@ -1932,7 +2099,13 @@ class StandardPrinter {
               if (displayConfig?['showFinalNetAmount']?.visible == true) ...[
                 pw.Divider(color: PdfColors.black),
                 _buildLabelValueRow(
-                    'Net Total:', finalTotal.toStringAsFixed(2), netTotalStyle,
+                    (displayConfig?['showFinalNetAmount']?.value as String?)
+                                ?.isNotEmpty ==
+                            true
+                        ? displayConfig!['showFinalNetAmount']!.value as String
+                        : (isRtl ? 'المجموع الصافي:' : 'Net Total:'),
+                    finalTotal.toStringAsFixed(2),
+                    netTotalStyle,
                     isRtl: isRtl),
               ],
               // Amount in words
@@ -1940,7 +2113,12 @@ class StandardPrinter {
                   true) ...[
                 pw.SizedBox(height: 5),
                 _buildLabelValueRow(
-                  'Amount in words:',
+                  (displayConfig?['showFinalAmountInWords']?.value as String?)
+                              ?.isNotEmpty ==
+                          true
+                      ? displayConfig!['showFinalAmountInWords']!.value
+                          as String
+                      : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
                   '${AmountHelper().convertNumberToWords(finalTotal)} Only.',
                   summaryStyle,
                   isRtl: isRtl,
@@ -1993,14 +2171,29 @@ class StandardPrinter {
     bool isFromLocalStorage,
     pw.TextStyle summaryStyle, {
     bool isRtl = false,
+    pw.Font? arabicFont,
+    pw.Font? arabicFontBold,
+    Map<String, DisplayOption>? displayConfig,
+    String currency = '',
   }) {
     final cartTotal = _calculateCartTotal(cartItems, isFromLocalStorage);
 
     final totalStyle = pw.TextStyle(
+      font: arabicFontBold,
+      fontBold: arabicFontBold,
       fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
       fontWeight: pw.FontWeight.bold,
       color: PdfColors.black,
     );
+
+    // Get total label from config with fallback
+    final totalLabel =
+        (displayConfig?['showCartTotal']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showCartTotal']!.value as String
+            : (isRtl ? 'الإجمالي:' : 'TOTAL:');
+
+    // Use currency symbol from app settings, fallback to empty string
+    final currencySymbol = currency.isNotEmpty ? '$currency ' : '';
 
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -2008,21 +2201,13 @@ class StandardPrinter {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: isRtl
             ? [
-                pw.Text('Rs. ${cartTotal.toStringAsFixed(2)}',
+                pw.Text('$currencySymbol${cartTotal.toStringAsFixed(2)}',
                     style: totalStyle),
-                pw.Text(
-                    isRtl
-                        ? '\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a:'
-                        : 'TOTAL:',
-                    style: totalStyle),
+                pw.Text(totalLabel, style: totalStyle),
               ]
             : [
-                pw.Text(
-                    isRtl
-                        ? '\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a:'
-                        : 'TOTAL:',
-                    style: totalStyle),
-                pw.Text('Rs. ${cartTotal.toStringAsFixed(2)}',
+                pw.Text(totalLabel, style: totalStyle),
+                pw.Text('$currencySymbol${cartTotal.toStringAsFixed(2)}',
                     style: totalStyle),
               ],
       ),
@@ -2143,6 +2328,11 @@ class StandardPrinter {
                     updatedAt: "",
                   ));
 
+      // Access App Settings Provider for currency symbol
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final currency = appSettingsProvider.appSettings?.currency ?? '';
+
       // Determine page format based on paper size
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
@@ -2244,9 +2434,14 @@ class StandardPrinter {
                       // Store name
                       if (updatedSettings?['showStoreName']?.visible == true)
                         pw.Text(
-                          updatedSettings?['showStoreName']?.value as String? ??
-                              billDocumentConfig.header ??
-                              'STORE NAME',
+                          (updatedSettings?['showStoreName']?.value as String?)
+                                      ?.isNotEmpty ==
+                                  true
+                              ? updatedSettings!['showStoreName']!.value
+                                  as String
+                              : (billDocumentConfig.header?.isNotEmpty == true
+                                  ? billDocumentConfig.header!
+                                  : (isRtl ? 'اسم المتجر' : 'STORE NAME')),
                           style: headerStyle,
                         ),
 
@@ -2258,6 +2453,8 @@ class StandardPrinter {
                               billDocumentConfig.subheader ??
                               '',
                           style: pw.TextStyle(
+                            font: arabicFont,
+                            fontBold: arabicFontBold,
                             fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
                           ),
                         ),
@@ -2327,16 +2524,25 @@ class StandardPrinter {
                                             billDocumentConfig
                                                 .numberPrefix!.isNotEmpty)
                                         ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                        : 'No: $orderNumber',
+                                        : (isRtl
+                                            ? 'رقم: $orderNumber'
+                                            : 'No: $orderNumber'),
                                     style: subheaderStyle),
                               if (updatedSettings?['showInvoiceTitle']
                                       ?.visible ==
                                   true)
                                 pw.Text(
-                                    updatedSettings?['showInvoiceTitle']?.value
-                                            as String? ??
-                                        billDocumentConfig.header ??
-                                        'INVOICE',
+                                    (updatedSettings?['showInvoiceTitle']?.value
+                                                    as String?)
+                                                ?.isNotEmpty ==
+                                            true
+                                        ? updatedSettings!['showInvoiceTitle']!
+                                            .value as String
+                                        : (billDocumentConfig
+                                                    .header?.isNotEmpty ==
+                                                true
+                                            ? billDocumentConfig.header!
+                                            : (isRtl ? 'فاتورة' : 'INVOICE')),
                                     style: subheaderStyle),
                             ]
                           : [
@@ -2344,10 +2550,17 @@ class StandardPrinter {
                                       ?.visible ==
                                   true)
                                 pw.Text(
-                                    updatedSettings?['showInvoiceTitle']?.value
-                                            as String? ??
-                                        billDocumentConfig.header ??
-                                        'INVOICE',
+                                    (updatedSettings?['showInvoiceTitle']?.value
+                                                    as String?)
+                                                ?.isNotEmpty ==
+                                            true
+                                        ? updatedSettings!['showInvoiceTitle']!
+                                            .value as String
+                                        : (billDocumentConfig
+                                                    .header?.isNotEmpty ==
+                                                true
+                                            ? billDocumentConfig.header!
+                                            : (isRtl ? 'فاتورة' : 'INVOICE')),
                                     style: subheaderStyle),
                               if (updatedSettings?['showInvoiceNumber']
                                       ?.visible ==
@@ -2357,7 +2570,9 @@ class StandardPrinter {
                                             billDocumentConfig
                                                 .numberPrefix!.isNotEmpty)
                                         ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                        : 'No: $orderNumber',
+                                        : (isRtl
+                                            ? 'رقم: $orderNumber'
+                                            : 'No: $orderNumber'),
                                     style: subheaderStyle),
                             ],
                     ),
@@ -2366,9 +2581,9 @@ class StandardPrinter {
                 // Date and Time Row - minimal design
                 _buildDateTimeRowPDF(
                     selectedPaperSize, orderDate, isFromLocalStorage,
-                    isRtl: isRtl),
-
-                // Customer Information Section - if available
+                    isRtl: isRtl,
+                    arabicFontBold: arabicFontBold,
+                    displayConfig: updatedSettings),
                 if (customerName != null ||
                     customerPhone != null ||
                     customerEmail != null ||
@@ -2382,6 +2597,7 @@ class StandardPrinter {
                     subheaderStyle,
                     bodyStyle,
                     isRtl: isRtl,
+                    arabicFontBold: arabicFontBold,
                   ),
 
                 // Items table - minimal design without borders
@@ -2412,7 +2628,11 @@ class StandardPrinter {
                 // Cart Total Row - added after items table
                 _buildCartTotalRow(selectedPaperSize, cartItems,
                     isFromLocalStorage, summaryStyle,
-                    isRtl: isRtl),
+                    isRtl: isRtl,
+                    arabicFont: arabicFont,
+                    arabicFontBold: arabicFontBold,
+                    displayConfig: updatedSettings,
+                    currency: currency),
 
                 pw.SizedBox(height: 5), // Reduced from 8
 
@@ -2428,7 +2648,10 @@ class StandardPrinter {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('ORDER SUMMARY',
+                        pw.Text(
+                            displayConfig?['showOrderSummary']?.value
+                                    as String? ??
+                                (isRtl ? 'ملخص الطلب' : 'ORDER SUMMARY'),
                             style: subheaderStyle,
                             textAlign:
                                 isRtl ? pw.TextAlign.right : pw.TextAlign.left),
@@ -2498,7 +2721,12 @@ class StandardPrinter {
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 0, horizontal: 8), // Same padding as summary
                     child: _buildLabelValueRow(
-                      'Amount in words:',
+                      (updatedSettings?['showAmountInWords']?.value as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? updatedSettings!['showAmountInWords']!.value
+                              as String
+                          : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
                       '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
                       summaryStyle,
                       isRtl: isRtl,
@@ -2525,6 +2753,8 @@ class StandardPrinter {
                       bodyStyle,
                       isRtl: isRtl,
                       displayConfig: updatedSettings,
+                      arabicFont: arabicFont,
+                      arabicFontBold: arabicFontBold,
                     ),
                   ),
 
@@ -2553,10 +2783,14 @@ class StandardPrinter {
                             ),
                             pw.SizedBox(height: 3), // Reduced from 5
                             pw.Text(
-                              updatedSettings?['showQRCode']?.value
-                                      as String? ??
-                                  'Scan to Pay',
+                              (updatedSettings?['showQRCode']?.value as String?)
+                                          ?.isNotEmpty ==
+                                      true
+                                  ? updatedSettings!['showQRCode']!.value
+                                      as String
+                                  : (isRtl ? 'امسح للدفع' : 'Scan to Pay'),
                               style: pw.TextStyle(
+                                font: arabicFontBold,
                                 fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
                                 fontWeight: pw.FontWeight.bold,
                               ),
@@ -2575,10 +2809,17 @@ class StandardPrinter {
                         true)
                       pw.Center(
                         child: pw.Text(
-                          updatedSettings?['showThankYouMessage']?.value
-                                  as String? ??
-                              'Thank You... Visit Again',
+                          (updatedSettings?['showThankYouMessage']?.value
+                                          as String?)
+                                      ?.isNotEmpty ==
+                                  true
+                              ? updatedSettings!['showThankYouMessage']!.value
+                                  as String
+                              : (isRtl
+                                  ? 'شكراً لك... نتمنى زيارتكم مرة أخرى'
+                                  : 'Thank You... Visit Again'),
                           style: pw.TextStyle(
+                            font: arabicFontBold,
                             fontSize: selectedPaperSize == 'A5'
                                 ? 8.0
                                 : 10.0, // Reduced from subheaderStyle
@@ -2595,7 +2836,9 @@ class StandardPrinter {
                           updatedSettings, billDocumentConfig)) ...[
                         _buildTermsConditionsBoxPDF(selectedPaperSize,
                             updatedSettings, billDocumentConfig,
-                            isRtl: isRtl),
+                            isRtl: isRtl,
+                            arabicFont: arabicFont,
+                            arabicFontBold: arabicFontBold),
                       ],
                     ],
                   ],

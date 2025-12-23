@@ -450,7 +450,8 @@ class ThermalPrinter {
             appSettings?.customerCarePhone ??
             '';
         if (telephone.isNotEmpty) {
-          part1Rows.add(TextRow('TEL: $telephone', scale: 0.8));
+          // Use dynamic prefix if available
+          part1Rows.add(TextRow(telephone, scale: 0.8));
         }
       }
 
@@ -460,7 +461,8 @@ class ThermalPrinter {
             appSettings?.customerCareEmail ??
             '';
         if (email.isNotEmpty) {
-          part1Rows.add(TextRow('Email: $email', scale: 0.8));
+          // Use the email value directly as configured
+          part1Rows.add(TextRow(email, scale: 0.8));
         }
       }
 
@@ -481,10 +483,11 @@ class ThermalPrinter {
 
       // Invoice Number
       if (displayConfig?['showInvoiceNumber']?.visible == true) {
+        // Use number_prefix from config, or show just the order number if not set
         final invoiceNumberText = billDocumentConfig.numberPrefix != null &&
                 billDocumentConfig.numberPrefix!.isNotEmpty
             ? '${billDocumentConfig.numberPrefix}$orderNumber'
-            : 'INV No: $orderNumber';
+            : '#$orderNumber';
         part1Rows.add(TextRow(invoiceNumberText, isBold: true));
       }
 
@@ -492,11 +495,15 @@ class ThermalPrinter {
 
       // --- CUSTOMER DETAILS SECTION ---
       if (customerName != null || customerPhone != null) {
+        // Get customer label from displayConfig or use defaults
+        final customerLabel = isEnglish ? "Customer:" : "العميل:";
+        final phoneLabel = isEnglish ? "Phone:" : "الهاتف:";
+
         if (isEnglish) {
           // English: Label: Value format
           if (customerName != null && customerName.isNotEmpty) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn("Customer:",
+              ReceiptTableColumn(customerLabel,
                   weight: 0.35, align: TextAlign.left, isBold: true),
               ReceiptTableColumn(customerName,
                   weight: 0.65, align: TextAlign.left),
@@ -504,7 +511,7 @@ class ThermalPrinter {
           }
           if (customerPhone != null && customerPhone.isNotEmpty) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn("Phone:",
+              ReceiptTableColumn(phoneLabel,
                   weight: 0.35, align: TextAlign.left, isBold: true),
               ReceiptTableColumn(
                   StringHelper.maskStringShowLast4(customerPhone),
@@ -513,13 +520,13 @@ class ThermalPrinter {
             ]));
           }
         } else {
-          // Arabic: Value :Label format (RTL)
+          // Arabic: Label on right, Value on left (RTL reading flow)
           if (customerName != null && customerName.isNotEmpty) {
             part1Rows.add(ReceiptTableRow([
               ReceiptTableColumn(customerName,
-                  weight: 0.65, align: TextAlign.right),
-              ReceiptTableColumn("العميل:",
-                  weight: 0.35, align: TextAlign.left, isBold: true),
+                  weight: 0.65, align: TextAlign.left),
+              ReceiptTableColumn(customerLabel,
+                  weight: 0.35, align: TextAlign.right, isBold: true),
             ]));
           }
           if (customerPhone != null && customerPhone.isNotEmpty) {
@@ -527,9 +534,9 @@ class ThermalPrinter {
               ReceiptTableColumn(
                   StringHelper.maskStringShowLast4(customerPhone),
                   weight: 0.65,
-                  align: TextAlign.right),
-              ReceiptTableColumn("الهاتف:",
-                  weight: 0.35, align: TextAlign.left, isBold: true),
+                  align: TextAlign.left),
+              ReceiptTableColumn(phoneLabel,
+                  weight: 0.35, align: TextAlign.right, isBold: true),
             ]));
           }
         }
@@ -588,28 +595,46 @@ class ThermalPrinter {
                   ? resolvedLabels!.tax!
                   : (isEnglish ? "Tax" : "الضريبة"));
 
+      // SL# label for serial number column
+      final String slLabel =
+          (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showSLNumber']!.value as String
+              : (resolvedLabels?.slNumber?.isNotEmpty == true
+                  ? resolvedLabels!.slNumber!
+                  : (isEnglish ? "SL#" : "#"));
+
       // Table Header
       if (isEnglish) {
         List<ReceiptTableColumn> headerCols = [];
+        // SL# column header
+        if (displayConfig?['showSLNumber']?.visible == true) {
+          headerCols.add(ReceiptTableColumn(slLabel,
+              weight: 0.08, align: TextAlign.left, isBold: true));
+        }
         if (displayConfig?['showParticulars']?.visible == true) {
           headerCols.add(ReceiptTableColumn(particularsLabel,
-              weight: 0.35, align: TextAlign.left, isBold: true));
+              weight:
+                  displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+              align: TextAlign.left,
+              isBold: true));
         }
         if (displayConfig?['showMRP']?.visible == true) {
           headerCols.add(ReceiptTableColumn(mrpLabel,
-              weight: 0.13, align: TextAlign.center, isBold: true));
+              weight: 0.15, align: TextAlign.center, isBold: true));
         }
         if (displayConfig?['showQty']?.visible == true) {
           headerCols.add(ReceiptTableColumn(qtyLabel,
-              weight: 0.08, align: TextAlign.center, isBold: true));
+              weight: 0.12, align: TextAlign.center, isBold: true));
         }
         if (displayConfig?['showRate']?.visible == true) {
           headerCols.add(ReceiptTableColumn(rateLabel,
-              weight: 0.13, align: TextAlign.right, isBold: true));
+              weight: 0.15, align: TextAlign.right, isBold: true));
         }
-        // Add Tax column header
-        headerCols.add(ReceiptTableColumn(taxLabel,
-            weight: 0.13, align: TextAlign.right, isBold: true));
+        // Add Tax column header only if visible
+        if (displayConfig?['showTax']?.visible == true) {
+          headerCols.add(ReceiptTableColumn(taxLabel,
+              weight: 0.15, align: TextAlign.right, isBold: true));
+        }
         if (displayConfig?['showTotal']?.visible == true) {
           headerCols.add(ReceiptTableColumn(totalLabel,
               weight: 0.18, align: TextAlign.right, isBold: true));
@@ -623,26 +648,36 @@ class ThermalPrinter {
         List<ReceiptTableColumn> headerCols = [];
         if (displayConfig?['showTotal']?.visible == true) {
           headerCols.add(ReceiptTableColumn(totalLabel,
-              weight: 0.17, align: TextAlign.right, isBold: true));
+              weight: 0.18, align: TextAlign.right, isBold: true));
         }
-        // Add Tax column header for Arabic
-        headerCols.add(ReceiptTableColumn(taxLabel,
-            weight: 0.13, align: TextAlign.right, isBold: true));
+        // Add Tax column header for Arabic only if visible
+        if (displayConfig?['showTax']?.visible == true) {
+          headerCols.add(ReceiptTableColumn(taxLabel,
+              weight: 0.15, align: TextAlign.right, isBold: true));
+        }
         if (displayConfig?['showRate']?.visible == true) {
           headerCols.add(ReceiptTableColumn(rateLabel,
               weight: 0.15, align: TextAlign.right, isBold: true));
         }
         if (displayConfig?['showQty']?.visible == true) {
           headerCols.add(ReceiptTableColumn(qtyLabel,
-              weight: 0.10, align: TextAlign.right, isBold: true));
+              weight: 0.12, align: TextAlign.right, isBold: true));
         }
         if (displayConfig?['showMRP']?.visible == true) {
           headerCols.add(ReceiptTableColumn(mrpLabel,
-              weight: 0.13, align: TextAlign.right, isBold: true));
+              weight: 0.15, align: TextAlign.right, isBold: true));
         }
         if (displayConfig?['showParticulars']?.visible == true) {
           headerCols.add(ReceiptTableColumn(particularsLabel,
-              weight: 0.32, align: TextAlign.right, isBold: true));
+              weight:
+                  displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+              align: TextAlign.right,
+              isBold: true));
+        }
+        // SL# column header for Arabic (at the end for RTL)
+        if (displayConfig?['showSLNumber']?.visible == true) {
+          headerCols.add(ReceiptTableColumn(slLabel,
+              weight: 0.08, align: TextAlign.right, isBold: true));
         }
         if (headerCols.isNotEmpty) {
           part1Rows.add(ReceiptTableRow(headerCols));
@@ -706,22 +741,24 @@ class ThermalPrinter {
           // Price details row
           List<ReceiptTableColumn> priceCols = [];
           priceCols.add(
-              ReceiptTableColumn("", weight: 0.35)); // Empty for item column
+              ReceiptTableColumn("", weight: 0.25)); // Empty for item column
           if (displayConfig?['showMRP']?.visible == true) {
             priceCols.add(
-                ReceiptTableColumn(mrp, weight: 0.13, align: TextAlign.center));
+                ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.center));
           }
           if (displayConfig?['showQty']?.visible == true) {
             priceCols.add(ReceiptTableColumn(quantity,
-                weight: 0.08, align: TextAlign.center));
+                weight: 0.12, align: TextAlign.center));
           }
           if (displayConfig?['showRate']?.visible == true) {
             priceCols.add(ReceiptTableColumn(unitPrice,
-                weight: 0.13, align: TextAlign.right));
+                weight: 0.15, align: TextAlign.right));
           }
-          // Add Tax amount for the item
-          priceCols.add(ReceiptTableColumn(itemTaxAmount,
-              weight: 0.13, align: TextAlign.right));
+          // Add Tax amount for the item only if visible
+          if (displayConfig?['showTax']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(itemTaxAmount,
+                weight: 0.15, align: TextAlign.right));
+          }
           if (displayConfig?['showTotal']?.visible == true) {
             priceCols.add(ReceiptTableColumn(totalPrice,
                 weight: 0.18, align: TextAlign.right));
@@ -744,25 +781,27 @@ class ThermalPrinter {
           List<ReceiptTableColumn> priceCols = [];
           if (displayConfig?['showTotal']?.visible == true) {
             priceCols.add(ReceiptTableColumn(totalPrice,
-                weight: 0.17, align: TextAlign.right));
+                weight: 0.18, align: TextAlign.right));
           }
-          // Add Tax amount for the item (RTL)
-          priceCols.add(ReceiptTableColumn(itemTaxAmount,
-              weight: 0.13, align: TextAlign.right));
+          // Add Tax amount for the item (RTL) only if visible
+          if (displayConfig?['showTax']?.visible == true) {
+            priceCols.add(ReceiptTableColumn(itemTaxAmount,
+                weight: 0.15, align: TextAlign.right));
+          }
           if (displayConfig?['showRate']?.visible == true) {
             priceCols.add(ReceiptTableColumn(unitPrice,
                 weight: 0.15, align: TextAlign.right));
           }
           if (displayConfig?['showQty']?.visible == true) {
             priceCols.add(ReceiptTableColumn(quantity,
-                weight: 0.10, align: TextAlign.right));
+                weight: 0.12, align: TextAlign.right));
           }
           if (displayConfig?['showMRP']?.visible == true) {
             priceCols.add(
-                ReceiptTableColumn(mrp, weight: 0.13, align: TextAlign.right));
+                ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.right));
           }
           priceCols.add(
-              ReceiptTableColumn("", weight: 0.32)); // Empty for item column
+              ReceiptTableColumn("", weight: 0.25)); // Empty for item column
           if (priceCols.length > 1) {
             part1Rows.add(ReceiptTableRow(priceCols));
           }
@@ -873,14 +912,6 @@ class ThermalPrinter {
           ]));
         }
 
-        // Always show tax for now (since showTax option doesn't exist in config)
-        part1Rows.add(ReceiptTableRow([
-          ReceiptTableColumn(taxLabel, weight: 0.25, align: TextAlign.right),
-          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
-              weight: 0.25, align: TextAlign.right),
-          ReceiptTableColumn(" ", weight: 0.50),
-        ]));
-
         part1Rows.add(SpacingRow(5));
 
         // Net Total
@@ -893,15 +924,22 @@ class ThermalPrinter {
           ]));
         }
       } else {
-        // SUMMARY ROWS - Bilingual Design (Image-based)
+        // SUMMARY ROWS - Bilingual/Arabic Design (Image-based)
         double totalDiscountAmount = discountAmountValue;
         double subtotal = total + totalDiscountAmount;
+
+        // Get dynamic labels from displayConfig with bilingual fallbacks
+        final String subtotalLabel =
+            (displayConfig?['showMRPTotal']?.value as String?)?.isNotEmpty ==
+                    true
+                ? displayConfig!['showMRPTotal']!.value as String
+                : "SUBTOTAL المجموع";
 
         // 1. Subtotal
         part1Rows.add(ReceiptTableRow([
           ReceiptTableColumn(subtotal.toStringAsFixed(2),
               weight: 0.35, align: TextAlign.left),
-          ReceiptTableColumn("SUBTOTAL المجموع",
+          ReceiptTableColumn(subtotalLabel,
               weight: 0.65, align: TextAlign.right),
         ]));
 
@@ -923,12 +961,12 @@ class ThermalPrinter {
 
         // 3. Tax / VAT
         // Try to get dynamic label from config, otherwise fallback to bilingual design
-        final taxLabel =
+        final taxLabelArabic =
             (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
                 ? displayConfig!['showTax']!.value as String
                 : (billDocumentConfig.resolvedLabels?.tax?.isNotEmpty == true
                     ? billDocumentConfig.resolvedLabels!.tax!
-                    : "Tax Amount : ");
+                    : "TAX الضريبة");
 
         double taxAmount = 0.0;
         for (var item in cartItems) {
@@ -944,7 +982,8 @@ class ThermalPrinter {
         part1Rows.add(ReceiptTableRow([
           ReceiptTableColumn(taxAmount.toStringAsFixed(2),
               weight: 0.35, align: TextAlign.left),
-          ReceiptTableColumn(taxLabel, weight: 0.65, align: TextAlign.right),
+          ReceiptTableColumn(taxLabelArabic,
+              weight: 0.65, align: TextAlign.right),
         ]));
 
         part1Rows.add(SpacingRow(5));
@@ -968,11 +1007,15 @@ class ThermalPrinter {
 
       // You Saved
       if (displayConfig?['showSaved']?.visible == true && saved > 0) {
+        // Get saved label from displayConfig or use defaults
+        final savedLabel =
+            (displayConfig?['showSaved']?.value as String?)?.isNotEmpty == true
+                ? displayConfig!['showSaved']!.value as String
+                : (isEnglish ? "You Saved:" : "لقد وفرت:");
+
         part1Rows.add(SpacingRow(5));
         part1Rows.add(TextRow(
-          isEnglish
-              ? "You Saved: ${saved.toStringAsFixed(2)}"
-              : "لقد وفرت: ${saved.toStringAsFixed(2)} ريال",
+          "$savedLabel ${saved.toStringAsFixed(2)}",
           isBold: true,
           scale: 0.9,
         ));
@@ -992,10 +1035,30 @@ class ThermalPrinter {
       if (customerOldBalance != null ||
           customerCurrentBalance != null ||
           paidAmount != null) {
+        // Get dynamic labels from displayConfig with fallbacks
+        final prevBalanceLabel =
+            (displayConfig?['showCustomerPrevBalance']?.value as String?)
+                        ?.isNotEmpty ==
+                    true
+                ? displayConfig!['showCustomerPrevBalance']!.value as String
+                : (isEnglish ? "Old Balance:" : "الرصيد السابق:");
+        final paidAmountLabel =
+            (displayConfig?['showCustomerPaidAmount']?.value as String?)
+                        ?.isNotEmpty ==
+                    true
+                ? displayConfig!['showCustomerPaidAmount']!.value as String
+                : (isEnglish ? "Paid Amount:" : "المدفوع:");
+        final currentBalanceLabel =
+            (displayConfig?['showCustomerCurrentBalance']?.value as String?)
+                        ?.isNotEmpty ==
+                    true
+                ? displayConfig!['showCustomerCurrentBalance']!.value as String
+                : (isEnglish ? "Current Balance:" : "الرصيد الحالي:");
+
         if (isEnglish) {
           if (customerOldBalance != null) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn("Old Balance:",
+              ReceiptTableColumn(prevBalanceLabel,
                   weight: 0.5, align: TextAlign.left),
               ReceiptTableColumn(customerOldBalance.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.right),
@@ -1003,7 +1066,7 @@ class ThermalPrinter {
           }
           if (paidAmount != null) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn("Paid Amount:",
+              ReceiptTableColumn(paidAmountLabel,
                   weight: 0.5, align: TextAlign.left),
               ReceiptTableColumn(paidAmount.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.right),
@@ -1011,39 +1074,36 @@ class ThermalPrinter {
           }
           if (customerCurrentBalance != null) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn("Current Balance:",
+              ReceiptTableColumn(currentBalanceLabel,
                   weight: 0.5, align: TextAlign.left, isBold: true),
               ReceiptTableColumn(customerCurrentBalance.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.right, isBold: true),
             ]));
           }
         } else {
-          // Arabic balance display
+          // Arabic balance display - Label on right, Value on left (RTL reading flow)
           if (customerOldBalance != null) {
             part1Rows.add(ReceiptTableRow([
               ReceiptTableColumn(customerOldBalance.toStringAsFixed(2),
-                  weight: 0.3, align: TextAlign.right),
-              ReceiptTableColumn("الرصيد السابق:",
-                  weight: 0.3, align: TextAlign.left),
-              ReceiptTableColumn(" ", weight: 0.4),
+                  weight: 0.5, align: TextAlign.left),
+              ReceiptTableColumn(prevBalanceLabel,
+                  weight: 0.5, align: TextAlign.right),
             ]));
           }
           if (paidAmount != null) {
             part1Rows.add(ReceiptTableRow([
               ReceiptTableColumn(paidAmount.toStringAsFixed(2),
-                  weight: 0.3, align: TextAlign.right),
-              ReceiptTableColumn("المدفوع:",
-                  weight: 0.3, align: TextAlign.left),
-              ReceiptTableColumn(" ", weight: 0.4),
+                  weight: 0.5, align: TextAlign.left),
+              ReceiptTableColumn(paidAmountLabel,
+                  weight: 0.5, align: TextAlign.right),
             ]));
           }
           if (customerCurrentBalance != null) {
             part1Rows.add(ReceiptTableRow([
               ReceiptTableColumn(customerCurrentBalance.toStringAsFixed(2),
-                  weight: 0.3, align: TextAlign.right, isBold: true),
-              ReceiptTableColumn("الرصيد الحالي:",
-                  weight: 0.3, align: TextAlign.left, isBold: true),
-              ReceiptTableColumn(" ", weight: 0.4),
+                  weight: 0.5, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(currentBalanceLabel,
+                  weight: 0.5, align: TextAlign.right, isBold: true),
             ]));
           }
         }
@@ -1089,10 +1149,10 @@ class ThermalPrinter {
                 'upi://pay?pa=$qrData&am=$formattedTotal&tn=$orderNumber&cu=INR';
           }
 
-          final qrMessage =
-              displayConfig?['showQRCode']?.value as String? ?? 'Scan to Pay';
-          part2Rows.add(TextRow(isEnglish ? qrMessage : "امسح الرمز للدفع",
-              isBold: true, scale: 0.9));
+          // Use dynamic QR message from config
+          final qrMessage = displayConfig?['showQRCode']?.value as String? ??
+              (isEnglish ? 'Scan to Pay' : 'امسح للدفع');
+          part2Rows.add(TextRow(qrMessage, isBold: true, scale: 0.9));
           part2Rows.add(QrRow(qrData, size: 200));
         }
       }
@@ -1107,9 +1167,12 @@ class ThermalPrinter {
           ? DateHelper.formatToISOTimeOnlyFromISO(orderDate)
           : DateHelper.formatISOTimeOnlyToIST(orderDate);
 
+      // Date label - use language-appropriate default
+      final dateLabel = isEnglish ? "Date:" : "التاريخ:";
+
       if (isEnglish) {
         part2Rows.add(ReceiptTableRow([
-          ReceiptTableColumn("Date:", weight: 0.4, align: TextAlign.left),
+          ReceiptTableColumn(dateLabel, weight: 0.4, align: TextAlign.left),
           ReceiptTableColumn("$formattedDate $formattedTime",
               weight: 0.6, align: TextAlign.right),
         ]));
@@ -1118,7 +1181,7 @@ class ThermalPrinter {
         part2Rows.add(ReceiptTableRow([
           ReceiptTableColumn("$formattedDate $formattedTime",
               weight: 0.6, align: TextAlign.left),
-          ReceiptTableColumn("التاريخ:", weight: 0.4, align: TextAlign.right),
+          ReceiptTableColumn(dateLabel, weight: 0.4, align: TextAlign.right),
         ]));
       }
 
@@ -1144,13 +1207,19 @@ class ThermalPrinter {
 
       // Thank You Message
       if (displayConfig?['showThankYouMessage']?.visible == true) {
+        // Get thank you message from displayConfig, fallback to footer, then defaults
+        final String defaultThankYou =
+            isEnglish ? 'Thank You... Visit Again' : 'شكراً لزيارتكم!';
         final message =
-            displayConfig?['showThankYouMessage']?.value as String? ??
-                'Thank You... Visit Again';
+            (displayConfig?['showThankYouMessage']?.value as String?)
+                        ?.isNotEmpty ==
+                    true
+                ? displayConfig!['showThankYouMessage']!.value as String
+                : (billDocumentConfig.footer?.isNotEmpty == true
+                    ? billDocumentConfig.footer!
+                    : defaultThankYou);
         part2Rows.add(TextRow(
-          isEnglish
-              ? (message.isNotEmpty ? message : 'Thank You... Visit Again')
-              : "شكراً لزيارتكم! نأمل رؤيتكم قريباً",
+          message,
           isBold: true,
         ));
       }
