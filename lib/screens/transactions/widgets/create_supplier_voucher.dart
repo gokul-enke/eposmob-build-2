@@ -207,12 +207,13 @@ class _CreateSupplierVoucherScreenState
         double unitAmount =
             double.tryParse(item.unitAmountController.text) ?? 0;
         double quantity = double.tryParse(item.quantityController.text) ?? 1;
-        double tax = double.tryParse(item.taxController.text) ?? 0;
+        double taxRate = double.tryParse(item.taxController.text) ?? 0;
         double itemNetTotal = unitAmount * quantity;
-        double itemTotal = itemNetTotal + tax;
+        double itemTax = itemNetTotal * (taxRate / 100);
+        double itemTotal = itemNetTotal + itemTax;
         item.totalController.text = itemTotal.toStringAsFixed(2);
         netTotal += itemNetTotal;
-        totalTax += tax;
+        totalTax += itemTax;
         total += itemTotal;
       } catch (e) {
         debugPrint("Error calculating total: $e");
@@ -822,7 +823,7 @@ class _CreateSupplierVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Tax',
+                'Tax %',
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
