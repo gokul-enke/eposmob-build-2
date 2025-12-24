@@ -94,7 +94,7 @@ class AppSettings {
       currency: settingsMap['CURRENCY']?['value'] ?? "",
       zatcaPhase1Enabled: settingsMap['ZATCA_PHASE_1']?['status'] ?? false,
       zatcaPhase2Enabled: settingsMap['ZATCA_PHASE_2']?['status'] ?? false,
-      showTaxPos: settingsMap['SHOW_TAX_POS']?['status'] ?? true,
+      showTaxPos: settingsMap['SHOW_TAX_POS']?['status'] ?? false,
       showMrpPos: settingsMap['SHOW_MRP_POS']?['status'] ?? true,
     );
   }
