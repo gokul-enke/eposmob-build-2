@@ -4091,7 +4091,6 @@ class BillingPageState extends State<BillingPage>
         paymentMethods: selectedPaymentMethods,
         paidMethods: _getPaidMethods(),
         balanceAmount: _balanceAmount.toString(),
-        couponId: isCouponApplied ? coupenCodeTextController.text : null,
         comment: _commentController.text,
         deliveryMethodId: deliveryMethodId,
         carNumber: _carNumberController.text,
@@ -4099,6 +4098,7 @@ class BillingPageState extends State<BillingPage>
         deliveryDate: deliveryDate,
         deliveryTime: deliveryTime,
         // Include discount data
+        couponId: isCouponApplied ? coupenCodeTextController.text : null,
         flatDiscount: priceSummary.flatDiscount,
         percentageDiscount: priceSummary.percentageDiscount,
         discountAmount: priceSummary.discount,

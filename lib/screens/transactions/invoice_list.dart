@@ -623,8 +623,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         ),
         CustomRoundButton(
           title: "Create invoice",
-          fct: () {
-            showCreateInvoiceModal(context, size);
+          fct: () async {
+            final result = await showCreateInvoiceModal(context, size);
+            debugPrint("[InvoiceList] Modal closed with result: $result");
+            // Refresh invoice list if a new invoice was created
+            if (result == true) {
+              debugPrint("[InvoiceList] Refreshing invoice list...");
+              await refreshData();
+              if (mounted) setState(() {});
+              debugPrint("[InvoiceList] Invoice list refreshed");
+            }
           },
           fontSize: 12,
           height: 45,

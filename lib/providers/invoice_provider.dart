@@ -1038,6 +1038,92 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
+  //          *********************** CREATE INVOICE API ***************************************************
+
+  Future<dynamic> createInvoice({
+    required int customerId,
+    required String type,
+    required String dueDate,
+    required String invoiceDate,
+    required double amount,
+    required String status,
+    required int paymentMethod,
+    required List<Map<String, dynamic>> invoiceItems,
+    required String accessToken,
+    // Discount fields
+    String? couponId,
+    double? flatDiscount,
+    double? percentageDiscount,
+    double? discountAmount,
+  }) async {
+    // Build request body
+    final Map<String, dynamic> apiBodyData = {
+      "customer_id": customerId,
+      "type": type,
+      "due_date": dueDate,
+      "invoice_date": invoiceDate,
+      "amount": amount,
+      "status": status,
+      "payment_method": paymentMethod,
+      "invoice_items": invoiceItems,
+      // Discount data
+      if (couponId != null) "coupon_id": couponId,
+      if (flatDiscount != null && flatDiscount > 0)
+        "flat_discount": flatDiscount,
+      if (percentageDiscount != null && percentageDiscount > 0)
+        "percentage_discount": percentageDiscount,
+      if (discountAmount != null && discountAmount > 0)
+        "discount_amount": discountAmount,
+    };
+
+    debugPrint(
+        "[InvoiceProvider] createInvoice called with body: $apiBodyData");
+
+    final url = Uri.parse(APPUrl.createInvoice);
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint(
+          "[InvoiceProvider] createInvoice response: ${response.statusCode}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseBody = json.decode(response.body);
+        debugPrint("[InvoiceProvider] createInvoice success: $responseBody");
+        return responseBody;
+      } else {
+        debugPrint("[InvoiceProvider] createInvoice error: ${response.body}");
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return {
+            'status': 'error',
+            'message': 'Failed with status ${response.statusCode}'
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint("[InvoiceProvider] createInvoice exception: $e");
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
   //          *********************** LIST ALL TRANSACTION API ***************************************************
 
   Future<dynamic> listAllTransaction({

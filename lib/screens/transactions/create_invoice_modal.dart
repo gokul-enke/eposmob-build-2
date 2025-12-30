@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
@@ -14,7 +13,9 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:provider/provider.dart';
 
@@ -85,9 +86,11 @@ class InvoiceItemCard {
 
   void _calculateTotal() {
     final unitAmount = double.tryParse(unitAmountController.text) ?? 0;
-    final tax = double.tryParse(taxController.text) ?? 0;
+    final taxPercent = double.tryParse(taxController.text) ?? 0;
     final quantity = double.tryParse(quantityController.text) ?? 1;
-    final total = (unitAmount + tax) * quantity;
+    // Calculate tax as percentage of unit amount
+    final taxAmount = unitAmount * (taxPercent / 100);
+    final total = (unitAmount + taxAmount) * quantity;
     totalController.text = total.toStringAsFixed(2);
   }
 
@@ -135,6 +138,12 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
   List<CustomerListModelData> _customerList = [];
   bool _isLoadingCustomers = false;
 
+  // Payment methods
+  List<MasterDataValue> _paymentMethods = [];
+  bool _isLoadingPaymentMethods = false;
+  String? _selectedPaymentMethod;
+  final FocusNode _paymentMethodFocus = FocusNode();
+
   // Invoice items
   final List<InvoiceItemCard> _invoiceItemCards = [];
   late InvoiceItemCard _newItemCard;
@@ -159,15 +168,16 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
         .split('T')[0];
     _invoiceDateController.text =
         DateTime.now().toIso8601String().split('T')[0];
-    _selectedType = "Other";
+    _selectedType = "other";
     _selectedStatus = "Pending";
 
     // Initialize new item card for inline form
     _newItemCard = InvoiceItemCard();
     _newItemCard.totalController.addListener(_calculateInvoiceTotal);
 
-    // Load customers
+    // Load customers and payment methods
     _loadCustomers();
+    _loadPaymentMethods();
 
     // Auto-focus on Type dropdown when modal opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -221,6 +231,57 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
     }
   }
 
+  Future<void> _loadPaymentMethods() async {
+    setState(() {
+      _isLoadingPaymentMethods = true;
+    });
+
+    try {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+
+      final paymentMethods = await masterDataProvider.fetchPaymentMethods();
+
+      if (mounted && paymentMethods != null) {
+        setState(() {
+          _paymentMethods = paymentMethods;
+          _isLoadingPaymentMethods = false;
+          // Set default payment method if available
+          if (_paymentMethods.isNotEmpty && _selectedPaymentMethod == null) {
+            // Try to set CASH as default, otherwise use first available
+            final cashMethod =
+                _paymentMethods.where((m) => m.value == 'CASH').firstOrNull;
+            if (cashMethod != null) {
+              _selectedPaymentMethod = 'CASH';
+            } else {
+              _selectedPaymentMethod = _paymentMethods.first.value;
+            }
+          }
+        });
+        debugPrint(
+            '📋 [Invoice Modal] Payment methods loaded: $_paymentMethods');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Error loading payment methods: $e');
+      setState(() {
+        _isLoadingPaymentMethods = false;
+      });
+    }
+  }
+
+  // Get payment method ID from value
+  int? _getPaymentMethodId(String? paymentMethodValue) {
+    if (paymentMethodValue == null) return null;
+    try {
+      return _paymentMethods
+          .firstWhere((m) => m.value == paymentMethodValue)
+          .id;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Get customer balance by ID
   double _getCustomerBalance(String? customerId) {
     if (customerId == null) return 0.0;
@@ -237,11 +298,13 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
 
     for (var card in _invoiceItemCards) {
       final unitAmount = double.tryParse(card.unitAmountController.text) ?? 0;
-      final tax = double.tryParse(card.taxController.text) ?? 0;
+      final taxPercent = double.tryParse(card.taxController.text) ?? 0;
       final quantity = double.tryParse(card.quantityController.text) ?? 1;
 
-      netTotal += unitAmount * quantity;
-      totalTax += tax * quantity;
+      final itemSubtotal = unitAmount * quantity;
+      final itemTax = itemSubtotal * (taxPercent / 100);
+      netTotal += itemSubtotal;
+      totalTax += itemTax;
     }
 
     setState(() {
@@ -253,12 +316,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
         _discount = (_netTotal + _totalTax) * (_discountPercentage / 100);
       }
 
-      // Total Payable = Net Total + Total Tax - Discount + Customer Balance
-      double balance = _getCustomerBalance(_selectedCustomer);
-      _totalPayable = (_netTotal + _totalTax - _discount) + balance;
+      // Total Payable = Net Total + Total Tax - Discount (without balance)
+      _totalPayable = _netTotal + _totalTax - _discount;
 
-      _totalAmountController.text =
-          (_netTotal + _totalTax - _discount).toStringAsFixed(2);
+      _totalAmountController.text = _totalPayable.toStringAsFixed(2);
     });
   }
 
@@ -488,34 +549,50 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
     setState(() => _isSubmitting = true);
 
     try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
       final invoiceProvider =
           Provider.of<InvoiceProvider>(context, listen: false);
-      final authModel = Provider.of<AuthModel>(context, listen: false);
 
-      // Build particulars from invoice items
-      final particulars = _invoiceItemCards
-          .map((card) =>
-              "${card.itemNameController.text} (Qty: ${card.quantityController.text}, Amount: ${card.totalController.text})")
-          .join("; ");
+      // Build invoice_items array
+      final List<Map<String, dynamic>> invoiceItems =
+          _invoiceItemCards.map((card) {
+        return {
+          "item_name": card.itemNameController.text,
+          "unit_amount": double.tryParse(card.unitAmountController.text) ?? 0.0,
+          "tax": double.tryParse(card.taxController.text) ?? 0.0,
+          "quantity": double.tryParse(card.quantityController.text) ?? 1.0,
+          "total_amount": double.tryParse(card.totalController.text) ?? 0.0,
+        };
+      }).toList();
 
-      final response = await invoiceProvider.addVoucher(
-        accountType: "invoice",
-        paymentMethod: "cash",
-        paymentMethodRef: "",
-        amount: _totalAmountController.text,
-        toUserID: _selectedCustomer!,
-        type: "invoice",
-        comment:
-            "Type: ${_selectedType ?? 'Other'}, Invoice Date: ${_invoiceDateController.text}, Due Date: ${_dueDateController.text}, Status: ${_selectedStatus ?? 'Pending'}",
-        particular: particulars,
+      final response = await invoiceProvider.createInvoice(
+        customerId: int.tryParse(_selectedCustomer!) ?? 0,
+        type: _selectedType?.toLowerCase() ?? "other",
+        dueDate: _dueDateController.text,
+        invoiceDate: _invoiceDateController.text,
+        amount: double.tryParse(_totalAmountController.text) ?? 0.0,
+        status: _selectedStatus?.toLowerCase() ?? "pending",
+        paymentMethod: _getPaymentMethodId(_selectedPaymentMethod) ??
+            206, // Use selected or default
+        invoiceItems: invoiceItems,
         accessToken: authModel.token ?? "",
+        // Discount data
+        couponId: _isCouponApplied ? _couponCode : null,
+        flatDiscount: _discountPercentage == 0 ? _discount : null,
+        percentageDiscount:
+            _discountPercentage > 0 ? _discountPercentage : null,
+        discountAmount: _discount,
       );
 
       if (!mounted) return;
 
       setState(() => _isSubmitting = false);
 
-      if (response != null && response["status"] == "success") {
+      // Check for both boolean true and string "success"
+      final isSuccess = response != null &&
+          (response["status"] == true || response["status"] == "success");
+
+      if (isSuccess) {
         Navigator.pop(context, true);
         showScaffold(
             context: context,
@@ -582,7 +659,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                             hintText: "Select type",
                             title: "",
                             value: _selectedType,
-                            items: const ["Other", "Sales", "Service"],
+                            items: const ["order", "other"],
                             focusNode: _typeFocus,
                             onChanged: (value) {
                               setState(() => _selectedType = value);
@@ -756,15 +833,28 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                       height: 48,
                     ),
                     const SizedBox(height: 4),
-                    // Display customer balance
-                    Text(
-                      "Balance: ${_getCustomerBalance(_selectedCustomer).toStringAsFixed(2)}",
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s12,
-                        0.20,
-                        Colors.grey.shade600,
-                      ),
+                    // Display customer balance with color coding
+                    Builder(
+                      builder: (context) {
+                        final balance = _getCustomerBalance(_selectedCustomer);
+                        Color balanceColor;
+                        if (balance > 0) {
+                          balanceColor = Colors.green;
+                        } else if (balance < 0) {
+                          balanceColor = Colors.red;
+                        } else {
+                          balanceColor = Colors.grey;
+                        }
+                        return Text(
+                          "Balance: ${balance.toStringAsFixed(2)}",
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s12,
+                            0.20,
+                            balanceColor,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -795,7 +885,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                   children: [
                     _buildTableHeader("Item name", flex: 2),
                     _buildTableHeader("Unit amount"),
-                    _buildTableHeader("Tax"),
+                    _buildTableHeader("Tax %"),
                     _buildTableHeader("Quantity"),
                     _buildTableHeader("Total"),
                   ],
@@ -994,7 +1084,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               onChanged: (value) {
                                 setState(() => _selectedStatus = value);
                                 FocusScope.of(context)
-                                    .requestFocus(_customerFocus);
+                                    .requestFocus(_paymentMethodFocus);
                               },
                               displayText: (item) => item,
                               showName: false,
@@ -1004,84 +1094,130 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: InkWell(
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => CouponModal(
-                                subTotal: _netTotal + _totalTax,
-                                initialFlatDiscount: _discount,
-                                initialPercentageDiscount: _discountPercentage,
-                                initialCouponCode: _couponCode,
-                                isCouponApplied: _isCouponApplied,
-                                onCouponAction: (couponCode, shouldApply,
-                                    {double? flatDiscount,
-                                    double? percentageDiscount}) async {
-                                  if (shouldApply) {
-                                    setState(() {
-                                      _couponCode = couponCode;
-                                      _isCouponApplied = true;
-                                      if (percentageDiscount != null &&
-                                          percentageDiscount > 0) {
-                                        _discountPercentage =
-                                            percentageDiscount;
-                                        _discount = 0; // Recalculated below
-                                      } else {
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildLabel("Payment Method"),
+                            const SizedBox(height: 4),
+                            CustomDropDownWithSearch<String>(
+                              hintText: _isLoadingPaymentMethods
+                                  ? "Loading..."
+                                  : "Payment Method",
+                              title: "",
+                              value: _selectedPaymentMethod,
+                              items:
+                                  _paymentMethods.map((m) => m.value).toList(),
+                              focusNode: _paymentMethodFocus,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedPaymentMethod = value;
+                                });
+                              },
+                              displayText: (item) {
+                                try {
+                                  return _paymentMethods
+                                      .firstWhere((m) => m.value == item)
+                                      .description;
+                                } catch (e) {
+                                  return item;
+                                }
+                              },
+                              showName: false,
+                              height: 48,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildLabel(""), // Empty label to align with Status
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => CouponModal(
+                                  subTotal: _netTotal + _totalTax,
+                                  initialFlatDiscount: _discount,
+                                  initialPercentageDiscount:
+                                      _discountPercentage,
+                                  initialCouponCode: _couponCode,
+                                  isCouponApplied: _isCouponApplied,
+                                  onCouponAction: (couponCode, shouldApply,
+                                      {double? flatDiscount,
+                                      double? percentageDiscount}) async {
+                                    if (shouldApply) {
+                                      setState(() {
+                                        _couponCode = couponCode;
+                                        _isCouponApplied = true;
+                                        if (percentageDiscount != null &&
+                                            percentageDiscount > 0) {
+                                          _discountPercentage =
+                                              percentageDiscount;
+                                          _discount = 0; // Recalculated below
+                                        } else {
+                                          _discountPercentage = 0;
+                                          _discount = flatDiscount ?? 0;
+                                        }
+                                      });
+                                      _calculateInvoiceTotal();
+                                    } else {
+                                      setState(() {
+                                        _couponCode = "";
+                                        _isCouponApplied = false;
+                                        _discount = 0;
                                         _discountPercentage = 0;
-                                        _discount = flatDiscount ?? 0;
-                                      }
-                                    });
-                                    _calculateInvoiceTotal();
-                                  } else {
-                                    setState(() {
-                                      _couponCode = "";
-                                      _isCouponApplied = false;
-                                      _discount = 0;
-                                      _discountPercentage = 0;
-                                    });
-                                    _calculateInvoiceTotal();
-                                  }
-                                },
+                                      });
+                                      _calculateInvoiceTotal();
+                                    }
+                                  },
+                                ),
+                              );
+                            },
+                            child: Container(
+                              height: 48, // Match dropdown height
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade300),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: ColorManager.boxShadowColor,
+                                    blurRadius: 3,
+                                    offset: Offset(1, 1),
+                                  ),
+                                ],
                               ),
-                            );
-                          },
-                          child: BuildBoxShadowContainer(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 9, vertical: 8),
-                            blurRadius: 4,
-                            circleRadius: 5,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 5, horizontal: 15),
-                              child: Column(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.discount_outlined,
-                                        size: 18,
-                                        color: Colors.blue,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        'Discount',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.14,
-                                          Colors.blue,
-                                        ),
-                                      ),
-                                    ],
+                                  const Icon(
+                                    Icons.discount_outlined,
+                                    size: 18,
+                                    color: Colors.blue,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Discount',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.14,
+                                      Colors.blue,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -1135,11 +1271,12 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
               ),
               const SizedBox(width: 10),
               CustomRoundButtonAdvanced(
-                title: "Submit",
+                title: _isSubmitting ? "Submitting..." : "Submit",
                 fct: _isSubmitting ? () {} : _submitInvoice,
-                width: 100,
+                width: _isSubmitting ? 130 : 100,
                 height: 45,
                 fontSize: 14,
+                boxColor: _isSubmitting ? Colors.grey.shade400 : null,
               ),
             ],
           ),
