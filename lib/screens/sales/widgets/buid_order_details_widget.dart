@@ -115,88 +115,8 @@ class OrderDetailWidget extends StatelessWidget {
                             const BuildProfilePicture(),
                           ],
                         ),
-                        // Cart Items List
-                        ListView.builder(
-                          padding: const EdgeInsets.all(20),
-                          itemCount: cartItem?.length ?? 0,
-                          shrinkWrap: true,
-                          physics:
-                              const NeverScrollableScrollPhysics(), // Prevent scrolling
-                          itemBuilder: (BuildContext context, int index) {
-                            return ListTile(
-                              minLeadingWidth: 0,
-                              minVerticalPadding: 0,
-                              contentPadding: EdgeInsets.zero,
-                              visualDensity: const VisualDensity(
-                                  horizontal: 0, vertical: 0),
-                              leading: Text(
-                                '${index + 1}',
-                                style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s15,
-                                    0.23,
-                                    Colors.black),
-                              ),
-                              title: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: RichText(
-                                      text: TextSpan(
-                                        text:
-                                            '${cartItem?[index]?.productName ?? ''}\n',
-                                        style: buildCustomStyle(
-                                            FontWeightManager.regular,
-                                            FontSize.s13,
-                                            0.20,
-                                            Colors.black),
-                                        children: <TextSpan>[
-                                          TextSpan(
-                                            text:
-                                                '${cartItem?[index]?.quantity ?? 0} * $currency ${_fmt(cartItem?[index]?.unitPrice)}',
-                                            style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                ColorManager
-                                                    .blackWithOpacity50),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          'MRP: $currency ${_fmt(cartItem?[index]?.mrp)}',
-                                          style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s11,
-                                              0.16,
-                                              ColorManager.blackWithOpacity50),
-                                        ),
-                                        Text(
-                                          '$currency ${_fmt(cartItem?[index]?.totalPrice)}',
-                                          style: buildCustomStyle(
-                                              FontWeightManager.semiBold,
-                                              FontSize.s14,
-                                              0.21,
-                                              Colors.black),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                        // Cart Items Table - Same design as Return Order Details
+                        _buildCartItemsTable(currency),
                         Align(
                           alignment: Alignment.bottomCenter,
                           child: Padding(
@@ -711,5 +631,102 @@ class OrderDetailWidget extends StatelessWidget {
       return parsed != null ? parsed.toStringAsFixed(2) : val;
     }
     return val.toString();
+  }
+
+  Widget _buildCartItemsTable(String currency) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 15.0),
+      child: Table(
+        columnWidths: const {
+          0: FlexColumnWidth(0.5),
+          1: FlexColumnWidth(3.0),
+          2: FlexColumnWidth(1.1),
+          3: FlexColumnWidth(0.6),
+          4: FlexColumnWidth(1.1),
+          5: FlexColumnWidth(1.0),
+          6: FlexColumnWidth(1.2),
+        },
+        children: [
+          // Header Row
+          TableRow(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+            ),
+            children: [
+              _buildTableCell('Sl#', isHeader: true),
+              _buildTableCell('DESCRIPTION', isHeader: true),
+              _buildTableCell('MRP', isHeader: true, align: TextAlign.right),
+              _buildTableCell('QTY', isHeader: true, align: TextAlign.center),
+              _buildTableCell('RATE', isHeader: true, align: TextAlign.right),
+              _buildTableCell('TAX', isHeader: true, align: TextAlign.right),
+              _buildTableCell('AMOUNT', isHeader: true, align: TextAlign.right),
+            ],
+          ),
+          // Data Rows
+          ...List.generate(
+            cartItem?.length ?? 0,
+            (index) {
+              final item = cartItem![index];
+              return TableRow(
+                decoration: BoxDecoration(
+                  color: index.isEven ? Colors.white : Colors.grey.shade50,
+                ),
+                children: [
+                  _buildTableCell('${index + 1}', align: TextAlign.center),
+                  _buildTableCell(item.productName ?? 'N/A'),
+                  _buildTableCell('$currency ${_fmt(item.mrp)}',
+                      align: TextAlign.right),
+                  _buildTableCell('${_fmtQty(item.quantity)}',
+                      align: TextAlign.center),
+                  _buildTableCell('$currency ${_fmt(item.unitPrice)}',
+                      align: TextAlign.right),
+                  _buildTableCell('$currency ${_fmt(item.taxAmount)}',
+                      align: TextAlign.right),
+                  _buildTableCell('$currency ${_fmt(item.totalPrice)}',
+                      align: TextAlign.right),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmtQty(dynamic val) {
+    if (val == null) return '0';
+    if (val is num) {
+      return val == val.truncate() ? val.truncate().toString() : val.toString();
+    }
+    if (val is String) {
+      final parsed = double.tryParse(val);
+      if (parsed != null) {
+        return parsed == parsed.truncate()
+            ? parsed.truncate().toString()
+            : parsed.toString();
+      }
+      return val;
+    }
+    return val.toString();
+  }
+
+  Widget _buildTableCell(String text,
+      {bool isHeader = false, TextAlign align = TextAlign.left}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: 12.0,
+        vertical: isHeader ? 12.0 : 10.0,
+      ),
+      child: Text(
+        text,
+        textAlign: align,
+        style: buildCustomStyle(
+          isHeader ? FontWeightManager.semiBold : FontWeightManager.regular,
+          isHeader ? FontSize.s12 : FontSize.s11,
+          0.18,
+          isHeader ? ColorManager.textColor : Colors.black87,
+        ),
+      ),
+    );
   }
 }

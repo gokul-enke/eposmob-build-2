@@ -404,6 +404,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                                           _passwordTextController
                                                               .text,
                                                           context);
+                                              debugPrint(
+                                                  "Login response: ${json.encode(value)}");
 
                                               if (value["status"] ==
                                                   "success") {

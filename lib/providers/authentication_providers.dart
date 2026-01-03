@@ -21,25 +21,24 @@ class AuthenticationProvider {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    debugPrint("apiKey: $apiKey");
-
     final Map<String, dynamic> apiBodyData = {
       'email': email,
       'password': password,
     };
-    // debugPrint(json.encode(apiBodyData));
+    debugPrint('Login request body: ${json.encode(apiBodyData)}');
     final url = Uri.parse(APPUrl.loginUrl);
+    debugPrint('Login URL: $url');
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      debugPrint('Login response status code: ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||
           response.statusCode == 401) {
-        // debugPrint(json.decode(response.body).toString());
+        debugPrint('Login response body: ${response.body}');
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("User Not Found.Try Again!");
