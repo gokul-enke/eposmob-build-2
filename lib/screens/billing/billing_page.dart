@@ -1975,6 +1975,9 @@ class BillingPageState extends State<BillingPage>
                         if (appSettings?.showMrpPos == true)
                           _buildHeaderCell('billing.table_mrp'.tr,
                               flex: 1, alignment: Alignment.centerLeft),
+                        if (appSettings?.showTaxPos == true)
+                          _buildHeaderCell('billing.table_tax_amount'.tr,
+                              flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_price'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_total'.tr,
@@ -2123,7 +2126,7 @@ class BillingPageState extends State<BillingPage>
                                     alignment: Alignment.center,
                                   ),
 
-                                  // Tax
+                                  // Tax Rate %
                                   if (appSettings?.showTaxPos == true)
                                     _buildContentCell(
                                       Padding(
@@ -2154,6 +2157,46 @@ class BillingPageState extends State<BillingPage>
                                             item: item,
                                             localProductProvider:
                                                 localProductProvider,
+                                          ),
+                                        ),
+                                      ),
+                                      flex: 1,
+                                      alignment: Alignment.centerLeft,
+                                    ),
+
+                                  // Tax Amount
+                                  if (appSettings?.showTaxPos == true)
+                                    _buildContentCell(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: SizedBox(
+                                          width: 60,
+                                          child: Builder(
+                                            builder: (context) {
+                                              // Calculate tax amount: (price * quantity * taxRate) / (100 + taxRate)
+                                              final double itemTotal =
+                                                  (item.price ?? 0.0) *
+                                                      item.quantity;
+                                              final double taxRate =
+                                                  item.taxRate ?? 0.0;
+                                              final double taxAmount =
+                                                  taxRate > 0
+                                                      ? (itemTotal *
+                                                          taxRate /
+                                                          (100 + taxRate))
+                                                      : 0.0;
+                                              return Text(
+                                                AmountHelper.formatAmount(
+                                                    taxAmount),
+                                                style: TextStyle(
+                                                  fontSize: fontProvider
+                                                      .billingTableItemSize,
+                                                  color: Colors.black,
+                                                ),
+                                                textAlign: TextAlign.left,
+                                              );
+                                            },
                                           ),
                                         ),
                                       ),
