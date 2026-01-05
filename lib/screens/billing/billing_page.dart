@@ -2127,7 +2127,7 @@ class BillingPageState extends State<BillingPage>
                                   ),
 
                                   // Tax Rate %
-                                  if (appSettings?.showTaxPos == true)
+                                  if (appSettings?.showTaxRatePos == true)
                                     _buildContentCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(

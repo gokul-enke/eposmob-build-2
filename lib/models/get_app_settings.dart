@@ -96,6 +96,7 @@ class AppSettings {
       zatcaPhase2Enabled: settingsMap['ZATCA_PHASE_2']?['status'] ?? false,
       showTaxPos: settingsMap['SHOW_TAX_POS']?['status'] ?? false,
       showMrpPos: settingsMap['SHOW_MRP_POS']?['status'] ?? false,
+      showTaxRatePos: settingsMap['SHOW_TAXRATE_POS']?['status'] ?? false,
     );
   }
 
@@ -185,6 +186,12 @@ class AppSettings {
           "code": "SHOW_MRP_POS",
           "value": "",
           "status": showMrpPos.toString(),
+        },
+          {
+          "name": "Show Tax Rate POS",
+          "code": "SHOW_TAXRATE_POS",
+          "value": "",
+          "status": showTaxRatePos.toString(),
         },
       ],
     };
