@@ -1969,7 +1969,7 @@ class BillingPageState extends State<BillingPage>
                             flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_qty'.tr,
                             flex: 2, alignment: Alignment.center),
-                        if (appSettings?.showTaxPos == true)
+                        if (appSettings?.showTaxRatePos == true)
                           _buildHeaderCell('billing.table_tax'.tr,
                               flex: 1, alignment: Alignment.centerLeft),
                         if (appSettings?.showMrpPos == true)
@@ -1977,7 +1977,7 @@ class BillingPageState extends State<BillingPage>
                               flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_price'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
-                        if (appSettings?.showTaxRatePos == true)
+                        if (appSettings?.showTaxPos == true)
                           _buildHeaderCell('billing.table_tax_amount'.tr,
                               flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_total'.tr,
