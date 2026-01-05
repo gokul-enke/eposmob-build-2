@@ -16,6 +16,7 @@ class AppSettings {
   final bool zatcaPhase2Enabled;
   final bool showTaxPos;
   final bool showMrpPos;
+  final bool showTaxRatePos;
 
   AppSettings({
     required this.barcodeSales,
@@ -33,6 +34,7 @@ class AppSettings {
     required this.zatcaPhase2Enabled,
     required this.showTaxPos,
     required this.showMrpPos,
+    required this.showTaxRatePos,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {

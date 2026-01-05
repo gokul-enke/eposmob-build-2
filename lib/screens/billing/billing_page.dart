@@ -1975,11 +1975,11 @@ class BillingPageState extends State<BillingPage>
                         if (appSettings?.showMrpPos == true)
                           _buildHeaderCell('billing.table_mrp'.tr,
                               flex: 1, alignment: Alignment.centerLeft),
-                        if (appSettings?.showTaxPos == true)
-                          _buildHeaderCell('billing.table_tax_amount'.tr,
-                              flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_price'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
+                        if (appSettings?.showTaxRatePos == true)
+                          _buildHeaderCell('billing.table_tax_amount'.tr,
+                              flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_total'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_actions'.tr,
@@ -2164,6 +2164,24 @@ class BillingPageState extends State<BillingPage>
                                       alignment: Alignment.centerLeft,
                                     ),
 
+                                  // Price
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: SizedBox(
+                                        width: 70,
+                                        child: PriceTextField(
+                                          item: item,
+                                          localProductProvider:
+                                              localProductProvider,
+                                        ),
+                                      ),
+                                    ),
+                                    flex: 1,
+                                    alignment: Alignment.centerLeft,
+                                  ),
+
                                   // Tax Amount
                                   if (appSettings?.showTaxPos == true)
                                     _buildContentCell(
@@ -2203,24 +2221,6 @@ class BillingPageState extends State<BillingPage>
                                       flex: 1,
                                       alignment: Alignment.centerLeft,
                                     ),
-
-                                  // Price
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: PriceTextField(
-                                          item: item,
-                                          localProductProvider:
-                                              localProductProvider,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
 
                                   // Total
                                   _buildContentCell(
