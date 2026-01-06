@@ -285,6 +285,31 @@ class _SideMenuState extends State<SideMenu> {
                 )
               : const SizedBox.shrink(),
 
+          // 1. HOME (Index: 46)
+          userRole == 'restaurant_sales'
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission = roleProvider
+                        .currentUserHasPermissionSync('create_order');
+
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Obx(
+                      () => DrawerListTile(
+                        icon: fa.FontAwesomeIcons.home,
+                        title: 'Restaurant',
+                        onTap: () {
+                          sideBarController.index.value = 46;
+                        },
+                        selected: sideBarController.index.value == 46,
+                      ),
+                    );
+                  },
+                )
+              : const SizedBox.shrink(),
+
           // 2. DASHBOARD (Index: 1)
           userRole == 'sales_executive'
               ? Consumer<RoleProvider>(

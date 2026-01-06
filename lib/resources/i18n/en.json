@@ -27,6 +27,7 @@
     "clear_cart": "Clear Cart",
     "apply_save_print": "Apply & Save and Print",
     "apply_confirm": "Apply & Confirm Order",
+    "cart": "Cart",
     "products": "Products",
     "orders": "Orders",
     "discount": "Discount",
@@ -119,7 +120,10 @@
     "posting_preview": "Posting Preview",
     "net_due": "Net Due",
     "quick_credit_options": "Quick Credit Options",
-    "all_available": "All Available"
+    "all_available": "All Available",
+    "edit_price": "Edit Price",
+    "unit_price": "Unit Price",
+    "empty_cart": "Cart is empty"
   },
   "customers": {
     "title": "Customers"
@@ -149,7 +153,9 @@
     "create_new_order": "Create New Order",
     "no_saved_orders": "No saved orders yet",
     "create_first_order": "Create your first order above",
-    "items": "items"
+    "items": "items",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "sync": {
     "syncing_data": "Syncing data...",

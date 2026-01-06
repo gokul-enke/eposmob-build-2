@@ -488,26 +488,88 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   void _togglePaymentMethod(String paymentType) {
     setState(() {
+      bool targetSelected;
+      TextEditingController? targetController;
+      FocusNode? targetFocusNode;
+
       switch (paymentType) {
         case 'cash':
           isCashSelected = !isCashSelected;
-          if (!isCashSelected) {
-            cashAmountController.clear();
-          }
+          targetSelected = isCashSelected;
+          targetController = cashAmountController;
+          targetFocusNode = cashAmountFocusNode;
+          if (!isCashSelected) cashAmountController.clear();
           break;
         case 'card':
           isCardSelected = !isCardSelected;
-          if (!isCardSelected) {
-            cardAmountController.clear();
-          }
+          targetSelected = isCardSelected;
+          targetController = cardAmountController;
+          targetFocusNode = cardAmountFocusNode;
+          if (!isCardSelected) cardAmountController.clear();
           break;
         case 'upi':
           isUpiSelected = !isUpiSelected;
-          if (!isUpiSelected) {
-            upiAmountController.clear();
-          }
+          targetSelected = isUpiSelected;
+          targetController = upiAmountController;
+          targetFocusNode = upiAmountFocusNode;
+          if (!isUpiSelected) upiAmountController.clear();
           break;
+        default:
+          return;
       }
+
+      // Handle selection (Toggle ON)
+      if (targetSelected) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            targetFocusNode?.requestFocus();
+            // Also trigger the keyboard immediately
+            Provider.of<KeyboardProvider>(context, listen: false).show(
+              'number',
+              targetController!,
+              replaceOnFirstInput: true,
+            );
+          }
+        });
+      }
+      // Handle deselection (Toggle OFF) - Auto-fill logic for remaining method
+      else {
+        // Find remaining active methods
+        List<MapEntry<String, TextEditingController>> activeMethods = [];
+        if (isCashSelected) {
+          activeMethods.add(MapEntry('cash', cashAmountController));
+        }
+        if (isCardSelected) {
+          activeMethods.add(MapEntry('card', cardAmountController));
+        }
+        if (isUpiSelected) {
+          activeMethods.add(MapEntry('upi', upiAmountController));
+        }
+
+        // If exactly one method is left, fill it with the total
+        if (activeMethods.length == 1) {
+          final remainingMethod = activeMethods.first;
+          remainingMethod.value.text = widget.cartTotal.toStringAsFixed(2);
+
+          // Focus and show keyboard for the remaining method
+          FocusNode? remainingFocusNode;
+          if (isCashSelected) remainingFocusNode = cashAmountFocusNode;
+          if (isCardSelected) remainingFocusNode = cardAmountFocusNode;
+          if (isUpiSelected) remainingFocusNode = upiAmountFocusNode;
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              remainingFocusNode?.requestFocus();
+              Provider.of<KeyboardProvider>(context, listen: false).show(
+                'number',
+                remainingMethod.value,
+                replaceOnFirstInput: true,
+              );
+            }
+          });
+        }
+      }
+
       _calculateBalance();
     });
   }
@@ -518,7 +580,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double amount = double.tryParse(controller.text) ?? 0;
 
     setState(() {
-      // Check if field has any text (including "0") to determine selection
+      // Use the raw text to determine if we should auto-select
       bool hasValue = controller.text.isNotEmpty;
 
       if (hasValue) {
@@ -538,20 +600,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             break;
         }
       } else {
-        // Only deselect when field is completely empty
-        switch (label) {
-          case 'cash':
-            isCashSelected = false;
-            break;
-          case 'card':
-            isCardSelected = false;
-            break;
-          case 'upi':
-            isUpiSelected = false;
-            break;
-          case 'toCustomerCredit':
-            toCustomerCredit = 0.0;
-            break;
+        // Do NOT auto-deselect payment methods when field is empty.
+        // Selection should be controlled by the manual toggle (icon click) or explicit onTap.
+        if (label == 'toCustomerCredit') {
+          toCustomerCredit = 0.0;
         }
       }
     });
@@ -602,6 +654,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               // Cash Payment
               _buildModalPaymentRow(
                 isSelected: isCashSelected,
+                type: 'cash',
                 icon: ImageAssets.cashIcon,
                 label: 'billing.cash'.tr,
                 controller: cashAmountController,
@@ -615,6 +668,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               // Card Payment
               _buildModalPaymentRow(
                 isSelected: isCardSelected,
+                type: 'card',
                 icon: ImageAssets.creditCardIcon,
                 label: 'billing.card'.tr,
                 controller: cardAmountController,
@@ -628,6 +682,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               // UPI Payment
               _buildModalPaymentRow(
                 isSelected: isUpiSelected,
+                type: 'upi',
                 icon: ImageAssets.creditCardIcon,
                 label: 'billing.upi'.tr,
                 controller: upiAmountController,
@@ -964,6 +1019,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   Widget _buildModalPaymentRow({
     required bool isSelected,
+    required String type,
     required String icon,
     required String label,
     required TextEditingController controller,
@@ -1025,9 +1081,18 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             keyboardType: TextInputType.number,
             focusNode: focusNode,
             readOnly: label == 'Balance',
-            onTap: (label == 'Balance')
+            onTap: (type == 'Balance')
                 ? null
                 : () {
+                    // Update selection state if not already selected
+                    setState(() {
+                      if (type == 'cash')
+                        isCashSelected = true;
+                      else if (type == 'card')
+                        isCardSelected = true;
+                      else if (type == 'upi') isUpiSelected = true;
+                    });
+
                     // Ensure full selection when tapping inside the field
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (controller.text.isNotEmpty && focusNode.hasFocus) {
@@ -1045,8 +1110,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       replaceOnFirstInput: true,
                     );
                   },
-            onchanged: (value) =>
-                _handleAmountControllerChange(label.toLowerCase(), controller),
           ),
         ),
       ],
