@@ -5,8 +5,8 @@ class APPUrl {
   // static String baseURL = "https://kmstoys.enke.in";
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
-  // static String baseURL = "https://eposdemo.yougoit.in";
-  static String baseURL = "https://eeezeeerp.cloudposai.com";
+  static String baseURL = "https://eposdemo.yougoit.in";
+  // static String baseURL = "https://eeezeeerp.cloudposai.com";
   // static String baseURL = "https://eposdemo.yougoit.in";
   // static String baseURL = "https://epos.hypersouq.in";
   // static String baseURL = "https://eeezee.enke.ae";

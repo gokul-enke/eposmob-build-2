@@ -115,21 +115,24 @@ class StockProvider extends ChangeNotifier {
   }
 
   /// *********************** LOCAL STOCK MANAGEMENT ***************************************************
-  
+
   /// Validate stock item locally before adding to pending list
   Map<String, String?> validateStockItem(Map<String, dynamic> stockItem) {
     Map<String, String?> errors = {};
-    
+
     // Required field validations
-    if (stockItem['productId'] == null || stockItem['productId'].toString().isEmpty) {
+    if (stockItem['productId'] == null ||
+        stockItem['productId'].toString().isEmpty) {
       errors['product'] = 'Product is required';
     }
-    
-    if (stockItem['categoryId'] == null || stockItem['categoryId'].toString().isEmpty) {
+
+    if (stockItem['categoryId'] == null ||
+        stockItem['categoryId'].toString().isEmpty) {
       errors['category'] = 'Category is required';
     }
-    
-    if (stockItem['quantity'] == null || stockItem['quantity'].toString().isEmpty) {
+
+    if (stockItem['quantity'] == null ||
+        stockItem['quantity'].toString().isEmpty) {
       errors['quantity'] = 'Quantity is required';
     } else {
       final qty = double.tryParse(stockItem['quantity'].toString());
@@ -137,8 +140,9 @@ class StockProvider extends ChangeNotifier {
         errors['quantity'] = 'Quantity must be a positive number';
       }
     }
-    
-    if (stockItem['retailPrice'] == null || stockItem['retailPrice'].toString().isEmpty) {
+
+    if (stockItem['retailPrice'] == null ||
+        stockItem['retailPrice'].toString().isEmpty) {
       errors['retailPrice'] = 'Retail price is required';
     } else {
       final price = double.tryParse(stockItem['retailPrice'].toString());
@@ -146,8 +150,9 @@ class StockProvider extends ChangeNotifier {
         errors['retailPrice'] = 'Retail price must be a positive number';
       }
     }
-    
-    if (stockItem['purchaseRate'] == null || stockItem['purchaseRate'].toString().isEmpty) {
+
+    if (stockItem['purchaseRate'] == null ||
+        stockItem['purchaseRate'].toString().isEmpty) {
       errors['purchaseRate'] = 'Purchase rate is required';
     } else {
       final price = double.tryParse(stockItem['purchaseRate'].toString());
@@ -155,15 +160,15 @@ class StockProvider extends ChangeNotifier {
         errors['purchaseRate'] = 'Purchase rate must be a positive number';
       }
     }
-    
+
     if (stockItem['unit'] == null || stockItem['unit'].toString().isEmpty) {
       errors['unit'] = 'Unit is required';
     }
-    
+
     if (stockItem['expiryDate'] == null) {
       errors['expiryDate'] = 'Expiry date is required';
     }
-    
+
     // Optional validations with defaults
     if (stockItem['mrp'] != null && stockItem['mrp'].toString().isNotEmpty) {
       final mrp = double.tryParse(stockItem['mrp'].toString());
@@ -171,25 +176,26 @@ class StockProvider extends ChangeNotifier {
         errors['mrp'] = 'MRP must be a positive number';
       }
     }
-    
-    if (stockItem['wholesalePrice'] != null && stockItem['wholesalePrice'].toString().isNotEmpty) {
+
+    if (stockItem['wholesalePrice'] != null &&
+        stockItem['wholesalePrice'].toString().isNotEmpty) {
       final price = double.tryParse(stockItem['wholesalePrice'].toString());
       if (price == null || price <= 0) {
         errors['wholesalePrice'] = 'Wholesale price must be a positive number';
       }
     }
-    
+
     return errors;
   }
-  
+
   /// Add stock item to local pending list with validation
   bool addStockItemLocally(Map<String, dynamic> stockItem) {
     debugPrint('🔄 ADDING STOCK ITEM LOCALLY');
     debugPrint('   - Stock Item Data: $stockItem');
-    
+
     // Validate the stock item
     Map<String, String?> validationErrors = validateStockItem(stockItem);
-    
+
     if (validationErrors.isNotEmpty) {
       debugPrint('❌ VALIDATION FAILED:');
       validationErrors.forEach((field, error) {
@@ -197,22 +203,22 @@ class StockProvider extends ChangeNotifier {
       });
       return false;
     }
-    
+
     // Add timestamp and unique ID for tracking
     stockItem['localId'] = DateTime.now().millisecondsSinceEpoch.toString();
     stockItem['addedAt'] = DateTime.now().toIso8601String();
     stockItem['status'] = 'pending'; // pending, processing, success, failed
-    
+
     _pendingStockItems.add(stockItem);
     _savePendingItemsToHive(); // Persist to Hive
     notifyListeners();
-    
+
     debugPrint('✅ STOCK ITEM ADDED TO PENDING LIST');
     debugPrint('   - Total pending items: ${_pendingStockItems.length}');
-    
+
     return true;
   }
-  
+
   /// Remove stock item from pending list
   void removeStockItemLocally(String localId) {
     _pendingStockItems.removeWhere((item) => item['localId'] == localId);
@@ -222,22 +228,24 @@ class StockProvider extends ChangeNotifier {
   }
 
   /// Update existing stock item in pending list
-  bool updateStockItemLocally(String localId, Map<String, dynamic> updatedData) {
+  bool updateStockItemLocally(
+      String localId, Map<String, dynamic> updatedData) {
     debugPrint('🔄 UPDATING STOCK ITEM LOCALLY');
     debugPrint('   - Local ID: $localId');
     debugPrint('   - Updated Data: $updatedData');
-    
+
     // Find the item in pending list
-    int index = _pendingStockItems.indexWhere((item) => item['localId'] == localId);
-    
+    int index =
+        _pendingStockItems.indexWhere((item) => item['localId'] == localId);
+
     if (index == -1) {
       debugPrint('❌ STOCK ITEM NOT FOUND IN PENDING LIST: $localId');
       return false;
     }
-    
+
     // Validate the updated data
     Map<String, String?> validationErrors = validateStockItem(updatedData);
-    
+
     if (validationErrors.isNotEmpty) {
       debugPrint('❌ UPDATE VALIDATION FAILED:');
       validationErrors.forEach((field, error) {
@@ -245,7 +253,7 @@ class StockProvider extends ChangeNotifier {
       });
       return false;
     }
-    
+
     // Update the item while preserving original metadata
     final originalItem = _pendingStockItems[index];
     _pendingStockItems[index] = {
@@ -255,25 +263,26 @@ class StockProvider extends ChangeNotifier {
       'status': originalItem['status'], // Preserve status
       'updatedAt': DateTime.now().toIso8601String(), // Add update timestamp
     };
-    
+
     _savePendingItemsToHive(); // Persist to Hive
     notifyListeners();
-    
+
     debugPrint('✅ STOCK ITEM UPDATED IN PENDING LIST');
     debugPrint('   - Local ID: $localId');
-    
+
     return true;
   }
-  
+
   /// Get stock item from pending list by local ID
   Map<String, dynamic>? getPendingStockItem(String localId) {
     try {
-      return _pendingStockItems.firstWhere((item) => item['localId'] == localId);
+      return _pendingStockItems
+          .firstWhere((item) => item['localId'] == localId);
     } catch (e) {
       return null;
     }
   }
-  
+
   /// Clear all pending stock items
   void clearPendingStockItems() {
     _pendingStockItems.clear();
@@ -282,16 +291,17 @@ class StockProvider extends ChangeNotifier {
     notifyListeners();
     debugPrint('🧹 CLEARED ALL PENDING STOCK ITEMS');
   }
-  
+
   /// Get pending stock items count
   int get pendingStockItemsCount => _pendingStockItems.length;
-  
+
   /// Get processed stock items count
   int get processedStockItemsCount => _processedStockItems.length;
-  
+
   /// Get failed stock items count
-  int get failedStockItemsCount => _pendingStockItems.where((item) => item['status'] == 'failed').length;
-  
+  int get failedStockItemsCount =>
+      _pendingStockItems.where((item) => item['status'] == 'failed').length;
+
   /// Reset failed items status to pending for retry
   void resetFailedItemsForRetry() {
     for (var item in _pendingStockItems) {
@@ -301,15 +311,16 @@ class StockProvider extends ChangeNotifier {
     }
     _savePendingItemsToHive();
     notifyListeners();
-    debugPrint('🔄 RESET ${failedStockItemsCount} FAILED ITEMS TO PENDING FOR RETRY');
+    debugPrint(
+        '🔄 RESET ${failedStockItemsCount} FAILED ITEMS TO PENDING FOR RETRY');
   }
-  
+
   /// *********************** HIVE PERSISTENCE ***************************************************
-  
+
   /// Initialize Hive box for pending stock items persistence
   Future<void> initHive() async {
     if (_isHiveInitialized) return;
-    
+
     try {
       if (!Hive.isBoxOpen(_kPendingStockBoxName)) {
         _pendingStockBox = await Hive.openBox(_kPendingStockBoxName);
@@ -318,28 +329,32 @@ class StockProvider extends ChangeNotifier {
       }
       _isHiveInitialized = true;
       debugPrint('✅ StockProvider Hive box initialized');
-      
+
       // Load any previously saved pending items
       await loadPendingItemsFromHive();
     } catch (e) {
       debugPrint('❌ Failed to initialize StockProvider Hive box: $e');
     }
   }
-  
+
   /// Save pending stock items to Hive
   Future<void> _savePendingItemsToHive() async {
     if (_pendingStockBox == null || !_pendingStockBox!.isOpen) {
       debugPrint('⚠️ Hive box not ready, skipping save');
       return;
     }
-    
+
     try {
       // Convert pending items to JSON-serializable format
-      final List<Map<String, dynamic>> itemsToSave = _pendingStockItems.map((item) {
+      final List<Map<String, dynamic>> itemsToSave =
+          _pendingStockItems.map((item) {
         // Create a copy and ensure all values are serializable
         final Map<String, dynamic> serializable = {};
         item.forEach((key, value) {
-          if (value == null || value is String || value is num || value is bool) {
+          if (value == null ||
+              value is String ||
+              value is num ||
+              value is bool) {
             serializable[key] = value;
           } else if (value is DateTime) {
             serializable[key] = value.toIso8601String();
@@ -349,21 +364,21 @@ class StockProvider extends ChangeNotifier {
         });
         return serializable;
       }).toList();
-      
+
       await _pendingStockBox!.put('pending_items', itemsToSave);
       debugPrint('💾 Saved ${itemsToSave.length} pending stock items to Hive');
     } catch (e) {
       debugPrint('❌ Failed to save pending items to Hive: $e');
     }
   }
-  
+
   /// Load pending stock items from Hive
   Future<void> loadPendingItemsFromHive() async {
     if (_pendingStockBox == null || !_pendingStockBox!.isOpen) {
       debugPrint('⚠️ Hive box not ready, skipping load');
       return;
     }
-    
+
     try {
       final savedItems = _pendingStockBox!.get('pending_items');
       if (savedItems != null && savedItems is List) {
@@ -373,7 +388,8 @@ class StockProvider extends ChangeNotifier {
             _pendingStockItems.add(Map<String, dynamic>.from(item));
           }
         }
-        debugPrint('📂 Loaded ${_pendingStockItems.length} pending stock items from Hive');
+        debugPrint(
+            '📂 Loaded ${_pendingStockItems.length} pending stock items from Hive');
         notifyListeners();
       } else {
         debugPrint('📂 No pending stock items found in Hive');
@@ -382,11 +398,11 @@ class StockProvider extends ChangeNotifier {
       debugPrint('❌ Failed to load pending items from Hive: $e');
     }
   }
-  
+
   /// Clear pending items from Hive
   Future<void> clearPendingItemsFromHive() async {
     if (_pendingStockBox == null || !_pendingStockBox!.isOpen) return;
-    
+
     try {
       await _pendingStockBox!.delete('pending_items');
       debugPrint('🗑️ Cleared pending stock items from Hive');
@@ -394,11 +410,12 @@ class StockProvider extends ChangeNotifier {
       debugPrint('❌ Failed to clear pending items from Hive: $e');
     }
   }
-  
+
   /// *********************** BATCH PROCESS STOCK ITEMS ***************************************************
-  
+
   /// Process all pending stock items via API calls
-  Future<Map<String, dynamic>> processPendingStockItems(String accessToken) async {
+  Future<Map<String, dynamic>> processPendingStockItems(
+      String accessToken) async {
     if (_pendingStockItems.isEmpty) {
       return {
         'success': false,
@@ -406,65 +423,72 @@ class StockProvider extends ChangeNotifier {
         'results': []
       };
     }
-    
-    debugPrint('🚀 STARTING BATCH PROCESSING OF ${_pendingStockItems.length} STOCK ITEMS');
-    
+
+    debugPrint(
+        '🚀 STARTING BATCH PROCESSING OF ${_pendingStockItems.length} STOCK ITEMS');
+
     _batchProcessingLoading = true;
     notifyListeners();
-    
+
     List<Map<String, dynamic>> results = [];
     List<Map<String, dynamic>> successfulItems = [];
     List<Map<String, dynamic>> failedItems = [];
-    
+
     try {
       // Extract common fields from first item (all items share these)
       final firstItem = _pendingStockItems.first;
       final supplierId = firstItem['supplierId'];
       final storeId = firstItem['storeId'];
       final purchaseDate = firstItem['purchaseDate'];
-      
+
       // Build products array
       List<Map<String, dynamic>> products = [];
       for (int i = 0; i < _pendingStockItems.length; i++) {
         final stockItem = _pendingStockItems[i];
-        
+
         products.add({
           'product_id': int.parse(stockItem['productId'].toString()),
           'category_id': int.parse(stockItem['categoryId'].toString()),
           'quantity': double.parse(stockItem['quantity'].toString()),
           'retail_price': double.parse(stockItem['retailPrice'].toString()),
           'purchase_rate': double.parse(stockItem['purchaseRate'].toString()),
-          'mrp': stockItem['mrp'] != null && stockItem['mrp'].toString().isNotEmpty
-              ? double.parse(stockItem['mrp'].toString())
-              : double.parse(stockItem['retailPrice'].toString()),
-          'wholesale_price': stockItem['wholesalePrice'] != null && stockItem['wholesalePrice'].toString().isNotEmpty
+          'mrp':
+              stockItem['mrp'] != null && stockItem['mrp'].toString().isNotEmpty
+                  ? double.parse(stockItem['mrp'].toString())
+                  : double.parse(stockItem['retailPrice'].toString()),
+          'wholesale_price': stockItem['wholesalePrice'] != null &&
+                  stockItem['wholesalePrice'].toString().isNotEmpty
               ? double.parse(stockItem['wholesalePrice'].toString())
-              : double.parse(stockItem['retailPrice'].toString()),
+              : 0.0,
           'unit': stockItem['unit'].toString(),
           'expiry_date': stockItem['expiryDate'].toString(),
           'barcode': stockItem['barcode']?.toString() ?? '',
           'batch_number': stockItem['batchNumber']?.toString() ?? '',
           'date': stockItem['date'].toString(),
-          'wholesale_min_unit': stockItem['wholesaleMinUnit'] != null && stockItem['wholesaleMinUnit'].toString().isNotEmpty
+          'wholesale_min_unit': stockItem['wholesaleMinUnit'] != null &&
+                  stockItem['wholesaleMinUnit'].toString().isNotEmpty
               ? int.parse(stockItem['wholesaleMinUnit'].toString())
               : 1,
           'tax_include': stockItem['taxInclude'] ?? false,
           'rack': stockItem['rack']?.toString() ?? '',
           'tax_amount_retail': stockItem['taxAmountRetail']?.toString(),
           'tax_amount_wholesale': stockItem['taxAmountWholesale']?.toString(),
-          'initial_retail_price': stockItem['initialRetailPrice'] != null && stockItem['initialRetailPrice'].toString().isNotEmpty
+          'initial_retail_price': stockItem['initialRetailPrice'] != null &&
+                  stockItem['initialRetailPrice'].toString().isNotEmpty
               ? double.parse(stockItem['initialRetailPrice'].toString())
               : double.parse(stockItem['retailPrice'].toString()),
-          'initial_wholesale_price': stockItem['initialWholesalePrice'] != null && stockItem['initialWholesalePrice'].toString().isNotEmpty
-              ? double.parse(stockItem['initialWholesalePrice'].toString())
-              : double.parse(stockItem['retailPrice'].toString()),
+          'initial_wholesale_price':
+              stockItem['initialWholesalePrice'] != null &&
+                      stockItem['initialWholesalePrice'].toString().isNotEmpty
+                  ? double.parse(stockItem['initialWholesalePrice'].toString())
+                  : 0.0,
           'retail_price_tax': stockItem['retailPriceTax']?.toString(),
           'wholesale_price_tax': stockItem['wholesalePriceTax']?.toString(),
         });
       }
-      
+
       debugPrint('📦 CALLING BULK STOCK API WITH ${products.length} PRODUCTS');
-      
+
       // Call bulk API
       final result = await addBulkProductStockAPI(
         accessToken: accessToken,
@@ -473,19 +497,19 @@ class StockProvider extends ChangeNotifier {
         storeId: storeId.toString(),
         purchaseDate: purchaseDate.toString(),
       );
-      
+
       if (result is Map<String, dynamic> && result['status'] == 'success') {
         debugPrint('✅ BULK API CALL SUCCESSFUL');
-        
+
         // Mark all items as successful
         for (int i = 0; i < _pendingStockItems.length; i++) {
           final stockItem = _pendingStockItems[i];
           final localId = stockItem['localId'];
-          
+
           stockItem['status'] = 'success';
           stockItem['apiResponse'] = result;
           successfulItems.add(stockItem);
-          
+
           results.add({
             'localId': localId,
             'status': 'success',
@@ -494,25 +518,26 @@ class StockProvider extends ChangeNotifier {
             'itemIndex': i + 1,
           });
         }
-        
-        debugPrint('✅ ALL ${successfulItems.length} ITEMS MARKED AS SUCCESSFUL');
+
+        debugPrint(
+            '✅ ALL ${successfulItems.length} ITEMS MARKED AS SUCCESSFUL');
       } else {
         debugPrint('❌ BULK API CALL FAILED');
-        
+
         // Mark all items as failed
         String errorMessage = 'Failed to add stock items';
         if (result is Map<String, dynamic> && result['message'] != null) {
           errorMessage = result['message'].toString();
         }
-        
+
         for (int i = 0; i < _pendingStockItems.length; i++) {
           final stockItem = _pendingStockItems[i];
           final localId = stockItem['localId'];
-          
+
           stockItem['status'] = 'failed';
           stockItem['apiResponse'] = result;
           failedItems.add(stockItem);
-          
+
           results.add({
             'localId': localId,
             'status': 'failed',
@@ -521,17 +546,18 @@ class StockProvider extends ChangeNotifier {
             'itemIndex': i + 1,
           });
         }
-        
-        debugPrint('❌ ALL ${failedItems.length} ITEMS MARKED AS FAILED: $errorMessage');
+
+        debugPrint(
+            '❌ ALL ${failedItems.length} ITEMS MARKED AS FAILED: $errorMessage');
       }
-      
+
       // Move only successful items to processed list, keep failed items in pending
       _processedStockItems.addAll(successfulItems);
-      
+
       // Remove only successful items from pending list
-      _pendingStockItems.removeWhere((item) => 
-        successfulItems.any((successItem) => successItem['localId'] == item['localId']));
-      
+      _pendingStockItems.removeWhere((item) => successfulItems
+          .any((successItem) => successItem['localId'] == item['localId']));
+
       // Reset failed items status back to 'pending' so they can be retried
       for (var failedItem in failedItems) {
         final pendingItem = _pendingStockItems.firstWhere(
@@ -540,18 +566,19 @@ class StockProvider extends ChangeNotifier {
         );
         pendingItem['status'] = 'pending';
       }
-      
+
       debugPrint('🏁 BATCH PROCESSING COMPLETED');
       debugPrint('   - Successful: ${successfulItems.length}');
       debugPrint('   - Failed: ${failedItems.length}');
       debugPrint('   - Total: ${results.length}');
       debugPrint('   - Remaining in pending: ${_pendingStockItems.length}');
-      
-      String message = 'Batch processing completed: ${successfulItems.length} successful, ${failedItems.length} failed';
+
+      String message =
+          'Batch processing completed: ${successfulItems.length} successful, ${failedItems.length} failed';
       if (failedItems.isNotEmpty) {
         message += '. Failed items remain in pending list for retry.';
       }
-      
+
       return {
         'success': successfulItems.isNotEmpty,
         'message': message,
@@ -565,7 +592,6 @@ class StockProvider extends ChangeNotifier {
           'remainingPending': _pendingStockItems.length,
         }
       };
-      
     } catch (e) {
       debugPrint('💥 BATCH PROCESSING EXCEPTION: $e');
       return {
@@ -597,7 +623,8 @@ class StockProvider extends ChangeNotifier {
       'purchase_date': purchaseDate,
     };
 
-    debugPrint('📦 ADD BULK STOCK API REQUEST BODY: ${json.encode(apiBodyData)}');
+    debugPrint(
+        '📦 ADD BULK STOCK API REQUEST BODY: ${json.encode(apiBodyData)}');
 
     final url = Uri.parse(APPUrl.addBulkStock);
     // Get API key from SharedPreferences
@@ -620,7 +647,8 @@ class StockProvider extends ChangeNotifier {
 
         // Note: Local stock will be updated via sync functionality
         // This ensures data consistency with the server
-        debugPrint("✅ Bulk stock added successfully - will be synced via SyncProvider");
+        debugPrint(
+            "✅ Bulk stock added successfully - will be synced via SyncProvider");
 
         return result;
       } else {
@@ -677,9 +705,8 @@ class StockProvider extends ChangeNotifier {
       'retail_price': double.parse(retailPrice),
       'purchase_rate': double.parse(purchaseRate),
       'mrp': mrp.isNotEmpty ? double.parse(mrp) : double.parse(retailPrice),
-      'wholesale_price': wholesalePrice.isNotEmpty
-          ? double.parse(wholesalePrice)
-          : double.parse(retailPrice),
+      'wholesale_price':
+          wholesalePrice.isNotEmpty ? double.parse(wholesalePrice) : 0.0,
       'unit': unit,
       'supplier_id': int.parse(supplierId),
       'store_id': int.parse(storeId),
@@ -701,7 +728,7 @@ class StockProvider extends ChangeNotifier {
       'initial_retail_price': double.parse(initialRetailPrice),
       'initial_wholesale_price': initialWholesalePrice.isNotEmpty
           ? double.parse(initialWholesalePrice)
-          : double.parse(retailPrice),
+          : 0.0,
       'retail_price_tax': retailPriceTax,
       'wholesale_price_tax': wholesalePriceTax,
     };
@@ -729,7 +756,8 @@ class StockProvider extends ChangeNotifier {
 
         // Note: Local stock will be updated via sync functionality
         // This ensures data consistency with the server
-        debugPrint("✅ Stock added successfully - will be synced via SyncProvider");
+        debugPrint(
+            "✅ Stock added successfully - will be synced via SyncProvider");
 
         return result;
       } else {
@@ -853,11 +881,18 @@ class StockProvider extends ChangeNotifier {
                 stock_models.ListStockModel.fromJson(jsonData);
 
             // Debug: Log barcode data for first few items
-            if (listStockModel.data != null && listStockModel.data!.isNotEmpty) {
+            if (listStockModel.data != null &&
+                listStockModel.data!.isNotEmpty) {
               debugPrint('🔍 BARCODE DEBUG - First 3 stock items:');
-              for (int i = 0; i < (listStockModel.data!.length > 3 ? 3 : listStockModel.data!.length); i++) {
+              for (int i = 0;
+                  i <
+                      (listStockModel.data!.length > 3
+                          ? 3
+                          : listStockModel.data!.length);
+                  i++) {
                 final stock = listStockModel.data![i];
-                debugPrint('  Item $i: Product=${stock.productName}, Barcode=${stock.barCode}');
+                debugPrint(
+                    '  Item $i: Product=${stock.productName}, Barcode=${stock.barCode}');
               }
             }
 
@@ -966,20 +1001,16 @@ class StockProvider extends ChangeNotifier {
       debugPrint('🔍 BARCODE FILTER DEBUG:');
       debugPrint('  Filter value: "$filterBarcode"');
       debugPrint('  Items before filter: ${filteredList.length}');
-      
-      filteredList = filteredList
-          .where((stock) {
-            final matches = stock.barCode != null &&
-                stock.barCode!
-                    .toLowerCase()
-                    .contains(filterBarcode.toLowerCase());
-            if (stock.barCode != null) {
-              debugPrint('  Checking: "${stock.barCode}" -> $matches');
-            }
-            return matches;
-          })
-          .toList();
-      
+
+      filteredList = filteredList.where((stock) {
+        final matches = stock.barCode != null &&
+            stock.barCode!.toLowerCase().contains(filterBarcode.toLowerCase());
+        if (stock.barCode != null) {
+          debugPrint('  Checking: "${stock.barCode}" -> $matches');
+        }
+        return matches;
+      }).toList();
+
       debugPrint('  Items after filter: ${filteredList.length}');
     }
 
@@ -1143,11 +1174,11 @@ class StockProvider extends ChangeNotifier {
   }
 
   //          *********************** SYNC STOCK DATA ***************************************************
-  
+
   /// Sync stock data from server - fetches latest stock quantities and details
   Future<Map<String, dynamic>> syncStockData(String accessToken) async {
     debugPrint('🔄 STARTING DEDICATED STOCK DATA SYNC');
-    
+
     try {
       // Use existing stock listing API but with all data
       await listStockAPI(
@@ -1156,9 +1187,9 @@ class StockProvider extends ChangeNotifier {
         loadAll: true, // Get large batch for sync
         filterName: null,
       );
-      
+
       debugPrint('✅ Stock sync API successful');
-      
+
       return {
         'status': 'success',
         'message': 'Stock data synced successfully',
@@ -1172,7 +1203,7 @@ class StockProvider extends ChangeNotifier {
       };
     }
   }
-  
+
   /// Get stock sync summary for reporting
   Map<String, dynamic> getStockSyncSummary() {
     return {
@@ -1182,7 +1213,7 @@ class StockProvider extends ChangeNotifier {
   }
 
   //          *********************** CLEAR STOCK DATA ***************************************************
-  
+
   /// Clear all stock data
   void clearStockData() {
     _listStockModelDataList = [];

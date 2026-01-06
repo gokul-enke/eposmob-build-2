@@ -101,7 +101,7 @@ class StockItem {
     this.selectedRack,
     this.isSuccessfullyAdded = false,
     this.apiResponse,
-    this.taxInclude = false,
+    this.taxInclude = true,
     this.retailPriceTax = '0.00',
     this.wholesalePriceTax = '0.00',
     this.calculatedTaxData,
@@ -474,7 +474,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       batchNumber: map['batchNumber'] ?? '',
       selectedUnit: map['selectedUnit'],
       selectedRack: map['selectedRack'],
-      taxInclude: map['taxInclude'] ?? false,
+      taxInclude: map['taxInclude'] ?? true,
     );
 
     // Try to restore product data
