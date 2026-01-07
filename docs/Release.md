@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.356
-git push build v0.1.0-dev.356
+git tag v0.1.0-dev.357
+git push build v0.1.0-dev.357
 
 souq build
 git tag v0.1.0-dev.334
@@ -22,3 +22,6 @@ salesexecutive2@cyclopedia.in
 FUNZCART_nCRY4bH0ASOtZWqKsDl7xabUTcc7gaft
 salesexecutive1@funzcart.in
 123456
+kitchenmaster@funzcart.in
+attender@funzcart.in
+restaurantsales@funzcart.in
