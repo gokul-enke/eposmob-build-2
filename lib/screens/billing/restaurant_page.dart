@@ -26,6 +26,10 @@ import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
+import 'package:pos_machine/screens/print/print_kot.dart';
+import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/models/order_details.dart';
 
 class RestaurantPage extends StatefulWidget {
   const RestaurantPage({super.key});
@@ -47,6 +51,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       GlobalKey<_OrderPanelState>(); // Key to access OrderPanel methods
   bool _isLoadingSendToKitchen =
       false; // Loading state for Send to Kitchen button
+  bool _isLoadingPrint = false; // Loading state for Print button
 
   // Mobile navigation state
   MobileView _currentMobileView = MobileView.tables;
@@ -179,6 +184,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onSendToKitchen:
                 _sendOrderToKitchenWithLoading, // Use wrapper method
             onNewOrder: _handleNewOrder, // Pass the new callback
+            onPrintOrder: _printOrderWithLoading, // Pass the print callback
             onOrderSelected: (order) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
@@ -193,6 +199,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             refreshCounter: _refreshCounter, // Pass refresh counter
             isLoadingSendToKitchen:
                 _isLoadingSendToKitchen, // Pass loading state
+            isLoadingPrint: _isLoadingPrint, // Pass print loading state
           ),
         ),
       ],
@@ -348,6 +355,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             screenSize: screenSize,
             onSendToKitchen: _sendOrderToKitchenWithLoading,
             onNewOrder: _handleNewOrder,
+            onPrintOrder: _printOrderWithLoading,
             onOrderSelected: (order) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
@@ -360,6 +368,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             selectedOrderFromParent: _selectedOrderFromOrderPanel,
             refreshCounter: _refreshCounter,
             isLoadingSendToKitchen: _isLoadingSendToKitchen,
+            isLoadingPrint: _isLoadingPrint,
           ),
         ),
       ],
@@ -717,6 +726,161 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (mounted) {
         setState(() {
           _isLoadingSendToKitchen = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _printOrderWithLoading() async {
+    if (_activeTableId == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a table first to print the order',
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoadingPrint = true;
+    });
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      // Get cart data BEFORE sending (it will be cleared after)
+      final cartItems = localProductProvider.getCartItems();
+
+      if (cartItems.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'No items in cart to print',
+        );
+        return;
+      }
+
+      // Capture data for printing BEFORE clearing
+      final tableName = _selectedTableName ?? 'Table $_activeTableId';
+      final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
+      final total = localProductProvider.getRoundedTotal(context);
+
+      // Build print items BEFORE clearing cart
+      List<Map<String, dynamic>> printItems = [];
+      for (var item in cartItems) {
+        printItems.add({
+          'productName': item.product.productName ?? '',
+          'quantity': item.quantity.toString(),
+          'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
+          'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+          'mrp': item.mrp?.toStringAsFixed(2) ??
+              item.price?.toStringAsFixed(2) ??
+              '0.00',
+        });
+      }
+
+      // Convert local cart items to API format
+      List<Map<String, dynamic>> items = [];
+      for (var item in cartItems) {
+        items.add({
+          'product_id': item.product.productId,
+          'quantity': item.quantity,
+          'price': item.price?.toString() ?? '0',
+          'mrp': item.mrp?.toString() ?? '0',
+          'stock_id': item.selectedStock?.id,
+        });
+      }
+
+      // Call the addToOrderAPI with status: "new"
+      debugPrint('➡️ Print: Calling CartProvider.addToOrderAPI');
+      final response = await cartProvider.addToOrderAPI(
+        items: items,
+        cartIds: 0,
+        accessToken: authModel.token ?? "",
+        transactionId: "",
+        totalPrice: total.toStringAsFixed(2),
+        customerId: authModel.userId ?? 1,
+        customerPhone: null,
+        paymentMethod: null,
+        paidAmount: null,
+        paymentMethods: [],
+        paidMethods: [],
+        balanceAmount: "0",
+        couponId: null,
+        comment: currentComment.isNotEmpty
+            ? currentComment
+            : "Order for Table ${_selectedTableName ?? _activeTableId}",
+        deliveryMethodId:
+            Provider.of<DeliveryMethodsProvider>(context, listen: false)
+                    .defaultDeliveryMethod
+                    ?.id ??
+                "11",
+        carNumber: null,
+        status: "new",
+        deliveryDate: null,
+        deliveryTime: null,
+        tableId: _activeTableId,
+      );
+
+      if (response["order_id"] != null) {
+        // Get order number from API response
+        final orderNumber = response["order_number"]?.toString() ??
+            'ORD-${response["order_id"]}';
+
+        showScaffold(
+          context: context,
+          message: 'Order sent to kitchen! Order: $orderNumber',
+        );
+
+        // Clear the local cart after successful submission
+        debugPrint('🗑️ Clearing local cart after successful kitchen order');
+        localProductProvider.clearCart();
+
+        // If a local draft was loaded, remove it after successful send
+        _orderPanelKey.currentState?.deleteLoadedDraftIfAny();
+
+        // Refresh saved orders
+        if (mounted && _activeTableId != null) {
+          _orderPanelKey.currentState?.refreshSavedOrders();
+        }
+
+        // Get current time for KOT
+        final now = DateTime.now();
+        final orderTime =
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+        // Navigate to simple KOT print page
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => KotPrintPage(
+                orderNumber: orderNumber,
+                tableName: tableName,
+                orderTime: orderTime,
+                items: printItems,
+                comment: currentComment.isNotEmpty ? currentComment : null,
+              ),
+            ),
+          );
+        }
+      } else {
+        showScaffoldError(
+          context: context,
+          message:
+              'Failed to send order: ${response["message"] ?? "Unknown error"}',
+        );
+      }
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Failed to print order: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingPrint = false;
         });
       }
     }
@@ -2265,12 +2429,15 @@ class _OrderPanel extends StatefulWidget {
   final Size screenSize;
   final VoidCallback onSendToKitchen; // New callback for send to kitchen
   final VoidCallback onNewOrder; // New callback for new order
+  final VoidCallback
+      onPrintOrder; // New callback for print order (send + print)
   final Function(dynamic)
       onOrderSelected; // New callback to update selected order
   final dynamic
       selectedOrderFromParent; // Add this to track parent's selected order
   final int? refreshCounter; // Add refresh counter
   final bool isLoadingSendToKitchen; // Loading state for Send to Kitchen button
+  final bool isLoadingPrint; // Loading state for Print button
 
   const _OrderPanel({
     super.key, // Add key parameter
@@ -2279,10 +2446,12 @@ class _OrderPanel extends StatefulWidget {
     required this.screenSize,
     required this.onSendToKitchen, // Make it required
     required this.onNewOrder, // Make it required
+    required this.onPrintOrder, // Make it required
     required this.onOrderSelected, // Make it required
     this.selectedOrderFromParent, // Add this parameter
     this.refreshCounter, // Add refresh counter parameter
     this.isLoadingSendToKitchen = false, // Add loading state parameter
+    this.isLoadingPrint = false, // Add loading state parameter for print
   });
 
   @override
@@ -4568,29 +4737,56 @@ class _OrderPanelState extends State<_OrderPanel> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${order['order_number']}',
-                    style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        widget.isCompact ? FontSize.s13 : FontSize.s15,
-                        0.21,
-                        const Color(0xFF1E293B)),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF059669).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  Expanded(
                     child: Text(
-                      '$servedItems/$totalItems',
+                      '${order['order_number']}',
                       style: buildCustomStyle(
                           FontWeightManager.semiBold,
-                          widget.isCompact ? FontSize.s11 : FontSize.s13,
+                          widget.isCompact ? FontSize.s13 : FontSize.s15,
                           0.21,
-                          const Color(0xFF059669)),
+                          const Color(0xFF1E293B)),
                     ),
+                  ),
+                  Row(
+                    children: [
+                      // Print KOT button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _printSavedOrderKot(order, cartItems),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.print,
+                              size: widget.isCompact ? 16 : 18,
+                              color: const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$servedItems/$totalItems',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s11 : FontSize.s13,
+                              0.21,
+                              const Color(0xFF059669)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -4635,6 +4831,89 @@ class _OrderPanelState extends State<_OrderPanel> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Print KOT for a saved order
+  void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
+    // Get order number
+    final orderNumber = order['order_number']?.toString() ?? 'Unknown';
+
+    // Get table name
+    String tableName = 'Unknown';
+    if (order['orderProps'] != null && order['orderProps']['TABLE'] != null) {
+      tableName = order['orderProps']['TABLE'].toString().replaceAll('"', '');
+    }
+
+    // Get current time
+    final now = DateTime.now();
+    final orderTime =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    // Build items list for KOT
+    // Build items list for KOT
+    List<Map<String, dynamic>> printItems = [];
+    for (var item in cartItems) {
+      String productName = 'Unknown';
+      String quantity = '1';
+      String unitPrice = '0.00';
+      String mrp = '0.00';
+
+      if (item is Map<String, dynamic>) {
+        // Try different keys for product name
+        if (item['product'] != null &&
+            item['product']['product_name'] != null) {
+          productName = item['product']['product_name'].toString();
+        } else if (item['product_name'] != null) {
+          productName = item['product_name'].toString();
+        } else if (item['name'] != null) {
+          productName = item['name'].toString();
+        }
+
+        // Get quantity
+        quantity = (item['quantity'] ?? item['qty'] ?? 1).toString();
+
+        // Get Price and MRP
+        double priceVal = double.tryParse((item['unit_price'] ??
+                    item['price'] ??
+                    item['product_price'] ??
+                    0)
+                .toString()) ??
+            0.0;
+        unitPrice = priceVal.toStringAsFixed(2);
+
+        double mrpVal =
+            double.tryParse((item['mrp'] ?? priceVal).toString()) ?? priceVal;
+        mrp = mrpVal.toStringAsFixed(2);
+      }
+
+      printItems.add({
+        'productName': productName,
+        'quantity': quantity,
+        'unitPrice': unitPrice,
+        'mrp': mrp,
+        'rate': unitPrice,
+      });
+    }
+
+    // Get comment
+    String? comment;
+    if (order['comment'] != null && order['comment'].toString().isNotEmpty) {
+      comment = order['comment'].toString();
+    }
+
+    // Navigate to KOT print page
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KotPrintPage(
+          orderNumber: orderNumber,
+          tableName: tableName,
+          orderTime: orderTime,
+          items: printItems,
+          comment: comment,
         ),
       ),
     );
@@ -4704,25 +4983,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Widget _buildOrderDetailsView() {
-    // Get cart items from the saved order - handle multiple possible structures
-    List<dynamic> cartItems = [];
-    if (_selectedOrder['cart_items'] != null) {
-      if (_selectedOrder['cart_items']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items']['cart_items'];
-      } else if (_selectedOrder['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items'];
-      }
-    } else if (_selectedOrder['cart'] != null) {
-      if (_selectedOrder['cart']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart']['cart_items'];
-      } else if (_selectedOrder['cart']['items'] is List) {
-        cartItems = _selectedOrder['cart']['items'];
-      }
-    } else if (_selectedOrder['items'] is List) {
-      cartItems = _selectedOrder['items'];
-    } else if (_selectedOrder['order_items'] is List) {
-      cartItems = _selectedOrder['order_items'];
-    }
+    // Get cart items from the saved order using helper
+    List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
 
     // Calculate current total from cart items (dynamic calculation)
     double total = 0.0;
@@ -5234,96 +5496,10 @@ class _OrderPanelState extends State<_OrderPanel> {
             // ),
             // const SizedBox(height: 12),
             // Second row: Back and Update Order buttons
+            // Row: Confirm and Print buttons
             Row(
               children: [
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        setState(() => _selectedOrder = null);
-                        widget.onOrderSelected(null);
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: const Color(0xFF64748B),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Back',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                0.21,
-                                const Color(0xFF64748B)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCommentDialog(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          border: Border.all(
-                            color: Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _orderComment.isNotEmpty
-                                    ? Icons.check_circle
-                                    : Icons.comment,
-                                color: _orderComment.isNotEmpty
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Comment',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s13
-                                          : FontSize.s14,
-                                      0.21,
-                                      const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
+                // 1. Confirm Button (Left Side)
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
@@ -5389,6 +5565,68 @@ class _OrderPanelState extends State<_OrderPanel> {
                                     ),
                                   ],
                                 ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 2. Print Button (Right Side)
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: (cartItems.isEmpty ||
+                              !allItemsServed ||
+                              _isLoadingConfirm)
+                          ? null
+                          : () => _confirmOrderAndPrintBill(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: (cartItems.isEmpty ||
+                                    !allItemsServed ||
+                                    _isLoadingConfirm)
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF2563EB),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.print,
+                                color: (cartItems.isEmpty ||
+                                        !allItemsServed ||
+                                        _isLoadingConfirm)
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF2563EB),
+                                size: widget.isCompact ? 16 : 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Print',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    widget.isCompact
+                                        ? FontSize.s13
+                                        : FontSize.s14,
+                                    0.21,
+                                    (cartItems.isEmpty ||
+                                            !allItemsServed ||
+                                            _isLoadingConfirm)
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF2563EB)),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -5746,6 +5984,134 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
+  List<dynamic> _getCartItemsFromOrder(dynamic order) {
+    if (order == null) return [];
+    if (order['cart_items'] != null) {
+      if (order['cart_items']['cart_items'] is List) {
+        return order['cart_items']['cart_items'];
+      } else if (order['cart_items'] is List) {
+        return order['cart_items'];
+      }
+    } else if (order['cart'] != null) {
+      if (order['cart']['cart_items'] is List) {
+        return order['cart']['cart_items'];
+      } else if (order['cart']['items'] is List) {
+        return order['cart']['items'];
+      }
+    } else if (order['items'] is List) {
+      return order['items'];
+    } else if (order['order_items'] is List) {
+      return order['order_items'];
+    }
+    return [];
+  }
+
+  Future<void> _confirmOrderAndPrintBill() async {
+    if (_selectedOrder == null) return;
+
+    // Capture order data before confirmation (in case it cleans up)
+    final capturedOrder = _selectedOrder;
+
+    // Confirm the order first, but don't close the view yet
+    final success = await _confirmOrder(closeOnSuccess: false);
+
+    if (success) {
+      try {
+        final orderNumber = capturedOrder['order_number']?.toString();
+        if (orderNumber == null) {
+          throw Exception("Order number not found");
+        }
+
+        final authModel = Provider.of<AuthModel>(context, listen: false);
+        final accessToken = authModel.token;
+
+        debugPrint(
+            "🔍 Fetching order details for bill print - Order $orderNumber");
+        final response = await SalesProvider().listOrderDetails(
+          context,
+          orderNumber,
+          accessToken ?? "",
+        );
+
+        if (response != null) {
+          OrderDetailsModel orderDetails = OrderDetailsModel.fromJson(response);
+
+          String? formattedTotal =
+              orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
+                  orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+          String? savedTotal =
+              orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
+
+          String storeName = orderDetails.data!.cart!.storeName ?? "";
+          String orderDate = orderDetails.data!.orderDate ?? "";
+
+          // Extract customer details
+          String? customerName = orderDetails.data?.customerDetails?.name;
+          String? customerPhone = orderDetails.data?.customerDetails?.phone;
+          String? customerEmail = orderDetails.data?.customerDetails?.email;
+          String? customerAddress =
+              orderDetails.data?.customerDetails?.address?.join(', ');
+
+          // Calculate customer balance for print
+          double? oldBalance = _selectedCustomer?.balance;
+          double totalPaid = 0.0;
+          if (_isCashSelected) totalPaid += double.tryParse(_cashAmount) ?? 0.0;
+          if (_isCardSelected) totalPaid += double.tryParse(_cardAmount) ?? 0.0;
+          if (_isUpiSelected) totalPaid += double.tryParse(_upiAmount) ?? 0.0;
+
+          double? currentBalance;
+          if (oldBalance != null) {
+            double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
+            currentBalance = oldBalance - (cartTotal - totalPaid);
+          }
+
+          if (mounted) {
+            // Navigate to PrintPage
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PrintPage(
+                  storeName: storeName,
+                  cartItems: orderDetails.data!.cart!.cartItems!,
+                  formattedTotal: formattedTotal!,
+                  savedTotal: savedTotal!,
+                  discountAmount:
+                      orderDetails.data!.priceSummary?.discount?.toString() ??
+                          "0.00",
+                  orderDate: orderDate,
+                  orderNumber: orderDetails.data!.orderNumber ?? "",
+                  customerName: customerName,
+                  customerPhone: customerPhone,
+                  customerEmail: customerEmail,
+                  customerAddress: customerAddress,
+                  customerOldBalance: oldBalance,
+                  customerCurrentBalance: currentBalance,
+                  paidAmount: totalPaid > 0 ? totalPaid : null,
+                ),
+              ),
+            );
+
+            // After returning from print or successful navigation, cleanup
+            if (mounted) {
+              setState(() => _selectedOrder = null);
+              widget.onOrderSelected(null);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("❌ Error printing bill: $e");
+        showScaffoldError(
+            context: context, message: "Failed to print bill: $e");
+
+        // Even if print fails, the order was confirmed, so cleanup
+        if (mounted) {
+          setState(() => _selectedOrder = null);
+          widget.onOrderSelected(null);
+        }
+      }
+    }
+  }
+
   Future<void> _refreshSelectedOrderAfterCartUpdate() async {
     if (_selectedOrder == null) return;
 
@@ -5803,13 +6169,13 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-  Future<void> _confirmOrder() async {
+  Future<bool> _confirmOrder({bool closeOnSuccess = true}) async {
     if (_selectedOrder == null) {
       showScaffoldError(
         context: context,
         message: 'No order selected to confirm',
       );
-      return;
+      return false;
     }
 
     // Set loading state
@@ -5856,7 +6222,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             _isLoadingConfirm = false;
           });
         }
-        return;
+        return false;
       }
 
       // Validate payment method selection (mandatory)
@@ -5871,7 +6237,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           });
         }
         _showPaymentMethodModal();
-        return;
+        return false;
       }
 
       // Prepare payment method data
@@ -6052,15 +6418,19 @@ class _OrderPanelState extends State<_OrderPanel> {
         await Future.delayed(const Duration(milliseconds: 500));
         await _fetchSavedOrders();
 
-        // Go back to orders list
-        setState(() => _selectedOrder = null);
-        widget.onOrderSelected(null);
+        if (closeOnSuccess) {
+          // Go back to orders list
+          setState(() => _selectedOrder = null);
+          widget.onOrderSelected(null);
+        }
+        return true;
       } else {
         showScaffoldError(
           context: context,
           message:
               'Failed to confirm order: ${response?['message'] ?? 'Unknown error'}',
         );
+        return false;
       }
     } catch (e) {
       debugPrint('❌ Error confirming order: ${e.toString()}');
@@ -6068,6 +6438,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         context: context,
         message: 'Failed to confirm order: ${e.toString()}',
       );
+      return false;
     } finally {
       // Clear loading state
       if (mounted) {
@@ -6325,9 +6696,10 @@ class _OrderPanelState extends State<_OrderPanel> {
               ),
             ),
             const SizedBox(height: 12),
-            // Bottom row: New Order, Save (Pending), and Send to Kitchen
+            // Bottom row: New, Save, Sent, Print (4 buttons)
             Row(
               children: [
+                // New button
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
@@ -6350,7 +6722,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                             'New',
                             style: buildCustomStyle(
                                 FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                widget.isCompact ? FontSize.s12 : FontSize.s13,
                                 0.21,
                                 const Color(0xFF64748B)),
                           ),
@@ -6359,8 +6731,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                // Save (Pending) button
+                const SizedBox(width: 8),
+                // Save button
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
@@ -6397,17 +6769,17 @@ class _OrderPanelState extends State<_OrderPanel> {
                               Icon(
                                 Icons.save,
                                 color: Colors.white,
-                                size: widget.isCompact ? 16 : 18,
+                                size: widget.isCompact ? 14 : 16,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
                                   'Save',
                                   style: buildCustomStyle(
                                       FontWeightManager.semiBold,
                                       widget.isCompact
-                                          ? FontSize.s13
-                                          : FontSize.s14,
+                                          ? FontSize.s12
+                                          : FontSize.s13,
                                       0.21,
                                       Colors.white),
                                   overflow: TextOverflow.ellipsis,
@@ -6420,9 +6792,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                // Sent button (renamed from Send to Kitchen)
                 Expanded(
-                  flex: 2,
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -6469,16 +6841,83 @@ class _OrderPanelState extends State<_OrderPanel> {
                                     Icon(
                                       Icons.send,
                                       color: Colors.white,
-                                      size: widget.isCompact ? 16 : 18,
+                                      size: widget.isCompact ? 14 : 16,
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      'Send to Kitchen',
+                                      'Sent',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
+                                              ? FontSize.s12
+                                              : FontSize.s13,
+                                          0.21,
+                                          Colors.white),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Print button (new)
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: (cartItems.isEmpty || widget.isLoadingPrint)
+                          ? null
+                          : () => widget.onPrintOrder(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: (cartItems.isEmpty || widget.isLoadingPrint)
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow:
+                              (cartItems.isNotEmpty && !widget.isLoadingPrint)
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF2563EB)
+                                            .withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : [],
+                        ),
+                        child: Center(
+                          child: widget.isLoadingPrint
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 20,
+                                  height: widget.isCompact ? 16 : 20,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.print,
+                                      color: Colors.white,
+                                      size: widget.isCompact ? 14 : 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Print',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          widget.isCompact
+                                              ? FontSize.s12
+                                              : FontSize.s13,
                                           0.21,
                                           Colors.white),
                                     ),

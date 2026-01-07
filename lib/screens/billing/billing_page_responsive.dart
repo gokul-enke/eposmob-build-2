@@ -37,7 +37,7 @@ class _BillingPageResponsiveState extends State<BillingPageResponsive> {
     }
 
     // Show BillingPageRestaurant for restaurant_sales role, otherwise show BillingPage
-    if (userRole == 'restaurant_sales') {
+    if (userRole == 'attender' || userRole == 'restaurant_sales') {
       return const BillingPageRestaurant();
     }
     return const BillingPage();
