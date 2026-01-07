@@ -286,7 +286,9 @@ class _SideMenuState extends State<SideMenu> {
               : const SizedBox.shrink(),
 
           // 1. HOME (Index: 46)
-          (userRole == 'restaurant_sales' || userRole == 'attender')
+          (userRole == 'restaurant_sales'
+          //  || userRole == 'attender'
+          )
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission = roleProvider
@@ -336,7 +338,9 @@ class _SideMenuState extends State<SideMenu> {
               : const SizedBox.shrink(),
 
           // 3. RESTAURANT (Index: 55) - Only for attender role
-          userRole == 'attender'
+           (userRole == 'restaurant_sales'
+           || userRole == 'attender'
+          )
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission = roleProvider
@@ -361,7 +365,7 @@ class _SideMenuState extends State<SideMenu> {
           // 4. KITCHEN MASTER (Index: 56) - Only for kitchen_master role
           (userRole == 'restaurant_sales' ||
                   userRole == 'kitchen_master' 
-                  || userRole == 'attender'
+                  // || userRole == 'attender'
                   )
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
