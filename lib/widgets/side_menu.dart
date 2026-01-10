@@ -287,8 +287,8 @@ class _SideMenuState extends State<SideMenu> {
 
           // 1. HOME (Index: 46)
           (userRole == 'restaurant_sales'
-          //  || userRole == 'attender'
-          )
+              //  || userRole == 'attender'
+              )
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission = roleProvider
@@ -338,9 +338,7 @@ class _SideMenuState extends State<SideMenu> {
               : const SizedBox.shrink(),
 
           // 3. RESTAURANT (Index: 55) - Only for attender role
-           (userRole == 'restaurant_sales'
-           || userRole == 'attender'
-          )
+          (userRole == 'restaurant_sales' || userRole == 'attender')
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission = roleProvider
@@ -363,10 +361,9 @@ class _SideMenuState extends State<SideMenu> {
               : const SizedBox.shrink(),
 
           // 4. KITCHEN MASTER (Index: 56) - Only for kitchen_master role
-          (userRole == 'restaurant_sales' ||
-                  userRole == 'kitchen_master' 
-                  // || userRole == 'attender'
-                  )
+          (userRole == 'restaurant_sales' || userRole == 'kitchen_master'
+              // || userRole == 'attender'
+              )
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission = roleProvider
@@ -546,13 +543,19 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle3: () {
                       sideBarController.index.value = 67;
                     },
+                    onTapTitle4: () {
+                      sideBarController.index.value = 77;
+                    },
                     listTitle1: "Sales Executive Reports",
                     listTitle2: "Customer Transactions Reports",
                     listTitle3: "Supplier Transactions Reports",
+                    listTitle4: "Non-Stock Report",
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
                     showTitle2: hasCustomerTransactionsPermission,
                     showTitle3: hasSupplierTransactionsPermission,
+                    showTitle4:
+                        true, // Show for now, add specific permission if needed
                     icon: fa.FontAwesomeIcons.chartPie,
                     title: 'Reports',
                     onTap: () {
@@ -566,7 +569,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 65 ||
                         sideBarController.index.value == 66 ||
                         sideBarController.index.value == 67 ||
-                        sideBarController.index.value == 68),
+                        sideBarController.index.value == 68 ||
+                        sideBarController.index.value == 77),
               );
             },
           ),

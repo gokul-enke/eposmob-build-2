@@ -210,4 +210,5 @@ class APPUrl {
       '$baseURL/api/v1/dashboard/supplier-transactions-graph';
   static String supplierCreditBalance =
       '$baseURL/api/v1/dashboard/supplier-credit-balance';
+  static String nonStockReportUrl = '$baseURL/api/v1/non-stock-report';
 }

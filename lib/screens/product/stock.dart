@@ -694,17 +694,26 @@ class _AddStockScreenState extends State<AddStockScreen> {
     );
   }
 
-  Widget _buildTableCell(String text) {
+  Widget _buildTableCell(String text, {Color? textColor, Color? bgColor}) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.13,
-          Colors.black,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: bgColor ?? Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.13,
+              textColor ?? Colors.black,
+            ),
+          ),
         ),
       ),
     );
@@ -1222,7 +1231,27 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                                 .purchaseRate ??
                                                             "N/A"),
                                                         _buildTableCell(
-                                                            '${stock.qty}'),
+                                                          '${stock.qty}',
+                                                          textColor:
+                                                              (stock.qty ??
+                                                                          0) <=
+                                                                      10
+                                                                  ? Colors.white
+                                                                  : Colors
+                                                                      .black,
+                                                          bgColor: (stock.qty ??
+                                                                      0) <=
+                                                                  5
+                                                              ? ColorManager
+                                                                  .kRed
+                                                              : (stock.qty ??
+                                                                          0) <=
+                                                                      10
+                                                                  ? ColorManager
+                                                                      .kOrange
+                                                                  : Colors
+                                                                      .transparent,
+                                                        ),
                                                         _buildTableCell(
                                                             '${stock.unit}'),
                                                         _buildTableCell(

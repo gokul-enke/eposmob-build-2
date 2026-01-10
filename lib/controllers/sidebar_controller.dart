@@ -44,6 +44,7 @@ import 'package:pos_machine/screens/reports/product_sales_report/product_sales_r
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
+import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/supplier_profile/open_supplier_profile.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
@@ -169,5 +170,6 @@ class SideBarController extends GetxController {
     TransactionScreen(), // 74 Supplier Transactions (alias for Party Accounts)
     SupplierVoucherListScreen(), // 75 Supplier Voucher List (alias for Transactions)
     CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
+    NonStockReportScreen(), // 77 Non-Stock Report
   ];
 }
