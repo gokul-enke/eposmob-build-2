@@ -1248,7 +1248,7 @@ class LocalProductProvider extends ChangeNotifier {
         final targetIndex =
             !isIncreamentUsingCompactQuantityControl! ? 0 : index;
         _cartItems[targetIndex].taxRate = taxRate;
-        _cartItems[targetIndex].taxAmount = (price * taxRate) / 100;
+        _cartItems[targetIndex].taxAmount = (price * taxRate) / (100 + taxRate);
       }
     } else {
       debugPrint("🆕 Adding new product to cart");
@@ -1279,7 +1279,7 @@ class LocalProductProvider extends ChangeNotifier {
 
       // Calculate initial tax
       final double taxRate = product.totalTaxRate;
-      final double calculatedTax = (productPrice * taxRate) / 100;
+      final double calculatedTax = (productPrice * taxRate) / (100 + taxRate);
 
       // Insert at the beginning of the array instead of appending
       _cartItems.insert(
@@ -1353,7 +1353,7 @@ class LocalProductProvider extends ChangeNotifier {
 
       // 🔧 FIX: Recalculate taxAmount when price changes
       final double taxRate = _cartItems[index].taxRate ?? 0.0;
-      _cartItems[index].taxAmount = (newPrice * taxRate) / 100;
+      _cartItems[index].taxAmount = (newPrice * taxRate) / (100 + taxRate);
 
       _saveCartToHive();
       notifyListeners();
@@ -1384,7 +1384,7 @@ class LocalProductProvider extends ChangeNotifier {
     if (index != -1) {
       _cartItems[index].taxRate = newTaxRate;
       _cartItems[index].taxAmount =
-          ((_cartItems[index].price ?? 0.0) * newTaxRate) / 100;
+          ((_cartItems[index].price ?? 0.0) * newTaxRate) / (100 + newTaxRate);
       _saveCartToHive();
       notifyListeners();
     }
@@ -1399,7 +1399,7 @@ class LocalProductProvider extends ChangeNotifier {
         item.mrp = newMrp;
         item.taxRate = newTax; // Changed from item.tax to item.taxRate
         // 🔧 FIX: Recalculate taxAmount
-        item.taxAmount = (newPrice * newTax) / 100;
+        item.taxAmount = (newPrice * newTax) / (100 + newTax);
         cartUpdated = true;
       }
     }
