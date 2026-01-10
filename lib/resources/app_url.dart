@@ -1,23 +1,8 @@
 class APPUrl {
-  // static String baseURL = "https://epos.enke.ae";
-  // static String baseURL = "https://hypersouq.enke.in";
-  // static String baseURL = "https://epos.mevcakes.com";
-  // static String baseURL = "https://kmstoys.enke.in";
-  //  static String baseURL = "https://stagingepos.enke.ae";
-  // static String baseURL = "https://tenant.hypersouq.in";
-  // static String baseURL = "https://eposdemo.yougoit.in";
   // static String baseURL = "https://eeezeeerp.cloudposai.com";
-  static String baseURL = "https://eposdemo.yougoit.in";
+  // static String baseURL = "https://eposdemo.yougoit.in";
+  static String baseURL = "https://linetolinepos.yougoit.in";
   // static String baseURL = "https://epos.hypersouq.in";
-  // static String baseURL = "https://eeezee.enke.ae";
-  // static String baseURL = "https://actdemo.yougoit.in";
-  // static String baseURL = "https://epos.yougoit.in";
-  // static String baseURL = "https://open-poems-sneeze.loca.lt";
-  // static String baseURL = "http://localhost:8000";
-  // static String baseURL = "https://icy-goats-brake.loca.lt";
-  // static void setBaseUrl(String url) {
-  //   baseURL = url;
-  // }
 
   static String verifyApiKey = '$baseURL/api/v1/verify-api-key';
   static String categoryListUrl = '$baseURL/api/v1/category/list-category';
