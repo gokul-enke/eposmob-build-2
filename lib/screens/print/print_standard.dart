@@ -21,6 +21,8 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:pos_machine/resources/app_url.dart';
 
 class StandardPrinter {
   final BuildContext context;
@@ -127,8 +129,10 @@ class StandardPrinter {
     OrderReturns? orderReturns, // Add this parameter
     double? customerOldBalance,
     double? customerCurrentBalance,
-    double? paidAmount,
+    required double? paidAmount,
   }) async {
+    debugPrint(
+        "[LOGO_DEBUG] generateAndPrintPDF started for order: $orderNumber");
     try {
       // Ensure billDocumentConfig is loaded before printing
       if (billDocumentConfig == null) {
@@ -140,6 +144,33 @@ class StandardPrinter {
           );
         }
         return;
+      }
+
+      // Load Logo if enabled
+      pw.MemoryImage? logoImage;
+      if (billDocumentConfig.showLogo == 1) {
+        debugPrint(
+            "[LOGO_DEBUG] showLogo == 1, attempting to load dynamic logo for standard print: ${billDocumentConfig.logo}");
+        try {
+          if (billDocumentConfig.logo != null &&
+              billDocumentConfig.logo.toString().isNotEmpty) {
+            logoImage =
+                await _fetchNetworkPdfImage(billDocumentConfig.logo.toString());
+          }
+
+          if (logoImage != null) {
+            debugPrint(
+                "[LOGO_DEBUG] Network logo resolved successfully for standard print");
+          } else {
+            debugPrint(
+                "[LOGO_DEBUG] No logo fetched or URL empty, skipping logo for standard print");
+          }
+        } catch (e) {
+          debugPrint("[LOGO_DEBUG] Error loading logo for standard print: $e");
+        }
+      } else {
+        debugPrint(
+            "[LOGO_DEBUG] showLogo != 1, skipping logo for standard print");
       }
 
       // Check if printer is selected before proceeding
@@ -371,6 +402,14 @@ class StandardPrinter {
             pw.Center(
               child: pw.Column(
                 children: [
+                  // Logo at the top
+                  if (logoImage != null) ...[
+                    pw.Container(
+                      height: 35,
+                      child: pw.Image(logoImage),
+                    ),
+                    pw.SizedBox(height: 5),
+                  ],
                   // Store name
                   if (updatedSettings?['showStoreName']?.visible == true)
                     pw.Text(
@@ -2880,5 +2919,39 @@ class StandardPrinter {
       debugPrint("Error generating PDF for sharing: ${e.toString()}");
       return null;
     }
+  }
+
+  /// Fetches an image from a network URL and returns it as a pw.MemoryImage
+  Future<pw.MemoryImage?> _fetchNetworkPdfImage(String? url) async {
+    if (url == null || url.isEmpty) {
+      debugPrint("[LOGO_DEBUG] No network logo URL provided for PDF");
+      return null;
+    }
+
+    String fullUrl;
+    if (url.startsWith('http')) {
+      fullUrl = url;
+    } else if (url.startsWith('logos/')) {
+      fullUrl = '${APPUrl.baseURL}/storage/$url';
+    } else {
+      fullUrl = url.startsWith('/')
+          ? '${APPUrl.baseURL}$url'
+          : '${APPUrl.baseURL}/$url';
+    }
+    debugPrint("[LOGO_DEBUG] Fetching network logo for PDF from: $fullUrl");
+
+    try {
+      final response = await http.get(Uri.parse(fullUrl));
+      if (response.statusCode == 200) {
+        debugPrint("[LOGO_DEBUG] Network logo fetched successfully for PDF");
+        return pw.MemoryImage(response.bodyBytes);
+      } else {
+        debugPrint(
+            "[LOGO_DEBUG] Failed to fetch network logo for PDF. Status code: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("[LOGO_DEBUG] Error fetching network logo for PDF: $e");
+    }
+    return null;
   }
 }

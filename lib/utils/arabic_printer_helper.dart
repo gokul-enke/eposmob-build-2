@@ -261,3 +261,61 @@ class QrRow extends ReceiptRow {
     }
   }
 }
+
+class ImageRow extends ReceiptRow {
+  final ui.Image image;
+  final double? width;
+  final double? height;
+  final TextAlign align;
+
+  ImageRow(this.image,
+      {this.width, this.height, this.align = TextAlign.center});
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    if (height != null) return height! + 10;
+
+    // Maintain aspect ratio if width is provided
+    if (this.width != null) {
+      double ratio = image.height / image.width;
+      return (this.width! * ratio) + 10;
+    }
+
+    // Scale to fit canvas width if image is wider
+    if (image.width > width) {
+      double ratio = image.height / image.width;
+      return (width * ratio) + 10;
+    }
+
+    return image.height.toDouble() + 10;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    double renderWidth = this.width ?? image.width.toDouble();
+    double renderHeight = this.height ?? image.height.toDouble();
+
+    if (this.width == null && image.width > width) {
+      renderWidth = width;
+      renderHeight = width * (image.height / image.width);
+    } else if (this.width != null && this.height == null) {
+      renderHeight = this.width! * (image.height / image.width);
+    }
+
+    double x = 0;
+    if (align == TextAlign.center) {
+      x = (width - renderWidth) / 2;
+    } else if (align == TextAlign.right) {
+      x = width - renderWidth;
+    }
+
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromLTWH(x, y + 5, renderWidth, renderHeight),
+      Paint(),
+    );
+  }
+}

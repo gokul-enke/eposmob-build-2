@@ -23,7 +23,12 @@ import 'package:pos_machine/utils/arabic_printer_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:http/http.dart' as http;
+import 'package:pos_machine/resources/app_url.dart';
 import 'package:image/image.dart' as img;
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 // Import modular components
 import 'font_config.dart';
@@ -155,6 +160,35 @@ class ThermalPrinter {
 
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
+
+      // Add Logo at the top if enabled/available
+      if (billDocumentConfig.showLogo == 1) {
+        debugPrint(
+            "[LOGO_DEBUG] showLogo == 1, attempting to load dynamic logo for native print: ${billDocumentConfig.logo}");
+        try {
+          img.Image? logo;
+          if (billDocumentConfig.logo != null &&
+              billDocumentConfig.logo.toString().isNotEmpty) {
+            logo = await _fetchNetworkImage(billDocumentConfig.logo.toString());
+          }
+
+          if (logo != null) {
+            debugPrint(
+                "[LOGO_DEBUG] Network logo resolved successfully for native print. Size: ${logo.width}x${logo.height}");
+            bytes += generator.image(logo, align: PosAlign.center);
+            bytes += generator.emptyLines(1);
+            debugPrint("[LOGO_DEBUG] Logo added to bytes for native print");
+          } else {
+            debugPrint(
+                "[LOGO_DEBUG] No logo fetched or URL empty, skipping logo for native print");
+          }
+        } catch (e) {
+          debugPrint("[LOGO_DEBUG] Error loading logo for native print: $e");
+        }
+      } else {
+        debugPrint(
+            "[LOGO_DEBUG] showLogo != 1, skipping logo for native print");
+      }
 
       // Build receipt using section builders
       debugPrint("Building header...");
@@ -404,6 +438,39 @@ class ThermalPrinter {
       List<ReceiptRow> part1Rows = [];
       List<ReceiptRow> part2Rows = [];
 
+      // Add Logo at the top if enabled
+      if (billDocumentConfig.showLogo == 1) {
+        debugPrint(
+            "[LOGO_DEBUG] showLogo == 1, attempting to load dynamic logo for image-based print: ${billDocumentConfig.logo}");
+        try {
+          ui.Image? logo;
+          if (billDocumentConfig.logo != null &&
+              billDocumentConfig.logo.toString().isNotEmpty) {
+            logo =
+                await _fetchNetworkUiImage(billDocumentConfig.logo.toString());
+          }
+
+          if (logo != null) {
+            debugPrint(
+                "[LOGO_DEBUG] Network logo resolved successfully for image-based print. Size: ${logo.width}x${logo.height}");
+            // Use 80% of width for logo
+            part1Rows.add(ImageRow(logo, width: printWidth * 0.8));
+            part1Rows.add(SpacingRow(10));
+            debugPrint(
+                "[LOGO_DEBUG] Logo added to part1Rows for image-based print");
+          } else {
+            debugPrint(
+                "[LOGO_DEBUG] No logo fetched or URL empty, skipping logo for image-based print");
+          }
+        } catch (e) {
+          debugPrint(
+              "[LOGO_DEBUG] Error loading logo for image-based print: $e");
+        }
+      } else {
+        debugPrint(
+            "[LOGO_DEBUG] showLogo != 1, skipping logo for image-based print");
+      }
+
       // ========== PART 1: Header, Customer, Items, Totals ==========
 
       // --- HEADER SECTION ---
@@ -412,8 +479,17 @@ class ThermalPrinter {
         final storeName = displayConfig?['showStoreName']?.value as String? ??
             billDocumentConfig.header ??
             'STORE NAME';
+
+        // Adjust scale based on name length to try keeping it in one line
+        double storeNameScale = 2.0;
+        if (storeName.length > 20) {
+          storeNameScale = 1.4;
+        } else if (storeName.length > 14) {
+          storeNameScale = 1.7;
+        }
+
         part1Rows.add(TextRow(storeName.isNotEmpty ? storeName : 'STORE NAME',
-            isBold: true, scale: 2.0));
+            isBold: true, scale: storeNameScale));
       }
 
       // Description/Subheader
@@ -423,7 +499,7 @@ class ThermalPrinter {
                 billDocumentConfig.subheader ??
                 '';
         if (description.isNotEmpty) {
-          part1Rows.add(TextRow(description, scale: 0.9));
+          part1Rows.add(TextRow(description, isBold: true, scale: 1.1));
         }
       }
 
@@ -1304,5 +1380,80 @@ class ThermalPrinter {
       await _printerUtils.disconnectPrinter(selectedPrinter);
       debugPrint("===== END IMAGE-BASED PRINTING =====");
     }
+  }
+
+  /// Fetches an image from a network URL and returns it as an img.Image
+  Future<img.Image?> _fetchNetworkImage(String? url) async {
+    if (url == null || url.isEmpty) {
+      debugPrint("[LOGO_DEBUG] No network logo URL provided");
+      return null;
+    }
+
+    String fullUrl;
+    if (url.startsWith('http')) {
+      fullUrl = url;
+    } else if (url.startsWith('logos/')) {
+      fullUrl = '${APPUrl.baseURL}/storage/$url';
+    } else {
+      fullUrl = url.startsWith('/')
+          ? '${APPUrl.baseURL}$url'
+          : '${APPUrl.baseURL}/$url';
+    }
+    debugPrint("[LOGO_DEBUG] Fetching network logo from: $fullUrl");
+
+    try {
+      final response = await http.get(Uri.parse(fullUrl));
+      if (response.statusCode == 200) {
+        final image = img.decodeImage(response.bodyBytes);
+        if (image != null) {
+          debugPrint(
+              "[LOGO_DEBUG] Network logo fetched and decoded successfully: ${image.width}x${image.height}");
+          return image;
+        } else {
+          debugPrint("[LOGO_DEBUG] Failed to decode network logo");
+        }
+      } else {
+        debugPrint(
+            "[LOGO_DEBUG] Failed to fetch network logo. Status code: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("[LOGO_DEBUG] Error fetching network logo: $e");
+    }
+    return null;
+  }
+
+  /// Fetches an image from a network URL and returns it as a ui.Image
+  Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
+    if (url == null || url.isEmpty) return null;
+
+    String fullUrl;
+    if (url.startsWith('http')) {
+      fullUrl = url;
+    } else if (url.startsWith('logos/')) {
+      fullUrl = '${APPUrl.baseURL}/storage/$url';
+    } else {
+      fullUrl = url.startsWith('/')
+          ? '${APPUrl.baseURL}$url'
+          : '${APPUrl.baseURL}/$url';
+    }
+    debugPrint("[LOGO_DEBUG] Fetching network UI logo from: $fullUrl");
+
+    try {
+      final response = await http.get(Uri.parse(fullUrl));
+      if (response.statusCode == 200) {
+        final Uint8List bytes = response.bodyBytes;
+        final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+        final ui.FrameInfo fi = await codec.getNextFrame();
+        debugPrint(
+            "[LOGO_DEBUG] Network UI logo fetched and decoded successfully: ${fi.image.width}x${fi.image.height}");
+        return fi.image;
+      } else {
+        debugPrint(
+            "[LOGO_DEBUG] Failed to fetch network UI logo. Status code: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("[LOGO_DEBUG] Error fetching network UI logo: $e");
+    }
+    return null;
   }
 }

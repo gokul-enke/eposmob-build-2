@@ -60,6 +60,8 @@ class ListStockModelData {
   final String? unit;
   final String? storeName;
   final String? rack;
+  final String? reorderLevel;
+  final String? stockStatus;
 
   ListStockModelData({
     this.stockId,
@@ -76,6 +78,8 @@ class ListStockModelData {
     this.unit,
     this.storeName,
     this.rack,
+    this.reorderLevel,
+    this.stockStatus,
   });
 
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
@@ -96,6 +100,8 @@ class ListStockModelData {
         unit: json["unit"],
         storeName: json["store_name"],
         rack: json["rack"],
+        reorderLevel: json["reorder_level"]?.toString(),
+        stockStatus: json["stock_status"]?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -113,6 +119,8 @@ class ListStockModelData {
         "unit": unit,
         "store_name": storeName,
         "rack": rack,
+        "reorder_level": reorderLevel,
+        "stock_status": stockStatus,
       };
 }
 

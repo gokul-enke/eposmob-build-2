@@ -34,6 +34,14 @@ class HeaderSectionBuilder {
           docConfig?.header ??
           '';
       if (storeName.isNotEmpty) {
+        // Adjust font size based on name length to keep it in one line as requested
+        PosTextSize fontSize = ThermalFontConfig.getHeaderSize(is58mm);
+        if (storeName.length > 20) {
+          fontSize = PosTextSize.size1;
+        } else if (storeName.length > 14) {
+          fontSize = PosTextSize.size2;
+        }
+
         bytes += generator.row([
           PosColumn(
             text: storeName,
@@ -42,8 +50,8 @@ class HeaderSectionBuilder {
                 fontType: fontType,
                 align: PosAlign.center,
                 bold: true,
-                width: ThermalFontConfig.getHeaderSize(is58mm),
-                height: ThermalFontConfig.getHeaderSize(is58mm)),
+                width: fontSize,
+                height: fontSize),
           ),
         ]);
       }
@@ -61,9 +69,9 @@ class HeaderSectionBuilder {
           styles: PosStyles(
             fontType: fontType,
             align: PosAlign.center,
-            bold: false,
-            height: ThermalFontConfig.textSizeSmall,
-            width: ThermalFontConfig.textSizeSmall,
+            bold: true,
+            height: ThermalFontConfig.getSubtitleSize(is58mm),
+            width: ThermalFontConfig.getSubtitleSize(is58mm),
           ),
         ),
       ]);

@@ -43,6 +43,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   final TextEditingController rackController = TextEditingController();
   final TextEditingController storeController = TextEditingController();
   final TextEditingController storeSearchController = TextEditingController();
+  final TextEditingController stockStatusController = TextEditingController();
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;
@@ -55,6 +56,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
     loadInitData();
     categoryController.text = "All Categories"; // Initialize with default value
     storeController.text = "All Stores"; // Initialize with default value
+    stockStatusController.text =
+        "All Statuses"; // Initialize with default value
   }
 
   void loadInitData() async {
@@ -157,6 +160,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
       filterRack: rackController.text.isEmpty ? null : rackController.text,
       filterStore:
           storeController.text == "All Stores" ? null : storeController.text,
+      filterStatus: stockStatusController.text == "All Statuses"
+          ? null
+          : stockStatusController.text,
       page: 1,
     );
   }
@@ -168,6 +174,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       barcodeController.clear();
       rackController.clear();
       storeController.text = "All Stores";
+      stockStatusController.text = "All Statuses";
     });
     Provider.of<StockProvider>(context, listen: false).resetStockFilters();
   }
@@ -1013,56 +1020,59 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
                       const SizedBox(width: 15),
 
-                      // Empty space to maintain layout
-                      Expanded(child: Container()),
+                      // Stock Status Filter dropdown
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            BuildDropDownWithSearch<String>(
+                              title: null,
+                              showName: false,
+                              hintText: 'Stock Status',
+                              value:
+                                  stockStatusController.text == "All Statuses"
+                                      ? null
+                                      : stockStatusController.text,
+                              items: const [
+                                "Out of Stock",
+                                "Low Stock",
+                                "At Reorder Level"
+                              ],
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  stockStatusController.text =
+                                      newValue ?? "All Statuses";
+                                });
+                                searchStocks();
+                              },
+                              displayText: (status) => status,
+                              searchController: TextEditingController(),
+                              height: 45,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 0),
+                            ),
+                          ],
+                        ),
+                      ),
 
                       const SizedBox(width: 15),
 
                       // Empty space to maintain layout
                       Expanded(child: Container()),
-
-                      const SizedBox(width: 15), // // Search button
-                      // Expanded(
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: [
-                      //       const SizedBox(
-                      //           height: 35), // Space to align with other fields
-                      //       CustomRoundButton(
-                      //         title: "Search",
-                      //         fct: () => {searchStocks()},
-                      //         height: 45,
-                      //         width:
-                      //             double.infinity, // Take full available width
-                      //         fontSize: FontSize.s12,
-                      //         boxColor: ColorManager.kPrimaryColor,
-                      //         textColor: Colors.white,
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
 
                       const SizedBox(width: 15),
 
                       // Reset button
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // const SizedBox(
-                            //     height: 35), // Space to align with other fields
-                            CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              borderColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width:
-                                  double.infinity, // Take full available width
-                              fontSize: FontSize.s12,
-                            ),
-                          ],
+                        child: CustomRoundButton(
+                          title: "Reset",
+                          boxColor: Colors.white,
+                          textColor: ColorManager.kPrimaryColor,
+                          borderColor: ColorManager.kPrimaryColor,
+                          fct: resetSearch,
+                          height: 45,
+                          width: double.infinity,
+                          fontSize: FontSize.s12,
                         ),
                       ),
                     ],
@@ -1232,25 +1242,30 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                             "N/A"),
                                                         _buildTableCell(
                                                           '${stock.qty}',
-                                                          textColor:
-                                                              (stock.qty ??
-                                                                          0) <=
-                                                                      10
-                                                                  ? Colors.white
-                                                                  : Colors
-                                                                      .black,
-                                                          bgColor: (stock.qty ??
-                                                                      0) <=
-                                                                  5
+                                                          textColor: (stock
+                                                                          .stockStatus ==
+                                                                      'Out of Stock' ||
+                                                                  stock.stockStatus ==
+                                                                      'Low Stock' ||
+                                                                  stock.stockStatus ==
+                                                                      'At Reorder Level')
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                          bgColor: stock
+                                                                      .stockStatus ==
+                                                                  'Out of Stock'
                                                               ? ColorManager
                                                                   .kRed
-                                                              : (stock.qty ??
-                                                                          0) <=
-                                                                      10
+                                                              : stock.stockStatus ==
+                                                                      'Low Stock'
                                                                   ? ColorManager
                                                                       .kOrange
-                                                                  : Colors
-                                                                      .transparent,
+                                                                  : stock.stockStatus ==
+                                                                          'At Reorder Level'
+                                                                      ? ColorManager
+                                                                          .kButtonYellow
+                                                                      : Colors
+                                                                          .transparent,
                                                         ),
                                                         _buildTableCell(
                                                             '${stock.unit}'),

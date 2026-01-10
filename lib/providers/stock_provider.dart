@@ -45,6 +45,7 @@ class StockProvider extends ChangeNotifier {
   String? _stockFilterBarcode;
   String? _stockFilterRack;
   String? _stockFilterStore;
+  String? _stockFilterStatus;
 
   // Loading state
   bool _stockIsLoading = false;
@@ -71,6 +72,7 @@ class StockProvider extends ChangeNotifier {
   String? get stockFilterBarcode => _stockFilterBarcode;
   String? get stockFilterRack => _stockFilterRack;
   String? get stockFilterStore => _stockFilterStore;
+  String? get stockFilterStatus => _stockFilterStatus;
   bool get stockIsLoading => _stockIsLoading;
 
   /// Search stocks locally by name
@@ -952,6 +954,7 @@ class StockProvider extends ChangeNotifier {
     String? filterBarcode,
     String? filterRack,
     String? filterStore,
+    String? filterStatus,
     int page = 1,
   }) {
     if (_allStocks == null || _allStocks!.isEmpty) {
@@ -969,6 +972,7 @@ class StockProvider extends ChangeNotifier {
     _stockFilterBarcode = filterBarcode;
     _stockFilterRack = filterRack;
     _stockFilterStore = filterStore;
+    _stockFilterStatus = filterStatus;
     _stockCurrentPage = page;
 
     // Apply filters
@@ -1034,6 +1038,17 @@ class StockProvider extends ChangeNotifier {
           .toList();
     }
 
+    // Apply status filter
+    if (filterStatus != null &&
+        filterStatus.isNotEmpty &&
+        filterStatus != "All Statuses") {
+      filteredList = filteredList
+          .where((stock) =>
+              stock.stockStatus != null &&
+              stock.stockStatus!.toLowerCase() == filterStatus.toLowerCase())
+          .toList();
+    }
+
     // Calculate pagination
     _stockTotalPages = (filteredList.length / _stockItemsPerPage).ceil();
     _stockTotalPages = _stockTotalPages == 0 ? 1 : _stockTotalPages;
@@ -1068,6 +1083,7 @@ class StockProvider extends ChangeNotifier {
     _stockFilterBarcode = null;
     _stockFilterRack = null;
     _stockFilterStore = null;
+    _stockFilterStatus = null;
     _stockCurrentPage = 1;
 
     if (_allStocks != null && _allStocks!.isNotEmpty) {
@@ -1085,6 +1101,7 @@ class StockProvider extends ChangeNotifier {
       filterBarcode: _stockFilterBarcode,
       filterRack: _stockFilterRack,
       filterStore: _stockFilterStore,
+      filterStatus: _stockFilterStatus,
       page: page,
     );
   }
@@ -1227,6 +1244,7 @@ class StockProvider extends ChangeNotifier {
     _stockFilterBarcode = null;
     _stockFilterRack = null;
     _stockFilterStore = null;
+    _stockFilterStatus = null;
     _stockIsLoading = false;
     _batchProcessingLoading = false;
     _pendingStockItems.clear();

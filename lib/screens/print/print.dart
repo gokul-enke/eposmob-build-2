@@ -419,6 +419,9 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _handlePrinting(
       String customerCareNumber, String customerCareEmail) async {
+    debugPrint("[LOGO_DEBUG] _handlePrinting entry in print.dart");
+    debugPrint("[LOGO_DEBUG] selectedPaperSize: $selectedPaperSize");
+
     if (_billDocumentConfig == null) {
       debugPrint("ERROR: Bill document configuration not loaded yet.");
       if (mounted) {
@@ -801,7 +804,9 @@ class _PrintPageState extends State<PrintPage> {
               ),
             ElevatedButton.icon(
               onPressed: () {
+                debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
                 if (selectedPrinter == null) {
+                  debugPrint("[LOGO_DEBUG] No printer selected");
                   showScaffoldError(
                     context: context,
                     message: "Please select a printer first",
@@ -809,6 +814,7 @@ class _PrintPageState extends State<PrintPage> {
                   return;
                 }
                 if (_billDocumentConfig == null) {
+                  debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
                   showScaffoldError(
                     context: context,
                     message:
@@ -816,6 +822,7 @@ class _PrintPageState extends State<PrintPage> {
                   );
                   return;
                 }
+                debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
                 _handlePrinting(appSettings!.customerCarePhone,
                     appSettings.customerCareEmail);
               },
