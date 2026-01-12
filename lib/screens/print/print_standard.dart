@@ -130,6 +130,9 @@ class StandardPrinter {
     double? customerOldBalance,
     double? customerCurrentBalance,
     required double? paidAmount,
+    String? orderComment,
+    String? customerAlternatePhone,
+    String? paymentMethod,
   }) async {
     debugPrint(
         "[LOGO_DEBUG] generateAndPrintPDF started for order: $orderNumber");
@@ -565,6 +568,8 @@ class StandardPrinter {
                 customerAddress,
                 subheaderStyle,
                 bodyStyle,
+                paymentMethod: paymentMethod,
+                customerAlternatePhone: customerAlternatePhone,
                 isRtl: isRtl,
                 arabicFontBold: arabicFontBold,
               ),
@@ -723,6 +728,18 @@ class StandardPrinter {
                 isRtl: isRtl,
               ),
               pw.SizedBox(height: 10),
+            ],
+
+            // Order Comment
+            if (orderComment != null && orderComment.isNotEmpty) ...[
+              pw.SizedBox(height: 5),
+              _buildLabelValueRow(
+                isRtl ? 'تعليق:' : 'Comment:',
+                orderComment,
+                summaryStyle,
+                isRtl: isRtl,
+              ),
+              pw.SizedBox(height: 5),
             ],
 
             // Footer section - compact design
@@ -1585,6 +1602,8 @@ class StandardPrinter {
     String? customerAddress,
     pw.TextStyle headerStyle,
     pw.TextStyle bodyStyle, {
+    String? customerAlternatePhone,
+    String? paymentMethod,
     bool isRtl = false,
     pw.Font? arabicFontBold,
   }) {
@@ -1618,15 +1637,23 @@ class StandardPrinter {
           if ((customerName != null && customerName.isNotEmpty) &&
               (customerPhone != null && customerPhone.isNotEmpty))
             pw.Text(
-                '$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}',
+                '$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
                 style: customerDetailStyle)
           else ...[
             if (customerName != null && customerName.isNotEmpty)
               pw.Text(customerName, style: customerDetailStyle),
             if (customerPhone != null && customerPhone.isNotEmpty)
-              pw.Text(StringHelper.maskStringShowLast4(customerPhone),
+              pw.Text(
+                  '${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
                   style: customerDetailStyle),
           ],
+          if (paymentMethod != null && paymentMethod.isNotEmpty)
+            pw.Text(
+              isRtl
+                  ? 'طريقة الدفع: $paymentMethod'
+                  : 'Payment Method: $paymentMethod',
+              style: customerDetailStyle,
+            ),
           // if (customerEmail != null && customerEmail.isNotEmpty)
           //   pw.Text('Email: $customerEmail', style: customerDetailStyle),
           if (customerAddress != null && customerAddress.isNotEmpty)
@@ -2274,6 +2301,9 @@ class StandardPrinter {
     double? customerOldBalance,
     double? customerCurrentBalance,
     double? paidAmount,
+    String? orderComment,
+    String? customerAlternatePhone,
+    String? paymentMethod,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -2635,6 +2665,8 @@ class StandardPrinter {
                     customerAddress,
                     subheaderStyle,
                     bodyStyle,
+                    paymentMethod: paymentMethod,
+                    customerAlternatePhone: customerAlternatePhone,
                     isRtl: isRtl,
                     arabicFontBold: arabicFontBold,
                   ),
@@ -2731,6 +2763,22 @@ class StandardPrinter {
                     billDocumentConfig, // Pass billDocumentConfig for resolved_labels
                     isRtl: isRtl,
                   ),
+                ],
+
+                // Order Comment
+                if (orderComment != null && orderComment.isNotEmpty) ...[
+                  pw.SizedBox(height: 5),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 8),
+                    child: _buildLabelValueRow(
+                      isRtl ? 'تعليق:' : 'Comment:',
+                      orderComment,
+                      summaryStyle,
+                      isRtl: isRtl,
+                    ),
+                  ),
+                  pw.SizedBox(height: 5),
                 ],
 
                 // Total Summary section - ONLY when there are returns

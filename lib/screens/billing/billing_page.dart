@@ -650,8 +650,8 @@ class BillingPageState extends State<BillingPage>
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
     try {
-      final response = await CustomerProvider()
-          .listCustomer(accessToken: accessToken!, sortAscending: true);
+      final response = await CustomerProvider().listCustomer(
+          accessToken: accessToken!, sortAscending: true, loadAll: true);
 
       if (response["status"] == "success") {
         CustomerListModel customerListModel =
@@ -4188,6 +4188,25 @@ class BillingPageState extends State<BillingPage>
             String storeName = orderDetails.data!.cart!.storeName ?? "";
             String orderDate = orderDetails.data!.orderDate ?? "";
 
+            // Extract new print details
+            String? customerAlternatePhone =
+                orderDetails.data?.customerDetails?.alternatePhone;
+            String? paymentMethod =
+                orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
+
+            String? orderComment;
+            if (orderDetails.data?.orderProps != null) {
+              try {
+                final commentProp = orderDetails.data!.orderProps!.firstWhere(
+                  (prop) => prop.propsCode == "COMMENT",
+                  orElse: () => OrderDetailsModelDataOrderProp(),
+                );
+                orderComment = commentProp.propsValue;
+              } catch (e) {
+                // ignore
+              }
+            }
+
             // Extract customer details
             String? customerName = orderDetails.data?.customerDetails?.name;
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
@@ -4231,6 +4250,9 @@ class BillingPageState extends State<BillingPage>
                   customerOldBalance: oldBalance,
                   customerCurrentBalance: currentBalance,
                   paidAmount: totalPaid > 0 ? totalPaid : null,
+                  customerAlternatePhone: customerAlternatePhone,
+                  paymentMethod: paymentMethod,
+                  orderComment: orderComment,
                 ),
               ),
             );
@@ -5385,6 +5407,11 @@ class BillingPageState extends State<BillingPage>
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
+            customerName: savedOrder.customerName,
+            customerPhone: savedOrder.customerPhone,
+            paymentMethod: savedOrder.paymentMethod,
+            customerAlternatePhone: savedOrder.alternatePhone,
+            orderComment: savedOrder.comment,
             // Balance info not available for offline saved orders
           ),
         ),

@@ -9,6 +9,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/auth_model.dart';
 import '../../models/cart_item_status.dart';
 import '../../helpers/date_helper.dart';
+import '../../screens/print/print_kot.dart'; // Add KOT Print Page import
 
 enum OrderStatus { pending, preparing, ready, served }
 
@@ -772,6 +773,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
             },
             onUpdateAllItemsStatus: _updateAllOrderItemsStatusAPI,
             loadingOrderIds: _loadingOrderIds,
+            onPrintOrder: _printKitchenOrder, // Pass the print callback
           ),
         ),
         // Order Details Panel
@@ -788,6 +790,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
               await _refreshOrdersAndUpdateSelection();
               await _fetchCartItemStatuses();
             },
+            onPrintOrder: _printKitchenOrder, // Pass the print callback
           ),
         ),
         // Kitchen Stats Panel
@@ -822,6 +825,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
           await _refreshOrdersAndUpdateSelection();
           await _fetchCartItemStatuses();
         },
+        onPrintOrder: _printKitchenOrder, // Pass the print callback
       );
     } else {
       // Show order list in full screen
@@ -852,6 +856,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
         },
         onUpdateAllItemsStatus: _updateAllOrderItemsStatusAPI,
         loadingOrderIds: _loadingOrderIds,
+        onPrintOrder: _printKitchenOrder, // Pass the print callback
       );
     }
   }
@@ -1348,16 +1353,50 @@ class _KitchenMasterState extends State<KitchenMaster> {
       debugPrint('🏁 === ALL ORDER ITEMS STATUS UPDATE COMPLETED ===');
     }
   }
+
+  void _printKitchenOrder(KitchenOrder order) {
+    // Get current time for KOT
+    final now = DateTime.now();
+    final orderTime =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    // Build print items
+    List<Map<String, dynamic>> printItems = [];
+    for (var item in order.items) {
+      printItems.add({
+        'productName': item.name,
+        'quantity': item.quantity.toString(),
+        'unitPrice': '0.00',
+        'totalPrice': '0.00',
+        'mrp': '0.00',
+      });
+    }
+
+    // Navigate to KOT print page
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KotPrintPage(
+            orderNumber: order.id,
+            tableName: order.tableId,
+            orderTime: orderTime,
+            items: printItems,
+            comment: order.notes,
+          ),
+        ),
+      );
+    }
+  }
 }
 
 class _OrderQueuePanel extends StatelessWidget {
   final List<KitchenOrder> orders;
-  final OrderStatus selectedFilter;
   final KitchenOrder? selectedOrder;
-  final ValueChanged<OrderStatus> onFilterChanged;
-  final Function(String, OrderStatus) onOrderStatusChanged;
   final Function(KitchenOrder) onOrderSelected;
-  final bool isCompact;
+  final OrderStatus selectedFilter;
+  final Function(OrderStatus) onFilterChanged;
+  final Function(String, OrderStatus) onOrderStatusChanged;
   final Size screenSize;
   final List<CartItemStatus>? availableStatuses;
   final Function(int, int)? onCartItemStatusChanged;
@@ -1366,15 +1405,16 @@ class _OrderQueuePanel extends StatelessWidget {
   final Future<void> Function()? onPullToRefresh;
   final Function(int, String)? onUpdateAllItemsStatus;
   final Set<int>? loadingOrderIds;
+  final bool isCompact;
+  final Function(KitchenOrder) onPrintOrder; // New print callback
 
   const _OrderQueuePanel({
     required this.orders,
-    required this.selectedFilter,
     this.selectedOrder,
+    required this.onOrderSelected,
+    required this.selectedFilter,
     required this.onFilterChanged,
     required this.onOrderStatusChanged,
-    required this.onOrderSelected,
-    this.isCompact = false,
     required this.screenSize,
     this.availableStatuses,
     this.onCartItemStatusChanged,
@@ -1383,6 +1423,8 @@ class _OrderQueuePanel extends StatelessWidget {
     this.onPullToRefresh,
     this.onUpdateAllItemsStatus,
     this.loadingOrderIds,
+    this.isCompact = false,
+    required this.onPrintOrder, // Mark as required
   });
 
   // Helper method to determine actual order status based on item statuses
@@ -1662,8 +1704,17 @@ class _OrderQueuePanel extends StatelessWidget {
                                   const SizedBox(height: 12),
                               itemBuilder: (_, index) {
                                 final order = orders[index];
-                                return _buildOrderCard(
-                                    order, isCompact, selectedFilter);
+                                return _ExpandableOrderCard(
+                                  order: order,
+                                  compact: isCompact,
+                                  selectedFilter: selectedFilter,
+                                  selectedOrder: selectedOrder,
+                                  onOrderSelected: onOrderSelected,
+                                  onPrintOrder: onPrintOrder,
+                                  onUpdateAllItemsStatus:
+                                      onUpdateAllItemsStatus,
+                                  loadingOrderIds: loadingOrderIds,
+                                );
                               },
                             ),
                           ),
@@ -1674,9 +1725,72 @@ class _OrderQueuePanel extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildOrderCard(
-      KitchenOrder order, bool compact, OrderStatus selectedFilter) {
+class _ExpandableOrderCard extends StatefulWidget {
+  final KitchenOrder order;
+  final bool compact;
+  final OrderStatus selectedFilter;
+  final KitchenOrder? selectedOrder;
+  final Function(KitchenOrder) onOrderSelected;
+  final Function(KitchenOrder) onPrintOrder;
+  final Function(int, String)? onUpdateAllItemsStatus;
+  final Set<int>? loadingOrderIds;
+
+  const _ExpandableOrderCard({
+    required this.order,
+    required this.compact,
+    required this.selectedFilter,
+    this.selectedOrder,
+    required this.onOrderSelected,
+    required this.onPrintOrder,
+    this.onUpdateAllItemsStatus,
+    this.loadingOrderIds,
+  });
+
+  @override
+  State<_ExpandableOrderCard> createState() => _ExpandableOrderCardState();
+}
+
+class _ExpandableOrderCardState extends State<_ExpandableOrderCard> {
+  bool _isExpanded = false;
+
+  // Helper method to determine actual order status based on item statuses
+  OrderStatus _determineActualOrderStatus(KitchenOrder order) {
+    if (order.items.isEmpty) return OrderStatus.pending;
+
+    final itemStatuses = order.items.map((item) => item.status).toList();
+
+    // If all items are served, order is served
+    if (itemStatuses.every((s) => s == ItemStatus.served)) {
+      return OrderStatus.served;
+    }
+
+    // If all items are ready, order is ready
+    if (itemStatuses.every((s) => s == ItemStatus.ready)) {
+      return OrderStatus.ready;
+    }
+
+    // If all items are pending, order is pending
+    if (itemStatuses.every((s) => s == ItemStatus.pending)) {
+      return OrderStatus.pending;
+    }
+
+    // Mixed statuses or some items are preparing = order is preparing
+    return OrderStatus.preparing;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final order = widget.order;
+    final compact = widget.compact;
+    final selectedFilter = widget.selectedFilter;
+    final selectedOrder = widget.selectedOrder;
+    final onOrderSelected = widget.onOrderSelected;
+    final onPrintOrder = widget.onPrintOrder;
+    final onUpdateAllItemsStatus = widget.onUpdateAllItemsStatus;
+    final loadingOrderIds = widget.loadingOrderIds;
+
     final timeSinceOrder = DateTime.now().difference(order.timestamp);
     final isSelected = selectedOrder?.id == order.id;
 
@@ -1690,6 +1804,12 @@ class _OrderQueuePanel extends StatelessWidget {
     final isVeryUrgent = timeSinceOrder.inMinutes > 30 &&
         (actualOrderStatus == OrderStatus.pending ||
             actualOrderStatus == OrderStatus.preparing);
+
+    // Expansion logic
+    final bool canExpand = order.items.length > 4;
+    final displayedItems = (_isExpanded || !canExpand)
+        ? order.items
+        : order.items.take(4).toList();
 
     return Material(
       color: Colors.transparent,
@@ -1754,6 +1874,20 @@ class _OrderQueuePanel extends StatelessWidget {
                           _getStatusColor(actualOrderStatus)),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  // Print Button
+                  IconButton(
+                    icon: Icon(
+                      Icons.print_outlined,
+                      size: compact ? 18 : 20,
+                      color:
+                          _getStatusColor(actualOrderStatus).withOpacity(0.7),
+                    ),
+                    onPressed: () => onPrintOrder(order),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Print KOT',
+                  ),
                   const Spacer(),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -1790,78 +1924,109 @@ class _OrderQueuePanel extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               // Order items summary
-              ...order.items
-                  .map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: _getItemStatusColor(item.status),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: _getItemStatusColor(item.status)
-                                      .withOpacity(0.3),
-                                  width: 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _getItemStatusColor(item.status)
-                                        .withOpacity(0.3),
-                                    blurRadius: 2,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
-                              ),
+              ...displayedItems.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _getItemStatusColor(item.status),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _getItemStatusColor(item.status)
+                                  .withOpacity(0.3),
+                              width: 1,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${item.quantity}x',
-                              style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  compact ? FontSize.s11 : FontSize.s12,
-                                  0.21,
-                                  const Color(0xFF64748B)),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                item.name,
-                                style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    compact ? FontSize.s11 : FontSize.s12,
-                                    0.21,
-                                    const Color(0xFF1E293B)),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
                                 color: _getItemStatusColor(item.status)
-                                    .withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
+                                    .withOpacity(0.3),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
                               ),
-                              child: Text(
-                                _getItemStatusText(item.status),
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s8,
-                                    0.14,
-                                    _getItemStatusColor(item.status)),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ))
-                  .toList(),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${item.quantity}x',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              compact ? FontSize.s11 : FontSize.s12,
+                              0.21,
+                              const Color(0xFF64748B)),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                compact ? FontSize.s11 : FontSize.s12,
+                                0.21,
+                                const Color(0xFF1E293B)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getItemStatusColor(item.status)
+                                .withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _getItemStatusText(item.status),
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s8,
+                                0.14,
+                                _getItemStatusColor(item.status)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+
+              // View More / View Less Button
+              if (canExpand)
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _isExpanded
+                              ? 'View Less'
+                              : 'View More (${order.items.length - 4} more)',
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s11, 0.21, const Color(0xFF2563EB)),
+                        ),
+                        Icon(
+                          _isExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: const Color(0xFF2563EB),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               if (onUpdateAllItemsStatus != null &&
                   actualOrderStatus != OrderStatus.served) ...[
-                const SizedBox(height: 12),
+                // const SizedBox(height: 12),
                 const Divider(),
                 const SizedBox(height: 8),
                 SizedBox(
@@ -1915,6 +2080,7 @@ class _OrderDetailsPanel extends StatefulWidget {
   final Size screenSize;
   final String? errorMessage;
   final Future<void> Function()? onRefresh;
+  final Function(KitchenOrder) onPrintOrder; // New print callback
 
   const _OrderDetailsPanel({
     this.selectedOrder,
@@ -1924,6 +2090,7 @@ class _OrderDetailsPanel extends StatefulWidget {
     required this.screenSize,
     this.errorMessage,
     this.onRefresh,
+    required this.onPrintOrder, // Mark as required
   });
 
   @override
@@ -2131,6 +2298,17 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                                   FontSize.s16, 0.21, Colors.white),
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          // Print Button
+                          IconButton(
+                            icon: const Icon(
+                              Icons.print,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            onPressed: () => widget.onPrintOrder(order),
+                            tooltip: 'Print KOT',
+                          ),
                           const Spacer(),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -2214,12 +2392,10 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                       0.21, const Color(0xFF1E293B)),
                 ),
                 const SizedBox(height: 12),
-                ...order.items
-                    .map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildItemCard(order.id, item),
-                        ))
-                    .toList(),
+                ...order.items.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildItemCard(order.id, item),
+                    )),
               ],
             ),
           ),
@@ -2512,7 +2688,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                   },
                 ),
               );
-            }).toList(),
+            }),
           ] else ...[
             // Fallback to original buttons if API statuses not loaded
             Row(

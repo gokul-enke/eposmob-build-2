@@ -4196,6 +4196,25 @@ class BillingPageState extends State<BillingPageRestaurant>
             String storeName = orderDetails.data!.cart!.storeName ?? "";
             String orderDate = orderDetails.data!.orderDate ?? "";
 
+            // Extract new print details
+            String? customerAlternatePhone =
+                orderDetails.data?.customerDetails?.alternatePhone;
+            String? paymentMethod =
+                orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
+
+            String? orderComment;
+            if (orderDetails.data?.orderProps != null) {
+              try {
+                final commentProp = orderDetails.data!.orderProps!.firstWhere(
+                  (prop) => prop.propsCode == "COMMENT",
+                  orElse: () => OrderDetailsModelDataOrderProp(),
+                );
+                orderComment = commentProp.propsValue;
+              } catch (e) {
+                // ignore
+              }
+            }
+
             // Extract customer details
             String? customerName = orderDetails.data?.customerDetails?.name;
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
@@ -4239,6 +4258,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                   customerOldBalance: oldBalance,
                   customerCurrentBalance: currentBalance,
                   paidAmount: totalPaid > 0 ? totalPaid : null,
+                  customerAlternatePhone: customerAlternatePhone,
+                  paymentMethod: paymentMethod,
+                  orderComment: orderComment,
                 ),
               ),
             );
@@ -5393,6 +5415,11 @@ class BillingPageState extends State<BillingPageRestaurant>
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
+            customerName: savedOrder.customerName,
+            customerPhone: savedOrder.customerPhone,
+            paymentMethod: savedOrder.paymentMethod,
+            customerAlternatePhone: savedOrder.alternatePhone,
+            orderComment: savedOrder.comment,
             // Balance info not available for offline saved orders
           ),
         ),
@@ -6789,7 +6816,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                           children: [
                                             // Product image
                                             Expanded(
-                                              flex: 3,
+                                              flex: 5,
                                               child: Stack(
                                                 fit: StackFit.expand,
                                                 children: [
@@ -6937,18 +6964,18 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             ),
                                             // Product name
                                             Expanded(
-                                              flex: 1,
+                                              flex: 3,
                                               child: Padding(
                                                 padding:
                                                     const EdgeInsets.all(6),
                                                 child: Text(
                                                   "${product.productName} / ${product.unit}",
-                                                  maxLines: 2,
+                                                  maxLines: 3,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: TextStyle(
                                                     fontSize: fontProvider
-                                                        .billingTableItemSize,
+                                                        .productCardTitleSize,
                                                     fontWeight: FontWeight.w500,
                                                   ),
                                                 ),

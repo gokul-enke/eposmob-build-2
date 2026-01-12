@@ -98,15 +98,18 @@ class MobileOrderCard extends StatelessWidget {
                 ),
                 Text(
                   'Order #${order.orderNumber}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
                 ListTile(
                   leading: CircleAvatar(
                     radius: 18,
-                    backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
-                    child: const Icon(Icons.share, color: ColorManager.kPrimaryColor),
+                    backgroundColor:
+                        ColorManager.kPrimaryColor.withOpacity(0.12),
+                    child: const Icon(Icons.share,
+                        color: ColorManager.kPrimaryColor),
                   ),
                   title: const Text('Share'),
                   onTap: () async {
@@ -118,7 +121,8 @@ class MobileOrderCard extends StatelessWidget {
                   leading: CircleAvatar(
                     radius: 18,
                     backgroundColor: Colors.red.withOpacity(0.12),
-                    child: const Icon(Icons.assignment_return, color: Colors.red),
+                    child:
+                        const Icon(Icons.assignment_return, color: Colors.red),
                   ),
                   title: const Text('Return Order'),
                   onTap: () async {
@@ -209,7 +213,8 @@ class MobileOrderCard extends StatelessWidget {
   void _handlePrint(BuildContext context) async {
     try {
       String ordersId = order.orderNumber.toString();
-      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
 
       final OrderDetailsresponse = await SalesProvider()
           .listOrderDetails(context, ordersId, accessToken ?? "");
@@ -218,9 +223,9 @@ class MobileOrderCard extends StatelessWidget {
         OrderDetailsModel orderDetails =
             OrderDetailsModel.fromJson(OrderDetailsresponse);
 
-        String? formattedTotal = orderDetails.data?.cart?.priceSummary?.netPayable
-                ?.toString() ??
-            orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+        String? formattedTotal =
+            orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
+                orderDetails.data?.cart?.priceSummary?.netTotal.toString();
         String? savedTotal =
             orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
 
@@ -232,6 +237,23 @@ class MobileOrderCard extends StatelessWidget {
         String? customerEmail = orderDetails.data?.customerDetails?.email;
         String? customerAddress =
             orderDetails.data?.customerDetails?.address?.join(', ');
+        String? customerAlternatePhone =
+            orderDetails.data?.customerDetails?.alternatePhone;
+        String? paymentMethod =
+            orderDetails.data?.paymentDetails?.paymentMethod;
+
+        String? orderComment;
+        if (orderDetails.data?.orderProps != null) {
+          try {
+            final commentProp = orderDetails.data!.orderProps!.firstWhere(
+              (prop) => prop.propsCode == "COMMENT",
+              orElse: () => OrderDetailsModelDataOrderProp(),
+            );
+            orderComment = commentProp.propsValue;
+          } catch (e) {
+            debugPrint("Error extracting order comment: $e");
+          }
+        }
 
         // Note: Balance info not available from order details API
         // customerOldBalance, customerCurrentBalance, paidAmount will be null
@@ -245,13 +267,17 @@ class MobileOrderCard extends StatelessWidget {
               formattedTotal: formattedTotal!,
               savedTotal: savedTotal!,
               discountAmount:
-                  orderDetails.data?.priceSummary?.discount?.toString() ?? "0.00",
+                  orderDetails.data?.priceSummary?.discount?.toString() ??
+                      "0.00",
               orderDate: orderDate,
               orderNumber: orderDetails.data!.orderNumber.toString(),
               customerName: customerName,
               customerPhone: customerPhone,
               customerEmail: customerEmail,
               customerAddress: customerAddress,
+              customerAlternatePhone: customerAlternatePhone,
+              paymentMethod: paymentMethod,
+              orderComment: orderComment,
               orderReturns: orderDetails.data?.orderReturns,
               // Balance info not available from order details API
             ),
@@ -307,7 +333,8 @@ class MobileOrderCard extends StatelessWidget {
               // Customer info
               Row(
                 children: [
-                  const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                  const Icon(Icons.person_outline,
+                      size: 16, color: Colors.grey),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -404,7 +431,8 @@ class MobileOrderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.print, size: 20, color: Colors.blue),
+                        icon: const Icon(Icons.print,
+                            size: 20, color: Colors.blue),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                         onPressed: () => _handlePrint(context),

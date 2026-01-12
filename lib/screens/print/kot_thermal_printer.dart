@@ -26,7 +26,7 @@ class KotThermalPrinter {
   static double getPrintWidth(bool is58mm) => is58mm ? 384.0 : 576.0;
 
   /// Get base font size based on paper size
-  static double getBaseFontSize(bool is58mm) => is58mm ? 20.0 : 20.0;
+  static double getBaseFontSize(bool is58mm) => is58mm ? 22.0 : 22.0;
 
   /// Get header font scale (for Kitchen Order title)
   static double getHeaderScale(bool is58mm) => is58mm ? 1.5 : 2.2;
@@ -38,10 +38,10 @@ class KotThermalPrinter {
   static double getOrderScale(bool is58mm) => is58mm ? 1.0 : 1.3;
 
   /// Get item font scale (item names - needs to be readable)
-  static double getItemScale(bool is58mm) => is58mm ? 1.0 : 1.3;
+  static double getItemScale(bool is58mm) => is58mm ? 1.40 : 2.0;
 
   /// Get quantity font scale (bold large numbers)
-  static double getQtyScale(bool is58mm) => is58mm ? 1.1 : 1.5;
+  static double getQtyScale(bool is58mm) => is58mm ? 1.40 : 2.0;
 
   /// Get secondary text scale (labels, time, notes)
   static double getSecondaryScale(bool is58mm) => is58mm ? 0.9 : 1.0;
@@ -59,13 +59,13 @@ class KotThermalPrinter {
   static double getSectionSpacing(bool is58mm) => is58mm ? 6.0 : 10.0;
 
   /// Get item spacing (between each item)
-  static double getItemSpacing(bool is58mm) => is58mm ? 4.0 : 6.0;
+  static double getItemSpacing(bool is58mm) => is58mm ? 8.0 : 12.0;
 
   /// Get divider font scale
   static double getDividerScale(bool is58mm) => is58mm ? 0.8 : 0.7;
 
   /// Get quantity column width (fixed for alignment)
-  static double getQtyColumnWidth(bool is58mm) => is58mm ? 60.0 : 70.0;
+  static double getQtyColumnWidth(bool is58mm) => is58mm ? 82.0 : 110.0;
 
   KotThermalPrinter(this.context);
 
@@ -315,7 +315,7 @@ class KotThermalPrinter {
 
         rows.add(_KotTableRow(itemCols, scale: getItemScale(is58mm)));
 
-        // Add MRP/Rate on separate line if visible (indented)
+        // Print MRP/Rate on separate line if visible (indented)
         if (showMRP || showRate) {
           List<String> priceInfo = [];
           if (showMRP && mrp.isNotEmpty) priceInfo.add('$mrpLabel: $mrp');
@@ -327,6 +327,17 @@ class KotThermalPrinter {
               indent: 0,
             ));
           }
+        }
+
+        // Add item-level notes if present
+        final itemNotes = item['notes']?.toString();
+        if (itemNotes != null && itemNotes.isNotEmpty) {
+          rows.add(_KotTextRow(
+            '  Note: $itemNotes',
+            scale: getSmallScale(is58mm),
+            indent: 0,
+            wrapText: true,
+          ));
         }
 
         rows.add(_KotSpacingRow(getItemSpacing(is58mm)));
@@ -454,7 +465,41 @@ class KotThermalPrinter {
     } else if (row is _KotDividerRow) {
       return baseFontSize * getDividerScale(is58mm) * lineHeight;
     } else if (row is _KotTableRow) {
-      return baseFontSize * row.scale * lineHeight;
+      final fontSize = baseFontSize * row.scale;
+      double maxColHeight = fontSize * lineHeight;
+      final availableTableWidth = width - padding * 2;
+
+      // Calculate column widths
+      double fixedWidth = 0;
+      int totalFlex = 0;
+      for (var col in row.columns) {
+        if (col.width > 0) {
+          fixedWidth += col.width;
+        } else {
+          totalFlex += col.flex;
+        }
+      }
+      final flexWidth =
+          (availableTableWidth - fixedWidth) / (totalFlex > 0 ? totalFlex : 1);
+
+      // Estimate heights for each column
+      for (var col in row.columns) {
+        final colWidth = col.width > 0 ? col.width : flexWidth * col.flex;
+        final colFontSize = fontSize * col.scale;
+
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: col.text,
+            style: TextStyle(fontSize: colFontSize),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout(maxWidth: colWidth);
+        if (textPainter.height > maxColHeight) {
+          maxColHeight = textPainter.height;
+        }
+      }
+      return maxColHeight;
     }
     return 0;
   }
@@ -547,8 +592,6 @@ class KotThermalPrinter {
           ),
           textDirection: TextDirection.ltr,
           textAlign: col.align,
-          maxLines: 1,
-          ellipsis: '…',
         );
         textPainter.layout(maxWidth: colWidth);
 
@@ -564,7 +607,25 @@ class KotThermalPrinter {
         xOffset += colWidth;
       }
 
-      return yOffset + fontSize * lineHeight;
+      // Return the actual height after rendering (in case of wrapping)
+      double maxRowHeight = fontSize * lineHeight;
+      for (var col in row.columns) {
+        final colWidth = col.width > 0 ? col.width : flexWidth * col.flex;
+        final colFontSize = fontSize * col.scale;
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: col.text,
+            style: TextStyle(fontSize: colFontSize),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout(maxWidth: colWidth);
+        if (textPainter.height > maxRowHeight) {
+          maxRowHeight = textPainter.height;
+        }
+      }
+
+      return yOffset + maxRowHeight;
     }
 
     return yOffset;

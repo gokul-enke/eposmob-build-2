@@ -61,7 +61,9 @@ class SavedOrder {
   final double? flatDiscount;
   final double? percentageDiscount;
   final bool? toCustomerCredit;
+
   final String? tableId;
+  final String? alternatePhone;
 
   SavedOrder({
     required this.id,
@@ -89,6 +91,7 @@ class SavedOrder {
     this.percentageDiscount,
     this.toCustomerCredit,
     this.tableId,
+    this.alternatePhone,
   });
 }
 
@@ -338,7 +341,10 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
           flatDiscount: hiveSavedOrder.flatDiscount,
           percentageDiscount: hiveSavedOrder.percentageDiscount,
+
           toCustomerCredit: hiveSavedOrder.toCustomerCredit,
+          alternatePhone: hiveSavedOrder.alternatePhone,
+          tableId: hiveSavedOrder.tableId,
         ));
       }
       notifyListeners();
@@ -404,7 +410,10 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryTime: order.deliveryTime,
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
+
           toCustomerCredit: order.toCustomerCredit,
+          tableId: order.tableId,
+          alternatePhone: order.alternatePhone,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -517,7 +526,9 @@ class LocalProductProvider extends ChangeNotifier {
         flatDiscount: hiveSavedOrder.flatDiscount,
         percentageDiscount: hiveSavedOrder.percentageDiscount,
         toCustomerCredit: hiveSavedOrder.toCustomerCredit,
+
         tableId: hiveSavedOrder.tableId,
+        alternatePhone: hiveSavedOrder.alternatePhone,
       );
       _savedOrders.add(savedOrder);
       debugPrint(
@@ -636,6 +647,7 @@ class LocalProductProvider extends ChangeNotifier {
         percentageDiscount: order.percentageDiscount,
         toCustomerCredit: order.toCustomerCredit,
         tableId: order.tableId,
+        alternatePhone: order.alternatePhone,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);

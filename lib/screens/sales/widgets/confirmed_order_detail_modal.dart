@@ -502,6 +502,11 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            paymentMethod: order.paymentMethod,
+            customerAlternatePhone: order.alternatePhone,
+            orderComment: order.comment,
             // Balance info not available for offline saved orders
           ),
         ),

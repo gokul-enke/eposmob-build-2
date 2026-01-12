@@ -333,17 +333,17 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? formattedTotal = orderDetailsModelData
                       ?.cart?.priceSummary?.netPayable
                       ?.toString() ??
-                  orderDetailsModelData
-                      ?.cart?.priceSummary?.netTotal
+                  orderDetailsModelData?.cart?.priceSummary?.netTotal
                       ?.toString() ??
                   "0.00";
               String? savedTotal = orderDetailsModelData
                       ?.cart?.priceSummary?.savedTotal
                       ?.toString() ??
                   "0.00";
-              String? discountAmount =
-                  orderDetailsModelData?.cart?.priceSummary?.discount?.toString() ??
-                      "0.00";
+              String? discountAmount = orderDetailsModelData
+                      ?.cart?.priceSummary?.discount
+                      ?.toString() ??
+                  "0.00";
               String storeName =
                   orderDetailsModelData?.cart?.storeName ?? "Store";
               String orderDate = orderDetailsModelData?.orderDate ?? "";
@@ -352,6 +352,23 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? customerPhone = customerDetails?.phone;
               String? customerEmail = customerDetails?.email;
               String? customerAddress = customerDetails?.address?.join(', ');
+              String? customerAlternatePhone = customerDetails?.alternatePhone;
+              String? paymentMethod =
+                  orderDetailsModelData?.paymentDetails?.paymentMethod;
+
+              String? orderComment;
+              if (orderDetailsModelData?.orderProps != null) {
+                try {
+                  final commentProp =
+                      orderDetailsModelData!.orderProps!.firstWhere(
+                    (prop) => prop.propsCode == "COMMENT",
+                    orElse: () => OrderDetailsModelDataOrderProp(),
+                  );
+                  orderComment = commentProp.propsValue;
+                } catch (e) {
+                  debugPrint("Error extracting order comment: $e");
+                }
+              }
 
               // Note: Balance info not available from order details API
               // customerOldBalance, customerCurrentBalance, paidAmount will be null
@@ -371,6 +388,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                     customerPhone: customerPhone,
                     customerEmail: customerEmail,
                     customerAddress: customerAddress,
+                    customerAlternatePhone: customerAlternatePhone,
+                    paymentMethod: paymentMethod,
+                    orderComment: orderComment,
                     orderReturns: orderDetailsModelData?.orderReturns,
                     // Balance info not available from order details API
                   ),
@@ -572,13 +592,12 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final appSettings = appSettingsProvider.appSettings;
 
-      final billDocumentConfig =
-          (orderDetailsModelData!.orderReturns != null &&
-                  orderDetailsModelData!.orderReturns!.returnItems != null &&
-                  orderDetailsModelData!.orderReturns!.returnItems!.isNotEmpty)
-              ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
-                  docConfigProvider.getDocumentConfig("Bill"))
-              : docConfigProvider.getDocumentConfig("Bill");
+      final billDocumentConfig = (orderDetailsModelData!.orderReturns != null &&
+              orderDetailsModelData!.orderReturns!.returnItems != null &&
+              orderDetailsModelData!.orderReturns!.returnItems!.isNotEmpty)
+          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
+              docConfigProvider.getDocumentConfig("Bill"))
+          : docConfigProvider.getDocumentConfig("Bill");
 
       if (appSettings == null || billDocumentConfig == null) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -591,21 +610,38 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         return;
       }
 
+      String? customerAlternatePhone = customerDetails?.alternatePhone;
+      String? paymentMethod =
+          orderDetailsModelData?.paymentDetails?.paymentMethod;
+
+      String? orderComment;
+      if (orderDetailsModelData?.orderProps != null) {
+        try {
+          final commentProp = orderDetailsModelData!.orderProps!.firstWhere(
+            (prop) => prop.propsCode == "COMMENT",
+            orElse: () => OrderDetailsModelDataOrderProp(),
+          );
+          orderComment = commentProp.propsValue;
+        } catch (e) {
+          // ignore
+        }
+      }
+
       final standardPrinter = StandardPrinter(context);
 
       final File? pdfFile = await standardPrinter.generatePDFForSharing(
         cartItems: orderDetailsModelData!.cart!.cartItems!,
-        formattedTotal: orderDetailsModelData!.priceSummary?.netPayable
-                ?.toString() ??
-            orderDetailsModelData!.priceSummary?.netTotal?.toString() ??
-            '0.00',
+        formattedTotal:
+            orderDetailsModelData!.priceSummary?.netPayable?.toString() ??
+                orderDetailsModelData!.priceSummary?.netTotal?.toString() ??
+                '0.00',
         savedTotal:
             orderDetailsModelData!.priceSummary?.savedTotal?.toString() ??
                 '0.00',
         discountAmount:
             orderDetailsModelData!.priceSummary?.discount?.toString() ?? '0.00',
-        orderDate:
-            orderDetailsModelData!.orderDate ?? DateTime.now().toIso8601String(),
+        orderDate: orderDetailsModelData!.orderDate ??
+            DateTime.now().toIso8601String(),
         orderNumber: orderNumber,
         isFromLocalStorage: false,
         selectedPaperSize: 'A4',
@@ -619,6 +655,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             ? customerDetails!.address!.join(', ')
             : null,
         orderReturns: orderDetailsModelData!.orderReturns,
+        customerAlternatePhone: customerAlternatePhone,
+        paymentMethod: paymentMethod,
+        orderComment: orderComment,
       );
 
       Navigator.of(context, rootNavigator: true).pop();
@@ -883,10 +922,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final customerPhone = customerDetails!.phone!;
       final customerName = customerDetails?.name ?? 'Valued Customer';
-      final totalAmount = orderDetailsModelData?.priceSummary?.netPayable
-              ?.toString() ??
-          orderDetailsModelData?.priceSummary?.netTotal?.toString() ??
-          '0.00';
+      final totalAmount =
+          orderDetailsModelData?.priceSummary?.netPayable?.toString() ??
+              orderDetailsModelData?.priceSummary?.netTotal?.toString() ??
+              '0.00';
       final currency = Provider.of<AppSettingsProvider>(context, listen: false)
               .appSettings
               ?.currency ??

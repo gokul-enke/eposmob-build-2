@@ -291,6 +291,23 @@ class _SalesScreenState extends State<SalesScreen> {
       // Create StandardPrinter instance and generate PDF
       final standardPrinter = StandardPrinter(context);
 
+      String? customerAlternatePhone =
+          orderData.customerDetails?.alternatePhone;
+      String? paymentMethod = orderData.paymentDetails?.paymentMethod;
+
+      String? orderComment;
+      if (orderData.orderProps != null) {
+        try {
+          final commentProp = orderData.orderProps!.firstWhere(
+            (prop) => prop.propsCode == "COMMENT",
+            orElse: () => OrderDetailsModelDataOrderProp(),
+          );
+          orderComment = commentProp.propsValue;
+        } catch (e) {
+          // ignore
+        }
+      }
+
       // Use the cart items directly without conversion since the PDF method expects the original objects
       final File? pdfFile = await standardPrinter.generatePDFForSharing(
         cartItems: orderData.cart!.cartItems!,
@@ -315,6 +332,9 @@ class _SalesScreenState extends State<SalesScreen> {
             ? orderData.customerDetails!.address!.join(', ')
             : null,
         orderReturns: orderData.orderReturns,
+        customerAlternatePhone: customerAlternatePhone,
+        paymentMethod: paymentMethod,
+        orderComment: orderComment,
       );
 
       // Close loading dialog
@@ -705,6 +725,23 @@ class _SalesScreenState extends State<SalesScreen> {
       debugPrint('🔄 Starting PDF generation for WhatsApp sharing...');
       final standardPrinter = StandardPrinter(context);
 
+      String? customerAlternatePhone =
+          orderData.customerDetails?.alternatePhone;
+      String? paymentMethod = orderData.paymentDetails?.paymentMethod;
+
+      String? orderComment;
+      if (orderData.orderProps != null) {
+        try {
+          final commentProp = orderData.orderProps!.firstWhere(
+            (prop) => prop.propsCode == "COMMENT",
+            orElse: () => OrderDetailsModelDataOrderProp(),
+          );
+          orderComment = commentProp.propsValue;
+        } catch (e) {
+          // ignore
+        }
+      }
+
       final File? pdfFile = await standardPrinter.generatePDFForSharing(
         cartItems: orderData.cart!.cartItems!,
         formattedTotal: orderData.priceSummary?.netPayable?.toString() ??
@@ -728,6 +765,9 @@ class _SalesScreenState extends State<SalesScreen> {
             ? orderData.customerDetails!.address!.join(', ')
             : null,
         orderReturns: orderData.orderReturns,
+        customerAlternatePhone: customerAlternatePhone,
+        paymentMethod: paymentMethod,
+        orderComment: orderComment,
       );
 
       if (pdfFile == null) {
@@ -1284,6 +1324,24 @@ Powered by CloudPOS''',
                     orderDetails.data?.customerDetails?.email;
                 String? customerAddress =
                     orderDetails.data?.customerDetails?.address?.join(', ');
+                String? customerAlternatePhone =
+                    orderDetails.data?.customerDetails?.alternatePhone;
+                String? paymentMethod =
+                    orderDetails.data?.paymentDetails?.paymentMethod;
+
+                String? orderComment;
+                if (orderDetails.data?.orderProps != null) {
+                  try {
+                    final commentProp =
+                        orderDetails.data!.orderProps!.firstWhere(
+                      (prop) => prop.propsCode == "COMMENT",
+                      orElse: () => OrderDetailsModelDataOrderProp(),
+                    );
+                    orderComment = commentProp.propsValue;
+                  } catch (e) {
+                    debugPrint("Error extracting order comment: $e");
+                  }
+                }
 
                 // Note: Balance info not available from order details API
                 // customerOldBalance, customerCurrentBalance, paidAmount will be null
@@ -1305,6 +1363,9 @@ Powered by CloudPOS''',
                       customerPhone: customerPhone,
                       customerEmail: customerEmail,
                       customerAddress: customerAddress,
+                      customerAlternatePhone: customerAlternatePhone,
+                      paymentMethod: paymentMethod,
+                      orderComment: orderComment,
                       orderReturns: orderDetails.data?.orderReturns,
                       // Balance info not available from order details API
                     ),

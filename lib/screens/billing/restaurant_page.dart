@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -629,7 +631,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         couponId: null, // Not applicable
         comment: currentComment.isNotEmpty
             ? currentComment
-            : "Order for Table ${_selectedTableName ?? _activeTableId}", // Use table name for clarity
+            : "Order for ${_selectedTableName ?? _activeTableId}", // Use table name for clarity
         deliveryMethodId:
             Provider.of<DeliveryMethodsProvider>(context, listen: false)
                     .defaultDeliveryMethod
@@ -646,7 +648,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         showScaffold(
           context: context,
           message:
-              'Order for Table $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
+              'Order for $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
         );
 
         // Clear the local cart after successful submission
@@ -810,7 +812,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         couponId: null,
         comment: currentComment.isNotEmpty
             ? currentComment
-            : "Order for Table ${_selectedTableName ?? _activeTableId}",
+            : "Order for ${_selectedTableName ?? _activeTableId}",
         deliveryMethodId:
             Provider.of<DeliveryMethodsProvider>(context, listen: false)
                     .defaultDeliveryMethod
@@ -2494,6 +2496,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   String? _selectedCustomerPhone;
   List<CustomerListModelData> _customers = [];
   bool _customersInitialized = false;
+  bool _isCustomerManuallySelected = false; // Flag to track manual override
 
   // Discount Variables
   bool _isCouponApplied = false;
@@ -2613,20 +2616,98 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Future<void> _fetchCustomers() async {
+    debugPrint("🔍 [DEBUG] Restaurant: _fetchCustomers called");
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final customerProvider =
           Provider.of<CustomerProvider>(context, listen: false);
 
+      debugPrint("🔍 [DEBUG] Restaurant: Loading customers from provider...");
       await customerProvider.loadAllCustomers(
         authModel.token ?? '',
       );
 
       setState(() {
-        _customers = customerProvider.customerList ?? [];
+        _customers = customerProvider.allCustomers ?? [];
+        debugPrint(
+            "🔍 [DEBUG] Restaurant: Fetched ${_customers.length} total customers (incl. background load)");
       });
+
+      // Apply default customer logic after fetching
+      _applyDefaultCustomer();
     } catch (e) {
-      debugPrint('Error fetching customers: $e');
+      debugPrint('❌ [DEBUG] Error fetching customers: $e');
+    }
+  }
+
+  /// Extracts and applies the default customer from app settings
+  void _applyDefaultCustomer() {
+    debugPrint("🔍 [DEBUG] Restaurant: _applyDefaultCustomer called");
+
+    // Safeguard: if customer was manually selected or already partially entered, don't reset to default
+    if (_isCustomerManuallySelected &&
+        (_selectedCustomerID != null ||
+            _selectedCustomerPhone?.isNotEmpty == true)) {
+      debugPrint(
+          "🛡️ [DEBUG] Restaurant: Customer manually selected (ID: $_selectedCustomerID, Phone: $_selectedCustomerPhone), skipping reset to default");
+      return;
+    }
+
+    try {
+      // Check if auto-assign is enabled in app settings
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final bool autoAssignEnabled =
+          appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? false;
+
+      debugPrint(
+          "🔧 [DEBUG] Restaurant: Auto-assign enabled in settings: $autoAssignEnabled");
+
+      if (!autoAssignEnabled) {
+        debugPrint(
+            "🔧 [DEBUG] APP SETTINGS: Auto-assign default customer is DISABLED for Restaurant");
+        return;
+      }
+
+      if (_customers.isNotEmpty) {
+        // Get the default customer phone from app settings
+        final defaultPhone =
+            appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ??
+                "";
+
+        debugPrint(
+            "🔧 [DEBUG] Restaurant: Default customer phone from settings: '$defaultPhone'");
+
+        if (defaultPhone.isNotEmpty) {
+          try {
+            final defaultCustomer = _customers.firstWhere(
+              (customer) => customer.phone == defaultPhone,
+            );
+            debugPrint(
+                "✅ [DEBUG] Found default customer for restaurant: ${defaultCustomer.name} (ID: ${defaultCustomer.id})");
+
+            setState(() {
+              _selectedCustomer = defaultCustomer;
+              _selectedCustomerID = defaultCustomer.id;
+              _selectedCustomerPhone = defaultCustomer.phone;
+            });
+
+            // Also update the global provider
+            debugPrint("🔄 [DEBUG] Syncing with CustomerSelectionProvider...");
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .setSelectedCustomer(defaultCustomer, isDefault: true);
+          } catch (e) {
+            debugPrint(
+                "⚠️ [DEBUG] No customer found in list of ${_customers.length} with phone '$defaultPhone' for restaurant");
+          }
+        } else {
+          debugPrint("⚠️ [DEBUG] Default phone number is empty in AppSettings");
+        }
+      } else {
+        debugPrint("⚠️ [DEBUG] Customer list is empty, cannot auto-assign");
+      }
+    } catch (e) {
+      debugPrint('❌ [DEBUG] Error applying default customer: $e');
     }
   }
 
@@ -3167,7 +3248,16 @@ class _OrderPanelState extends State<_OrderPanel> {
                                             _selectedCustomerID = customer.id;
                                             _selectedCustomerPhone =
                                                 customer.phone;
+                                            _isCustomerManuallySelected =
+                                                true; // Mark as manually selected
                                           });
+
+                                          // Also update the global provider
+                                          Provider.of<CustomerSelectionProvider>(
+                                                  context,
+                                                  listen: false)
+                                              .setSelectedCustomer(customer);
+
                                           Navigator.of(context).pop();
                                         },
                                         borderRadius: BorderRadius.circular(8),
@@ -3713,7 +3803,12 @@ class _OrderPanelState extends State<_OrderPanel> {
           _selectedCustomerPhone = customerPhone;
         });
 
-        debugPrint('✅ Loaded customer: ${customer.name} (${customer.phone})');
+        debugPrint(
+            '✅ Loaded customer from order: ${customer.name} (${customer.phone})');
+      } else {
+        debugPrint(
+            'ℹ️ No customer associated with this order. Applying default if applicable...');
+        _applyDefaultCustomer();
       }
 
       // Load payment method information if available
@@ -4843,9 +4938,18 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     // Get table name
     String tableName = 'Unknown';
-    if (order['orderProps'] != null && order['orderProps']['TABLE'] != null) {
-      tableName = order['orderProps']['TABLE'].toString().replaceAll('"', '');
-    }
+    try {
+      if (order['orderProps'] != null && order['orderProps']['TABLE'] != null) {
+        tableName = order['orderProps']['TABLE'].toString().replaceAll('"', '');
+      } else if (order['table'] != null) {
+        final t = order['table'];
+        if (t is Map && t['name'] != null) {
+          tableName = t['name'].toString();
+        } else if (t is String) {
+          tableName = t;
+        }
+      }
+    } catch (_) {}
 
     // Get current time
     final now = DateTime.now();
@@ -4853,13 +4957,13 @@ class _OrderPanelState extends State<_OrderPanel> {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
     // Build items list for KOT
-    // Build items list for KOT
     List<Map<String, dynamic>> printItems = [];
     for (var item in cartItems) {
       String productName = 'Unknown';
       String quantity = '1';
       String unitPrice = '0.00';
       String mrp = '0.00';
+      String? itemNotes;
 
       if (item is Map<String, dynamic>) {
         // Try different keys for product name
@@ -4887,6 +4991,26 @@ class _OrderPanelState extends State<_OrderPanel> {
         double mrpVal =
             double.tryParse((item['mrp'] ?? priceVal).toString()) ?? priceVal;
         mrp = mrpVal.toStringAsFixed(2);
+
+        // Extract item-level notes
+        itemNotes = item['notes']?.toString();
+        if (itemNotes == null || itemNotes.isEmpty) {
+          final props = item['order_item_props'];
+          if (props is List) {
+            try {
+              final noteProp = props.firstWhere(
+                (p) =>
+                    p is Map &&
+                    p['code'] != null &&
+                    p['code'].toString().toUpperCase() == 'NOTES',
+                orElse: () => null,
+              );
+              if (noteProp != null) {
+                itemNotes = noteProp['value']?.toString();
+              }
+            } catch (_) {}
+          }
+        }
       }
 
       printItems.add({
@@ -4895,13 +5019,47 @@ class _OrderPanelState extends State<_OrderPanel> {
         'unitPrice': unitPrice,
         'mrp': mrp,
         'rate': unitPrice,
+        'notes': itemNotes, // Pass item notes
       });
     }
 
-    // Get comment
-    String? comment;
-    if (order['comment'] != null && order['comment'].toString().isNotEmpty) {
-      comment = order['comment'].toString();
+    // Get comment using robust extraction logic
+    String? comment = order['comment']?.toString();
+    comment ??= order['order_comment']?.toString();
+
+    // From nested map: orderProps: { COMMENT: "..." }
+    if (comment == null || comment.isEmpty) {
+      final propsMap = order['orderProps'];
+      if (propsMap is Map && propsMap['COMMENT'] != null) {
+        comment = propsMap['COMMENT']?.toString();
+      }
+    }
+
+    // From array: order_props: [{ code: COMMENT, value: "..." }]
+    if (comment == null || comment.isEmpty) {
+      final propsList = order['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) =>
+                (e is Map) &&
+                (e['code'] != null &&
+                    e['code'].toString().toUpperCase() == 'COMMENT'),
+            orElse: () => null,
+          );
+          if (match is Map && match['value'] != null) {
+            comment = match['value']?.toString();
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Normalize: strip surrounding quotes
+    if (comment != null) {
+      comment = comment.trim();
+      if (comment.startsWith('"') && comment.endsWith('"')) {
+        comment = comment.substring(1, comment.length - 1);
+      }
     }
 
     // Navigate to KOT print page
@@ -4917,19 +5075,6 @@ class _OrderPanelState extends State<_OrderPanel> {
         ),
       ),
     );
-  }
-
-  Color _getOrderStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'init':
-        return Colors.orange;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 
   Color _statusColor(String? status) {
@@ -5030,7 +5175,11 @@ class _OrderPanelState extends State<_OrderPanel> {
             const Color(0xFFD97706),
             showBackButton: true,
             onBackButtonPressed: () {
-              setState(() => _selectedOrder = null);
+              setState(() {
+                _selectedOrder = null;
+                // Re-apply default customer when returning to current cart
+                _applyDefaultCustomer();
+              });
               widget.onOrderSelected(null);
             },
             totalPrice: total,
@@ -6052,6 +6201,24 @@ class _OrderPanelState extends State<_OrderPanel> {
           String? customerAddress =
               orderDetails.data?.customerDetails?.address?.join(', ');
 
+          String? customerAlternatePhone =
+              orderDetails.data?.customerDetails?.alternatePhone;
+          String? paymentMethod =
+              orderDetails.data?.paymentDetails?.paymentMethod;
+
+          String? orderComment;
+          if (orderDetails.data?.orderProps != null) {
+            try {
+              final commentProp = orderDetails.data!.orderProps!.firstWhere(
+                (prop) => prop.propsCode == "COMMENT",
+                orElse: () => OrderDetailsModelDataOrderProp(),
+              );
+              orderComment = commentProp.propsValue;
+            } catch (e) {
+              // ignore
+            }
+          }
+
           // Calculate customer balance for print
           double? oldBalance = _selectedCustomer?.balance;
           double totalPaid = 0.0;
@@ -6087,6 +6254,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                   customerOldBalance: oldBalance,
                   customerCurrentBalance: currentBalance,
                   paidAmount: totalPaid > 0 ? totalPaid : null,
+                  customerAlternatePhone: customerAlternatePhone,
+                  paymentMethod: paymentMethod,
+                  orderComment: orderComment,
                 ),
               ),
             );
@@ -7076,11 +7246,17 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   // Refresh local drafts from Hive filtered by table tag and pending status
-  void _refreshLocalDrafts() {
+  Future<void> _refreshLocalDrafts() async {
+    // Reset manual selection flag when table changes context or drafts are refreshed
+    _isCustomerManuallySelected = false;
+
+    // Apply default customer logic for the current table context
+    _applyDefaultCustomer();
+
     try {
-      final localProductProvider =
+      final localProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      final drafts = localProductProvider.savedOrders.where((o) {
+      final drafts = localProvider.savedOrders.where((o) {
         final st = (o.status ?? '').toLowerCase();
         return st == 'pending' && o.tableId == widget.tableId;
       }).toList();

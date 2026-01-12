@@ -321,7 +321,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       double finalTotal = order.total;
 
       // Get active store name
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
       Navigator.push(
@@ -342,6 +343,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            paymentMethod: order.paymentMethod,
+            customerAlternatePhone: order.alternatePhone,
+            orderComment: order.comment,
             // Balance info not available for offline saved orders
           ),
         ),
@@ -588,7 +594,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           'quantity': item.quantity,
           'price': item.price,
           'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
-          'stock_id': item.selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
+          'stock_id': item
+              .selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
         });
       }
 
@@ -634,7 +641,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               // ✅ For multi-payment, EXPLICITLY set single payment fields to null
               paymentMethod = null;
               paidAmount = null;
-              
+
               debugPrint("✅ Using multi-payment format for sync");
               debugPrint("  - Payment Methods: $paymentMethods");
               debugPrint("  - Paid Methods: $paidMethods");
@@ -646,7 +653,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             paidAmount = order.paidAmount ?? order.total.toString();
             paymentMethods = null;
             paidMethods = null;
-            
+
             debugPrint("⚠️ Fallback to single-payment format");
             debugPrint("  - Payment Method: $paymentMethod");
             debugPrint("  - Paid Amount: $paidAmount");
@@ -657,7 +664,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           paidAmount = order.paidAmount ?? order.total.toString();
           paymentMethods = null;
           paidMethods = null;
-          
+
           debugPrint("⚠️ Single-payment format (no JSON detected)");
           debugPrint("  - Payment Method: $paymentMethod");
           debugPrint("  - Paid Amount: $paidAmount");
@@ -684,7 +691,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           deliveryMethodId: order.deliveryMethodId ??
               "1", // Use stored delivery method or default
           carNumber: order.carNumber,
-          status: "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
+          status:
+              "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
           // Include discount data from saved order
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,

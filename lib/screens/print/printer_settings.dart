@@ -34,6 +34,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool isLoading = true;
   String selectedPaperSize = '80mm';
   String selectedFontStyle = 'Font A (Small & Sharp)';
+  String selectedSettingsType = 'Billing'; // 'Billing' or 'Kitchen'
 
   // Printer scanning variables
   var printerManager = PrinterManager.instance;
@@ -222,7 +223,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       'productId': printer.productId,
       'typePrinter': printer.typePrinter.toString(),
     };
-    await prefs.setString('default_printer', json.encode(printerData));
+
+    // Save to appropriate key based on selected type
+    final key =
+        selectedSettingsType == 'Billing' ? 'default_printer' : 'kot_printer';
+    await prefs.setString(key, json.encode(printerData));
   }
 
   Future<void> _loadSettings() async {
@@ -231,9 +236,20 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     });
 
     final prefs = await SharedPreferences.getInstance();
-    final defaultPrinterJson = prefs.getString('default_printer');
-    final defaultPaperSize = prefs.getString('default_paper_size');
-    final defaultFontStyle = prefs.getString('default_font_style');
+
+    // Determine keys based on selected type
+    final printerKey =
+        selectedSettingsType == 'Billing' ? 'default_printer' : 'kot_printer';
+    final paperSizeKey = selectedSettingsType == 'Billing'
+        ? 'default_paper_size'
+        : 'kot_paper_size';
+    final fontStyleKey = selectedSettingsType == 'Billing'
+        ? 'default_font_style'
+        : 'kot_font_style';
+
+    final defaultPrinterJson = prefs.getString(printerKey);
+    final defaultPaperSize = prefs.getString(paperSizeKey);
+    final defaultFontStyle = prefs.getString(fontStyleKey);
 
     // Load paper size
     if (defaultPaperSize != null) {
@@ -252,7 +268,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       setState(() {
         selectedPaperSize = '80mm';
       });
-      _saveDefaultPaperSize('80mm');
+      // Don't auto-save default here to avoid overwriting if just switching tabs
     }
 
     // Load font style
@@ -261,11 +277,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         selectedFontStyle = defaultFontStyle;
       });
     } else {
-      // Default to Font B if no preference is set
+      // Default to Font A if no preference is set
       setState(() {
         selectedFontStyle = 'Font A (Small & Sharp)';
       });
-      _saveDefaultFontStyle('Font A (Small & Sharp)');
     }
 
     // Load default printer
@@ -282,6 +297,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             orElse: () => PrinterType.bluetooth,
           ),
         );
+      });
+    } else {
+      setState(() {
+        selectedPrinter = null;
       });
     }
 
@@ -301,6 +320,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         selectedPaperSize = '80mm';
         selectedFontStyle = 'Font A (Small & Sharp)';
       });
+
+      // Also clear current context keys
+      final prefs = await SharedPreferences.getInstance();
+      if (selectedSettingsType == 'Billing') {
+        await prefs.remove('default_printer');
+        await prefs.remove('default_paper_size');
+        await prefs.remove('default_font_style');
+      } else {
+        await prefs.remove('kot_printer');
+        await prefs.remove('kot_paper_size');
+        // await prefs.remove('kot_font_style'); // If added later
+      }
 
       if (mounted) {
         showScaffold(
@@ -400,7 +431,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('default_paper_size', paperSize);
+    final key = selectedSettingsType == 'Billing'
+        ? 'default_paper_size'
+        : 'kot_paper_size';
+    await prefs.setString(key, paperSize);
 
     if (mounted) {
       showScaffold(
@@ -412,7 +446,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _saveDefaultFontStyle(String fontStyle) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('default_font_style', fontStyle);
+    final key = selectedSettingsType == 'Billing'
+        ? 'default_font_style'
+        : 'kot_font_style';
+    await prefs.setString(key, fontStyle);
 
     if (mounted) {
       showScaffold(
@@ -1174,6 +1211,77 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                   //   ),
 
                   // if (selectedPrinter != null) const SizedBox(height: 24),
+
+                  // Settings Type Toggle
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedSettingsType = 'Billing';
+                              });
+                              _loadSettings();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: selectedSettingsType == 'Billing'
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                'Billing Printer',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: selectedSettingsType == 'Billing'
+                                      ? Colors.white
+                                      : ColorManager.kTitleTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedSettingsType = 'Kitchen';
+                              });
+                              _loadSettings();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: selectedSettingsType == 'Kitchen'
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                'Kitchen Printer',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: selectedSettingsType == 'Kitchen'
+                                      ? Colors.white
+                                      : ColorManager.kTitleTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                   // Settings Grid
                   Row(

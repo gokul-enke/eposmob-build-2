@@ -17,18 +17,21 @@ class CustomerSectionBuilder {
     String? customerPhone,
     String? customerEmail,
     String? customerAddress,
-    PosFontType fontType,
-  ) {
+    PosFontType fontType, {
+    String? customerAlternatePhone,
+    String? paymentMethod,
+    String? orderComment,
+  }) {
     List<int> bytes = [];
 
     // Add separator line
     bytes += generator.hr();
 
-    // Customer Name + Phone on a single line when both are present
+    // Customer Name + Phone (and Alternate)
     if ((customerName != null && customerName.isNotEmpty) &&
         (customerPhone != null && customerPhone.isNotEmpty)) {
       final combined = printerUtils.sanitizeText(
-          '$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}');
+          '$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}');
       bytes += generator.text(
         combined,
         styles: PosStyles(
@@ -51,8 +54,8 @@ class CustomerSectionBuilder {
       }
       if (customerPhone != null && customerPhone.isNotEmpty) {
         bytes += generator.text(
-          printerUtils
-              .sanitizeText(StringHelper.maskStringShowLast4(customerPhone)),
+          printerUtils.sanitizeText(
+              '${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}'),
           styles: PosStyles(
             fontType: fontType,
             height: ThermalFontConfig.textSizeSmall,
@@ -60,6 +63,30 @@ class CustomerSectionBuilder {
           ),
         );
       }
+    }
+
+    // Payment Method
+    if (paymentMethod != null && paymentMethod.isNotEmpty) {
+      bytes += generator.text(
+        printerUtils.sanitizeText('Payment: $paymentMethod'),
+        styles: PosStyles(
+          fontType: fontType,
+          height: ThermalFontConfig.textSizeSmall,
+          width: ThermalFontConfig.textSizeSmall,
+        ),
+      );
+    }
+
+    // Order Comment
+    if (orderComment != null && orderComment.isNotEmpty) {
+      bytes += generator.text(
+        printerUtils.sanitizeText('Comment: $orderComment'),
+        styles: PosStyles(
+          fontType: fontType,
+          height: ThermalFontConfig.textSizeSmall,
+          width: ThermalFontConfig.textSizeSmall,
+        ),
+      );
     }
 
     // Customer Address

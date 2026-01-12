@@ -402,12 +402,15 @@ class OrderDetailsModelDataCustomerDetails {
   final int? customerId; // Keep as int? if it's an int in JSON
   final List<dynamic>? address; // Changed to List<dynamic>
 
+  final String? alternatePhone; // Added alternate_phone
+
   OrderDetailsModelDataCustomerDetails({
     this.name,
     this.email,
     this.phone,
     this.customerId,
     this.address,
+    this.alternatePhone,
   });
 
   factory OrderDetailsModelDataCustomerDetails.fromJson(
@@ -419,6 +422,7 @@ class OrderDetailsModelDataCustomerDetails {
         customerId: json["customer_id"], // Keep as int? if it's an int
         address:
             json["address"] == null ? [] : List<dynamic>.from(json["address"]),
+        alternatePhone: json["alternate_phone"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -427,6 +431,7 @@ class OrderDetailsModelDataCustomerDetails {
         "phone": phone,
         "customer_id": customerId,
         "address": address,
+        "alternate_phone": alternatePhone,
       };
 }
 

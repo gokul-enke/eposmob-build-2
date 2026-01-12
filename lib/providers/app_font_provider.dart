@@ -39,6 +39,9 @@ class AppFontProvider extends ChangeNotifier {
   /// Font size for billing table input fields (S:11, M:13, L:15)
   double get billingTableInputSize => 11.0 + (_fontSizeLevel * 2);
 
+  /// Font size for product card titles (S:14, M:16, L:18)
+  double get productCardTitleSize => 14.0 + (_fontSizeLevel * 2);
+
   // ============== Future Extensibility ==============
   // Add more semantic getters here as needed, e.g.:
   // double get reportTableHeaderSize => 14.0 + (_fontSizeLevel * 2);

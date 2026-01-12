@@ -215,10 +215,18 @@ class _KotPrintPageState extends State<KotPrintPage> {
     debugPrint(
         '[KotPrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
-    final defaultPrinterJson = prefs.getString('default_printer');
+    // Try to load KOT specific printer first
+    String? printerJson = prefs.getString('kot_printer');
 
-    if (defaultPrinterJson != null) {
-      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
+    // Fallback to default printer if KOT printer is not set
+    if (printerJson == null) {
+      debugPrint(
+          '[KotPrintPage] No KOT printer found. Falling back to default printer.');
+      printerJson = prefs.getString('default_printer');
+    }
+
+    if (printerJson != null) {
+      final Map<String, dynamic> printerData = json.decode(printerJson);
 
       setState(() {
         selectedPrinter = BluetoothPrinter(
@@ -233,7 +241,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         _isLoading = false;
       });
       debugPrint(
-          '[KotPrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
+          '[KotPrintPage] Printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
 
       if (selectedPrinter != null && _kotDocumentConfig != null) {
         _handlePrinting();
@@ -242,8 +250,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       setState(() {
         _isLoading = false;
       });
-      debugPrint(
-          '[KotPrintPage] No default printer found in SharedPreferences');
+      debugPrint('[KotPrintPage] No printer found in SharedPreferences');
     }
   }
 
@@ -256,7 +263,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
       'productId': printer.productId,
       'typePrinter': printer.typePrinter.toString(),
     };
-    await prefs.setString('default_printer', json.encode(printerData));
+    // Save to 'kot_printer' instead of 'default_printer'
+    await prefs.setString('kot_printer', json.encode(printerData));
   }
 
   void selectPrinter(BluetoothPrinter printer) {
@@ -435,15 +443,21 @@ class _KotPrintPageState extends State<KotPrintPage> {
   Future<void> _loadDefaultPaperSize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final defaultPaperSize = prefs.getString('default_paper_size');
+      // Try to load KOT specific paper size first
+      String? paperSize = prefs.getString('kot_paper_size');
 
-      if (defaultPaperSize != null) {
+      // Fallback to default paper size if KOT paper size is not set
+      if (paperSize == null) {
+        paperSize = prefs.getString('default_paper_size');
+      }
+
+      if (paperSize != null) {
         setState(() {
-          if (defaultPaperSize == 'Thermal') {
+          if (paperSize == 'Thermal') {
             selectedPaperSize = '80mm';
             _saveDefaultPaperSize('80mm');
           } else {
-            selectedPaperSize = defaultPaperSize;
+            selectedPaperSize = paperSize!;
           }
         });
       } else {
@@ -456,7 +470,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
 
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('default_paper_size', paperSize);
+    // Save to 'kot_paper_size' instead of 'default_paper_size'
+    await prefs.setString('kot_paper_size', paperSize);
 
     setState(() {
       selectedPaperSize = paperSize;

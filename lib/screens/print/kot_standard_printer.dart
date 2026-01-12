@@ -366,9 +366,18 @@ class KotStandardPrinter {
                         ));
                       }
                       if (showParticulars) {
+                        final itemNotes = item['notes']?.toString();
                         rowCells.add(pw.Padding(
                           padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                          child: pw.Text(name, style: itemStyle),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text(name, style: itemStyle),
+                              if (itemNotes != null && itemNotes.isNotEmpty)
+                                pw.Text('  Note: $itemNotes',
+                                    style: commentStyle),
+                            ],
+                          ),
                         ));
                       }
                       if (showQty) {

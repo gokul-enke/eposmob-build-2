@@ -115,6 +115,9 @@ class ThermalPrinter {
     double? customerOldBalance,
     double? customerCurrentBalance,
     double? paidAmount,
+    String? orderComment,
+    String? customerAlternatePhone,
+    String? paymentMethod,
   }) async {
     debugPrint("===== THERMAL PRINTING DEBUG =====");
 
@@ -200,7 +203,10 @@ class ThermalPrinter {
           customerEmail != null) {
         debugPrint("Building customer details...");
         bytes += _customerBuilder.build(generator, customerName, customerPhone,
-            customerEmail, customerAddress, selectedFontType);
+            customerEmail, customerAddress, selectedFontType,
+            customerAlternatePhone: customerAlternatePhone,
+            paymentMethod: paymentMethod,
+            orderComment: orderComment);
       }
 
       debugPrint("Building cart items...");
@@ -397,6 +403,9 @@ class ThermalPrinter {
     double? customerOldBalance,
     double? customerCurrentBalance,
     double? paidAmount,
+    String? orderComment,
+    String? customerAlternatePhone,
+    String? paymentMethod,
   }) async {
     debugPrint("===== IMAGE-BASED THERMAL PRINTING ====");
 
@@ -590,9 +599,27 @@ class ThermalPrinter {
               ReceiptTableColumn(phoneLabel,
                   weight: 0.35, align: TextAlign.left, isBold: true),
               ReceiptTableColumn(
-                  StringHelper.maskStringShowLast4(customerPhone),
+                  '${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
                   weight: 0.65,
                   align: TextAlign.left),
+            ]));
+          }
+          if (paymentMethod != null && paymentMethod.isNotEmpty) {
+            final paymentLabel = isEnglish ? "Payment:" : "الدفع:";
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(paymentLabel,
+                  weight: 0.35, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(paymentMethod,
+                  weight: 0.65, align: TextAlign.left),
+            ]));
+          }
+          if (orderComment != null && orderComment.isNotEmpty) {
+            final commentLabel = isEnglish ? "Comment:" : "تعليق:";
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(commentLabel,
+                  weight: 0.35, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(orderComment,
+                  weight: 0.65, align: TextAlign.left),
             ]));
           }
         } else {
@@ -615,11 +642,29 @@ class ThermalPrinter {
                   weight: 0.35, align: TextAlign.right, isBold: true),
             ]));
           }
+          if (paymentMethod != null && paymentMethod.isNotEmpty) {
+            final paymentLabel = isEnglish ? "Payment:" : "الدفع:";
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(paymentMethod,
+                  weight: 0.65, align: TextAlign.left),
+              ReceiptTableColumn(paymentLabel,
+                  weight: 0.35, align: TextAlign.right, isBold: true),
+            ]));
+          }
+          if (orderComment != null && orderComment.isNotEmpty) {
+            final commentLabel = isEnglish ? "Comment:" : "تعليق:";
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(orderComment,
+                  weight: 0.65, align: TextAlign.left),
+              ReceiptTableColumn(commentLabel,
+                  weight: 0.35, align: TextAlign.right, isBold: true),
+            ]));
+          }
+          if (customerAddress != null && customerAddress.isNotEmpty) {
+            part1Rows.add(TextRow(customerAddress, scale: 0.9));
+          }
+          part1Rows.add(DividerRow());
         }
-        if (customerAddress != null && customerAddress.isNotEmpty) {
-          part1Rows.add(TextRow(customerAddress, scale: 0.9));
-        }
-        part1Rows.add(DividerRow());
       }
 
       // --- CART ITEMS SECTION ---
@@ -1184,6 +1229,13 @@ class ThermalPrinter {
           }
         }
         part1Rows.add(SpacingRow(10));
+
+        // Order Comment
+        if (orderComment != null && orderComment.isNotEmpty) {
+          final commentLabel = isEnglish ? "Comment:" : "تعليق:";
+          part1Rows.add(TextRow('$commentLabel $orderComment', scale: 0.9));
+          part1Rows.add(SpacingRow(5));
+        }
       }
 
       // ========== PART 2: Footer (QR, Date, Terms, Thank You) ==========
