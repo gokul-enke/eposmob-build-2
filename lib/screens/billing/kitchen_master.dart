@@ -71,6 +71,7 @@ String _getItemStatusText(ItemStatus status) {
 
 class KitchenOrder {
   final String id;
+  final int internalId; // Added for API calls
   final String tableId;
   final DateTime timestamp;
   final List<KitchenOrderItem> items;
@@ -79,6 +80,7 @@ class KitchenOrder {
 
   KitchenOrder({
     required this.id,
+    required this.internalId,
     required this.tableId,
     required this.timestamp,
     required this.items,
@@ -88,6 +90,7 @@ class KitchenOrder {
 
   KitchenOrder copyWith({
     String? id,
+    int? internalId,
     String? tableId,
     DateTime? timestamp,
     List<KitchenOrderItem>? items,
@@ -96,6 +99,7 @@ class KitchenOrder {
   }) {
     return KitchenOrder(
       id: id ?? this.id,
+      internalId: internalId ?? this.internalId,
       tableId: tableId ?? this.tableId,
       timestamp: timestamp ?? this.timestamp,
       items: items ?? this.items,
@@ -424,6 +428,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
     return KitchenOrder(
       id: id.isNotEmpty ? id : 'ORD-${DateTime.now().millisecondsSinceEpoch}',
+      internalId: _parseInt(order['id']) ?? 0,
       tableId: tableDisplay.isNotEmpty ? tableDisplay : 'Table',
       timestamp: timestamp,
       items: items,
@@ -765,6 +770,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
               await _refreshOrdersAndUpdateSelection();
               await _fetchCartItemStatuses();
             },
+            onUpdateAllItemsStatus: _updateAllOrderItemsStatusAPI,
+            loadingOrderIds: _loadingOrderIds,
           ),
         ),
         // Order Details Panel
@@ -843,6 +850,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
           await _refreshOrdersAndUpdateSelection();
           await _fetchCartItemStatuses();
         },
+        onUpdateAllItemsStatus: _updateAllOrderItemsStatusAPI,
+        loadingOrderIds: _loadingOrderIds,
       );
     }
   }
@@ -1271,6 +1280,74 @@ class _KitchenMasterState extends State<KitchenMaster> {
       debugPrint('🏁 === CART ITEM STATUS UPDATE COMPLETED ===');
     }
   }
+
+  final Set<int> _loadingOrderIds = {};
+
+  Future<void> _updateAllOrderItemsStatusAPI(
+      int orderId, String displayOrderId) async {
+    debugPrint('🚀 === ALL ORDER ITEMS STATUS UPDATE STARTED ===');
+    debugPrint('📦 Order ID: $orderId');
+
+    final statusId = _findStatusIdByValue('SERVED');
+    if (statusId == null) {
+      debugPrint('❌ SERVED status ID not found');
+      showScaffoldError(context: context, message: 'Status "SERVED" not found');
+      return;
+    }
+
+    setState(() {
+      _loadingOrderIds.add(orderId);
+    });
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      final response = await cartProvider.updateAllOrderItemsStatus(
+        orderId: orderId,
+        statusId: statusId,
+        accessToken: authModel.token ?? '',
+      );
+
+      debugPrint('📥 API Response: $response');
+
+      if ((response['status'] as String?)?.toLowerCase() == 'success') {
+        debugPrint('✅ All order items updated to SERVED');
+        await _refreshOrdersAndUpdateSelection();
+
+        if (mounted) {
+          showScaffold(
+            context: context,
+            message: 'Order $displayOrderId items marked as SERVED',
+          );
+        }
+      } else {
+        debugPrint('❌ Failed to update all order items');
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message:
+                'Failed to update items for $displayOrderId: ${response['message']}',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Exception updating all order items: $e');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error updating items for $displayOrderId: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingOrderIds.remove(orderId);
+        });
+      }
+      debugPrint('🏁 === ALL ORDER ITEMS STATUS UPDATE COMPLETED ===');
+    }
+  }
 }
 
 class _OrderQueuePanel extends StatelessWidget {
@@ -1287,6 +1364,8 @@ class _OrderQueuePanel extends StatelessWidget {
   final String? errorMessage;
   final VoidCallback? onRetry;
   final Future<void> Function()? onPullToRefresh;
+  final Function(int, String)? onUpdateAllItemsStatus;
+  final Set<int>? loadingOrderIds;
 
   const _OrderQueuePanel({
     required this.orders,
@@ -1302,6 +1381,8 @@ class _OrderQueuePanel extends StatelessWidget {
     this.errorMessage,
     this.onRetry,
     this.onPullToRefresh,
+    this.onUpdateAllItemsStatus,
+    this.loadingOrderIds,
   });
 
   // Helper method to determine actual order status based on item statuses
@@ -1778,6 +1859,46 @@ class _OrderQueuePanel extends StatelessWidget {
                         ),
                       ))
                   .toList(),
+              if (onUpdateAllItemsStatus != null &&
+                  actualOrderStatus != OrderStatus.served) ...[
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: loadingOrderIds?.contains(order.internalId) ??
+                            false
+                        ? null
+                        : () =>
+                            onUpdateAllItemsStatus!(order.internalId, order.id),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669), // Green
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: loadingOrderIds?.contains(order.internalId) ?? false
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            'Mark As Served',
+                            style: buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s12, 0.21, Colors.white),
+                          ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

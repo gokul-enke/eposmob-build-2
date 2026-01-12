@@ -346,28 +346,29 @@ class CartProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      
+
       debugPrint('🔍 Remove API Response Status Code: ${response.statusCode}');
       debugPrint('🔍 Remove API Response Body: ${response.body}');
       debugPrint('🔍 Remove API Request Body: ${json.encode(apiBodyData)}');
-      
+
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         debugPrint('🔍 Parsed JSON Response: $jsonData');
-        
+
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         debugPrint('🔍 AddToCartModel Status: ${addToCartModel.status}');
-        
+
         await fetchCartDataFromApi(
           customerId: customerId,
           accessToken: accessToken,
           cartId: cartId,
         );
-        
+
         if (addToCartModel.status == 'success') {
           debugPrint('✅ Remove from cart successful');
         } else {
-          debugPrint('⚠️ Remove from cart status not success: ${addToCartModel.status}');
+          debugPrint(
+              '⚠️ Remove from cart status not success: ${addToCartModel.status}');
         }
 
         return jsonData; // Return response data or success status
@@ -502,7 +503,8 @@ class CartProvider with ChangeNotifier {
 
           // Check if cartItem list is not empty before accessing first element
           if (addToCartModel.cart!.cartItem!.isNotEmpty) {
-            setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+            setCartIDForOrder(
+                addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
           }
         }
 
@@ -521,10 +523,10 @@ class CartProvider with ChangeNotifier {
     required String accessToken,
   }) async {
     debugPrint("📤 GET CART ITEM STATUSES API - Starting request");
-    
+
     final url = Uri.parse(APPUrl.getCartItemStatuses);
     debugPrint('🌐 API URL: ${url.toString()}');
-    
+
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -532,24 +534,28 @@ class CartProvider with ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
-    
+
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      
+
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         debugPrint('✅ Cart item statuses fetched successfully');
         return jsonData;
       } else {
-        debugPrint('❌ Failed to fetch cart item statuses (status ${response.statusCode})');
-        return {"status": "error", "message": "Failed to fetch cart item statuses"};
+        debugPrint(
+            '❌ Failed to fetch cart item statuses (status ${response.statusCode})');
+        return {
+          "status": "error",
+          "message": "Failed to fetch cart item statuses"
+        };
       }
     } catch (e) {
       debugPrint('❌ Exception during API call: $e');
@@ -567,13 +573,14 @@ class CartProvider with ChangeNotifier {
     debugPrint("📤 UPDATE CART ITEM STATUS API - Starting request");
     debugPrint("🛒 Cart Item ID: $cartItemId");
     debugPrint("📊 Status ID: $statusId");
-    
-    final url = Uri.parse(APPUrl.updateCartItemStatus).replace(queryParameters: {
+
+    final url =
+        Uri.parse(APPUrl.updateCartItemStatus).replace(queryParameters: {
       'cart_item_id': cartItemId.toString(),
       'status_id': statusId.toString(),
     });
     debugPrint('🌐 API URL: ${url.toString()}');
-    
+
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -581,23 +588,24 @@ class CartProvider with ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
-    
+
     try {
       final response = await http.post(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      
+
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         debugPrint('✅ Cart item status updated successfully');
         return jsonData;
       } else {
-        debugPrint('❌ Failed to update cart item status (status ${response.statusCode})');
+        debugPrint(
+            '❌ Failed to update cart item status (status ${response.statusCode})');
         final jsonData = json.decode(response.body);
         return jsonData;
       }
@@ -607,7 +615,59 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  //          *********************** Change Cart Item Price API ***************************************************
+  //          *********************** UPDATE ALL ORDER ITEMS STATUS API ***************************************************
+
+  Future<Map<String, dynamic>> updateAllOrderItemsStatus({
+    required int orderId,
+    required int statusId,
+    required String accessToken,
+  }) async {
+    debugPrint("📤 UPDATE ALL ORDER ITEMS STATUS API - Starting request");
+    debugPrint("📦 Order ID: $orderId");
+    debugPrint("📊 Status ID: $statusId");
+
+    final url =
+        Uri.parse(APPUrl.updateAllOrderItemsStatus).replace(queryParameters: {
+      'order_id': orderId.toString(),
+      'status_id': statusId.toString(),
+    });
+    debugPrint('🌐 API URL: ${url.toString()}');
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint('✅ Order items status updated successfully');
+        return jsonData;
+      } else {
+        debugPrint(
+            '❌ Failed to update order items status (status ${response.statusCode})');
+        final jsonData = json.decode(response.body);
+        return jsonData;
+      }
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
+  //          *********************** Change Cart Item Price API **********************************
 
   Future<dynamic> updateCartItemPrice({
     required int cartItemId,
@@ -731,8 +791,9 @@ class CartProvider with ChangeNotifier {
     Map<String, dynamic> apiBodyData = {};
 
     // Create a mutable copy of paidMethods to adjust the cash amount
-    List<Map<String, dynamic>>? finalPaidMethods =
-        paidMethods != null ? List<Map<String, dynamic>>.from(paidMethods) : null;
+    List<Map<String, dynamic>>? finalPaidMethods = paidMethods != null
+        ? List<Map<String, dynamic>>.from(paidMethods)
+        : null;
     double parsedBalance = double.tryParse(balanceAmount ?? '0.0') ?? 0.0;
 
     if (parsedBalance > 0 && finalPaidMethods != null) {
@@ -914,7 +975,8 @@ class CartProvider with ChangeNotifier {
         if (status != null) "status": status,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
       };
     } else {
@@ -934,7 +996,8 @@ class CartProvider with ChangeNotifier {
         if (status != null) "status": status,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
       };
     }

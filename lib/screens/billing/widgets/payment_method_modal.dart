@@ -651,47 +651,74 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               ),
               const SizedBox(height: 20),
 
-              // Cash Payment
-              _buildModalPaymentRow(
-                isSelected: isCashSelected,
-                type: 'cash',
-                icon: ImageAssets.cashIcon,
-                label: 'billing.cash'.tr,
-                controller: cashAmountController,
-                focusNode: cashAmountFocusNode,
-                size: size,
-                onToggle: () => _togglePaymentMethod('cash'),
-              ),
+              if (_isLoadingPaymentMethods)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (_paymentMethods.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'No payment methods available',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s14,
+                        0.20,
+                        ColorManager.textColorRed,
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                // Cash Payment
+                if (_cashPaymentMethodId != null) ...[
+                  _buildModalPaymentRow(
+                    isSelected: isCashSelected,
+                    type: 'cash',
+                    icon: ImageAssets.cashIcon,
+                    label: 'billing.cash'.tr,
+                    controller: cashAmountController,
+                    focusNode: cashAmountFocusNode,
+                    size: size,
+                    onToggle: () => _togglePaymentMethod('cash'),
+                  ),
+                  const SizedBox(height: 15),
+                ],
 
-              const SizedBox(height: 15),
+                // Card Payment
+                if (_cardPaymentMethodId != null) ...[
+                  _buildModalPaymentRow(
+                    isSelected: isCardSelected,
+                    type: 'card',
+                    icon: ImageAssets.creditCardIcon,
+                    label: 'billing.card'.tr,
+                    controller: cardAmountController,
+                    focusNode: cardAmountFocusNode,
+                    size: size,
+                    onToggle: () => _togglePaymentMethod('card'),
+                  ),
+                  const SizedBox(height: 15),
+                ],
 
-              // Card Payment
-              _buildModalPaymentRow(
-                isSelected: isCardSelected,
-                type: 'card',
-                icon: ImageAssets.creditCardIcon,
-                label: 'billing.card'.tr,
-                controller: cardAmountController,
-                focusNode: cardAmountFocusNode,
-                size: size,
-                onToggle: () => _togglePaymentMethod('card'),
-              ),
-
-              const SizedBox(height: 15),
-
-              // UPI Payment
-              _buildModalPaymentRow(
-                isSelected: isUpiSelected,
-                type: 'upi',
-                icon: ImageAssets.creditCardIcon,
-                label: 'billing.upi'.tr,
-                controller: upiAmountController,
-                focusNode: upiAmountFocusNode,
-                size: size,
-                onToggle: () => _togglePaymentMethod('upi'),
-              ),
-
-              const SizedBox(height: 15),
+                // UPI Payment
+                if (_upiPaymentMethodId != null) ...[
+                  _buildModalPaymentRow(
+                    isSelected: isUpiSelected,
+                    type: 'upi',
+                    icon: ImageAssets.creditCardIcon,
+                    label: 'billing.upi'.tr,
+                    controller: upiAmountController,
+                    focusNode: upiAmountFocusNode,
+                    size: size,
+                    onToggle: () => _togglePaymentMethod('upi'),
+                  ),
+                  const SizedBox(height: 15),
+                ],
+              ],
 
               // Transaction Reference Field - Show only if Card or UPI is selected
               if (isCardSelected || isUpiSelected) ...[

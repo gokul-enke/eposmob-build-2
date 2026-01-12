@@ -144,8 +144,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
-  int _selectedSidebarTab =
-      1; // 0 for products, 1 for orders/categories - default to orders tab
+  int _selectedSidebarTab = 0; // 0 for cart, 1 for orders - default to cart tab
 
   Timer? _debounceTimer;
 

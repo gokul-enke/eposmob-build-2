@@ -1,7 +1,7 @@
 class APPUrl {
   // static String baseURL = "https://eeezeeerp.cloudposai.com";
-  // static String baseURL = "https://eposdemo.yougoit.in";
-  static String baseURL = "https://linetolinepos.yougoit.in";
+  static String baseURL = "https://eposdemo.yougoit.in";
+  // static String baseURL = "https://linetolinepos.yougoit.in";
   // static String baseURL = "https://epos.hypersouq.in";
 
   static String verifyApiKey = '$baseURL/api/v1/verify-api-key';
@@ -174,6 +174,8 @@ class APPUrl {
   static String updateCartItemStatus =
       '$baseURL/api/v1/cart/update-cart-item-status';
   static String generateBarcode = '$baseURL/api/v1/product/generate-barcode';
+  static String updateAllOrderItemsStatus =
+      '$baseURL/api/v1/order/update-order-items-status';
 
   static String getSalesExecutiveReport =
       '$baseURL/api/v1/sales-executive-report';
