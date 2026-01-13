@@ -17,6 +17,7 @@ class AppSettings {
   final bool showTaxPos;
   final bool showMrpPos;
   final bool showTaxRatePos;
+  final bool showConfirmOrderButton;
 
   AppSettings({
     required this.barcodeSales,
@@ -35,6 +36,7 @@ class AppSettings {
     required this.showTaxPos,
     required this.showMrpPos,
     required this.showTaxRatePos,
+    required this.showConfirmOrderButton,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -99,6 +101,8 @@ class AppSettings {
       showTaxPos: settingsMap['SHOW_TAX_POS']?['status'] ?? false,
       showMrpPos: settingsMap['SHOW_MRP_POS']?['status'] ?? false,
       showTaxRatePos: settingsMap['SHOW_TAXRATE_POS']?['status'] ?? false,
+      showConfirmOrderButton:
+          settingsMap['SHOW_CONFIRM_ORDER_BUTTON']?['status'] ?? true,
     );
   }
 
@@ -189,11 +193,17 @@ class AppSettings {
           "value": "",
           "status": showMrpPos.toString(),
         },
-          {
+        {
           "name": "Show Tax Rate POS",
           "code": "SHOW_TAXRATE_POS",
           "value": "",
           "status": showTaxRatePos.toString(),
+        },
+        {
+          "name": "Show Confirm Order Button",
+          "code": "SHOW_CONFIRM_ORDER_BUTTON",
+          "value": "",
+          "status": showConfirmOrderButton.toString(),
         },
       ],
     };

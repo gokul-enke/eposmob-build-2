@@ -3436,12 +3436,16 @@ class BillingPageState extends State<BillingPage>
               onPressed: _createOrderAndPrint,
               isLoading: isLoadingCreateOrder,
             ),
-            _buildActionButton(
-              text: 'billing.confirm_order'.tr,
-              color: ColorManager.kButtonGreen,
-              onPressed: _confirmOrder,
-              isLoading: isLoadingConfirmOrder,
-            ),
+            if (Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.showConfirmOrderButton ??
+                true)
+              _buildActionButton(
+                text: 'billing.confirm_order'.tr,
+                color: ColorManager.kButtonGreen,
+                onPressed: _confirmOrder,
+                isLoading: isLoadingConfirmOrder,
+              ),
           ],
           if (!_hasInternet) ...[
             _buildActionButton(
