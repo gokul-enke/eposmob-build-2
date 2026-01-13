@@ -11,7 +11,7 @@ import '../../models/cart_item_status.dart';
 import '../../helpers/date_helper.dart';
 import '../../screens/print/print_kot.dart'; // Add KOT Print Page import
 
-enum OrderStatus { pending, preparing, ready, served }
+enum OrderStatus { all, pending, preparing, ready, served }
 
 enum ItemStatus { pending, preparing, ready, served }
 
@@ -20,6 +20,8 @@ enum MobileView { orderList, orderDetails }
 // Shared color and label helpers for statuses (top-level, file-private)
 Color _getStatusColor(OrderStatus status) {
   switch (status) {
+    case OrderStatus.all:
+      return const Color(0xFF2563EB); // Blue
     case OrderStatus.pending:
       return const Color(0xFF2563EB); // Blue (Ready To Cook)
     case OrderStatus.preparing:
@@ -46,6 +48,8 @@ Color _getItemStatusColor(ItemStatus status) {
 
 String _getStatusText(OrderStatus status) {
   switch (status) {
+    case OrderStatus.all:
+      return 'All';
     case OrderStatus.pending:
       return 'Pending';
     case OrderStatus.preparing:
@@ -162,7 +166,7 @@ class KitchenMaster extends StatefulWidget {
 }
 
 class _KitchenMasterState extends State<KitchenMaster> {
-  OrderStatus _selectedFilter = OrderStatus.pending;
+  OrderStatus _selectedFilter = OrderStatus.all;
   KitchenOrder? _selectedOrder; // Track selected order for details panel
 
   // Mobile view state management
@@ -1106,9 +1110,15 @@ class _KitchenMasterState extends State<KitchenMaster> {
         return false;
       }
 
+      if (_selectedFilter == OrderStatus.all) {
+        return true;
+      }
+
       final itemStatuses = order.items.map((item) => item.status).toList();
 
       switch (_selectedFilter) {
+        case OrderStatus.all:
+          return true;
         case OrderStatus.pending:
           return itemStatuses.every((s) => s == ItemStatus.pending);
         case OrderStatus.served:

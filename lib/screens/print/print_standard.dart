@@ -572,6 +572,7 @@ class StandardPrinter {
                 customerAlternatePhone: customerAlternatePhone,
                 isRtl: isRtl,
                 arabicFontBold: arabicFontBold,
+                displayConfig: updatedSettings,
               ),
 
             // Items table - minimal design without borders
@@ -1606,6 +1607,7 @@ class StandardPrinter {
     String? paymentMethod,
     bool isRtl = false,
     pw.Font? arabicFontBold,
+    Map<String, DisplayOption>? displayConfig,
   }) {
     // Create a larger style for customer details with Arabic font support
     final customerDetailStyle = pw.TextStyle(
@@ -1616,49 +1618,53 @@ class StandardPrinter {
       color: PdfColors.black,
     );
 
+    List<pw.Widget> customerDetails = [];
+
+    final bool maskPhone = displayConfig?['maskCustomerPhone']?.visible ?? true;
+
+    if ((customerName != null && customerName.isNotEmpty) &&
+        (customerPhone != null && customerPhone.isNotEmpty)) {
+      final String displayedPhone = maskPhone
+          ? StringHelper.maskStringShowLast4(customerPhone)
+          : customerPhone;
+
+      customerDetails.add(pw.Text(
+          '$customerName - $displayedPhone${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
+          style: customerDetailStyle));
+    } else {
+      if (customerName != null && customerName.isNotEmpty) {
+        customerDetails.add(pw.Text(customerName, style: customerDetailStyle));
+      }
+      if (customerPhone != null && customerPhone.isNotEmpty) {
+        final String displayedPhone = maskPhone
+            ? StringHelper.maskStringShowLast4(customerPhone)
+            : customerPhone;
+
+        customerDetails.add(pw.Text(
+            '$displayedPhone${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
+            style: customerDetailStyle));
+      }
+    }
+
+    if (paymentMethod != null && paymentMethod.isNotEmpty) {
+      customerDetails.add(pw.Text(
+        isRtl
+            ? 'طريقة الدفع: $paymentMethod'
+            : 'Payment Method: $paymentMethod',
+        style: customerDetailStyle,
+      ));
+    }
+
+    if (customerAddress != null && customerAddress.isNotEmpty) {
+      customerDetails.add(pw.Text(customerAddress, style: customerDetailStyle));
+    }
+
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(
-          vertical: 8, horizontal: 8), // Increased vertical padding
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: pw.Column(
         crossAxisAlignment:
             isRtl ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
-        children: [
-          // Add a header for customer details
-          // pw.Text(
-          //   'CUSTOMER DETAILS',
-          //   style: pw.TextStyle(
-          //     fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
-          //     fontWeight: pw.FontWeight.bold,
-          //     color: PdfColors.black,
-          //   ),
-          // ),
-          // pw.SizedBox(height: 5),
-          // Show Name and Phone on a single line without labels when both are present
-          if ((customerName != null && customerName.isNotEmpty) &&
-              (customerPhone != null && customerPhone.isNotEmpty))
-            pw.Text(
-                '$customerName - ${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
-                style: customerDetailStyle)
-          else ...[
-            if (customerName != null && customerName.isNotEmpty)
-              pw.Text(customerName, style: customerDetailStyle),
-            if (customerPhone != null && customerPhone.isNotEmpty)
-              pw.Text(
-                  '${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
-                  style: customerDetailStyle),
-          ],
-          if (paymentMethod != null && paymentMethod.isNotEmpty)
-            pw.Text(
-              isRtl
-                  ? 'طريقة الدفع: $paymentMethod'
-                  : 'Payment Method: $paymentMethod',
-              style: customerDetailStyle,
-            ),
-          // if (customerEmail != null && customerEmail.isNotEmpty)
-          //   pw.Text('Email: $customerEmail', style: customerDetailStyle),
-          if (customerAddress != null && customerAddress.isNotEmpty)
-            pw.Text(customerAddress, style: customerDetailStyle),
-        ],
+        children: customerDetails,
       ),
     );
   }

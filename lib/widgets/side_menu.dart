@@ -30,10 +30,10 @@ class CollapsibleSidebar extends StatefulWidget {
   final Widget sidebarContent;
 
   const CollapsibleSidebar({
-    Key? key,
+    super.key,
     required this.child,
     required this.sidebarContent,
-  }) : super(key: key);
+  });
 
   @override
   CollapsibleSidebarState createState() => CollapsibleSidebarState();
@@ -97,9 +97,8 @@ class _PreservedChild extends StatefulWidget {
   final Widget child;
 
   const _PreservedChild({
-    Key? key,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   _PreservedChildState createState() => _PreservedChildState();
@@ -118,7 +117,7 @@ class _PreservedChildState extends State<_PreservedChild>
 }
 
 class SideMenu extends StatefulWidget {
-  const SideMenu({Key? key}) : super(key: key);
+  const SideMenu({super.key});
 
   @override
   State<SideMenu> createState() => _SideMenuState();
@@ -349,7 +348,7 @@ class _SideMenuState extends State<SideMenu> {
                     return Obx(
                       () => DrawerListTile(
                         icon: fa.FontAwesomeIcons.utensils,
-                        title: 'Restaurant',
+                        title: 'Attender',
                         onTap: () {
                           sideBarController.index.value = 55;
                         },

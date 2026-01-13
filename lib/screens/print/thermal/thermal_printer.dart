@@ -595,11 +595,17 @@ class ThermalPrinter {
             ]));
           }
           if (customerPhone != null && customerPhone.isNotEmpty) {
+            final bool maskPhone =
+                displayConfig?['maskCustomerPhone']?.visible ?? false;
+            final String displayedPhone = maskPhone
+                ? StringHelper.maskStringShowLast4(customerPhone)
+                : customerPhone;
+
             part1Rows.add(ReceiptTableRow([
               ReceiptTableColumn(phoneLabel,
                   weight: 0.35, align: TextAlign.left, isBold: true),
               ReceiptTableColumn(
-                  '${StringHelper.maskStringShowLast4(customerPhone)}${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
+                  '$displayedPhone${customerAlternatePhone != null && customerAlternatePhone.isNotEmpty ? ", $customerAlternatePhone" : ""}',
                   weight: 0.65,
                   align: TextAlign.left),
             ]));
@@ -633,11 +639,15 @@ class ThermalPrinter {
             ]));
           }
           if (customerPhone != null && customerPhone.isNotEmpty) {
+            final bool maskPhone =
+                displayConfig?['maskCustomerPhone']?.visible ?? true;
+            final String displayedPhone = maskPhone
+                ? StringHelper.maskStringShowLast4(customerPhone)
+                : customerPhone;
+
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn(
-                  StringHelper.maskStringShowLast4(customerPhone),
-                  weight: 0.65,
-                  align: TextAlign.left),
+              ReceiptTableColumn(displayedPhone,
+                  weight: 0.65, align: TextAlign.left),
               ReceiptTableColumn(phoneLabel,
                   weight: 0.35, align: TextAlign.right, isBold: true),
             ]));
