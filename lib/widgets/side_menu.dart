@@ -312,7 +312,7 @@ class _SideMenuState extends State<SideMenu> {
               : const SizedBox.shrink(),
 
           // 2. DASHBOARD (Index: 1)
-          userRole == 'sales_executive'
+          (userRole == 'sales_executive' || userRole == 'restaurant_sales')
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission =

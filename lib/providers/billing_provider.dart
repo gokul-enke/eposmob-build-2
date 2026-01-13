@@ -45,6 +45,7 @@ class BillingProvider extends ChangeNotifier {
   final TextEditingController cashAmountController = TextEditingController();
   final TextEditingController cardAmountController = TextEditingController();
   final TextEditingController upiAmountController = TextEditingController();
+  final TextEditingController codAmountController = TextEditingController();
   final TextEditingController debitAmountController = TextEditingController();
   final TextEditingController barcodeController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
@@ -66,6 +67,7 @@ class BillingProvider extends ChangeNotifier {
   final FocusNode cashAmountFocusNode = FocusNode();
   final FocusNode cardAmountFocusNode = FocusNode();
   final FocusNode upiAmountFocusNode = FocusNode();
+  final FocusNode codAmountFocusNode = FocusNode();
   final FocusNode debitAmountFocusNode = FocusNode();
   final FocusNode quantityFocusNode = FocusNode();
   final FocusNode unitPriceFocusNode = FocusNode();
@@ -789,6 +791,7 @@ class BillingProvider extends ChangeNotifier {
   bool _isCashSelected = false;
   bool _isCardSelected = false;
   bool _isUpiSelected = false;
+  bool _isCodSelected = false;
   bool _isDebitSelected = false;
   bool _isOnlineSelected = false;
   bool _toCustomerCreditEnabled = false;
@@ -797,6 +800,7 @@ class BillingProvider extends ChangeNotifier {
   String? _cashPaymentMethodId;
   String? _cardPaymentMethodId;
   String? _upiPaymentMethodId;
+  String? _codPaymentMethodId;
 
   // Pine Labs payment success state
   bool _pineLabsPaymentSuccess = false;
@@ -804,6 +808,7 @@ class BillingProvider extends ChangeNotifier {
   bool get isCashSelected => _isCashSelected;
   bool get isCardSelected => _isCardSelected;
   bool get isUpiSelected => _isUpiSelected;
+  bool get isCodSelected => _isCodSelected;
   bool get isDebitSelected => _isDebitSelected;
   bool get isOnlineSelected => _isOnlineSelected;
   bool get toCustomerCreditEnabled => _toCustomerCreditEnabled;
@@ -813,6 +818,7 @@ class BillingProvider extends ChangeNotifier {
   String? get cashPaymentMethodId => _cashPaymentMethodId;
   String? get cardPaymentMethodId => _cardPaymentMethodId;
   String? get upiPaymentMethodId => _upiPaymentMethodId;
+  String? get codPaymentMethodId => _codPaymentMethodId;
 
   // 23. Payment Validation - Ensure payment methods are selected before confirmation
   bool _isPaymentValid = false;
@@ -855,6 +861,10 @@ class BillingProvider extends ChangeNotifier {
         _isUpiSelected = selected;
         if (!selected) upiAmountController.clear();
         break;
+      case 'COD':
+        _isCodSelected = selected;
+        if (!selected) codAmountController.clear();
+        break;
       case 'DEBIT':
         _isDebitSelected = selected;
         if (!selected) debitAmountController.clear();
@@ -886,6 +896,7 @@ class BillingProvider extends ChangeNotifier {
     _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;
+    _isCodSelected = false;
     _isDebitSelected = false;
     _isOnlineSelected = false;
     _toCustomerCreditEnabled = false;
@@ -894,6 +905,7 @@ class BillingProvider extends ChangeNotifier {
     cashAmountController.clear();
     cardAmountController.clear();
     upiAmountController.clear();
+    codAmountController.clear();
     debitAmountController.clear();
     paidAmountController.clear();
 
@@ -909,6 +921,7 @@ class BillingProvider extends ChangeNotifier {
     if (_isCashSelected) methods.add("CASH");
     if (_isCardSelected) methods.add("CARD");
     if (_isUpiSelected) methods.add("UPI");
+    if (_isCodSelected) methods.add("COD");
     if (_isDebitSelected) methods.add("DEBIT");
     if (_isOnlineSelected) methods.add("ONLINE");
     return methods;
@@ -962,6 +975,14 @@ class BillingProvider extends ChangeNotifier {
       });
     }
 
+    final double codAmount = double.tryParse(codAmountController.text) ?? 0;
+    if (_isCodSelected && codAmount > 0) {
+      paidMethods.add({
+        "method": "COD",
+        "amount": codAmount,
+      });
+    }
+
     // Include ONLINE (Pine Labs) with cart total as amount
     if (_isOnlineSelected) {
       paidMethods.add({
@@ -997,6 +1018,9 @@ class BillingProvider extends ChangeNotifier {
           break;
         case 'UPI':
           amount = double.tryParse(upiAmountController.text) ?? 0;
+          break;
+        case 'COD':
+          amount = double.tryParse(codAmountController.text) ?? 0;
           break;
         case 'DEBIT':
           amount = double.tryParse(debitAmountController.text) ?? 0;
@@ -1054,10 +1078,12 @@ class BillingProvider extends ChangeNotifier {
     required bool isCash,
     required bool isCard,
     required bool isUpi,
+    required bool isCod,
     required bool isDebit,
     required String cashAmount,
     required String cardAmount,
     required String upiAmount,
+    required String codAmount,
     required String debitAmount,
     required String transactionNumber,
     required bool toCustomerCredit,
@@ -1065,10 +1091,12 @@ class BillingProvider extends ChangeNotifier {
     String? cashMethodId,
     String? cardMethodId,
     String? upiMethodId,
+    String? codMethodId,
   }) {
     _isCashSelected = isCash;
     _isCardSelected = isCard;
     _isUpiSelected = isUpi;
+    _isCodSelected = isCod;
     _isDebitSelected = isDebit;
     _toCustomerCreditEnabled = toCustomerCredit;
 
@@ -1076,10 +1104,12 @@ class BillingProvider extends ChangeNotifier {
     if (cashMethodId != null) _cashPaymentMethodId = cashMethodId;
     if (cardMethodId != null) _cardPaymentMethodId = cardMethodId;
     if (upiMethodId != null) _upiPaymentMethodId = upiMethodId;
+    if (codMethodId != null) _codPaymentMethodId = codMethodId;
 
     cashAmountController.text = cashAmount;
     cardAmountController.text = cardAmount;
     upiAmountController.text = upiAmount;
+    codAmountController.text = codAmount;
     debitAmountController.text = debitAmount;
     transactionNumberController.text = transactionNumber;
 
@@ -1265,7 +1295,9 @@ class BillingProvider extends ChangeNotifier {
         "amounts": {
           "CASH": cashAmountController.text,
           "CARD": cardAmountController.text,
+          "CARD": cardAmountController.text,
           "UPI": upiAmountController.text,
+          "COD": codAmountController.text,
           "DEBIT": debitAmountController.text,
         },
         "isMultiPayment": true,
@@ -1285,6 +1317,9 @@ class BillingProvider extends ChangeNotifier {
           break;
         case 'UPI':
           paidAmountValue = upiAmountController.text;
+          break;
+        case 'COD':
+          paidAmountValue = codAmountController.text;
           break;
         default:
           paidAmountValue = getTotalPaidAmount().toString();
@@ -1345,6 +1380,7 @@ class BillingProvider extends ChangeNotifier {
             _isCashSelected = methods.contains('CASH');
             _isCardSelected = methods.contains('CARD');
             _isUpiSelected = methods.contains('UPI');
+            _isCodSelected = methods.contains('COD');
             _isDebitSelected = methods.contains('DEBIT');
             _isOnlineSelected = methods.contains('ONLINE');
 
@@ -1356,6 +1392,9 @@ class BillingProvider extends ChangeNotifier {
             }
             if (_isUpiSelected) {
               upiAmountController.text = (amounts['UPI'] ?? '0').toString();
+            }
+            if (_isCodSelected) {
+              codAmountController.text = (amounts['COD'] ?? '0').toString();
             }
             if (_isDebitSelected) {
               debitAmountController.text = (amounts['DEBIT'] ?? '0').toString();
@@ -1387,6 +1426,9 @@ class BillingProvider extends ChangeNotifier {
               break;
             case 'UPI':
               upiAmountController.text = paidText;
+              break;
+            case 'COD':
+              codAmountController.text = paidText;
               break;
             case 'DEBIT':
               debitAmountController.text = paidText;

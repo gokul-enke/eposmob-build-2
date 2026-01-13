@@ -2476,10 +2476,12 @@ class _OrderPanelState extends State<_OrderPanel> {
   bool _isCashSelected = false;
   bool _isCardSelected = false;
   bool _isUpiSelected = false;
+  bool _isCodSelected = false;
   bool _isDebitSelected = false;
   String _cashAmount = "";
   String _cardAmount = "";
   String _upiAmount = "";
+  String _codAmount = "";
   String _debitAmount = "";
   String _transactionNumber = "";
   double _balanceAmount = 0.0;
@@ -2766,6 +2768,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     if (!_isCashSelected &&
         !_isCardSelected &&
         !_isUpiSelected &&
+        !_isCodSelected &&
         !_isDebitSelected) {
       // No payment method selected, auto-fill cash with order total
       autoFillCashAmount = orderTotal.toStringAsFixed(2);
@@ -2782,10 +2785,12 @@ class _OrderPanelState extends State<_OrderPanel> {
         initialIsCashSelected: autoSelectCash,
         initialIsCardSelected: _isCardSelected,
         initialIsUpiSelected: _isUpiSelected,
+        initialIsCodSelected: _isCodSelected,
         initialIsDebitSelected: _isDebitSelected,
         initialCashAmount: autoFillCashAmount,
         initialCardAmount: _cardAmount,
         initialUpiAmount: _upiAmount,
+        initialCodAmount: _codAmount,
         initialDebitAmount: _debitAmount,
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
@@ -2794,25 +2799,30 @@ class _OrderPanelState extends State<_OrderPanel> {
           isCash,
           isCard,
           isUpi,
+          isCod,
           isDebit,
           cash,
           card,
           upi,
+          cod,
           debit,
           transaction,
           toCustomerCredit, {
           String? cashMethodId,
           String? cardMethodId,
           String? upiMethodId,
+          String? codMethodId,
         }) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
+            _isCodSelected = isCod;
             _isDebitSelected = isDebit;
             _cashAmount = cash;
             _cardAmount = card;
             _upiAmount = upi;
+            _codAmount = cod;
             _debitAmount = debit;
             _transactionNumber = transaction;
             _toCustomerCreditEnabled = toCustomerCredit;
@@ -2830,11 +2840,14 @@ class _OrderPanelState extends State<_OrderPanel> {
               debugPrint('  - Card Method ID: $cardMethodId');
             if (upiMethodId != null)
               debugPrint('  - UPI Method ID: $upiMethodId');
+            if (codMethodId != null)
+              debugPrint('  - COD Method ID: $codMethodId');
 
             // Calculate balance
             final totalPaid = (double.tryParse(cash) ?? 0.0) +
                 (double.tryParse(card) ?? 0.0) +
-                (double.tryParse(upi) ?? 0.0);
+                (double.tryParse(upi) ?? 0.0) +
+                (double.tryParse(cod) ?? 0.0);
             _balanceAmount = totalPaid - orderTotal;
           });
 
@@ -2845,16 +2858,19 @@ class _OrderPanelState extends State<_OrderPanel> {
             isCash: isCash,
             isCard: isCard,
             isUpi: isUpi,
+            isCod: isCod,
             isDebit: isDebit,
             cashAmount: cash,
             cardAmount: card,
             upiAmount: upi,
+            codAmount: cod,
             debitAmount: debit,
             transactionNumber: transaction,
             toCustomerCredit: toCustomerCredit,
             cashMethodId: cashMethodId,
             cardMethodId: cardMethodId,
             upiMethodId: upiMethodId,
+            codMethodId: codMethodId,
           );
         },
       ),
@@ -3721,10 +3737,12 @@ class _OrderPanelState extends State<_OrderPanel> {
       _isCashSelected = false;
       _isCardSelected = false;
       _isUpiSelected = false;
+      _isCodSelected = false;
       _isDebitSelected = false;
       _cashAmount = "";
       _cardAmount = "";
       _upiAmount = '';
+      _codAmount = "";
       _debitAmount = '';
       _orderComment = "";
       _transactionNumber = "";
@@ -3755,10 +3773,12 @@ class _OrderPanelState extends State<_OrderPanel> {
     _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;
+    _isCodSelected = false;
     _isDebitSelected = false;
     _cashAmount = "";
     _cardAmount = "";
     _upiAmount = '';
+    _codAmount = "";
     _debitAmount = '';
     _orderComment = "";
     _transactionNumber = "";
@@ -3825,10 +3845,12 @@ class _OrderPanelState extends State<_OrderPanel> {
           _isCashSelected = false;
           _isCardSelected = false;
           _isUpiSelected = false;
+          _isCodSelected = false;
           _isDebitSelected = false;
           _cashAmount = '';
           _cardAmount = '';
           _upiAmount = '';
+          _codAmount = '';
           _debitAmount = '';
 
           // Set the specific payment method
@@ -3844,6 +3866,10 @@ class _OrderPanelState extends State<_OrderPanel> {
             case 'UPI':
               _isUpiSelected = true;
               _upiAmount = paidAmount;
+              break;
+            case 'COD':
+              _isCodSelected = true;
+              _codAmount = paidAmount;
               break;
             default:
               // Default to cash if payment method is unknown
@@ -3941,6 +3967,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     return _isCashSelected ||
         _isCardSelected ||
         _isUpiSelected ||
+        _isCodSelected ||
         _isDebitSelected;
   }
 
@@ -4140,7 +4167,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
     final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
     final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
-    final totalPaidAmount = cashAmount + cardAmount + upiAmount;
+    final codAmount = double.tryParse(_codAmount) ?? 0.0;
+    final totalPaidAmount = cashAmount + cardAmount + upiAmount + codAmount;
 
     debugPrint('\n🧮 === RESTAURANT PAGE BALANCE CALCULATION START ===');
     debugPrint('💰 Input Values:');
@@ -4149,6 +4177,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     debugPrint('  - Cash Amount: ₹${cashAmount.toStringAsFixed(2)}');
     debugPrint('  - Card Amount: ₹${cardAmount.toStringAsFixed(2)}');
     debugPrint('  - UPI Amount: ₹${upiAmount.toStringAsFixed(2)}');
+    debugPrint('  - COD Amount: ₹${codAmount.toStringAsFixed(2)}');
     debugPrint('  - Total Paid Amount: ₹${totalPaidAmount.toStringAsFixed(2)}');
     debugPrint('  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
     debugPrint(
@@ -6423,12 +6452,14 @@ class _OrderPanelState extends State<_OrderPanel> {
         final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
         final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
         final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
+        final codId = billingProvider.codPaymentMethodId ?? 'COD';
 
         // Multi-payment handling with dynamic IDs
         List<String> selectedMethods = [];
         if (_isCashSelected) selectedMethods.add(cashId);
         if (_isCardSelected) selectedMethods.add(cardId);
         if (_isUpiSelected) selectedMethods.add(upiId);
+        if (_isCodSelected) selectedMethods.add(codId);
 
         if (selectedMethods.length > 1) {
           // Multi-payment: store as JSON with IDs as keys
@@ -6438,6 +6469,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               cashId: _cashAmount.isNotEmpty ? _cashAmount : "0",
               cardId: _cardAmount.isNotEmpty ? _cardAmount : "0",
               upiId: _upiAmount.isNotEmpty ? _upiAmount : "0",
+              codId: _codAmount.isNotEmpty ? _codAmount : "0",
             },
             "isMultiPayment": true
           };
@@ -6447,7 +6479,9 @@ class _OrderPanelState extends State<_OrderPanel> {
           final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
           final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
           final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
-          paidAmount = (cashAmount + cardAmount + upiAmount).toString();
+          final codAmount = double.tryParse(_codAmount) ?? 0.0;
+          paidAmount =
+              (cashAmount + cardAmount + upiAmount + codAmount).toString();
 
           // Prepare paidMethods array with IDs
           if (_isCashSelected) {
@@ -6468,6 +6502,12 @@ class _OrderPanelState extends State<_OrderPanel> {
               "amount": double.tryParse(_upiAmount) ?? 0.0
             });
           }
+          if (_isCodSelected) {
+            paidMethods.add({
+              "method": codId,
+              "amount": double.tryParse(_codAmount) ?? 0.0
+            });
+          }
 
           paymentMethods = selectedMethods;
         } else {
@@ -6479,6 +6519,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             paidAmount = _cardAmount;
           } else if (_isUpiSelected) {
             paidAmount = _upiAmount;
+          } else if (_isCodSelected) {
+            paidAmount = _codAmount;
           }
         }
       }

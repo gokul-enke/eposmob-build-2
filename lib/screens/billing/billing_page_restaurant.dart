@@ -100,16 +100,19 @@ class BillingPageState extends State<BillingPageRestaurant>
   final TextEditingController _cardAmountController = TextEditingController();
   final TextEditingController _upiAmountController = TextEditingController();
   final TextEditingController _debitAmountController = TextEditingController();
+  final TextEditingController _codAmountController = TextEditingController();
   final FocusNode _cashAmountFocusNode = FocusNode();
   final FocusNode _cardAmountFocusNode = FocusNode();
   final FocusNode _upiAmountFocusNode = FocusNode();
   final FocusNode _debitAmountFocusNode = FocusNode();
+  final FocusNode _codAmountFocusNode = FocusNode();
 
   // Payment method selection states
   bool _isCashSelected = false;
   bool _isCardSelected = false;
   bool _isUpiSelected = false;
   bool _isDebitSelected = false;
+  bool _isCodSelected = false;
   bool isInitLoading = false;
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
@@ -208,6 +211,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;
+    _isCodSelected = false;
     _isDebitSelected = false;
 
     _fetchCustomers();
@@ -319,10 +323,12 @@ class BillingPageState extends State<BillingPageRestaurant>
     _cardAmountController.dispose();
     _upiAmountController.dispose();
     _debitAmountController.dispose();
+    _codAmountController.dispose();
     _cashAmountFocusNode.dispose();
     _cardAmountFocusNode.dispose();
     _upiAmountFocusNode.dispose();
     _debitAmountFocusNode.dispose();
+    _codAmountFocusNode.dispose();
 
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
@@ -501,11 +507,13 @@ class BillingPageState extends State<BillingPageRestaurant>
         _isCashSelected = false;
         _isCardSelected = false;
         _isUpiSelected = false;
+        _isCodSelected = false;
         _isDebitSelected = false;
         _cashAmountController.clear();
         _cardAmountController.clear();
         _upiAmountController.clear();
         _debitAmountController.clear();
+        _codAmountController.clear();
 
         if (currentOrder.paymentMethod != null) {
           final pm = currentOrder.paymentMethod!;
@@ -538,6 +546,11 @@ class BillingPageState extends State<BillingPageRestaurant>
                   _debitAmountController.text =
                       (amounts['DEBIT'] ?? '0').toString();
                 }
+                if (methods.contains('COD')) {
+                  _isCodSelected = true;
+                  _codAmountController.text =
+                      (amounts['COD'] ?? '0').toString();
+                }
               }
             } catch (e) {
               debugPrint("Error parsing payment JSON on rehydration: $e");
@@ -547,6 +560,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             _isCashSelected = pm.toUpperCase() == 'CASH';
             _isCardSelected = pm.toUpperCase() == 'CARD';
             _isUpiSelected = pm.toUpperCase() == 'UPI';
+            _isCodSelected = pm.toUpperCase() == 'COD';
             _isDebitSelected = pm.toUpperCase() == 'DEBIT';
 
             final paid = currentOrder.paidAmount ?? '0.0';
@@ -554,6 +568,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             if (_isCardSelected) _cardAmountController.text = paid;
             if (_isUpiSelected) _upiAmountController.text = paid;
             if (_isDebitSelected) _debitAmountController.text = paid;
+            if (_isCodSelected) _codAmountController.text = paid;
           }
         }
 
@@ -3512,11 +3527,13 @@ class BillingPageState extends State<BillingPageRestaurant>
         _isCashSelected = false;
         _isCardSelected = false;
         _isUpiSelected = false;
+        _isCodSelected = false;
         _isDebitSelected = false;
         _cashAmountController.clear();
         _cardAmountController.clear();
         _upiAmountController.clear();
         _debitAmountController.clear();
+        _codAmountController.clear();
         _autocompleteProductKey = GlobalKey();
         quantityController.clear();
         barcodeController.clear();
@@ -3847,6 +3864,9 @@ class BillingPageState extends State<BillingPageRestaurant>
               "DEBIT": _debitAmountController.text.isNotEmpty
                   ? _debitAmountController.text
                   : "0",
+              "COD": _codAmountController.text.isNotEmpty
+                  ? _codAmountController.text
+                  : "0",
             },
             "isMultiPayment": true
           };
@@ -3904,6 +3924,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                 : "0",
             "DEBIT": _debitAmountController.text.isNotEmpty
                 ? _debitAmountController.text
+                : "0",
+            "COD": _codAmountController.text.isNotEmpty
+                ? _codAmountController.text
                 : "0",
           },
           "isMultiPayment": true
@@ -4060,6 +4083,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         paymentMethod = "UPI";
       } else if (selectedPaymentMethods.contains("DEBIT")) {
         paymentMethod = "DEBIT";
+      } else if (selectedPaymentMethods.contains("COD")) {
+        paymentMethod = "COD";
       } else if (selectedPaymentMethods.contains("BALANCE")) {
         paymentMethod = "BALANCE";
       }
@@ -4392,6 +4417,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         paymentMethod = "CARD";
       } else if (selectedPaymentMethods.contains("UPI")) {
         paymentMethod = "UPI";
+      } else if (selectedPaymentMethods.contains("COD")) {
+        paymentMethod = "COD";
       } else if (selectedPaymentMethods.contains("DEBIT")) {
         paymentMethod = "DEBIT";
       } else if (selectedPaymentMethods.contains("BALANCE")) {
@@ -4564,6 +4591,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
     final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
     final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
+    final codId = billingProvider.codPaymentMethodId ?? "COD";
 
     if (selectedPaymentMethods.length > 1) {
       // Multi-payment: store as JSON with IDs as keys
@@ -4578,6 +4606,9 @@ class BillingPageState extends State<BillingPageRestaurant>
               : "0",
           upiId: _upiAmountController.text.isNotEmpty
               ? _upiAmountController.text
+              : "0",
+          codId: _codAmountController.text.isNotEmpty
+              ? _codAmountController.text
               : "0",
         },
         "isMultiPayment": true
@@ -4595,6 +4626,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           paidAmount = _cardAmountController.text;
         } else if (paymentMethod == upiId) {
           paidAmount = _upiAmountController.text;
+        } else if (paymentMethod == codId) {
+          paidAmount = _codAmountController.text;
         } else {
           // Fallback for legacy string checks
           if (_isCashSelected) {
@@ -4603,6 +4636,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             paidAmount = _cardAmountController.text;
           } else if (_isUpiSelected) {
             paidAmount = _upiAmountController.text;
+          } else if (_isCodSelected) {
+            paidAmount = _codAmountController.text;
           }
         }
       } else {
@@ -4631,7 +4666,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount;
+    double codAmount = double.tryParse(_codAmountController.text) ?? 0.0;
+    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
 
     double balance = 0.0;
 
@@ -4739,9 +4775,10 @@ class BillingPageState extends State<BillingPageRestaurant>
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
+    double codAmount = double.tryParse(_codAmountController.text) ?? 0.0;
     // Note: We don't include debit/toCustomerCredit in total paid amount
     // as it represents money going to customer credit, not money collected
-    return cashAmount + cardAmount + upiAmount;
+    return cashAmount + cardAmount + upiAmount + codAmount;
   }
 
   List<String> _getSelectedPaymentMethods() {
@@ -4762,6 +4799,10 @@ class BillingPageState extends State<BillingPageRestaurant>
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       methods.add(billingProvider.upiPaymentMethodId ?? "UPI");
+    }
+    if (_isCodSelected &&
+        (double.tryParse(_codAmountController.text) ?? 0) > 0) {
+      methods.add(billingProvider.codPaymentMethodId ?? "COD");
     }
     // if (_isDebitSelected &&
     //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
@@ -4801,6 +4842,14 @@ class BillingPageState extends State<BillingPageRestaurant>
       });
     }
 
+    if (_isCodSelected &&
+        (double.tryParse(_codAmountController.text) ?? 0) > 0) {
+      paidMethods.add({
+        "method": billingProvider.codPaymentMethodId ?? "COD",
+        "amount": double.tryParse(_codAmountController.text) ?? 0,
+      });
+    }
+
     // if (_isDebitSelected &&
     //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
     //   paidMethods.add({
@@ -4823,7 +4872,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
         double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
         double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
-        double actualCashPaid = cashAmount + cardAmount + upiAmount;
+        double codAmount = double.tryParse(_codAmountController.text) ?? 0.0;
+        double actualCashPaid = cashAmount + cardAmount + upiAmount + codAmount;
 
         // Use the helper method for consistent balance calculation
         double balance = _calculateBalanceAmount();
@@ -4990,6 +5040,10 @@ class BillingPageState extends State<BillingPageRestaurant>
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       activeMethods.add('UPI');
     }
+    if (_isCodSelected &&
+        (double.tryParse(_codAmountController.text) ?? 0) > 0) {
+      activeMethods.add('COD');
+    }
 
     if (activeMethods.length > 1) {
       return Icons.account_balance_wallet; // Multiple payment methods
@@ -4998,6 +5052,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     } else if (activeMethods.contains('Card')) {
       return Icons.credit_card;
     } else if (activeMethods.contains('UPI')) {
+      return Icons.phone_android;
+    } else if (activeMethods.contains('COD')) {
       return Icons.phone_android;
     }
     return Icons.payment; // Default
@@ -5015,6 +5071,10 @@ class BillingPageState extends State<BillingPageRestaurant>
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       activeMethods.add('billing.upi'.tr);
+    }
+    if (_isCodSelected &&
+        (double.tryParse(_codAmountController.text) ?? 0) > 0) {
+      activeMethods.add('billing.cod'.tr);
     }
 
     if (activeMethods.length > 1) {
@@ -5089,7 +5149,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     if (!_isCashSelected &&
         !_isCardSelected &&
         !_isUpiSelected &&
-        !_isDebitSelected) {
+        !_isDebitSelected &&
+        !_isCodSelected) {
       // No payment method selected, auto-fill cash with cart total
       autoFillCashAmount = localProductProvider.cartTotal.toStringAsFixed(2);
       autoSelectCash = true;
@@ -5101,10 +5162,12 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialIsCashSelected: autoSelectCash,
         initialIsCardSelected: _isCardSelected,
         initialIsUpiSelected: _isUpiSelected,
+        initialIsCodSelected: _isCodSelected,
         initialIsDebitSelected: _isDebitSelected,
         initialCashAmount: autoFillCashAmount,
         initialCardAmount: _cardAmountController.text,
         initialUpiAmount: _upiAmountController.text,
+        initialCodAmount: _codAmountController.text,
         initialDebitAmount: _debitAmountController.text,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
@@ -5116,25 +5179,30 @@ class BillingPageState extends State<BillingPageRestaurant>
           isCard,
           isUpi,
           isDebit,
+          isCod,
           cashAmount,
           cardAmount,
           upiAmount,
           debitAmount,
+          codAmount,
           transactionNumber,
           toCustomerCredit, {
           String? cashMethodId,
           String? cardMethodId,
           String? upiMethodId,
+          String? codMethodId,
         }) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
             _isDebitSelected = isDebit;
+            _isCodSelected = isCod;
             _cashAmountController.text = cashAmount;
             _cardAmountController.text = cardAmount;
             _upiAmountController.text = upiAmount;
             _debitAmountController.text = debitAmount;
+            _codAmountController.text = codAmount;
             _transactionNumberController.text = transactionNumber;
             _toCustomerCreditEnabled = toCustomerCredit;
 
@@ -5149,16 +5217,19 @@ class BillingPageState extends State<BillingPageRestaurant>
             isCash: isCash,
             isCard: isCard,
             isUpi: isUpi,
+            isCod: isCod,
             isDebit: isDebit,
             cashAmount: cashAmount,
             cardAmount: cardAmount,
             upiAmount: upiAmount,
+            codAmount: codAmount,
             debitAmount: debitAmount,
             transactionNumber: transactionNumber,
             toCustomerCredit: toCustomerCredit,
             cashMethodId: cashMethodId,
             cardMethodId: cardMethodId,
             upiMethodId: upiMethodId,
+            codMethodId: codMethodId,
           );
         },
       ),

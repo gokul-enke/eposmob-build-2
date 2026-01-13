@@ -24,6 +24,7 @@ class PaymentCoordinator {
     if (!bp.isCashSelected &&
         !bp.isCardSelected &&
         !bp.isUpiSelected &&
+        !bp.isCodSelected &&
         !bp.isDebitSelected) {
       autoFillCashAmount = localProductProvider.cartTotal.toStringAsFixed(2);
       autoSelectCash = true;
@@ -35,10 +36,12 @@ class PaymentCoordinator {
         initialIsCashSelected: autoSelectCash,
         initialIsCardSelected: bp.isCardSelected,
         initialIsUpiSelected: bp.isUpiSelected,
+        initialIsCodSelected: bp.isCodSelected,
         initialIsDebitSelected: bp.isDebitSelected,
         initialCashAmount: autoFillCashAmount,
         initialCardAmount: bp.cardAmountController.text,
         initialUpiAmount: bp.upiAmountController.text,
+        initialCodAmount: bp.codAmountController.text,
         initialDebitAmount: bp.debitAmountController.text,
         initialTransactionNumber: bp.transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
@@ -47,31 +50,37 @@ class PaymentCoordinator {
           isCash,
           isCard,
           isUpi,
+          isCod,
           isDebit,
           cashAmount,
           cardAmount,
           upiAmount,
+          codAmount,
           debitAmount,
           transactionNumber,
           toCustomerCredit, {
           String? cashMethodId,
           String? cardMethodId,
           String? upiMethodId,
+          String? codMethodId,
         }) {
           bp.updatePaymentFromModal(
             isCash: isCash,
             isCard: isCard,
             isUpi: isUpi,
+            isCod: isCod,
             isDebit: isDebit,
             cashAmount: cashAmount,
             cardAmount: cardAmount,
             upiAmount: upiAmount,
+            codAmount: codAmount,
             debitAmount: debitAmount,
             transactionNumber: transactionNumber,
             toCustomerCredit: toCustomerCredit,
             cashMethodId: cashMethodId,
             cardMethodId: cardMethodId,
             upiMethodId: upiMethodId,
+            codMethodId: codMethodId,
           );
           // Recalculate balance with current cart total
           final netTotal =

@@ -110,6 +110,7 @@
     "cash": "Cash",
     "card": "Card",
     "upi": "UPI",
+    "cod": "COD",
     "multi": "Multi",
     "transaction_reference": "Transaction Reference",
     "purchase_total": "Purchase Total",

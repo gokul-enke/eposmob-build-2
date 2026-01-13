@@ -109,6 +109,7 @@
     "cash": "نقد",
     "card": "بطاقة",
     "upi": "يوبي",
+    "cod": "كود",
     "multi": "دفع متعدد",
     "transaction_reference": "مرجع المعاملة",
     "purchase_total": "إجمالي الشراء",

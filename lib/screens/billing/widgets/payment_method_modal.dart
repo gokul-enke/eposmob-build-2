@@ -19,20 +19,35 @@ class PaymentMethodModal extends StatefulWidget {
   final bool initialIsCashSelected;
   final bool initialIsCardSelected;
   final bool initialIsUpiSelected;
+  final bool initialIsCodSelected;
   final bool initialIsDebitSelected;
   final String initialCashAmount;
   final String initialCardAmount;
   final String initialUpiAmount;
+  final String initialCodAmount;
   final String initialDebitAmount;
   final String initialTransactionNumber;
   final double cartTotal;
   // Customer previous balance (positive = customer has credit; negative = customer owes)
   final double customerPrevBalance;
   final Function(
-      bool, bool, bool, bool, String, String, String, String, String, bool,
-      {String? cashMethodId,
-      String? cardMethodId,
-      String? upiMethodId}) onPaymentMethodSelected;
+    bool isCash,
+    bool isCard,
+    bool isUpi,
+    bool isCod,
+    bool isDebit,
+    String cashAmount,
+    String cardAmount,
+    String upiAmount,
+    String codAmount,
+    String debitAmount,
+    String transactionNumber,
+    bool toCustomerCredit, {
+    String? cashMethodId,
+    String? cardMethodId,
+    String? upiMethodId,
+    String? codMethodId,
+  }) onPaymentMethodSelected;
   final VoidCallback?
       onAfterApply; // Optional callback to execute after applying payment methods
   final String? customButtonTitle; // Optional custom button title
@@ -42,10 +57,12 @@ class PaymentMethodModal extends StatefulWidget {
     required this.initialIsCashSelected,
     required this.initialIsCardSelected,
     required this.initialIsUpiSelected,
+    this.initialIsCodSelected = false,
     required this.initialIsDebitSelected,
     required this.initialCashAmount,
     required this.initialCardAmount,
     required this.initialUpiAmount,
+    this.initialCodAmount = "",
     required this.initialDebitAmount,
     required this.initialTransactionNumber,
     required this.cartTotal,
@@ -63,13 +80,16 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late bool isCashSelected;
   late bool isCardSelected;
   late bool isUpiSelected;
+  late bool isCodSelected;
   late TextEditingController cashAmountController;
   late TextEditingController cardAmountController;
   late TextEditingController upiAmountController;
+  late TextEditingController codAmountController;
   late TextEditingController transactionNumberController;
   late FocusNode cashAmountFocusNode;
   late FocusNode cardAmountFocusNode;
   late FocusNode upiAmountFocusNode;
+  late FocusNode codAmountFocusNode;
   late FocusNode toCustomerCreditFocusNode;
   double balanceAmount = 0;
   // To Customer Credit toggle and controller
@@ -81,6 +101,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   String? _cashPaymentMethodId;
   String? _cardPaymentMethodId;
   String? _upiPaymentMethodId;
+  String? _codPaymentMethodId;
   List<MasterDataValue> _paymentMethods = [];
   bool _isLoadingPaymentMethods = false;
 
@@ -95,6 +116,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     isCashSelected = widget.initialIsCashSelected;
     isCardSelected = widget.initialIsCardSelected;
     isUpiSelected = widget.initialIsUpiSelected;
+    isCodSelected = widget.initialIsCodSelected;
 
     // Initialize controllers - handle auto-filled values properly
     cashAmountController = TextEditingController(
@@ -108,8 +130,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         text: widget.initialUpiAmount.isEmpty || widget.initialUpiAmount == "0"
             ? ""
             : widget.initialUpiAmount);
+    codAmountController = TextEditingController(
+        text: widget.initialCodAmount.isEmpty || widget.initialCodAmount == "0"
+            ? ""
+            : widget.initialCodAmount);
     // Debit field removed. We'll map To Customer Credit to debit in the callback only.
-
+    // Transaction number
     transactionNumberController =
         TextEditingController(text: widget.initialTransactionNumber);
 
@@ -117,6 +143,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     cashAmountFocusNode = FocusNode();
     cardAmountFocusNode = FocusNode();
     upiAmountFocusNode = FocusNode();
+    codAmountFocusNode = FocusNode();
     toCustomerCreditFocusNode = FocusNode();
 
     // Initialize To Customer Credit controller
@@ -173,6 +200,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         () => _handleAmountControllerChange('card', cardAmountController));
     upiAmountController.addListener(
         () => _handleAmountControllerChange('upi', upiAmountController));
+    codAmountController.addListener(
+        () => _handleAmountControllerChange('cod', codAmountController));
     toCustomerCreditController.addListener(() => _handleAmountControllerChange(
         'toCustomerCredit', toCustomerCreditController));
 
@@ -212,13 +241,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         () => _handleAmountControllerChange('card', cardAmountController));
     upiAmountController.removeListener(
         () => _handleAmountControllerChange('upi', upiAmountController));
+    codAmountController.removeListener(
+        () => _handleAmountControllerChange('cod', codAmountController));
     cashAmountController.dispose();
     cardAmountController.dispose();
     upiAmountController.dispose();
+    codAmountController.dispose();
     transactionNumberController.dispose();
     cashAmountFocusNode.dispose();
     cardAmountFocusNode.dispose();
     upiAmountFocusNode.dispose();
+    codAmountFocusNode.dispose();
     toCustomerCreditFocusNode.dispose();
     toCustomerCreditController.removeListener(() =>
         _handleAmountControllerChange(
@@ -291,6 +324,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         } else if (value == 'UPI') {
           _upiPaymentMethodId = method.id.toString();
           debugPrint('📱 UPI ID: $_upiPaymentMethodId');
+        } else if (value == 'COD') {
+          _codPaymentMethodId = method.id.toString();
+          debugPrint('📦 COD ID: $_codPaymentMethodId');
         }
       }
     });
@@ -301,7 +337,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount;
+    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
 
     // Net due is always the current purchase total in the modal
     final double netDue = widget.cartTotal;
@@ -315,7 +352,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount;
+    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
 
     // Net due is always the current purchase total in the modal
     final double netDue = widget.cartTotal;
@@ -327,6 +365,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       'cash': 0.0,
       'card': 0.0,
       'upi': 0.0,
+      'cod': 0.0,
       'toCustomerCredit': 0.0,
       'balance': 0.0,
     };
@@ -336,6 +375,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       postingAmounts['cash'] = cashAmount;
       postingAmounts['card'] = cardAmount;
       postingAmounts['upi'] = upiAmount;
+      postingAmounts['cod'] = codAmount;
 
       // No extra for credit/balance when underpaid
       postingAmounts['toCustomerCredit'] = 0.0;
@@ -361,10 +401,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         double cashPortion = (cashAmount / totalCollected) * amountToSettle;
         double cardPortion = (cardAmount / totalCollected) * amountToSettle;
         double upiPortion = (upiAmount / totalCollected) * amountToSettle;
+        double codPortion = (codAmount / totalCollected) * amountToSettle;
 
         postingAmounts['cash'] = cashPortion;
         postingAmounts['card'] = cardPortion;
         postingAmounts['upi'] = upiPortion;
+        postingAmounts['cod'] = codPortion;
       }
 
       postingAmounts['toCustomerCredit'] = toCredit;
@@ -380,7 +422,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount;
+    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
 
     double cashBal = 0.0;
 
@@ -482,8 +525,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    // Total Paid = amounts actually collected now (cash + card + UPI)
-    return cashAmount + cardAmount + upiAmount;
+    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+    // Total Paid = amounts actually collected now (cash + card + UPI + COD)
+    return cashAmount + cardAmount + upiAmount + codAmount;
   }
 
   void _togglePaymentMethod(String paymentType) {
@@ -513,6 +557,13 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           targetController = upiAmountController;
           targetFocusNode = upiAmountFocusNode;
           if (!isUpiSelected) upiAmountController.clear();
+          break;
+        case 'cod':
+          isCodSelected = !isCodSelected;
+          targetSelected = isCodSelected;
+          targetController = codAmountController;
+          targetFocusNode = codAmountFocusNode;
+          if (!isCodSelected) codAmountController.clear();
           break;
         default:
           return;
@@ -545,6 +596,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         if (isUpiSelected) {
           activeMethods.add(MapEntry('upi', upiAmountController));
         }
+        if (isCodSelected) {
+          activeMethods.add(MapEntry('cod', codAmountController));
+        }
 
         // If exactly one method is left, fill it with the total
         if (activeMethods.length == 1) {
@@ -556,6 +610,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           if (isCashSelected) remainingFocusNode = cashAmountFocusNode;
           if (isCardSelected) remainingFocusNode = cardAmountFocusNode;
           if (isUpiSelected) remainingFocusNode = upiAmountFocusNode;
+          if (isCodSelected) remainingFocusNode = codAmountFocusNode;
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -593,6 +648,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             break;
           case 'upi':
             isUpiSelected = true;
+            break;
+          case 'cod':
+            isCodSelected = true;
             break;
           case 'toCustomerCredit':
             // Store the raw amount without clamping during editing
@@ -709,7 +767,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   _buildModalPaymentRow(
                     isSelected: isUpiSelected,
                     type: 'upi',
-                    icon: ImageAssets.creditCardIcon,
+                    icon: ImageAssets.creditCardIcon, // Use a suitable icon
                     label: 'billing.upi'.tr,
                     controller: upiAmountController,
                     focusNode: upiAmountFocusNode,
@@ -718,9 +776,26 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   ),
                   const SizedBox(height: 15),
                 ],
+
+                // COD Payment
+                if (_codPaymentMethodId != null) ...[
+                  _buildModalPaymentRow(
+                    isSelected: isCodSelected,
+                    type: 'cod',
+                    icon: ImageAssets.cashIcon, // Reusing cash icon for COD
+                    label: 'COD',
+                    controller: codAmountController,
+                    focusNode: codAmountFocusNode,
+                    size: size,
+                    onToggle: () => _togglePaymentMethod('cod'),
+                  ),
+                  const SizedBox(height: 15),
+                ],
               ],
 
-              // Transaction Reference Field - Show only if Card or UPI is selected
+              // Transaction Reference Field - Show only if Card, UPI or COD is selected
+              // Transaction Reference Field - Show only if Card, UPI or maybe COD if needed (keeping same logic for COD if desired)
+              // Assuming COD doesn't need transaction number always, but user can use it if they want.
               if (isCardSelected || isUpiSelected) ...[
                 Text(
                   'billing.transaction_reference'.tr,
@@ -850,8 +925,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               double.tryParse(cardAmountController.text) ?? 0.0;
                           final upiAmount =
                               double.tryParse(upiAmountController.text) ?? 0.0;
+                          final codAmount =
+                              double.tryParse(codAmountController.text) ?? 0.0;
                           final totalCollected =
-                              cashAmount + cardAmount + upiAmount;
+                              cashAmount + cardAmount + upiAmount + codAmount;
                           final netDueWithToggle =
                               widget.cartTotal - widget.customerPrevBalance;
                           final netDueWithoutToggle = widget.cartTotal;
@@ -863,6 +940,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               '  - Card: ₹${cardAmount.toStringAsFixed(2)}');
                           debugPrint(
                               '  - UPI: ₹${upiAmount.toStringAsFixed(2)}');
+                          debugPrint(
+                              '  - COD: ₹${codAmount.toStringAsFixed(2)}');
                           debugPrint(
                               '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
                           debugPrint('');
@@ -1012,16 +1091,19 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     isCashSelected,
                     isCardSelected,
                     isUpiSelected,
+                    isCodSelected,
                     mappedIsDebitSelected,
                     cashAmountController.text,
                     cardAmountController.text,
                     upiAmountController.text,
+                    codAmountController.text,
                     mappedDebitAmount,
                     transactionNumberController.text,
                     toCustomerCreditEnabled,
                     cashMethodId: _cashPaymentMethodId,
                     cardMethodId: _cardPaymentMethodId,
                     upiMethodId: _upiPaymentMethodId,
+                    codMethodId: _codPaymentMethodId,
                   );
                   Navigator.of(context).pop();
 
@@ -1117,7 +1199,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         isCashSelected = true;
                       else if (type == 'card')
                         isCardSelected = true;
-                      else if (type == 'upi') isUpiSelected = true;
+                      else if (type == 'upi')
+                        isUpiSelected = true;
+                      else if (type == 'cod') isCodSelected = true;
                     });
 
                     // Ensure full selection when tapping inside the field
@@ -1175,6 +1259,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     _buildPostingRow('Cash Posted:', postingAmounts['cash']!),
                     _buildPostingRow('Card Posted:', postingAmounts['card']!),
                     _buildPostingRow('UPI Posted:', postingAmounts['upi']!),
+                    _buildPostingRow('COD Posted:', postingAmounts['cod']!),
                   ],
                 ),
               ),
@@ -1272,7 +1357,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    final totalCollected = cashAmount + cardAmount + upiAmount;
+    final codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+    final totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
     final currency = Provider.of<AppSettingsProvider>(context, listen: true)
             .appSettings
             ?.currency ??
