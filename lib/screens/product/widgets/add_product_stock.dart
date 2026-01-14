@@ -828,14 +828,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
       // Load categories with caching (same as sidebar and stock)
-      if (!categoryProvider.isCategoriesLoaded) {
-        debugPrint("📥 Loading categories from API...");
-        await categoryProvider.listAllCategory();
-        debugPrint("✅ Categories loaded and cached");
-      } else {
-        debugPrint(
-            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
-      }
+      // Force load raw categories (ignoring sellable filter) for stock adding
+      debugPrint("📥 Loading raw categories for stock adding...");
+      await categoryProvider.listAllCategory(sellableOnly: false, force: true);
+      debugPrint("✅ Raw categories loaded");
     } catch (e) {
       debugPrint('Error loading categories: $e');
     }

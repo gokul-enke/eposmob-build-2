@@ -553,6 +553,7 @@ class BuildDropDownStatic extends StatelessWidget {
 }
 
 Widget buildColumnWidgetForTextFields({
+  Key? key,
   TextEditingController? controller,
   TextInputType? keyboardType,
   List<TextInputFormatter>? inputFormatters,
@@ -573,6 +574,7 @@ Widget buildColumnWidgetForTextFields({
   VoidCallback? onTap,
 }) =>
     Column(
+      key: key,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (title != null)

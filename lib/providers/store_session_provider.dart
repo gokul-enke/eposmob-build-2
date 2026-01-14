@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -52,8 +53,7 @@ class StoreSessionProvider extends ChangeNotifier {
     _isBootstrapping = true;
     _setStatus('Saving your selection...');
 
-    final sharedPrefProvider =
-        context.read<SharedPreferenceProvider>();
+    final sharedPrefProvider = context.read<SharedPreferenceProvider>();
     await sharedPrefProvider.saveActiveStoreId(store.storeId ?? 0);
     _activeStore = store;
     _setStatus('Preparing environment for ${store.storeName ?? "store"}...');
@@ -69,6 +69,7 @@ class StoreSessionProvider extends ChangeNotifier {
     final categoryProvider = context.read<CategoryProvider>();
     final localProductProvider = context.read<LocalProductProvider>();
     final roleProvider = context.read<RoleProvider>();
+    final deliveryMethodsProvider = context.read<DeliveryMethodsProvider>();
 
     try {
       await _updateStatus('Loading user permissions...');
@@ -78,6 +79,13 @@ class StoreSessionProvider extends ChangeNotifier {
       } catch (e) {
         debugPrint('Warning: Failed to load user permissions: $e');
         await _updateStatus('Warning: Could not load permissions');
+      }
+
+      await _updateStatus('Syncing delivery methods...');
+      try {
+        await deliveryMethodsProvider.fetchDeliveryMethods();
+      } catch (e) {
+        debugPrint('Warning: Failed to load delivery methods: $e');
       }
 
       await _updateStatus('Loading general settings...');
@@ -132,7 +140,8 @@ class StoreSessionProvider extends ChangeNotifier {
             'Warning: Failed to load categories after store selection: $e');
       }
 
-      await _updateStatus('Fetching product catalog (this may take a moment)...');
+      await _updateStatus(
+          'Fetching product catalog (this may take a moment)...');
       await localProductProvider.fetchProductsFromAPI(
         onProgress: (loaded, batch) async {
           await _updateStatus(

@@ -128,6 +128,35 @@ class OrderDetailsModelData {
     return null;
   }
 
+  // Helper to extract customer address from order_props
+  String? getCustomerAddressFromProps() {
+    if (orderProps == null) return null;
+    try {
+      // Prioritize CUSTOMER_ADDRESS
+      final addressProp = orderProps!.firstWhere(
+        (prop) => prop.propsCode == "CUSTOMER_ADDRESS",
+        orElse: () => OrderDetailsModelDataOrderProp(),
+      );
+      if (addressProp.propsValue != null &&
+          addressProp.propsValue!.isNotEmpty) {
+        return addressProp.propsValue;
+      }
+
+      // Fallback to DELIVERY_ADDRESS if needed
+      final deliveryAddressProp = orderProps!.firstWhere(
+        (prop) => prop.propsCode == "DELIVERY_ADDRESS",
+        orElse: () => OrderDetailsModelDataOrderProp(),
+      );
+      if (deliveryAddressProp.propsValue != null &&
+          deliveryAddressProp.propsValue!.isNotEmpty) {
+        return deliveryAddressProp.propsValue;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }
+
   Map<String, dynamic> toJson() => {
         "orders_id": ordersId,
         "store_id": storeId,

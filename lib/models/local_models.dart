@@ -132,6 +132,9 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(24)
   final String? alternatePhone;
 
+  @HiveField(25)
+  final String? address;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -159,6 +162,7 @@ class HiveSavedOrder extends HiveObject {
     this.toCustomerCredit,
     this.tableId,
     this.alternatePhone,
+    this.address,
   });
 }
 

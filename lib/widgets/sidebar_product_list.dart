@@ -170,8 +170,9 @@ class _SideBarProductListState extends State<SideBarProductList> {
                       margin: const EdgeInsets.symmetric(
                           horizontal: 8), // Minimal margin
                       onchanged: (query) {
-                        final categoryProvider =
-                            Provider.of<CategoryProvider>(context, listen: false);
+                        final categoryProvider = Provider.of<CategoryProvider>(
+                            context,
+                            listen: false);
                         if (query!.isEmpty) {
                           // Reset to show all categories without API call
                           categoryProvider.resetCategoryFilter();
@@ -443,19 +444,22 @@ class _SideBarProductListState extends State<SideBarProductList> {
                             onTap: () async {
                               final result = await showDialog(
                                 context: context,
-                                builder: (context) => const AddProductWithBarcodeModal(
+                                builder: (context) =>
+                                    const AddProductWithBarcodeModal(
                                   isAddToCart: false,
                                 ),
                               );
-                              
+
                               // If product was created successfully, refresh the product list
                               if (result != null) {
-                                Provider.of<LocalProductProvider>(context, listen: false)
+                                Provider.of<LocalProductProvider>(context,
+                                        listen: false)
                                     .refreshProducts();
                               }
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: ColorManager.kPrimaryColor,
                                 borderRadius: BorderRadius.circular(6),
@@ -618,15 +622,16 @@ class _SideBarProductListState extends State<SideBarProductList> {
                               crossAxisSpacing: crossAxisSpacing,
                               mainAxisSpacing: mainAxisSpacing,
                               physics: const BouncingScrollPhysics(),
-                              children:
-                                  List.generate(products.length, (index) {
+                              children: List.generate(products.length, (index) {
                                 final product = products[index];
-                                final isSelected = product == productProvider.selectedProduct;
+                                final isSelected =
+                                    product == productProvider.selectedProduct;
 
                                 String? primaryImage;
                                 if (product.attachment != null &&
                                     product.attachment!.isNotEmpty) {
-                                  for (final attachment in product.attachment!) {
+                                  for (final attachment
+                                      in product.attachment!) {
                                     if (attachment.isPrimary == 1) {
                                       primaryImage = attachment.filePath;
                                       break;
@@ -638,8 +643,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
 
                                 return GestureDetector(
                                   behavior: HitTestBehavior.opaque,
-                                  onTap: () =>
-                                      _handleProductSelection(product),
+                                  onTap: () => _handleProductSelection(product),
                                   child: Container(
                                     decoration: BoxDecoration(
                                       color: Colors.white,
@@ -648,7 +652,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                           ? Border.all(
                                               color: ColorManager.kPrimaryColor,
                                               width: 1)
-                                          : Border.all(color: Colors.grey.shade100),
+                                          : Border.all(
+                                              color: Colors.grey.shade100),
                                     ),
                                     child: Column(
                                       crossAxisAlignment:
@@ -661,10 +666,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                               ClipRRect(
                                                 borderRadius:
                                                     const BorderRadius.only(
-                                                  topLeft:
-                                                      Radius.circular(8),
-                                                  topRight:
-                                                      Radius.circular(8),
+                                                  topLeft: Radius.circular(8),
+                                                  topRight: Radius.circular(8),
                                                 ),
                                                 child: Container(
                                                   color: Colors.grey.shade50,
@@ -693,9 +696,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                 bottom: 0,
                                                 right: 0,
                                                 child: Container(
-                                                  padding:
-                                                      const EdgeInsets
-                                                          .symmetric(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
                                                       horizontal: 4,
                                                       vertical: 2),
                                                   decoration: BoxDecoration(
@@ -708,16 +710,32 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                           Radius.circular(4),
                                                     ),
                                                   ),
-                                                  child: Consumer<AppSettingsProvider>(
-                                                    builder: (context, appSettingsProvider, _) {
-                                                      final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-                                                      final raw = product.price?.price; // can be String or num
+                                                  child: Consumer<
+                                                      AppSettingsProvider>(
+                                                    builder: (context,
+                                                        appSettingsProvider,
+                                                        _) {
+                                                      final currency =
+                                                          appSettingsProvider
+                                                                  .appSettings
+                                                                  ?.currency ??
+                                                              'INR';
+                                                      final raw = product.price
+                                                          ?.price; // can be String or num
                                                       String amount;
                                                       if (raw is num) {
-                                                        amount = raw.toStringAsFixed(2);
-                                                      } else if (raw is String) {
-                                                        final parsed = double.tryParse(raw);
-                                                        amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                                                        amount = raw
+                                                            .toStringAsFixed(2);
+                                                      } else if (raw
+                                                          is String) {
+                                                        final parsed =
+                                                            double.tryParse(
+                                                                raw);
+                                                        amount = parsed != null
+                                                            ? parsed
+                                                                .toStringAsFixed(
+                                                                    2)
+                                                            : raw;
                                                       } else {
                                                         amount = '0.00';
                                                       }

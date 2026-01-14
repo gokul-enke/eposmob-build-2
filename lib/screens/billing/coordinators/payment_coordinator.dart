@@ -113,6 +113,7 @@ class PaymentCoordinator {
           comment,
           selectedDate,
           selectedTime,
+          address,
         ) {
           bp.setDeliveryMethod(method, methodId);
           bp.carNumberController.text = carNumber;

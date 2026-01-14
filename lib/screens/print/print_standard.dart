@@ -1646,6 +1646,20 @@ class StandardPrinter {
       }
     }
 
+    if (customerAddress != null && customerAddress.isNotEmpty) {
+      if (customerName == null && customerPhone == null) {
+        // If name/phone empty, add as just text
+        customerDetails
+            .add(pw.Text(customerAddress, style: customerDetailStyle));
+      } else {
+        // Add as formatted row if within details block
+        customerDetails.add(pw.Text(
+          isRtl ? '$customerAddress :العنوان' : 'Address: $customerAddress',
+          style: customerDetailStyle,
+        ));
+      }
+    }
+
     if (paymentMethod != null && paymentMethod.isNotEmpty) {
       customerDetails.add(pw.Text(
         isRtl
@@ -1653,10 +1667,6 @@ class StandardPrinter {
             : 'Payment Method: $paymentMethod',
         style: customerDetailStyle,
       ));
-    }
-
-    if (customerAddress != null && customerAddress.isNotEmpty) {
-      customerDetails.add(pw.Text(customerAddress, style: customerDetailStyle));
     }
 
     return pw.Container(

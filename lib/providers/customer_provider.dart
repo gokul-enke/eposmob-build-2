@@ -334,7 +334,7 @@ class CustomerProvider extends ChangeNotifier {
       'state': state,
       'country': country,
     };
-    
+
     // Add optional parameters if provided
     if (balance != null && balance.isNotEmpty) {
       apiBodyData['balance'] = balance;
@@ -681,6 +681,87 @@ class CustomerProvider extends ChangeNotifier {
     } catch (error) {
       debugPrint('fetchUserById Error: ${error.toString()}');
       rethrow;
+    }
+  }
+
+  //                 *********************** ADD ADDRESS API ***************************************************
+  Future<dynamic> addAddress({
+    required String accessToken,
+    required Map<String, dynamic> addressData,
+  }) async {
+    debugPrint("addAddress API called");
+    final url = Uri.parse(APPUrl.executiveAddAddressUrl);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(addressData),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint('addAddress response status: ${response.statusCode}');
+      debugPrint('addAddress response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        return json.decode(response.body);
+      }
+    } catch (e) {
+      debugPrint("Exception in addAddress: $e");
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
+  //                 *********************** UPDATE ADDRESS API ***************************************************
+  Future<dynamic> updateAddress({
+    required String accessToken,
+    required int addressId,
+    required Map<String, dynamic> addressData,
+  }) async {
+    debugPrint("updateAddress API called for ID: $addressId");
+    final url = Uri.parse("${APPUrl.executiveUpdateAddressUrl}/$addressId");
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(addressData),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint('updateAddress response status: ${response.statusCode}');
+      debugPrint('updateAddress response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        return json.decode(response.body);
+      }
+    } catch (e) {
+      debugPrint("Exception in updateAddress: $e");
+      return {"status": "error", "message": e.toString()};
     }
   }
 }

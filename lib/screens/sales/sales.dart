@@ -328,9 +328,10 @@ class _SalesScreenState extends State<SalesScreen> {
         customerName: orderData.customerDetails?.name,
         customerPhone: orderData.customerDetails?.phone,
         customerEmail: orderData.customerDetails?.email,
-        customerAddress: orderData.customerDetails?.address?.isNotEmpty == true
-            ? orderData.customerDetails!.address!.join(', ')
-            : null,
+        customerAddress: orderData.getCustomerAddressFromProps() ??
+            (orderData.customerDetails?.address?.isNotEmpty == true
+                ? orderData.customerDetails!.address!.join(', ')
+                : null),
         orderReturns: orderData.orderReturns,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,

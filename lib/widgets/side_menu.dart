@@ -284,6 +284,31 @@ class _SideMenuState extends State<SideMenu> {
                 )
               : const SizedBox.shrink(),
 
+          // 2. DASHBOARD (Index: 1)
+          (userRole == 'sales_executive' || userRole == 'restaurant_sales')
+              ? Consumer<RoleProvider>(
+                  builder: (context, roleProvider, child) {
+                    final hasPermission =
+                        roleProvider.currentUserHasPermissionSync('view_order');
+
+                    if (!hasPermission) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Obx(
+                      () => DrawerListTile(
+                        icon: fa.FontAwesomeIcons.chartLine,
+                        title: 'Dashboard',
+                        onTap: () {
+                          sideBarController.index.value = 1;
+                        },
+                        selected: sideBarController.index.value == 1,
+                      ),
+                    );
+                  },
+                )
+              : const SizedBox.shrink(),
+
           // 1. HOME (Index: 46)
           (userRole == 'restaurant_sales'
               //  || userRole == 'attender'
@@ -305,31 +330,6 @@ class _SideMenuState extends State<SideMenu> {
                           sideBarController.index.value = 46;
                         },
                         selected: sideBarController.index.value == 46,
-                      ),
-                    );
-                  },
-                )
-              : const SizedBox.shrink(),
-
-          // 2. DASHBOARD (Index: 1)
-          (userRole == 'sales_executive' || userRole == 'restaurant_sales')
-              ? Consumer<RoleProvider>(
-                  builder: (context, roleProvider, child) {
-                    final hasPermission =
-                        roleProvider.currentUserHasPermissionSync('view_order');
-
-                    if (!hasPermission) {
-                      return const SizedBox.shrink();
-                    }
-
-                    return Obx(
-                      () => DrawerListTile(
-                        icon: fa.FontAwesomeIcons.chartLine,
-                        title: 'Dashboard',
-                        onTap: () {
-                          sideBarController.index.value = 1;
-                        },
-                        selected: sideBarController.index.value == 1,
                       ),
                     );
                   },

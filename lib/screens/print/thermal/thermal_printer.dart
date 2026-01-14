@@ -619,6 +619,15 @@ class ThermalPrinter {
                   weight: 0.65, align: TextAlign.left),
             ]));
           }
+          if (customerAddress != null && customerAddress.isNotEmpty) {
+            final addressLabel = isEnglish ? "Address:" : "العنوان:";
+            part1Rows.add(ReceiptTableRow([
+              ReceiptTableColumn(addressLabel,
+                  weight: 0.35, align: TextAlign.left, isBold: true),
+              ReceiptTableColumn(customerAddress,
+                  weight: 0.65, align: TextAlign.left),
+            ]));
+          }
           if (orderComment != null && orderComment.isNotEmpty) {
             final commentLabel = isEnglish ? "Comment:" : "تعليق:";
             part1Rows.add(ReceiptTableRow([

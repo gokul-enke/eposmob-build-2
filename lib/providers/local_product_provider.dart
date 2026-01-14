@@ -64,6 +64,7 @@ class SavedOrder {
 
   final String? tableId;
   final String? alternatePhone;
+  final String? address;
 
   SavedOrder({
     required this.id,
@@ -92,6 +93,7 @@ class SavedOrder {
     this.toCustomerCredit,
     this.tableId,
     this.alternatePhone,
+    this.address,
   });
 }
 
@@ -345,6 +347,7 @@ class LocalProductProvider extends ChangeNotifier {
           toCustomerCredit: hiveSavedOrder.toCustomerCredit,
           alternatePhone: hiveSavedOrder.alternatePhone,
           tableId: hiveSavedOrder.tableId,
+          address: hiveSavedOrder.address,
         ));
       }
       notifyListeners();
@@ -414,6 +417,7 @@ class LocalProductProvider extends ChangeNotifier {
           toCustomerCredit: order.toCustomerCredit,
           tableId: order.tableId,
           alternatePhone: order.alternatePhone,
+          address: order.address,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -529,6 +533,7 @@ class LocalProductProvider extends ChangeNotifier {
 
         tableId: hiveSavedOrder.tableId,
         alternatePhone: hiveSavedOrder.alternatePhone,
+        address: hiveSavedOrder.address,
       );
       _savedOrders.add(savedOrder);
       debugPrint(
@@ -648,6 +653,7 @@ class LocalProductProvider extends ChangeNotifier {
         toCustomerCredit: order.toCustomerCredit,
         tableId: order.tableId,
         alternatePhone: order.alternatePhone,
+        address: order.address,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -742,11 +748,11 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetches products from the API with batched concurrent requests (10 pages at a time).
+  /// Fetch products from API with pagination
   Future<void> fetchProductsFromAPI({
-    int? categoryId,
-    String? filterName,
-    Future<void> Function(int totalLoaded, int batchLoaded)? onProgress,
+    bool refresh = false,
+    Function(int total, int current)? onProgress,
+    bool sellableOnly = false,
   }) async {
     List<GetProduct> allProducts = [];
     int currentPage = 1;
@@ -786,8 +792,17 @@ class LocalProductProvider extends ChangeNotifier {
             'page': page.toString(),
           };
 
-          final url = Uri.parse(APPUrl.getSellableProductUrl)
-              .replace(queryParameters: queryParams);
+          // Choose URL based on sellableOnly flag
+          final urlString = sellableOnly
+              ? '${APPUrl.getSellableProductUrl}?type=sellable'
+              : APPUrl.getRawProductUrl;
+
+          final baseUri = Uri.parse(urlString);
+          final finalQueryParams =
+              Map<String, dynamic>.from(baseUri.queryParameters)
+                ..addAll(queryParams);
+
+          final url = baseUri.replace(queryParameters: finalQueryParams);
 
           futures.add(http.get(url, headers: {
             'Content-Type': 'application/json',
@@ -927,6 +942,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? filterStore,
     String? filterSupplier,
     int page = 1,
+    bool sellableOnly = true, // Added but currently unused for local filtering
   }) {
     List<GetProduct> result = List.from(_products);
 
@@ -1796,6 +1812,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
+    String? address,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -1849,6 +1866,7 @@ class LocalProductProvider extends ChangeNotifier {
       flatDiscount: _flatDiscount,
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
+      address: address,
     );
 
     // Add to confirmed orders list
@@ -1895,6 +1913,7 @@ class LocalProductProvider extends ChangeNotifier {
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
           toCustomerCredit: order.toCustomerCredit,
+          address: order.address,
         );
 
         // Add to confirmed orders
@@ -1974,6 +1993,7 @@ class LocalProductProvider extends ChangeNotifier {
     bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
     String? tableId,
+    String? address,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -2035,6 +2055,9 @@ class LocalProductProvider extends ChangeNotifier {
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
       tableId: tableId,
+      alternatePhone: null, // Add if needed
+      address:
+          address, // Pass address if available, or update if passed as param
     );
 
     // Add to saved orders list
@@ -2138,6 +2161,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
     String? tableId,
+    String? address,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -2201,6 +2225,8 @@ class LocalProductProvider extends ChangeNotifier {
         toCustomerCredit:
             toCustomerCredit ?? _savedOrders[index].toCustomerCredit,
         tableId: tableId ?? _savedOrders[index].tableId,
+        alternatePhone: _savedOrders[index].alternatePhone,
+        address: address ?? _savedOrders[index].address,
       );
 
       // Update in list

@@ -56,6 +56,7 @@ import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/screens/print/print_kot.dart'; // Add KOT print import
 
 class BillingPageRestaurant extends StatefulWidget {
   const BillingPageRestaurant({super.key});
@@ -173,6 +174,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   String? deliveryDate;
   String? deliveryTime;
+  String deliveryAddress = "";
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -587,6 +589,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         _carNumberController.text = currentOrder.carNumber ?? "";
         deliveryDate = currentOrder.deliveryDate;
         deliveryTime = currentOrder.deliveryTime;
+        deliveryAddress = currentOrder.address ?? ""; // Restore address
 
         // 5. Restore Coupon State
         if ((currentOrder.couponId != null &&
@@ -3363,6 +3366,18 @@ class BillingPageState extends State<BillingPageRestaurant>
       return false;
     }
 
+    // Get app settings to check for default customer
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultCustomerPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+
+    // Don't show balance if it's the default customer (by phone match)
+    if (defaultCustomerPhone.isNotEmpty &&
+        selectedCustomer!.phone == defaultCustomerPhone) {
+      return false;
+    }
+
     // Get current sales executive
     final salesExecutiveProvider =
         Provider.of<SalesExecutiveProvider>(context, listen: false);
@@ -3417,6 +3432,51 @@ class BillingPageState extends State<BillingPageRestaurant>
         ),
       ],
     );
+  }
+
+  /// Helper method to print KOT for delivery and takeaway
+  Future<void> _printKOT(
+      String orderNumber, List<LocalCartItem> cartItems) async {
+    debugPrint("🖨️ Printing KOT for $orderNumber");
+
+    // Build print items
+    List<Map<String, dynamic>> printItems = [];
+    for (var item in cartItems) {
+      printItems.add({
+        'productName': item.product.productName ?? '',
+        'quantity': item.quantity.toString(),
+        'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
+        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+        'mrp': item.mrp?.toStringAsFixed(2) ??
+            item.price?.toStringAsFixed(2) ??
+            '0.00',
+      });
+    }
+
+    // Get current time for KOT
+    final now = DateTime.now();
+    final orderTime =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    final tableName = deliveryMethod; // Use delivery method as table name
+
+    // Navigate to KOT print page
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KotPrintPage(
+            orderNumber: orderNumber,
+            tableName: tableName,
+            orderTime: orderTime,
+            items: printItems,
+            comment: _commentController.text.isNotEmpty
+                ? _commentController.text
+                : null,
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildActionButtons() {
@@ -3551,7 +3611,9 @@ class BillingPageState extends State<BillingPageRestaurant>
         deliveryTime = null;
         // Clear delivery comment and car number
         _commentController.clear();
+        _commentController.clear();
         _carNumberController.clear();
+        deliveryAddress = "";
 
         // Clear customer-related state completely
         mobileNumberText = "";
@@ -3670,10 +3732,10 @@ class BillingPageState extends State<BillingPageRestaurant>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: "saved",
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
           toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress, // Pass address
           // context: context, // Pass context
         );
 
@@ -3719,11 +3781,11 @@ class BillingPageState extends State<BillingPageRestaurant>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: "saved",
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           context: context, // Pass context
           toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress, // Pass address
         );
 
         showScaffold(
@@ -3891,10 +3953,10 @@ class BillingPageState extends State<BillingPageRestaurant>
             couponId: isCouponApplied ? coupenCodeTextController.text : null,
             deliveryMethodId: deliveryMethodId,
             carNumber: _carNumberController.text,
-            status: "confirmed",
             deliveryDate: deliveryDate, // Pass deliveryDate
             deliveryTime: deliveryTime, // Pass deliveryTime
             toCustomerCredit: _toCustomerCreditEnabled,
+            address: deliveryAddress, // Pass address
           );
 
           showScaffold(
@@ -3952,10 +4014,10 @@ class BillingPageState extends State<BillingPageRestaurant>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: "confirmed",
-          deliveryDate: deliveryDate, // Pass deliveryDate
-          deliveryTime: deliveryTime, // Pass deliveryTime
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
           toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress, // Pass address
         );
 
         showScaffold(
@@ -4096,7 +4158,8 @@ class BillingPageState extends State<BillingPageRestaurant>
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      final cartItems = localProductProvider.cartItems;
+      final cartItems =
+          List<LocalCartItem>.from(localProductProvider.cartItems);
 
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
@@ -4183,6 +4246,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         percentageDiscount: priceSummary.percentageDiscount,
         discountAmount: priceSummary.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
+        address: deliveryAddress,
       )
           .then((response) async {
         debugPrint(
@@ -4201,6 +4265,15 @@ class BillingPageState extends State<BillingPageRestaurant>
 
           // Clear cart without restoring stock (order is confirmed)
           localProductProvider.clearCartAfterOrder();
+
+          // KOT Print for Delivery and Takeaway
+          if (deliveryMethod == "Car Delivery" ||
+              deliveryMethod == "Store Takeaway") {
+            await _printKOT(
+                response["order_number"]?.toString() ??
+                    'ORD-${response["order_id"]}',
+                cartItems);
+          }
 
           try {
             String ordersId = response["order_number"].toString();
@@ -4249,7 +4322,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
             String? customerEmail = orderDetails.data?.customerDetails?.email;
             String? customerAddress =
-                orderDetails.data?.customerDetails?.address?.join(', ');
+                orderDetails.data?.getCustomerAddressFromProps() ??
+                    orderDetails.data?.customerDetails?.address?.join(', ');
 
             // Calculate customer balance for print
             double? oldBalance = selectedCustomer?.balance;
@@ -4295,6 +4369,15 @@ class BillingPageState extends State<BillingPageRestaurant>
             );
           } catch (error) {
             debugPrint("❌ Error fetching order details for print: $error");
+          }
+
+          // KOT Print for Delivery and Takeaway
+          if (deliveryMethod == "Car Delivery" ||
+              deliveryMethod == "Store Takeaway") {
+            _printKOT(
+                response["order_number"]?.toString() ??
+                    'ORD-${response["order_id"]}',
+                cartItems);
           }
 
           // Clear the mobile number after successful save
@@ -4432,7 +4515,8 @@ class BillingPageState extends State<BillingPageRestaurant>
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      final cartItems = localProductProvider.cartItems;
+      final cartItems =
+          List<LocalCartItem>.from(localProductProvider.cartItems);
 
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
@@ -4515,8 +4599,9 @@ class BillingPageState extends State<BillingPageRestaurant>
             localProductProvider.priceSummary!.percentageDiscount,
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
+        address: deliveryAddress,
       )
-          .then((response) {
+          .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
         if (response["order_id"] != null) {
           showScaffold(
@@ -4563,6 +4648,15 @@ class BillingPageState extends State<BillingPageRestaurant>
 
           _fetchCustomers();
           _clearCart();
+
+          // KOT Print for Delivery and Takeaway
+          if (deliveryMethod == "Car Delivery" ||
+              deliveryMethod == "Store Takeaway") {
+            await _printKOT(
+                response["order_number"]?.toString() ??
+                    'ORD-${response["order_id"]}',
+                cartItems);
+          }
         } else {
           debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
@@ -5250,8 +5344,9 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialComment: _commentController.text,
         initialDeliveryDate: deliveryDate,
         initialDeliveryTime: deliveryTime,
-        onDeliveryMethodSelected:
-            (method, methodId, carNumber, comment, selectedDate, selectedTime) {
+        initialAddress: deliveryAddress,
+        onDeliveryMethodSelected: (method, methodId, carNumber, comment,
+            selectedDate, selectedTime, address) {
           setState(() {
             deliveryMethod = method;
             deliveryMethodId = methodId;
@@ -5259,6 +5354,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             _commentController.text = comment;
             deliveryDate = selectedDate;
             deliveryTime = selectedTime;
+            deliveryAddress = address;
           });
         },
       ),

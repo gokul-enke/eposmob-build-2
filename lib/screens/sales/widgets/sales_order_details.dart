@@ -351,7 +351,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? customerName = customerDetails?.name;
               String? customerPhone = customerDetails?.phone;
               String? customerEmail = customerDetails?.email;
-              String? customerAddress = customerDetails?.address?.join(', ');
+              String? customerAddress =
+                  orderDetailsModelData?.getCustomerAddressFromProps() ??
+                      customerDetails?.address?.join(', ');
               String? customerAlternatePhone = customerDetails?.alternatePhone;
               String? paymentMethod =
                   orderDetailsModelData?.paymentDetails?.paymentMethod;
@@ -651,9 +653,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         customerName: customerDetails?.name,
         customerPhone: customerDetails?.phone,
         customerEmail: customerDetails?.email,
-        customerAddress: customerDetails?.address?.isNotEmpty == true
-            ? customerDetails!.address!.join(', ')
-            : null,
+        customerAddress: orderDetailsModelData?.getCustomerAddressFromProps() ??
+            (customerDetails?.address?.isNotEmpty == true
+                ? customerDetails!.address!.join(', ')
+                : null),
         orderReturns: orderDetailsModelData!.orderReturns,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,

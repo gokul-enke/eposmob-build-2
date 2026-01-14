@@ -57,7 +57,15 @@ class BillingProvider extends ChangeNotifier {
   final TextEditingController commentController = TextEditingController();
   final TextEditingController carNumberController = TextEditingController();
 
-  // Additional controllers
+  // Delivery Address
+  String _orderAddress = "";
+  String get orderAddress => _orderAddress;
+
+  void setOrderAddress(String address) {
+    _orderAddress = address;
+    notifyListeners();
+  }
+
   final TextEditingController _transactionNumberController =
       TextEditingController();
   final ScrollController _customerScrollController = ScrollController();
@@ -1346,6 +1354,7 @@ class BillingProvider extends ChangeNotifier {
       'toCustomerCredit': _toCustomerCreditEnabled,
       'cartItems': _cartProductItems,
       'taxNames': _taxNames,
+      'address': _orderAddress,
     };
   }
 
@@ -1461,6 +1470,7 @@ class BillingProvider extends ChangeNotifier {
         _deliveryDate = DateTime.tryParse(order['deliveryDate']);
       }
       _deliveryTime = order['deliveryTime'];
+      _orderAddress = order['address'] ?? '';
 
       // Restore other fields
       transactionNumberController.text = order['transactionId'] ?? '';
@@ -1490,7 +1500,9 @@ class BillingProvider extends ChangeNotifier {
     _deliveryDate = null;
     _deliveryTime = null;
     _carNumber = "";
+    _carNumber = "";
     _orderComment = "";
+    _orderAddress = "";
 
     // Clear controllers
     transactionNumberController.clear();

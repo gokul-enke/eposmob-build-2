@@ -83,6 +83,7 @@ class CustomerListModelData {
   // Related data
   final List<CustomerTransaction>? transactions;
   final List<CustomerOrder>? orders;
+  final List<Address>? addresses;
 
   CustomerListModelData({
     this.id,
@@ -121,6 +122,7 @@ class CustomerListModelData {
     this.kyc,
     this.transactions,
     this.orders,
+    this.addresses,
   });
 
   factory CustomerListModelData.fromJson(Map<String, dynamic> json) =>
@@ -153,7 +155,9 @@ class CustomerListModelData {
         membershipCode: json["membership_code"]?.toString(),
         minRedeemablePoints: json["min_redeemable_points"],
         pricePerPoint: json["price_per_point"]?.toDouble(),
-        balance: json["balance"] != null ? double.tryParse(json["balance"].toString()) : null,
+        balance: json["balance"] != null
+            ? double.tryParse(json["balance"].toString())
+            : null,
         paymentType: json["payment_type"],
         customerType: json["customer_type"],
         address: json["address"],
@@ -175,6 +179,10 @@ class CustomerListModelData {
             ? []
             : List<CustomerOrder>.from(
                 json["orders"].map((x) => CustomerOrder.fromJson(x))),
+        addresses: json["addresses"] == null
+            ? []
+            : List<Address>.from(
+                json["addresses"].map((x) => Address.fromJson(x))),
       );
 
   Map<String, dynamic> toJson() => {
@@ -211,15 +219,17 @@ class CustomerListModelData {
         "district": district,
         "company_id": companyId,
         "store_name": storeName,
-        "kyc": kyc == null
-            ? []
-            : List<dynamic>.from(kyc!.map((x) => x.toJson())),
+        "kyc":
+            kyc == null ? [] : List<dynamic>.from(kyc!.map((x) => x.toJson())),
         "transactions": transactions == null
             ? []
             : List<dynamic>.from(transactions!.map((x) => x.toJson())),
         "orders": orders == null
             ? []
             : List<dynamic>.from(orders!.map((x) => x.toJson())),
+        "addresses": addresses == null
+            ? []
+            : List<dynamic>.from(addresses!.map((x) => x.toJson())),
       };
 }
 
@@ -542,3 +552,73 @@ class OrderItem {
 //         "updated_at": updatedAt?.toIso8601String(),
 //       };
 // }
+
+class Address {
+  final int? id;
+  final int? customerId;
+  final String? name;
+  final String? address;
+  final String? city;
+  final int? stateId;
+  final int? districtId;
+  final int? pincodeId;
+  final String? phone;
+  final String? type;
+  final String? landmark;
+  final int? companyId;
+
+  Address({
+    this.id,
+    this.customerId,
+    this.name,
+    this.address,
+    this.city,
+    this.stateId,
+    this.districtId,
+    this.pincodeId,
+    this.phone,
+    this.type,
+    this.landmark,
+    this.companyId,
+  });
+
+  factory Address.fromJson(Map<String, dynamic> json) => Address(
+        id: json["id"] is int
+            ? json["id"]
+            : int.tryParse(json["id"].toString()),
+        customerId: json["customer_id"] is int
+            ? json["customer_id"]
+            : int.tryParse(json["customer_id"].toString()),
+        name: json["name"],
+        address: json["address"],
+        city: json["city"]?.toString(),
+        stateId: json["state_id"] is int
+            ? json["state_id"]
+            : int.tryParse(json["state_id"].toString()),
+        districtId: json["district_id"] is int
+            ? json["district_id"]
+            : int.tryParse(json["district_id"].toString()),
+        pincodeId: json["pincode_id"] is int
+            ? json["pincode_id"]
+            : int.tryParse(json["pincode_id"].toString()),
+        phone: json["phone"],
+        type: json["type"],
+        landmark: json["landmark"],
+        companyId: json["company_id"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "customer_id": customerId,
+        "name": name,
+        "address": address,
+        "city": city,
+        "state_id": stateId,
+        "district_id": districtId,
+        "pincode_id": pincodeId,
+        "phone": phone,
+        "type": type,
+        "landmark": landmark,
+        "company_id": companyId,
+      };
+}

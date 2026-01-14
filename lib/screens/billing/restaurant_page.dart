@@ -1776,12 +1776,10 @@ class _MenuPanelState extends State<_MenuPanel> {
         }
 
         final categories = categoryProvider.category ?? [];
-        final selectedCategoryId = widget.activeCategoryId ??
-            (categories.isNotEmpty ? categories.first.categoryId : null);
+        final selectedCategoryId = widget.activeCategoryId ?? 0;
 
         // Get products for selected category
         List<GetProduct> items = [];
-        if (selectedCategoryId != null) {
           if (selectedCategoryId == 0) {
             // "ALL" category - show all products
             items = productProvider.filteredProducts;
@@ -1791,7 +1789,6 @@ class _MenuPanelState extends State<_MenuPanel> {
                 .where((product) => product.categoryId == selectedCategoryId)
                 .toList();
           }
-        }
 
         // Apply search filter
         if (_searchQuery.isNotEmpty) {
@@ -1930,8 +1927,71 @@ class _MenuPanelState extends State<_MenuPanel> {
                         padding: EdgeInsets.symmetric(
                             horizontal: widget.isCompact ? 12 : 16),
                         scrollDirection: Axis.horizontal,
+                        itemCount: categories.length + 1,
                         itemBuilder: (_, idx) {
-                          final c = categories[idx];
+                          // Handle "All" category at index 0
+                          if (idx == 0) {
+                            final active = selectedCategoryId == 0;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    widget.onCategoryChanged(0);
+                                    // Update products for "All" category
+                                    productProvider.refreshProducts();
+                                  },
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: widget.isCompact ? 16 : 20,
+                                        vertical: widget.isCompact ? 8 : 10),
+                                    decoration: BoxDecoration(
+                                      color: active
+                                          ? const Color(0xFF2563EB)
+                                          : Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(
+                                        color: active
+                                            ? const Color(0xFF2563EB)
+                                            : Colors.grey.shade200,
+                                        width: 1,
+                                      ),
+                                      boxShadow: active
+                                          ? [
+                                              BoxShadow(
+                                                color: const Color(0xFF2563EB)
+                                                    .withOpacity(0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : [],
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'All',
+                                        style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s12
+                                                : FontSize.s13,
+                                            0.21,
+                                            active
+                                                ? Colors.white
+                                                : const Color(0xFF64748B)),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          // Handle regular categories (index offset by 1)
+                          final c = categories[idx - 1];
                           final active = c.categoryId == selectedCategoryId;
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
@@ -1942,7 +2002,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                                   widget.onCategoryChanged(c.categoryId);
                                   // Update products for selected category
                                   if (c.categoryId == 0) {
-                                    // "ALL" category
+                                    // Should not happen for regular categories but kept for safety
                                     productProvider.refreshProducts();
                                   } else {
                                     // Specific category
@@ -1998,7 +2058,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                           );
                         },
                         separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemCount: categories.length,
+
                       ),
                     ),
                   ),

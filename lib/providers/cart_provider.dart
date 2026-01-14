@@ -757,6 +757,7 @@ class CartProvider with ChangeNotifier {
     double? percentageDiscount,
     double? discountAmount,
     bool? toCustomerCredit,
+    String? address,
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -837,10 +838,9 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null)
-          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
+        if (address != null) "address": address,
       };
     } else {
       // Fallback to single payment method format
@@ -863,10 +863,9 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null)
-          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
+        if (address != null) "address": address,
       };
     }
 
@@ -948,6 +947,7 @@ class CartProvider with ChangeNotifier {
     double? flatDiscount,
     double? percentageDiscount,
     double? discountAmount,
+    String? address,
   }) async {
     debugPrint("📤 UPDATE ORDER API - Starting request");
     DateTime now = DateTime.now();

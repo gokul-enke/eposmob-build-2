@@ -101,10 +101,13 @@ class CategoryProvider extends ChangeNotifier {
     String? filterName,
     String? filterParent,
     int? page,
+    bool sellableOnly = true,
+    bool force = false,
   }) async {
     // If categories are already loaded and no filtering is applied, return early
     // BUT also check if categoryList is not empty to avoid empty list issues
-    if (_isCategoriesLoaded &&
+    if (!force &&
+        _isCategoriesLoaded &&
         filterName == null &&
         filterParent == null &&
         categoryList != null &&
@@ -154,8 +157,16 @@ class CategoryProvider extends ChangeNotifier {
       queryParameters['filter_parent'] = filterParent;
     }
 
-    final uri = Uri.parse(APPUrl.getSellableCategoryListUrl)
-        .replace(queryParameters: queryParameters);
+    // Choose the appropriate URL based on the sellableOnly flag
+    final urlString = sellableOnly
+        ? APPUrl.getSellableCategoryListUrl
+        : APPUrl.getRawCategoryListUrl;
+
+    final baseUri = Uri.parse(urlString);
+    final finalQueryParameters =
+        Map<String, dynamic>.from(baseUri.queryParameters)
+          ..addAll(queryParameters);
+    final uri = baseUri.replace(queryParameters: finalQueryParameters);
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -277,8 +288,11 @@ class CategoryProvider extends ChangeNotifier {
       queryParameters['filter_parent'] = filterParent;
     }
 
-    final uri = Uri.parse(APPUrl.getSellableCategoryListUrl)
-        .replace(queryParameters: queryParameters);
+    final baseUri = Uri.parse(APPUrl.getSellableCategoryListUrl);
+    final finalQueryParameters =
+        Map<String, dynamic>.from(baseUri.queryParameters)
+          ..addAll(queryParameters);
+    final uri = baseUri.replace(queryParameters: finalQueryParameters);
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();

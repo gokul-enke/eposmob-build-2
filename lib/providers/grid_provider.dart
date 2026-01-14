@@ -179,8 +179,10 @@ class GridSelectionProvider extends ChangeNotifier {
     // selectedCategoryId = categoryId;
     notifyListeners();
     productList = [];
-    final url =
-        Uri.parse(APPUrl.getSellableProductUrl).replace(queryParameters: queryParams);
+    final baseUri = Uri.parse(APPUrl.getSellableProductUrl);
+    final finalQueryParams = Map<String, dynamic>.from(baseUri.queryParameters)
+      ..addAll(queryParams);
+    final url = baseUri.replace(queryParameters: finalQueryParams);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -261,8 +263,10 @@ class GridSelectionProvider extends ChangeNotifier {
     // selectedCategoryId = categoryId;
     notifyListeners();
     productList = [];
-    final url =
-        Uri.parse(APPUrl.getSellableProductUrl).replace(queryParameters: queryParams);
+    final baseUri = Uri.parse(APPUrl.getSellableProductUrl);
+    final finalQueryParams = Map<String, dynamic>.from(baseUri.queryParameters)
+      ..addAll(queryParams);
+    final url = baseUri.replace(queryParameters: finalQueryParams);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -358,8 +362,11 @@ class GridSelectionProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final url =
-        Uri.parse(APPUrl.getSellableProductUrl).replace(queryParameters: queryParams);
+    final baseUri = Uri.parse(APPUrl.getSellableProductUrl);
+    final finalQueryParams = Map<String, dynamic>.from(baseUri.queryParameters)
+      ..addAll(queryParams);
+
+    final url = baseUri.replace(queryParameters: finalQueryParams);
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -371,7 +378,7 @@ class GridSelectionProvider extends ChangeNotifier {
     try {
       final response = await http.get(url, headers: {
         'X-Tenant': apiKey,
-        });
+      });
       debugPrint('Response Status Code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
@@ -459,12 +466,14 @@ class GridSelectionProvider extends ChangeNotifier {
 
   //          *********************** GENERATE BARCODE API ***************************************************
 
-  Future<Map<String, dynamic>?> generateBarcodeAPI({required String accessToken}) async {
+  Future<Map<String, dynamic>?> generateBarcodeAPI(
+      {required String accessToken}) async {
     // Debug: Print request details
     debugPrint('=== GENERATE BARCODE API REQUEST ===');
     debugPrint('URL: ${APPUrl.generateBarcode}');
     debugPrint('Method: GET');
-    debugPrint('Access Token: ${accessToken.isNotEmpty ? "Present" : "Missing"}');
+    debugPrint(
+        'Access Token: ${accessToken.isNotEmpty ? "Present" : "Missing"}');
     debugPrint('==========================================');
 
     final Map<String, dynamic> error = {
@@ -473,7 +482,7 @@ class GridSelectionProvider extends ChangeNotifier {
     };
 
     final url = Uri.parse(APPUrl.generateBarcode);
-    
+
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -495,29 +504,30 @@ class GridSelectionProvider extends ChangeNotifier {
 
     try {
       final response = await http.get(url, headers: headers);
-      
+
       // Debug: Print response details
       debugPrint('=== GENERATE BARCODE API RESPONSE ===');
       debugPrint('Status Code: ${response.statusCode}');
       debugPrint('Response Headers: ${response.headers}');
       debugPrint('Response Body: ${response.body}');
       debugPrint('=======================================');
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
-        
+
         // Debug: Print parsed response data
         debugPrint('=== PARSED RESPONSE DATA ===');
         debugPrint('Full Response: $responseData');
         debugPrint('Status: ${responseData['status']}');
         debugPrint('Message: ${responseData['message']}');
         debugPrint('Data: ${responseData['data']}');
-        
-        if (responseData['data'] != null && responseData['data']['barcode'] != null) {
+
+        if (responseData['data'] != null &&
+            responseData['data']['barcode'] != null) {
           debugPrint('Generated Barcode: ${responseData['data']['barcode']}');
         }
         debugPrint('============================');
-        
+
         return responseData;
       } else {
         debugPrint('=== HTTP ERROR ===');

@@ -173,6 +173,7 @@ class BillingPageState extends State<BillingPage>
 
   String? deliveryDate;
   String? deliveryTime;
+  String? deliveryAddress;
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -585,6 +586,7 @@ class BillingPageState extends State<BillingPage>
         _carNumberController.text = currentOrder.carNumber ?? "";
         deliveryDate = currentOrder.deliveryDate;
         deliveryTime = currentOrder.deliveryTime;
+        deliveryAddress = currentOrder.address; // Restore address
 
         // 5. Restore Coupon State
         if ((currentOrder.couponId != null &&
@@ -3355,6 +3357,18 @@ class BillingPageState extends State<BillingPage>
       return false;
     }
 
+    // Get app settings to check for default customer
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultCustomerPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+
+    // Don't show balance if it's the default customer (by phone match)
+    if (defaultCustomerPhone.isNotEmpty &&
+        selectedCustomer!.phone == defaultCustomerPhone) {
+      return false;
+    }
+
     // Get current sales executive
     final salesExecutiveProvider =
         Provider.of<SalesExecutiveProvider>(context, listen: false);
@@ -3541,6 +3555,7 @@ class BillingPageState extends State<BillingPage>
         // Clear delivery date and time
         deliveryDate = null;
         deliveryTime = null;
+        deliveryAddress = null;
         // Clear delivery comment and car number
         _commentController.clear();
         _carNumberController.clear();
@@ -3667,6 +3682,7 @@ class BillingPageState extends State<BillingPage>
           deliveryTime: deliveryTime, // Pass deliveryTime
           toCustomerCredit: _toCustomerCreditEnabled,
           // context: context, // Pass context
+          address: deliveryAddress,
         );
 
         showScaffold(
@@ -3716,6 +3732,7 @@ class BillingPageState extends State<BillingPage>
           deliveryTime: deliveryTime,
           context: context, // Pass context
           toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress,
         );
 
         showScaffold(
@@ -3887,6 +3904,7 @@ class BillingPageState extends State<BillingPage>
             deliveryDate: deliveryDate, // Pass deliveryDate
             deliveryTime: deliveryTime, // Pass deliveryTime
             toCustomerCredit: _toCustomerCreditEnabled,
+            address: deliveryAddress,
           );
 
           showScaffold(
@@ -3948,6 +3966,7 @@ class BillingPageState extends State<BillingPage>
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
           toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress,
         );
 
         showScaffold(
@@ -4175,6 +4194,7 @@ class BillingPageState extends State<BillingPage>
         percentageDiscount: priceSummary.percentageDiscount,
         discountAmount: priceSummary.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
+        address: deliveryAddress,
       )
           .then((response) async {
         debugPrint(
@@ -4240,8 +4260,10 @@ class BillingPageState extends State<BillingPage>
             String? customerName = orderDetails.data?.customerDetails?.name;
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
             String? customerEmail = orderDetails.data?.customerDetails?.email;
+            // Use helper to get address from order_props, fallback to customer details
             String? customerAddress =
-                orderDetails.data?.customerDetails?.address?.join(', ');
+                orderDetails.data?.getCustomerAddressFromProps() ??
+                    orderDetails.data?.customerDetails?.address?.join(', ');
 
             // Calculate customer balance for print
             double? oldBalance = selectedCustomer?.balance;
@@ -4312,6 +4334,7 @@ class BillingPageState extends State<BillingPage>
             _commentController.clear();
             deliveryDate = null;
             deliveryTime = null;
+            deliveryAddress = null;
           });
           resetAutocomplete(
               shouldFetchCustomers:
@@ -4507,6 +4530,7 @@ class BillingPageState extends State<BillingPage>
             localProductProvider.priceSummary!.percentageDiscount,
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
+        address: deliveryAddress,
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -4548,6 +4572,7 @@ class BillingPageState extends State<BillingPage>
             _commentController.clear();
             deliveryDate = null;
             deliveryTime = null;
+            deliveryAddress = null;
           });
           resetAutocomplete(
               shouldFetchCustomers:
@@ -5242,8 +5267,9 @@ class BillingPageState extends State<BillingPage>
         initialComment: _commentController.text,
         initialDeliveryDate: deliveryDate,
         initialDeliveryTime: deliveryTime,
-        onDeliveryMethodSelected:
-            (method, methodId, carNumber, comment, selectedDate, selectedTime) {
+        initialAddress: deliveryAddress ?? "", // Pass initial address
+        onDeliveryMethodSelected: (method, methodId, carNumber, comment,
+            selectedDate, selectedTime, address) {
           setState(() {
             deliveryMethod = method;
             deliveryMethodId = methodId;
@@ -5251,6 +5277,7 @@ class BillingPageState extends State<BillingPage>
             _commentController.text = comment;
             deliveryDate = selectedDate;
             deliveryTime = selectedTime;
+            deliveryAddress = address; // Update address
           });
         },
       ),

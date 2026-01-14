@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/delivery_method.dart';
@@ -18,30 +17,38 @@ class DeliveryMethodsProvider with ChangeNotifier {
     try {
       return _deliveryMethods.firstWhere(
         (method) => method.name.toLowerCase().contains('store takeaway'),
-        orElse: () => _deliveryMethods.isNotEmpty ? _deliveryMethods.first : DeliveryMethod(id: "11", name: "Store Takeaway"),
+        orElse: () => _deliveryMethods.isNotEmpty
+            ? _deliveryMethods.first
+            : DeliveryMethod(id: "11", name: "Store Takeaway"),
       );
     } catch (e) {
       // Fallback to first method or default
-      return _deliveryMethods.isNotEmpty ? _deliveryMethods.first : DeliveryMethod(id: "11", name: "Store Takeaway");
+      return _deliveryMethods.isNotEmpty
+          ? _deliveryMethods.first
+          : DeliveryMethod(id: "11", name: "Store Takeaway");
     }
   }
 
   DeliveryMethodsProvider() {
-    fetchDeliveryMethods();
+    // Removed direct fetch to prevent early crashes or unauthorized requests
   }
 
   Future<void> fetchDeliveryMethods() async {
     _isLoading = true;
     notifyListeners();
-    final url = Uri.parse(APPUrl.getDeliveryMethods);
-        // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
 
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }   
     try {
+      final url = Uri.parse(APPUrl.getDeliveryMethods);
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        debugPrint(
+            '⚠️ DeliveryMethodsProvider: No API key found, skipping fetch.');
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
       final response = await http.get(url, headers: {
         'X-Tenant': apiKey,
       });

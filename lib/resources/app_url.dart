@@ -1,13 +1,17 @@
 class APPUrl {
   // static String baseURL = "https://eeezeeerp.cloudposai.com";
   // static String baseURL = "https://eposdemo.yougoit.in";
-  static String baseURL = "https://linetolinepos.yougoit.in";
-  // static String baseURL = "https://epos.hypersouq.in";
+  // static String baseURL = "https://linetolinepos.yougoit.in";
+  static String baseURL = "https://epos.hypersouq.in";
 
   static String verifyApiKey = '$baseURL/api/v1/verify-api-key';
-  static String categoryListUrl = '$baseURL/api/v1/category/list-category';
+  static String categoryListUrl =
+      '$baseURL/api/v1/category/list-category?type=sellable';
   static String getSellableCategoryListUrl =
       '$baseURL/api/v1/category/list-category?type=sellable';
+  // URL to fetch all categories without type=sellable filter
+  static String getRawCategoryListUrl =
+      '$baseURL/api/v1/category/list-category';
   static String viewCategoryListUrl = '$baseURL/api/v1/category-details';
   static String addCategoryUrl = '$baseURL/api/v1/category/add-category';
   static String editCategoryUrl = '$baseURL/api/v1/category/edit-category';
@@ -16,8 +20,11 @@ class APPUrl {
 
   // static String getProcductUrl = '$baseURL/api/v1/list-products';
   static String getSellableProductUrl =
-      '$baseURL/api/v1/product/executive/list-products?type=sellable';
+      '$baseURL/api/v1/product/executive/list-products';
   static String getAllProductsUrl =
+      '$baseURL/api/v1/product/executive/list-products';
+  // URL to fetch all products without type=sellable filter
+  static String getRawProductUrl =
       '$baseURL/api/v1/product/executive/list-products';
   static String addToCartUrl = '$baseURL/api/v1/cart/add-to-cart';
   static String listRoles = '$baseURL/api/v1/roles/list';
@@ -55,6 +62,10 @@ class APPUrl {
   // static String customerListUrl = '$baseURL/api/v1/sales/list-customer';
   static String customerListUrl = '$baseURL/api/v1/customer/customer-searchbar';
   static String userDetailsUrl = '$baseURL/api/v1/user/get-user-details';
+  static String executiveAddAddressUrl =
+      '$baseURL/api/v1/customer/executive-add-address';
+  static String executiveUpdateAddressUrl =
+      '$baseURL/api/v1/customer/executive-update-address';
   static String findCustomerByPhone = '$baseURL/api/v1/search-user-by-key';
 
   static String createProductUrl = '$baseURL/api/v1/product/create-product';
