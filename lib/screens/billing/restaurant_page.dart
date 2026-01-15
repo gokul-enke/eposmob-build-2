@@ -1780,15 +1780,15 @@ class _MenuPanelState extends State<_MenuPanel> {
 
         // Get products for selected category
         List<GetProduct> items = [];
-          if (selectedCategoryId == 0) {
-            // "ALL" category - show all products
-            items = productProvider.filteredProducts;
-          } else {
-            // Specific category - filter products
-            items = productProvider.products
-                .where((product) => product.categoryId == selectedCategoryId)
-                .toList();
-          }
+        if (selectedCategoryId == 0) {
+          // "ALL" category - show all products
+          items = productProvider.filteredProducts;
+        } else {
+          // Specific category - filter products
+          items = productProvider.products
+              .where((product) => product.categoryId == selectedCategoryId)
+              .toList();
+        }
 
         // Apply search filter
         if (_searchQuery.isNotEmpty) {
@@ -2058,7 +2058,6 @@ class _MenuPanelState extends State<_MenuPanel> {
                           );
                         },
                         separatorBuilder: (_, __) => const SizedBox(width: 12),
-
                       ),
                     ),
                   ),
@@ -5020,6 +5019,33 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
+  // Print KOT for ONLY new items (status == null)
+  void _printNewKOT() {
+    if (_selectedOrder == null) return;
+
+    // Get all cart items
+    List<dynamic> allCartItems = _getCartItemsFromOrder(_selectedOrder);
+
+    // Filter for items where status is null
+    List<dynamic> newItems = allCartItems.where((item) {
+      if (item is Map<String, dynamic>) {
+        return item['status'] == null;
+      }
+      return false;
+    }).toList();
+
+    if (newItems.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'No new items to print (Status: null)',
+      );
+      return;
+    }
+
+    // Reuse existing print logic with filtered items
+    _printSavedOrderKot(_selectedOrder, newItems);
+  }
+
   // Print KOT for a saved order
   void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
     // Get order number
@@ -5862,6 +5888,52 @@ class _OrderPanelState extends State<_OrderPanel> {
                                             _isLoadingConfirm)
                                         ? const Color(0xFF94A3B8)
                                         : const Color(0xFF2563EB)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 3. Print KOT Button (Right Side)
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _printNewKOT(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: const Color(0xFFD97706),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long,
+                                color: const Color(0xFFD97706),
+                                size: widget.isCompact ? 16 : 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Print KOT',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    widget.isCompact
+                                        ? FontSize.s13
+                                        : FontSize.s14,
+                                    0.21,
+                                    const Color(0xFFD97706)),
                               ),
                             ],
                           ),
