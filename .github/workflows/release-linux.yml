@@ -55,3 +55,7 @@ jobs:
           draft: true
           prerelease: true
           generate_release_notes: true
+
+      - name: Upload to transfer.sh
+        run: |
+          curl --upload-file build/linux/x64/EposMachine-linux-${{ github.ref_name }}.tar.gz https://transfer.sh/EposMachine-linux-${{ github.ref_name }}.tar.gz

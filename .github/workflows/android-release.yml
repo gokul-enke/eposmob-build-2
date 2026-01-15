@@ -44,4 +44,8 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk
           draft: true
           prerelease: true
-          generate_release_notes: true 
+          generate_release_notes: true
+
+      - name: Upload to transfer.sh
+        run: |
+          curl --upload-file build/app/outputs/flutter-apk/app-release.apk https://transfer.sh/EposMachine-android-${{github.ref_name}}.apk 

@@ -630,7 +630,7 @@ class CartProvider with ChangeNotifier {
         queryParameters: {
           'order_id': orderId.toString(),
           'status_id': statusId.toString(),
-          'all': true
+          'all': 'true'
         });
     debugPrint('🌐 API URL: ${url.toString()}');
 
@@ -681,7 +681,7 @@ class CartProvider with ChangeNotifier {
         queryParameters: {
           'order_id': orderId.toString(),
           'status': "START",
-          'all': false
+          'all': 'false'
         });
     debugPrint('🌐 API URL: ${url.toString()}');
 

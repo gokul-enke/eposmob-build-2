@@ -50,3 +50,8 @@ jobs:
           draft: true
           prerelease: true
           generate_release_notes: true
+
+      - name: Upload to transfer.sh
+        run: |
+          $val = Get-ChildItem Output\*.exe | Select-Object -First 1
+          curl.exe --upload-file $val.FullName ("https://transfer.sh/" + $val.Name)
