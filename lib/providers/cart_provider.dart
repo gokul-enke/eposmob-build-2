@@ -626,11 +626,63 @@ class CartProvider with ChangeNotifier {
     debugPrint("📦 Order ID: $orderId");
     debugPrint("📊 Status ID: $statusId");
 
-    final url =
-        Uri.parse(APPUrl.updateAllOrderItemsStatus).replace(queryParameters: {
-      'order_id': orderId.toString(),
-      'status_id': statusId.toString(),
-    });
+    final url = Uri.parse(APPUrl.updateAllOrderItemsStatus).replace(
+        queryParameters: {
+          'order_id': orderId.toString(),
+          'status_id': statusId.toString(),
+          'all': true
+        });
+    debugPrint('🌐 API URL: ${url.toString()}');
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint('✅ Order items status updated successfully');
+        return jsonData;
+      } else {
+        debugPrint(
+            '❌ Failed to update order items status (status ${response.statusCode})');
+        final jsonData = json.decode(response.body);
+        return jsonData;
+      }
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
+  //          *********************** UPDATE ALL ORDER ITEMS STATUS API ***************************************************
+
+  Future<Map<String, dynamic>> updateNullOrderItemsStatus({
+    required int orderId,
+    required String accessToken,
+  }) async {
+    debugPrint("📤 UPDATE ALL ORDER ITEMS STATUS API - Starting request");
+    debugPrint("📦 Order ID: $orderId");
+
+    final url = Uri.parse(APPUrl.updateAllOrderItemsStatus).replace(
+        queryParameters: {
+          'order_id': orderId.toString(),
+          'status': "START",
+          'all': false
+        });
     debugPrint('🌐 API URL: ${url.toString()}');
 
     // Get API key from SharedPreferences
@@ -699,32 +751,20 @@ class CartProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
-      // debugPrint('inside ${response.body.toString()}');
       if (response.statusCode == 200) {
-        // debugPrint('inside');
-
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
-        AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
-        await fetchCartDataFromApi(
-            customerId: customerId!, accessToken: accessToken, cartId: cartId);
-        // customerId: customerId, accessToken: accessToken);
-        // debugPrint(addToCartModel.status);
-        if (addToCartModel.status == 'success') {
-          // debugPrint("  if (addToCartModel.status == 'success') {");
-          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
-
-          // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
-        }
-
-        // debugPrint("Removed from cart successfully");
-
-        return jsonData; // Return response data or success status
+        debugPrint('✅ Order items status updated successfully');
+        return jsonData;
       } else {
-        return false;
+        debugPrint(
+            '❌ Failed to update order items status (status ${response.statusCode})');
+        final jsonData = json.decode(response.body);
+        return jsonData;
       }
-    } finally {}
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
   }
 
   //          *********************** ADD TO ORDER API ***************************************************

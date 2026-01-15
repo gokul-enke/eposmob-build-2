@@ -5020,7 +5020,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   // Print KOT for ONLY new items (status == null)
-  void _printNewKOT() {
+  void _printNewKOT() async {
     if (_selectedOrder == null) return;
 
     // Get all cart items
@@ -5044,6 +5044,35 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     // Reuse existing print logic with filtered items
     _printSavedOrderKot(_selectedOrder, newItems);
+
+    // Call API to update status for null items
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+      final orderId = int.tryParse(orderIdValue.toString());
+
+      if (orderId != null) {
+        debugPrint(
+            '➡️ Calling CartProvider.updateNullOrderItemsStatus for Order $orderId');
+        final response = await cartProvider.updateNullOrderItemsStatus(
+          orderId: orderId,
+          accessToken: authModel.token ?? '',
+        );
+
+        if (response['status'] == 'success') {
+          debugPrint('✅ updateNullOrderItemsStatus successful');
+          // Refresh the order details to reflect status changes
+          await _refreshSelectedOrderAfterCartUpdate();
+        } else {
+          debugPrint(
+              '⚠️ updateNullOrderItemsStatus failed: ${response['message']}');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating KOT status: $e');
+    }
   }
 
   // Print KOT for a saved order
@@ -6873,8 +6902,34 @@ class _OrderPanelState extends State<_OrderPanel> {
           // Unit price and quantity info
           Row(
             children: [
+              // Editable Price Trigger for Local Items (Blue Box style)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () =>
+                      _showEditItemPriceDialog(cartItem, isLocal: true),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.blue.withOpacity(0.05),
+                    ),
+                    child: Text(
+                      '₹${unitPrice.toStringAsFixed(2)}',
+                      style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          widget.isCompact ? FontSize.s11 : FontSize.s12,
+                          0.21,
+                          const Color(0xFF2563EB)),
+                    ),
+                  ),
+                ),
+              ),
               Text(
-                '₹${unitPrice.toStringAsFixed(0)} × ${quantity.toStringAsFixed(0)}',
+                ' × ${quantity.toStringAsFixed(0)}',
                 style: buildCustomStyle(
                     FontWeightManager.medium,
                     widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -7599,6 +7654,245 @@ class _OrderPanelState extends State<_OrderPanel> {
     _refreshLocalDrafts();
   }
 
+  Future<void> _updateSavedItemPrice(
+      dynamic cartItem, String newPriceStr) async {
+    final newPrice = double.tryParse(newPriceStr);
+    if (newPrice == null || newPrice < 0) {
+      showScaffoldError(context: context, message: 'Invalid price');
+      return;
+    }
+
+    // Determine cartItemId
+    final cartItemId = cartItem['id'];
+    if (cartItemId == null) {
+      showScaffoldError(context: context, message: 'Item ID not found');
+      return;
+    }
+
+    setState(() {
+      _loadingCartItems.add('${cartItemId}_price');
+      // _isLoadingOrderDetails = true; // Removed full loader
+    });
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      debugPrint(
+          '🔄 Updating saved item price: Item $cartItemId to $newPriceStr');
+
+      final response = await cartProvider.updateCartItemPrice(
+        cartItemId: int.parse(cartItemId.toString()),
+        unitPrice: newPriceStr,
+        accessToken: authModel.token ?? '',
+        // Pass cartId and customerId if available/needed
+        cartId: _selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'],
+        customerId: _selectedOrder['customer_id'] ??
+            _selectedOrder['cart']?['customer_id'],
+      );
+
+      if (response != null &&
+          (response['status']?.toLowerCase() == 'success' ||
+              response['status']?.toLowerCase() == 'sucesss')) {
+        debugPrint('✅ Price updated successfully');
+        showScaffold(context: context, message: 'Price updated successfully');
+
+        // Refresh the order to show new price
+        await _refreshSelectedOrderAfterCartUpdate();
+      } else {
+        debugPrint('❌ Price update failed: ${response['message']}');
+        showScaffoldError(
+            context: context,
+            message: response['message'] ?? 'Failed to update price');
+      }
+    } catch (e) {
+      debugPrint('❌ Exception updating price: $e');
+      showScaffoldError(context: context, message: 'Error updating price: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingCartItems.remove('${cartItemId}_price');
+          // _isLoadingOrderDetails = false; // Removed full loader
+        });
+      }
+    }
+  }
+
+  void _showEditItemPriceDialog(dynamic cartItem, {bool isLocal = false}) {
+    final double price = isLocal
+        ? (cartItem as LocalCartItem).price ?? 0.0
+        : (double.tryParse((cartItem['unit_price'] ?? cartItem['price'] ?? 0)
+                .toString()) ??
+            0.0);
+
+    final String productName = isLocal
+        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
+        : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
+
+    final TextEditingController _priceController =
+        TextEditingController(text: price.toStringAsFixed(2));
+
+    // Auto-select all text when dialog opens
+    _priceController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _priceController.text.length,
+    );
+
+    void _handleUpdate() {
+      Navigator.pop(context);
+      final newPriceStr = _priceController.text;
+      final newPrice = double.tryParse(newPriceStr);
+
+      if (newPrice != null && newPrice >= 0) {
+        if (isLocal) {
+          // Update Local Item
+          final localItem = cartItem as LocalCartItem;
+          final localProductProvider =
+              Provider.of<LocalProductProvider>(context, listen: false);
+          localProductProvider.updateItemPrice(
+            localItem.product.productId!,
+            localItem.selectedStock,
+            newPrice,
+          );
+        } else {
+          // Update Saved Item
+          _updateSavedItemPrice(cartItem, newPriceStr);
+        }
+      } else {
+        showScaffoldError(context: context, message: 'Invalid price');
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    const Icon(Icons.edit, color: Color(0xFF2563EB), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Edit Price',
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
+                    0.21, const Color(0xFF1E293B)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                productName,
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.21, const Color(0xFF1E293B)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Current Price: ₹${price.toStringAsFixed(2)}',
+                style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                    0.21, const Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _priceController,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _handleUpdate(),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.21, const Color(0xFF1E293B)),
+                decoration: InputDecoration(
+                  labelText: 'New Unit Price',
+                  labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF2563EB), width: 2),
+                  ),
+                  prefixText: '₹ ',
+                  prefixStyle: const TextStyle(
+                      color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
+                ),
+                onTap: () {
+                  Provider.of<KeyboardProvider>(context, listen: false)
+                      .show('numeric', _priceController);
+                },
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s14, 0.21, const Color(0xFF64748B)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _handleUpdate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Update',
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          FontSize.s14, 0.21, Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSavedOrderItem(dynamic cartItem, int index) {
     final productName = cartItem['product']?['name'] ??
         cartItem['product_name'] ??
@@ -7700,8 +7994,47 @@ class _OrderPanelState extends State<_OrderPanel> {
           // Unit price and quantity info
           Row(
             children: [
+              // Editable Price for Saved Items (Tap to edit)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _loadingCartItems.contains('${cartItem['id']}_price')
+                      ? null
+                      : () =>
+                          _showEditItemPriceDialog(cartItem, isLocal: false),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.blue.withOpacity(0.05),
+                    ),
+                    child: _loadingCartItems.contains('${cartItem['id']}_price')
+                        ? SizedBox(
+                            width: widget.isCompact ? 16 : 18,
+                            height: widget.isCompact ? 16 : 18,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF2563EB),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            '₹${unitPrice.toStringAsFixed(2)}',
+                            style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                0.21,
+                                const Color(0xFF2563EB)),
+                          ),
+                  ),
+                ),
+              ),
               Text(
-                '₹${unitPrice.toStringAsFixed(0)} × ${quantity.toStringAsFixed(0)}',
+                ' × ${quantity.toStringAsFixed(0)}',
                 style: buildCustomStyle(
                     FontWeightManager.medium,
                     widget.isCompact ? FontSize.s11 : FontSize.s12,
