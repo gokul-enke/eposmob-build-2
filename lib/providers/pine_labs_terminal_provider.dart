@@ -73,9 +73,10 @@ class PineLabsTerminalProvider with ChangeNotifier {
       print(' [PineLabs] Cannot process sale - service not bound');
       return 'BINDING FAILED';
     }
-    // Pine Labs expects amount in minor units (paise). Convert ₹ to paise.
+    // Pine Labs expects amount in minor units (paise). Convert  to paise.
     final int paymentAmount = (amount * 100).round();
-    print(' [PineLabs] Processing sale: ₹${amount.toStringAsFixed(2)} (paise: $paymentAmount), Ref: $billingRefNo');
+    print(
+        ' [PineLabs] Processing sale: ${amount.toStringAsFixed(2)} (paise: $paymentAmount), Ref: $billingRefNo');
     final payload = {
       "Detail": {
         "BillingRefNo": billingRefNo,

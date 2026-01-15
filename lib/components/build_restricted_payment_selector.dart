@@ -20,8 +20,9 @@ class RestrictedPaymentData {
     this.secondaryAmount = '',
   });
 
-  bool get hasPaymentMethods => primaryMethod != null || secondaryMethod != null;
-  
+  bool get hasPaymentMethods =>
+      primaryMethod != null || secondaryMethod != null;
+
   double get totalAmount {
     double primary = double.tryParse(primaryAmount) ?? 0;
     double secondary = double.tryParse(secondaryAmount) ?? 0;
@@ -45,7 +46,7 @@ class RestrictedPaymentData {
 
 /// Payment selector with restricted combinations:
 /// - Cash + Card ✅
-/// - Cash + UPI ✅ 
+/// - Cash + UPI ✅
 /// - Cash only ✅
 /// - Card only ✅
 /// - UPI only ✅
@@ -81,18 +82,20 @@ class BuildRestrictedPaymentSelector extends StatefulWidget {
       _BuildRestrictedPaymentSelectorState();
 }
 
-class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentSelector> {
+class _BuildRestrictedPaymentSelectorState
+    extends State<BuildRestrictedPaymentSelector> {
   RestrictedPaymentType? primaryMethod;
   RestrictedPaymentType? secondaryMethod;
   final TextEditingController primaryAmountController = TextEditingController();
-  final TextEditingController secondaryAmountController = TextEditingController();
+  final TextEditingController secondaryAmountController =
+      TextEditingController();
   final FocusNode _primaryAmountFocusNode = FocusNode();
   final FocusNode _secondaryAmountFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    
+
     if (widget.initialData != null) {
       primaryMethod = widget.initialData!.primaryMethod;
       secondaryMethod = widget.initialData!.secondaryMethod;
@@ -147,17 +150,17 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
     // If Card is selected, UPI is disabled
     if (method == RestrictedPaymentType.upi &&
         (primaryMethod == RestrictedPaymentType.card ||
-         secondaryMethod == RestrictedPaymentType.card)) {
+            secondaryMethod == RestrictedPaymentType.card)) {
       return true;
     }
-    
+
     // If UPI is selected, Card is disabled
     if (method == RestrictedPaymentType.card &&
         (primaryMethod == RestrictedPaymentType.upi ||
-         secondaryMethod == RestrictedPaymentType.upi)) {
+            secondaryMethod == RestrictedPaymentType.upi)) {
       return true;
     }
-    
+
     return false;
   }
 
@@ -216,10 +219,13 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
     _notifyChange();
   }
 
-  bool _wouldViolateRestriction(RestrictedPaymentType method1, RestrictedPaymentType method2) {
+  bool _wouldViolateRestriction(
+      RestrictedPaymentType method1, RestrictedPaymentType method2) {
     // Card + UPI combination is not allowed
-    return (method1 == RestrictedPaymentType.card && method2 == RestrictedPaymentType.upi) ||
-           (method1 == RestrictedPaymentType.upi && method2 == RestrictedPaymentType.card);
+    return (method1 == RestrictedPaymentType.card &&
+            method2 == RestrictedPaymentType.upi) ||
+        (method1 == RestrictedPaymentType.upi &&
+            method2 == RestrictedPaymentType.card);
   }
 
   void _showRestrictionMessage() {
@@ -277,7 +283,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Restriction info (only show if enabled)
           if (widget.showRestrictionInfo && widget.restrictionMessage != null)
             Container(
@@ -310,14 +316,14 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
                 ],
               ),
             ),
-          
+
           // Payment method buttons
           Row(
             children: widget.availableMethods.map((method) {
               bool isSelected = _isMethodSelected(method);
               bool isDisabled = _isMethodDisabled(method);
               Color methodColor = _getMethodColor(method);
-              
+
               return Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(
@@ -326,7 +332,9 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
                   child: Opacity(
                     opacity: isDisabled ? 0.4 : 1.0,
                     child: GestureDetector(
-                      onTap: isDisabled ? null : () => _selectPaymentMethod(method),
+                      onTap: isDisabled
+                          ? null
+                          : () => _selectPaymentMethod(method),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: 50,
@@ -334,9 +342,11 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
                           color: isSelected ? methodColor : Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isDisabled 
+                            color: isDisabled
                                 ? Colors.grey.shade300
-                                : (isSelected ? methodColor : Colors.grey.shade300),
+                                : (isSelected
+                                    ? methodColor
+                                    : Colors.grey.shade300),
                             width: 2,
                           ),
                           boxShadow: isSelected && !isDisabled
@@ -386,7 +396,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
               );
             }).toList(),
           ),
-          
+
           // Amount input fields
           if (primaryMethod != null || secondaryMethod != null) ...[
             const SizedBox(height: 16),
@@ -397,7 +407,8 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
                     child: _buildAmountInput(
                       method: primaryMethod!,
                       controller: primaryAmountController,
-                      placeholder: 'Enter ${_getMethodName(primaryMethod!)} Amount',
+                      placeholder:
+                          'Enter ${_getMethodName(primaryMethod!)} Amount',
                       focusNode: _primaryAmountFocusNode,
                     ),
                   ),
@@ -408,16 +419,18 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
                     child: _buildAmountInput(
                       method: secondaryMethod!,
                       controller: secondaryAmountController,
-                      placeholder: 'Enter ${_getMethodName(secondaryMethod!)} Amount',
+                      placeholder:
+                          'Enter ${_getMethodName(secondaryMethod!)} Amount',
                       focusNode: _secondaryAmountFocusNode,
                     ),
                   ),
               ],
             ),
           ],
-          
+
           // Total amount display
-          if (widget.showTotalAmount && (primaryMethod != null || secondaryMethod != null)) ...[
+          if (widget.showTotalAmount &&
+              (primaryMethod != null || secondaryMethod != null)) ...[
             const SizedBox(height: 12),
             _buildTotalDisplay(),
           ],
@@ -472,11 +485,14 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
 
   Widget _buildTotalDisplay() {
     double primaryAmount = double.tryParse(primaryAmountController.text) ?? 0;
-    double secondaryAmount = double.tryParse(secondaryAmountController.text) ?? 0;
+    double secondaryAmount =
+        double.tryParse(secondaryAmountController.text) ?? 0;
     double total = primaryAmount + secondaryAmount;
-    
+
     Color totalColor = widget.expectedAmount != null
-        ? (total == widget.expectedAmount ? ColorManager.kSuccessColor : ColorManager.kErrorColor)
+        ? (total == widget.expectedAmount
+            ? ColorManager.kSuccessColor
+            : ColorManager.kErrorColor)
         : ColorManager.kPrimaryColor;
 
     return Container(
@@ -490,7 +506,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total: ₹${total.toStringAsFixed(2)}',
+            'Total: ${total.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -500,7 +516,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
           ),
           if (widget.expectedAmount != null) ...[
             Text(
-              'Expected: ₹${widget.expectedAmount!.toStringAsFixed(2)}',
+              'Expected: ${widget.expectedAmount!.toStringAsFixed(2)}',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

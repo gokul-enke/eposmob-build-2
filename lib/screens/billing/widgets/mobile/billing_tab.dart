@@ -40,8 +40,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       try {
-        final terminalProvider =
-            context.read<PineLabsTerminalProvider>();
+        final terminalProvider = context.read<PineLabsTerminalProvider>();
         terminalProvider.ensureBinding();
       } catch (_) {
         // Ignore; UI will still allow manual binding on first attempt.
@@ -92,8 +91,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics()),
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.fromLTRB(
                 16,
                 16,
@@ -356,7 +354,8 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
         final totalAmount = billingProvider.totalOrderAmount;
         final billingRefNo = billingProvider.transactionNumberController.text;
         // Debug: trace state when widget rebuilds (e.g., after loading saved order)
-        debugPrint('🧩 [PineLabs UI] pineLabsPaymentSuccess=${billingProvider.pineLabsPaymentSuccess} | methods=${billingProvider.getSelectedPaymentMethods()} | ref=$billingRefNo');
+        debugPrint(
+            '🧩 [PineLabs UI] pineLabsPaymentSuccess=${billingProvider.pineLabsPaymentSuccess} | methods=${billingProvider.getSelectedPaymentMethods()} | ref=$billingRefNo');
 
         return CustomRoundButton(
           title: terminalProvider.isProcessing
@@ -400,27 +399,31 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                         detail?['BillingRefNo'] ??
                         '')
                     .toString();
-                
+
                 debugPrint('✅ [PineLabs] Payment SUCCESS');
                 debugPrint('📋 [PineLabs] Reference Number: $ref');
-                
+
                 billingProvider.setPineLabsPaymentSuccess(true);
-                
+
                 // Update provider with ONLINE payment and reference number
                 debugPrint('💳 [PineLabs] Setting payment method to ONLINE...');
                 billingProvider.setPaymentMethod('ONLINE', true);
-                
+
                 debugPrint('🔢 [PineLabs] Setting transaction reference: $ref');
                 billingProvider.transactionNumberController.text = ref;
-                
+
                 // Verify the payment method was set
-                final selectedMethods = billingProvider.getSelectedPaymentMethodsExcludingEmpty();
-                debugPrint('✔️ [PineLabs] Selected payment methods after setting ONLINE: $selectedMethods');
-                debugPrint('✔️ [PineLabs] isOnlineSelected flag: ${billingProvider.isOnlineSelected}');
-                
+                final selectedMethods =
+                    billingProvider.getSelectedPaymentMethodsExcludingEmpty();
+                debugPrint(
+                    '✔️ [PineLabs] Selected payment methods after setting ONLINE: $selectedMethods');
+                debugPrint(
+                    '✔️ [PineLabs] isOnlineSelected flag: ${billingProvider.isOnlineSelected}');
+
                 showScaffold(
                   context: context,
-                  message: msg.isNotEmpty ? msg : 'Pine Labs payment successful',
+                  message:
+                      msg.isNotEmpty ? msg : 'Pine Labs payment successful',
                 );
               } else {
                 billingProvider.setPineLabsPaymentSuccess(false);
@@ -456,10 +459,12 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
           height: 48,
           width: double.infinity,
           radius: 12,
-          boxColor:
-              billingProvider.pineLabsPaymentSuccess ? ColorManager.kGreen : ColorManager.kPrimaryColor,
-          borderColor:
-              billingProvider.pineLabsPaymentSuccess ? ColorManager.kGreen : ColorManager.kPrimaryColor,
+          boxColor: billingProvider.pineLabsPaymentSuccess
+              ? ColorManager.kGreen
+              : ColorManager.kPrimaryColor,
+          borderColor: billingProvider.pineLabsPaymentSuccess
+              ? ColorManager.kGreen
+              : ColorManager.kPrimaryColor,
           textColor: Colors.white,
           isLoading: terminalProvider.isProcessing,
         );
@@ -662,7 +667,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Discount Applied: ₹${(summary.flatDiscount + summary.percentageDiscount).toStringAsFixed(2)}',
+                          'Discount Applied: ${(summary.flatDiscount + summary.percentageDiscount).toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.green.shade700,

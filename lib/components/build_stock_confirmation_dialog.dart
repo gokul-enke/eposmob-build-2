@@ -496,7 +496,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      '₹${purchaseRate.toStringAsFixed(0)} × $quantity',
+                      '${purchaseRate.toStringAsFixed(0)} × $quantity',
                       textAlign: TextAlign.center,
                       style: buildCustomStyle(
                         FontWeightManager.regular,
@@ -509,7 +509,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                   SizedBox(
                     width: 70,
                     child: Text(
-                      '₹${total.toStringAsFixed(2)}',
+                      '${total.toStringAsFixed(2)}',
                       textAlign: TextAlign.right,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
@@ -615,7 +615,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
           // Purchase Amount
           _buildSummaryRow(
             "Total Purchase Amount",
-            "₹${widget.totalAmount.toStringAsFixed(2)}",
+            "${widget.totalAmount.toStringAsFixed(2)}",
             isBold: true,
             valueColor: ColorManager.textColor,
           ),
@@ -625,7 +625,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             const SizedBox(height: 6),
             _buildSummaryRow(
               "Old Supplier Balance",
-              "₹${supplierOldBalance.toStringAsFixed(2)}",
+              "${supplierOldBalance.toStringAsFixed(2)}",
               valueColor: supplierOldBalance > 0
                   ? Colors.orange.shade700
                   : Colors.green.shade700,
@@ -665,7 +665,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             const Divider(height: 16),
             _buildSummaryRow(
               "Total Paid Amount",
-              "₹${paidAmount.toStringAsFixed(2)}",
+              "${paidAmount.toStringAsFixed(2)}",
               valueColor: ColorManager.kSuccessColor,
               isBold: true,
             ),
@@ -702,7 +702,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                   ),
                 ),
                 Text(
-                  "₹${currentSupplierBalance.toStringAsFixed(2)}",
+                  "${currentSupplierBalance.toStringAsFixed(2)}",
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s15,
@@ -823,7 +823,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
         ),
         const Spacer(),
         Text(
-          "₹${amount.toStringAsFixed(2)}",
+          "${amount.toStringAsFixed(2)}",
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s12,

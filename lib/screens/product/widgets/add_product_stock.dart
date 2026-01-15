@@ -3228,7 +3228,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               Expanded(
                 child: _buildSummaryCard(
                   'Total Purchase Amount',
-                  '₹${totalPurchaseAmount.toStringAsFixed(2)}',
+                  '${totalPurchaseAmount.toStringAsFixed(2)}',
                   Icons.shopping_cart_outlined,
                   Colors.green.shade600,
                 ),
@@ -3246,7 +3246,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               Expanded(
                 child: _buildSummaryCard(
                   'Total Due Amount',
-                  '₹${totalPayable.toStringAsFixed(2)}',
+                  '${totalPayable.toStringAsFixed(2)}',
                   Icons.payment_outlined,
                   totalPayable >= 0
                       ? Colors.green.shade600
@@ -3311,7 +3311,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 ),
               ),
               Text(
-                '₹$balanceText',
+                '$balanceText',
                 style: buildCustomStyle(
                   FontWeightManager.bold,
                   FontSize.s12,
@@ -3442,7 +3442,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         ),
         const SizedBox(width: 6),
         Text(
-          '$balanceLabel ₹${balance.abs().toStringAsFixed(2)}',
+          '$balanceLabel ${balance.abs().toStringAsFixed(2)}',
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -3910,16 +3910,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       runSpacing: 4,
                       children: [
                         if (item.salePrice.isNotEmpty)
-                          _buildDetailChip("Retail", "₹${item.salePrice}",
+                          _buildDetailChip("Retail", "${item.salePrice}",
                               Icons.sell, Colors.blue.shade600),
                         if (item.purchaseRate.isNotEmpty)
-                          _buildDetailChip("Purchase", "₹${item.purchaseRate}",
+                          _buildDetailChip("Purchase", "${item.purchaseRate}",
                               Icons.shopping_cart, Colors.green.shade600),
                         if (item.mrp.isNotEmpty)
-                          _buildDetailChip("MRP", "₹${item.mrp}",
+                          _buildDetailChip("MRP", "${item.mrp}",
                               Icons.local_offer, Colors.orange.shade600),
                         if (item.wholesale.isNotEmpty)
-                          _buildDetailChip("Wholesale", "₹${item.wholesale}",
+                          _buildDetailChip("Wholesale", "${item.wholesale}",
                               Icons.store, Colors.purple.shade600),
                         if (item.unit.isNotEmpty)
                           _buildDetailChip("Unit", item.unit, Icons.straighten,
@@ -3949,7 +3949,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           border: Border.all(color: Colors.green.shade200),
                         ),
                         child: Text(
-                          "Total: ₹${purchaseTotal.toStringAsFixed(2)}",
+                          "Total: ${purchaseTotal.toStringAsFixed(2)}",
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s10,
@@ -5028,8 +5028,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               child: _buildTaxCard(
                 "Retail Price",
                 item.taxInclude
-                    ? '₹${(item.calculatedTaxData?['price_including_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
-                    : '₹${(item.calculatedTaxData?['price_excluding_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ₹${(item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
+                    ? '${(item.calculatedTaxData?['price_including_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
+                    : '${(item.calculatedTaxData?['price_excluding_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
                 'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.blue,
                 item.taxInclude,
@@ -5041,8 +5041,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               child: _buildTaxCard(
                 "Wholesale Price",
                 item.taxInclude
-                    ? '₹${(item.calculatedTaxData?['price_including_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
-                    : '₹${(item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ₹${(item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
+                    ? '${(item.calculatedTaxData?['price_including_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
+                    : '${(item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
                 'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.orange,
                 item.taxInclude,

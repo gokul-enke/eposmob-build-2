@@ -1527,7 +1527,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                               ),
                               if (product.price?.price != null)
                                 Text(
-                                  '₹${product.price!.price}',
+                                  '${product.price!.price}',
                                   style: buildCustomStyle(
                                     FontWeightManager.bold,
                                     FontSize.s14,
@@ -1604,10 +1604,10 @@ class _MenuPanelState extends State<_MenuPanel> {
                               (product.sku ?? '').toString().isNotEmpty)
                             _buildKeyValueRow('SKU', product.sku!),
                           if (product.mrp != null)
-                            _buildKeyValueRow('MRP', '₹${product.mrp}'),
+                            _buildKeyValueRow('MRP', '${product.mrp}'),
                           if (product.price?.price != null)
                             _buildKeyValueRow(
-                                'Price', '₹${product.price!.price}'),
+                                'Price', '${product.price!.price}'),
 
                           if (product.barcode != null &&
                               (product.barcode ?? '').toString().isNotEmpty)
@@ -2291,7 +2291,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            '₹${item.price?.price ?? '0'}',
+                            '${item.price?.price ?? '0'}',
                             style: buildCustomStyle(
                               FontWeightManager.bold,
                               compact ? FontSize.s9 : FontSize.s11,
@@ -2816,7 +2816,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     debugPrint(
-        '💰 Payment Modal - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+        '💰 Payment Modal - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
 
@@ -2833,7 +2833,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       autoFillCashAmount = orderTotal.toStringAsFixed(2);
       autoSelectCash = true;
       debugPrint(
-          '🔧 Auto-fill triggered: Cash amount set to ₹${autoFillCashAmount}, Cash selected: $autoSelectCash');
+          '🔧 Auto-fill triggered: Cash amount set to ${autoFillCashAmount}, Cash selected: $autoSelectCash');
     } else {
       debugPrint('🔧 Auto-fill skipped: Payment methods already selected');
     }
@@ -2892,7 +2892,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             debugPrint(
                 '  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
             debugPrint(
-                '  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+                '  - Customer Credit Amount: ${_toCustomerCreditAmount.toStringAsFixed(2)}');
             if (cashMethodId != null)
               debugPrint('  - Cash Method ID: $cashMethodId');
             if (cardMethodId != null)
@@ -3938,7 +3938,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         });
 
         debugPrint(
-            '✅ Loaded payment method: $paymentMethod, Amount: ₹$paidAmount');
+            '✅ Loaded payment method: $paymentMethod, Amount: $paidAmount');
       }
 
       // Load existing comment if available (supports multiple API shapes)
@@ -4001,7 +4001,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       if (_isCouponApplied) {
         debugPrint('✅ Loaded discount data:');
-        debugPrint('   - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
+        debugPrint('   - Flat Discount: ${_flatDiscount.toStringAsFixed(2)}');
         debugPrint(
             '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
         debugPrint('   - Coupon Code: $_couponCode');
@@ -4013,8 +4013,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       final totalPaid = double.tryParse(paidAmount) ?? 0.0;
       _balanceAmount = totalPaid - orderTotal;
 
-      debugPrint(
-          '💰 Calculated balance: ₹${_balanceAmount.toStringAsFixed(2)}');
+      debugPrint('💰 Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
     } catch (e) {
       debugPrint('❌ Error loading order-specific data: $e');
     }
@@ -4220,7 +4219,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     debugPrint(
-        '💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+        '💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerBalance = _selectedCustomer?.balance ?? 0.0;
     final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
@@ -4231,16 +4230,16 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     debugPrint('\n🧮 === RESTAURANT PAGE BALANCE CALCULATION START ===');
     debugPrint('💰 Input Values:');
-    debugPrint('  - Order Total: ₹${orderTotal.toStringAsFixed(2)}');
-    debugPrint('  - Customer Balance: ₹${customerBalance.toStringAsFixed(2)}');
-    debugPrint('  - Cash Amount: ₹${cashAmount.toStringAsFixed(2)}');
-    debugPrint('  - Card Amount: ₹${cardAmount.toStringAsFixed(2)}');
-    debugPrint('  - UPI Amount: ₹${upiAmount.toStringAsFixed(2)}');
-    debugPrint('  - COD Amount: ₹${codAmount.toStringAsFixed(2)}');
-    debugPrint('  - Total Paid Amount: ₹${totalPaidAmount.toStringAsFixed(2)}');
+    debugPrint('  - Order Total: ${orderTotal.toStringAsFixed(2)}');
+    debugPrint('  - Customer Balance: ${customerBalance.toStringAsFixed(2)}');
+    debugPrint('  - Cash Amount: ${cashAmount.toStringAsFixed(2)}');
+    debugPrint('  - Card Amount: ${cardAmount.toStringAsFixed(2)}');
+    debugPrint('  - UPI Amount: ${upiAmount.toStringAsFixed(2)}');
+    debugPrint('  - COD Amount: ${codAmount.toStringAsFixed(2)}');
+    debugPrint('  - Total Paid Amount: ${totalPaidAmount.toStringAsFixed(2)}');
     debugPrint('  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
     debugPrint(
-        '  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+        '  - Customer Credit Amount: ${_toCustomerCreditAmount.toStringAsFixed(2)}');
 
     // Calculate balance using the same logic as billing_page.dart
     double cashBalance = 0.0;
@@ -4254,7 +4253,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         debugPrint('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalPaidAmount - orderTotal;
         debugPrint(
-            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+            '💰 Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
 
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
@@ -4264,13 +4263,13 @@ class _OrderPanelState extends State<_OrderPanel> {
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
             debugPrint(
-                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to transaction excess: ${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = transaction excess - customer credit
           cashBalance = transactionExcess - actualCustomerCredit;
           debugPrint(
-              '  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+              '  - Balance = Transaction Excess (${transactionExcess.toStringAsFixed(2)}) - Customer Credit (${actualCustomerCredit.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
         } else {
           cashBalance = 0.0;
           debugPrint('  - No transaction excess, balance = 0');
@@ -4281,17 +4280,17 @@ class _OrderPanelState extends State<_OrderPanel> {
         // Net Due = Purchase Total - Customer Previous Balance
         double netDue = orderTotal - customerBalance;
         debugPrint('💰 Net Due calculation:');
-        debugPrint('  - Purchase Total: ₹${orderTotal.toStringAsFixed(2)}');
+        debugPrint('  - Purchase Total: ${orderTotal.toStringAsFixed(2)}');
         debugPrint(
-            '  - Customer Prev Balance: ₹${customerBalance.toStringAsFixed(2)}');
-        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+            '  - Customer Prev Balance: ${customerBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: ${netDue.toStringAsFixed(2)}');
 
         // Available balance = Total Collected - Net Due
         double availableBalance = totalPaidAmount - netDue;
         debugPrint(
-            '  - Total Collected: ₹${totalPaidAmount.toStringAsFixed(2)}');
+            '  - Total Collected: ${totalPaidAmount.toStringAsFixed(2)}');
         debugPrint(
-            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+            '  - Available Balance: ${availableBalance.toStringAsFixed(2)}');
 
         if (availableBalance > 0) {
           // Get the actual customer credit amount being allocated
@@ -4301,13 +4300,13 @@ class _OrderPanelState extends State<_OrderPanel> {
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
             debugPrint(
-                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to available balance: ${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = available balance - customer credit
           cashBalance = availableBalance - actualCustomerCredit;
           debugPrint(
-              '  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+              '  - Balance = Available Balance (${availableBalance.toStringAsFixed(2)}) - Customer Credit (${actualCustomerCredit.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
         } else {
           cashBalance = 0.0;
           debugPrint('  - No available balance, balance = 0');
@@ -4319,7 +4318,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       // Toggle OFF: Simple calculation without previous balance
       cashBalance = totalPaidAmount - orderTotal;
       debugPrint(
-          '  - Balance = Total Collected (₹${totalPaidAmount.toStringAsFixed(2)}) - Cart Total (₹${orderTotal.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+          '  - Balance = Total Collected (${totalPaidAmount.toStringAsFixed(2)}) - Cart Total (${orderTotal.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
     }
 
     // Store the raw balance before clamping for comparison
@@ -4329,13 +4328,13 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (cashBalance < 0) {
       debugPrint(
-          '🚫 RESTAURANT PAGE: Clamping negative cash balance (₹${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
+          '🚫 RESTAURANT PAGE: Clamping negative cash balance (${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
       cashBalance = 0.0;
     }
 
-    debugPrint('💵 Final cash balance: ₹${cashBalance.toStringAsFixed(2)}');
+    debugPrint('💵 Final cash balance: ${cashBalance.toStringAsFixed(2)}');
     debugPrint(
-        '💵 Raw balance (before clamping): ₹${rawBalance.toStringAsFixed(2)}');
+        '💵 Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
     debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
 
     // Calculate discount amounts
@@ -4389,7 +4388,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           // Summary rows
           _buildSummaryRow(
             'Order Total',
-            '₹${orderTotal.toStringAsFixed(2)}',
+            '${orderTotal.toStringAsFixed(2)}',
             color: const Color(0xFF64748B),
           ),
 
@@ -4397,19 +4396,19 @@ class _OrderPanelState extends State<_OrderPanel> {
           if (_hasDiscount()) ...[
             _buildSummaryRow(
               'Discount',
-              '₹${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
+              '${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
               color: const Color(0xFFDC2626),
             ),
             _buildSummaryRow(
               'Final Total',
-              '₹${finalOrderTotal.toStringAsFixed(2)}',
+              '${finalOrderTotal.toStringAsFixed(2)}',
               color: const Color(0xFF059669),
               isBold: true,
             ),
           ] else ...[
             _buildSummaryRow(
               'Final Total',
-              '₹${orderTotal.toStringAsFixed(2)}',
+              '${orderTotal.toStringAsFixed(2)}',
               color: const Color(0xFF059669),
               isBold: true,
             ),
@@ -4419,12 +4418,12 @@ class _OrderPanelState extends State<_OrderPanel> {
           // if (_hasDiscount()) ...[
           //   _buildSummaryRow(
           //     'Discount',
-          //     '-₹${discountAmount.toStringAsFixed(2)}',
+          //     '-${discountAmount.toStringAsFixed(2)}',
           //     color: const Color(0xFFD97706),
           //   ),
           //   _buildSummaryRow(
           //     'Final Total',
-          //     '₹${finalOrderTotal.toStringAsFixed(2)}',
+          //     '${finalOrderTotal.toStringAsFixed(2)}',
           //     color: const Color(0xFF1E293B),
           //     isBold: true,
           //   ),
@@ -4439,7 +4438,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             const SizedBox(height: 8),
             _buildSummaryRow(
               'Customer Balance',
-              '₹${customerBalance.toStringAsFixed(2)}',
+              '${customerBalance.toStringAsFixed(2)}',
               color: customerBalance >= 0
                   ? const Color(0xFF059669)
                   : const Color(0xFFDC2626),
@@ -4455,14 +4454,14 @@ class _OrderPanelState extends State<_OrderPanel> {
             const SizedBox(height: 8),
             _buildSummaryRow(
               'Paid Amount',
-              '₹${totalPaidAmount.toStringAsFixed(2)}',
+              '${totalPaidAmount.toStringAsFixed(2)}',
               color: const Color(0xFF059669),
             ),
             _buildSummaryRow(
               'Balance',
               rawBalance >= 0
-                  ? '₹${rawBalance.toStringAsFixed(2)}'
-                  : 'Short: ₹${(-rawBalance).toStringAsFixed(2)}',
+                  ? '${rawBalance.toStringAsFixed(2)}'
+                  : 'Short: ${(-rawBalance).toStringAsFixed(2)}',
               color: rawBalance >= 0
                   ? const Color(0xFF059669)
                   : const Color(0xFFDC2626),
@@ -5296,7 +5295,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     debugPrint(
-        '📊 Cart items count: ${cartItems.length}, Total: ₹${total.toStringAsFixed(2)}');
+        '📊 Cart items count: ${cartItems.length}, Total: ${total.toStringAsFixed(2)}');
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -5497,7 +5496,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '₹${totalPrice.toStringAsFixed(0)}',
+                '${totalPrice.toStringAsFixed(0)}',
                 style: buildCustomStyle(
                     FontWeightManager.bold,
                     widget.isCompact ? FontSize.s14 : FontSize.s16,
@@ -6708,11 +6707,11 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('   - Balance Amount: $balanceAmount');
       debugPrint('🎫 Discount details for confirmation:');
       debugPrint(
-          '   - Flat Discount: ₹${flatDiscountAmount.toStringAsFixed(2)}');
+          '   - Flat Discount: ${flatDiscountAmount.toStringAsFixed(2)}');
       debugPrint(
           '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
       debugPrint(
-          '   - Total Discount Amount: ₹${totalDiscountAmount.toStringAsFixed(2)}');
+          '   - Total Discount Amount: ${totalDiscountAmount.toStringAsFixed(2)}');
       debugPrint('   - Coupon Code: $_couponCode');
       debugPrint('🔧 Payment Methods Details:');
       debugPrint('   - Payment Methods Array: $paymentMethods');
@@ -6889,7 +6888,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '₹${totalPrice.toStringAsFixed(0)}',
+                  '${totalPrice.toStringAsFixed(0)}',
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
                       0.21, const Color(0xFF059669)),
                 ),
@@ -6918,7 +6917,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                       color: Colors.blue.withOpacity(0.05),
                     ),
                     child: Text(
-                      '₹${unitPrice.toStringAsFixed(2)}',
+                      '${unitPrice.toStringAsFixed(2)}',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -7802,7 +7801,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Current Price: ₹${price.toStringAsFixed(2)}',
+                'Current Price: ${price.toStringAsFixed(2)}',
                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
                     0.21, const Color(0xFF64748B)),
               ),
@@ -7836,7 +7835,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                     borderSide:
                         const BorderSide(color: Color(0xFF2563EB), width: 2),
                   ),
-                  prefixText: '₹ ',
+                  prefixText: ' ',
                   prefixStyle: const TextStyle(
                       color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
                 ),
@@ -7956,7 +7955,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '₹${totalPrice.toStringAsFixed(0)}',
+                      '${totalPrice.toStringAsFixed(0)}',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s12 : FontSize.s14,
@@ -8023,7 +8022,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                             ),
                           )
                         : Text(
-                            '₹${unitPrice.toStringAsFixed(2)}',
+                            '${unitPrice.toStringAsFixed(2)}',
                             style: buildCustomStyle(
                                 FontWeightManager.bold,
                                 widget.isCompact ? FontSize.s11 : FontSize.s12,

@@ -74,7 +74,7 @@ class PriceSelectionModal extends StatelessWidget {
                       ),
                       child: Center(
                         child: Text(
-                          '₹${price.toStringAsFixed(0)}',
+                          '${price.toStringAsFixed(0)}',
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s14,
@@ -121,4 +121,4 @@ class PriceSelectionModal extends StatelessWidget {
       ),
     );
   }
-} 
+}

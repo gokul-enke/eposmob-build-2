@@ -438,19 +438,19 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     }
 
     // Get period-specific data
-    String bankAccountValue = "₹0";
-    String cashAccountValue = "₹0";
-    String revenueValue = "₹0";
+    String bankAccountValue = "0";
+    String cashAccountValue = "0";
+    String revenueValue = "0";
     String customersValue = "0";
     String ordersValue = "0";
 
     if (dashboardOverview != null) {
       bankAccountValue =
-          "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}";
+          "${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}";
       cashAccountValue =
-          "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}";
+          "${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}";
       revenueValue =
-          "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.revenue.totalSales)}";
+          "${NumberFormat('#,##,###.##').format(dashboardOverview!.revenue.totalSales)}";
       customersValue = dashboardOverview!.customers.totalCustomers.toString();
       ordersValue = dashboardOverview!.orders.totalOrders.toString();
     }
@@ -530,20 +530,20 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         'Building Sales Executive Account Overview. Data available: ${dashboardOverview != null}');
 
     // Get period-specific data
-    String cashReceivedValue = "₹0";
-    String cashSentValue = "₹0";
-    String bankReceivedValue = "₹0";
-    String bankSentValue = "₹0";
+    String cashReceivedValue = "0";
+    String cashSentValue = "0";
+    String bankReceivedValue = "0";
+    String bankSentValue = "0";
 
     if (dashboardOverview != null) {
       cashReceivedValue =
-          "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}";
+          "${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}";
       cashSentValue =
-          "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.sentAmount)}";
+          "${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.sentAmount)}";
       bankReceivedValue =
-          "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}";
+          "${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}";
       bankSentValue =
-          "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.sentAmount)}";
+          "${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.sentAmount)}";
     }
 
     return Column(
@@ -611,10 +611,10 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         'Building Sales Performance. Data available: ${dashboardOverview != null}');
 
     // Get period-specific data based on the filter
-    String todaysSalesValue = "₹0";
-    String thisWeekValue = "₹0";
-    String thisMonthValue = "₹0";
-    String totalSalesValue = "₹0";
+    String todaysSalesValue = "0";
+    String thisWeekValue = "0";
+    String thisMonthValue = "0";
+    String totalSalesValue = "0";
 
     if (dashboardOverview != null) {
       double totalRevenue = dashboardOverview!.revenue.totalSales;
@@ -623,53 +623,53 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       switch (value) {
         case "today":
           todaysSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
           thisWeekValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.35)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.35)}";
           thisMonthValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.50)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.50)}";
           totalSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue)}";
           break;
         case "week":
           todaysSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.10)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.10)}";
           thisWeekValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.40)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.40)}";
           thisMonthValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.50)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.50)}";
           totalSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue)}";
           break;
         case "month":
           todaysSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.05)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.05)}";
           thisWeekValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
           thisMonthValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.80)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.80)}";
           totalSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue)}";
           break;
         case "year":
           todaysSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.01)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.01)}";
           thisWeekValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.04)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.04)}";
           thisMonthValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
           totalSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue)}";
           break;
         default:
           todaysSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.15)}";
           thisWeekValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.35)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.35)}";
           thisMonthValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue * 0.50)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue * 0.50)}";
           totalSalesValue =
-              "₹${NumberFormat('#,##,###.##').format(totalRevenue)}";
+              "${NumberFormat('#,##,###.##').format(totalRevenue)}";
       }
     }
 
@@ -1412,7 +1412,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                   getTitlesWidget: (double value, TitleMeta meta) {
                     debugPrint('Left title value: $value');
                     return Text(
-                      '₹${NumberFormat('#,##').format(value.toInt())}',
+                      '${NumberFormat('#,##').format(value.toInt())}',
                       style: TextStyle(
                         color: ColorManager.textColor,
                         fontWeight: FontWeight.bold,
@@ -1706,7 +1706,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       case "Count":
         return periodStats.totalSales?.toString() ?? "0";
       case "Amount":
-        return "₹${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
+        return "${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       case "Products":
@@ -1715,7 +1715,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             .length
             .toString();
       case "Revenue":
-        return "₹${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
+        return "${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
       case "Orders":
         return "${(periodStats.totalSales ?? 0) + 15}";
       default:

@@ -83,17 +83,17 @@ class _BillingWidgetState extends State<BillingWidget> {
                                   ),
                                   const SizedBox(height: 12),
                                   _buildSummaryRow('Subtotal:',
-                                      '₹${subtotal.toStringAsFixed(2)}'),
+                                      '${subtotal.toStringAsFixed(2)}'),
                                   if (billingProvider.isCouponApplied ||
                                       discountAmount > 0)
                                     _buildSummaryRow('Discount:',
-                                        '-₹${discountAmount.toStringAsFixed(2)}'),
+                                        '-${discountAmount.toStringAsFixed(2)}'),
                                   _buildSummaryRow('Tax (10%):',
-                                      '₹${taxAmount.toStringAsFixed(2)}'),
+                                      '${taxAmount.toStringAsFixed(2)}'),
                                   const Divider(height: 24),
                                   _buildSummaryRow(
                                     'GRAND TOTAL:',
-                                    '₹${grandTotal.toStringAsFixed(2)}',
+                                    '${grandTotal.toStringAsFixed(2)}',
                                     isBold: true,
                                     textColor: Colors.green,
                                   ),
@@ -127,13 +127,13 @@ class _BillingWidgetState extends State<BillingWidget> {
                                       contentPadding:
                                           const EdgeInsets.symmetric(
                                               horizontal: 16, vertical: 14),
-                                      prefixText: '₹ ',
+                                      prefixText: ' ',
                                     ),
                                   ),
                                   const SizedBox(height: 12),
                                   _buildSummaryRow(
                                     'BALANCE:',
-                                    '₹${billingProvider.balanceAmount.toStringAsFixed(2)}',
+                                    '${billingProvider.balanceAmount.toStringAsFixed(2)}',
                                     textColor:
                                         billingProvider.balanceAmount >= 0
                                             ? Colors.green
@@ -498,11 +498,11 @@ class _BillingWidgetState extends State<BillingWidget> {
               _buildSummaryRow(
                   'Customer:', billingProvider.mobileNumberTextController.text),
               _buildSummaryRow('Delivery:', billingProvider.deliveryMethod),
-              _buildSummaryRow('Total:', '₹${grandTotal.toStringAsFixed(2)}'),
-              _buildSummaryRow('Paid:', '₹${totalPaid.toStringAsFixed(2)}'),
+              _buildSummaryRow('Total:', '${grandTotal.toStringAsFixed(2)}'),
+              _buildSummaryRow('Paid:', '${totalPaid.toStringAsFixed(2)}'),
               _buildSummaryRow(
                 'Balance:',
-                '₹${billingProvider.balanceAmount.toStringAsFixed(2)}',
+                '${billingProvider.balanceAmount.toStringAsFixed(2)}',
                 textColor: billingProvider.balanceAmount >= 0
                     ? Colors.green
                     : Colors.red,
@@ -513,15 +513,15 @@ class _BillingWidgetState extends State<BillingWidget> {
               if (billingProvider.isCashSelected &&
                   billingProvider.cashAmountController.text.isNotEmpty)
                 _buildSummaryRow(
-                    'Cash:', '₹${billingProvider.cashAmountController.text}'),
+                    'Cash:', '${billingProvider.cashAmountController.text}'),
               if (billingProvider.isCardSelected &&
                   billingProvider.cardAmountController.text.isNotEmpty)
                 _buildSummaryRow(
-                    'Card:', '₹${billingProvider.cardAmountController.text}'),
+                    'Card:', '${billingProvider.cardAmountController.text}'),
               if (billingProvider.isUpiSelected &&
                   billingProvider.upiAmountController.text.isNotEmpty)
                 _buildSummaryRow(
-                    'UPI:', '₹${billingProvider.upiAmountController.text}'),
+                    'UPI:', '${billingProvider.upiAmountController.text}'),
               if (billingProvider.transactionNumberController.text.isNotEmpty)
                 _buildSummaryRow('Transaction Ref:',
                     billingProvider.transactionNumberController.text),

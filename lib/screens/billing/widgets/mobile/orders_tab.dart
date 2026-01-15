@@ -43,7 +43,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
               raw is num ? raw : num.tryParse(raw?.toString() ?? '');
           if (val != null && val > 0) {
             final label = m[0] + m.substring(1).toLowerCase();
-            parts.add('$label ₹${val.toStringAsFixed(2)}');
+            parts.add('$label ${val.toStringAsFixed(2)}');
           } else {
             final label = m[0] + m.substring(1).toLowerCase();
             parts.add(label);
@@ -359,7 +359,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '₹${order.total.toStringAsFixed(2)}',
+                          '${order.total.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -574,7 +574,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                         'Date: ${_formatDate(DateTime.parse(order.createdAt))}',
                         'Payment: ${_formatPaymentSummary(order.paymentMethod)}',
                         'Delivery: ${order.deliveryMethod ?? 'N/A'}',
-                        'Total: ₹${order.total.toStringAsFixed(2)}',
+                        'Total: ${order.total.toStringAsFixed(2)}',
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -584,7 +584,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                         'Items (${order.items.length})',
                         order.items
                             .map((item) =>
-                                '${item.product.productName} x ${item.quantity} = ₹${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}')
+                                '${item.product.productName} x ${item.quantity} = ${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}')
                             .toList(),
                       ),
                   ],

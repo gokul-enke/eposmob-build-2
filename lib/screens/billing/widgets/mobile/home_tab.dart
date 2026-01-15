@@ -214,7 +214,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                                           ),
                                         ),
                                         Text(
-                                          '₹${total.toStringAsFixed(2)}',
+                                          '${total.toStringAsFixed(2)}',
                                           style: const TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
@@ -237,8 +237,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 12,
                                           ),
-                                          foregroundColor:
-                                              Colors.red.shade700,
+                                          foregroundColor: Colors.red.shade700,
                                           side: BorderSide(
                                             color: Colors.red.shade300,
                                           ),

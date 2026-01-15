@@ -390,7 +390,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 focusNode: billingProvider.unitPriceFocusNode,
                 decoration: InputDecoration(
                   labelText: 'Price',
-                  prefixText: '₹ ',
+                  prefixText: ' ',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -468,7 +468,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('${item.quantity} ${item.product.unit ?? ''}'),
-                      Text('₹${item.price?.toStringAsFixed(2) ?? '0.00'}'),
+                      Text('${item.price?.toStringAsFixed(2) ?? '0.00'}'),
                     ],
                   ),
                   trailing: SizedBox(
@@ -478,7 +478,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '₹${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}',
+                          '${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14, // Slightly smaller font
@@ -517,7 +517,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 ),
               ),
               Text(
-                '₹${provider.cartTotal.toStringAsFixed(2)}',
+                '${provider.cartTotal.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,

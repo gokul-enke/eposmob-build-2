@@ -471,7 +471,7 @@ class _BuildDynamicPaymentSelectorState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total: ₹${total.toStringAsFixed(2)}',
+            'Total: ${total.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -481,7 +481,7 @@ class _BuildDynamicPaymentSelectorState
           ),
           if (widget.expectedAmount != null) ...[
             Text(
-              'Expected: ₹${widget.expectedAmount!.toStringAsFixed(2)}',
+              'Expected: ${widget.expectedAmount!.toStringAsFixed(2)}',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

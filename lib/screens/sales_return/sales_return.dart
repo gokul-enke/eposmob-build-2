@@ -78,8 +78,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   bool isCompletingReturn = false;
 
   // Track initial state to calculate session-specific returns
-  Map<int, int> _initialReturnedQuantities = {}; // cartItemId -> initial returned quantity
-  Map<int, double> _initialReturnedTotals = {}; // cartItemId -> initial returned total
+  Map<int, int> _initialReturnedQuantities =
+      {}; // cartItemId -> initial returned quantity
+  Map<int, double> _initialReturnedTotals =
+      {}; // cartItemId -> initial returned total
 
   @override
   void initState() {
@@ -117,10 +119,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           // Load the order details
           await getOrderDetails(passedOrderNumber);
 
-              // Clear the provider values to prevent reloading on future navigation
+          // Clear the provider values to prevent reloading on future navigation
           salesProvider.setOrderNumber("");
           salesProvider.setOrderId("");
-          
+
           debugPrint('✅ Initial order loaded and baseline state saved');
         } catch (e) {
           debugPrint('Error loading specific order: $e');
@@ -260,8 +262,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     resetSearch();
   }
 
-  Future<void> getOrderDetails(String ordersId, {bool resetInitialState = true}) async {
-    debugPrint("Starting getOrderDetails for order ID: $ordersId (resetInitialState: $resetInitialState)");
+  Future<void> getOrderDetails(String ordersId,
+      {bool resetInitialState = true}) async {
+    debugPrint(
+        "Starting getOrderDetails for order ID: $ordersId (resetInitialState: $resetInitialState)");
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
@@ -295,9 +299,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         _initialReturnedTotals.clear();
         for (var item in _salesReturnItems) {
           _initialReturnedQuantities[item.cartItemId] = item.returnedQuantity;
-          _initialReturnedTotals[item.cartItemId] = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+          _initialReturnedTotals[item.cartItemId] =
+              double.tryParse(item.returnedTotal.toString()) ?? 0.0;
         }
-        debugPrint('🔄 Reset initial return state for ${_initialReturnedQuantities.length} items');
+        debugPrint(
+            '🔄 Reset initial return state for ${_initialReturnedQuantities.length} items');
       } else {
         debugPrint('✅ Refreshed items without resetting initial state');
       }
@@ -556,7 +562,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                        color: ColorManager.kPrimaryColor
+                                            .withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -614,7 +621,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                     Expanded(
                                       child: _buildOrderDetailItem(
                                         'Date',
-                                        DateHelper.formatDate(order.orderDate ?? DateTime.now()),
+                                        DateHelper.formatDate(
+                                            order.orderDate ?? DateTime.now()),
                                         Icons.calendar_today,
                                       ),
                                     ),
@@ -647,7 +655,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                        color: ColorManager.kPrimaryColor
+                                            .withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -1350,7 +1359,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             );
 
                             // Refresh items WITHOUT resetting initial state (keep session tracking)
-                            await getOrderDetails(selectedOrderNumber.toString(), resetInitialState: false);
+                            await getOrderDetails(
+                                selectedOrderNumber.toString(),
+                                resetInitialState: false);
 
                             Navigator.pop(context);
                           } catch (error, stackTrace) {
@@ -1550,12 +1561,16 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                               context,
                                               productName:
                                                   item.productName.toString(),
-                                              unitPrice: item.unitPrice.toString(),
-                                              orderId: selectedOrderId.toString(),
+                                              unitPrice:
+                                                  item.unitPrice.toString(),
+                                              orderId:
+                                                  selectedOrderId.toString(),
                                               cartItemId: item.cartItemId,
                                               currency: '',
-                                              totalPrice: item.totalPrice.toString(),
-                                              quantity: item.quantity.toString(),
+                                              totalPrice:
+                                                  item.totalPrice.toString(),
+                                              quantity:
+                                                  item.quantity.toString(),
                                             );
                                           },
                                           child: const Text("Return"),
@@ -1655,12 +1670,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               return;
             }
 
-            double paidAmount = double.tryParse(paidAmountController.text) ?? 0.0;
+            double paidAmount =
+                double.tryParse(paidAmountController.text) ?? 0.0;
 
             // Calculate maximum returnable amount
             double maxReturnAmount = 0.0;
             for (var item in _salesReturnItems) {
-              final itemReturned = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+              final itemReturned =
+                  double.tryParse(item.returnedTotal.toString()) ?? 0.0;
               maxReturnAmount += itemReturned;
             }
 
@@ -1675,7 +1692,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             if (paidAmount > maxReturnAmount) {
               showScaffoldError(
                 context: context,
-                message: 'Return amount cannot exceed ₹${maxReturnAmount.toStringAsFixed(2)}',
+                message:
+                    'Return amount cannot exceed ${maxReturnAmount.toStringAsFixed(2)}',
               );
               return;
             }
@@ -1776,7 +1794,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   Widget _buildSummarySection() {
     return Consumer<SalesProvider>(builder: (context, salesProvider, child) {
       final salesReturnItems = salesProvider.salesReturnItems;
-      
+
       if (salesReturnItems.isEmpty) {
         return const SizedBox.shrink();
       }
@@ -1791,27 +1809,33 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       for (var item in salesReturnItems) {
         final itemTotal = double.tryParse(item.totalPrice.toString()) ?? 0.0;
-        final itemQuantity = int.tryParse(item.quantity) ?? 0; // item.quantity is already a String
-        
+        final itemQuantity = int.tryParse(item.quantity) ??
+            0; // item.quantity is already a String
+
         orderTotal += itemTotal;
         totalQuantity += itemQuantity;
-        
+
         // Calculate ONLY the returns made in THIS session (difference from initial state)
-        final initialReturnedQty = _initialReturnedQuantities[item.cartItemId] ?? 0;
-        final initialReturnedTotal = _initialReturnedTotals[item.cartItemId] ?? 0.0;
-        
+        final initialReturnedQty =
+            _initialReturnedQuantities[item.cartItemId] ?? 0;
+        final initialReturnedTotal =
+            _initialReturnedTotals[item.cartItemId] ?? 0.0;
+
         final currentReturnedQty = item.returnedQuantity;
-        final currentReturnedTotal = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
-        
+        final currentReturnedTotal =
+            double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+
         // Session-specific returns
         final sessionReturnedQty = currentReturnedQty - initialReturnedQty;
-        final sessionReturnedTotal = currentReturnedTotal - initialReturnedTotal;
-        
-        debugPrint('Item: ${item.productName}, Session Returns - Qty: $sessionReturnedQty, Total: $sessionReturnedTotal');
-        
+        final sessionReturnedTotal =
+            currentReturnedTotal - initialReturnedTotal;
+
+        debugPrint(
+            'Item: ${item.productName}, Session Returns - Qty: $sessionReturnedQty, Total: $sessionReturnedTotal');
+
         returnedTotal += sessionReturnedTotal;
         returnedQuantity += sessionReturnedQty;
-        
+
         if (sessionReturnedQty > 0) {
           returnedItems += 1; // Count items returned in this session
         }
@@ -1860,7 +1884,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(height: 6),
                   _buildSummaryRow('Total Quantity', '$totalQuantity'),
                   const SizedBox(height: 6),
-                  _buildSummaryRow('Order Total', '₹${orderTotal.toStringAsFixed(2)}'),
+                  _buildSummaryRow(
+                      'Order Total', '${orderTotal.toStringAsFixed(2)}'),
                 ],
               ),
             ),
@@ -1906,7 +1931,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(height: 6),
                   _buildSummaryRow('Returned Quantity', '$returnedQuantity'),
                   const SizedBox(height: 6),
-                  _buildSummaryRow('Return Total', '₹${returnedTotal.toStringAsFixed(2)}'),
+                  _buildSummaryRow(
+                      'Return Total', '${returnedTotal.toStringAsFixed(2)}'),
                 ],
               ),
             ),
@@ -1945,7 +1971,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   Widget _buildPaymentDetailsSection() {
     return Consumer<SalesProvider>(builder: (context, salesProvider, child) {
       final salesReturnItems = salesProvider.salesReturnItems;
-      
+
       if (salesReturnItems.isEmpty) {
         return const SizedBox.shrink();
       }
@@ -1953,9 +1979,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       // Calculate return total (ONLY from this session)
       double returnedTotal = 0.0;
       for (var item in salesReturnItems) {
-        final initialReturnedTotal = _initialReturnedTotals[item.cartItemId] ?? 0.0;
-        final currentReturnedTotal = double.tryParse(item.returnedTotal.toString()) ?? 0.0;
-        final sessionReturnedTotal = currentReturnedTotal - initialReturnedTotal;
+        final initialReturnedTotal =
+            _initialReturnedTotals[item.cartItemId] ?? 0.0;
+        final currentReturnedTotal =
+            double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+        final sessionReturnedTotal =
+            currentReturnedTotal - initialReturnedTotal;
         returnedTotal += sessionReturnedTotal;
       }
 
@@ -1965,7 +1994,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       }
 
       // Real-time validation flag
-      final double enteredAmount = double.tryParse(paidAmountController.text) ?? 0.0;
+      final double enteredAmount =
+          double.tryParse(paidAmountController.text) ?? 0.0;
       final bool isExceedingMax = hasPayment && enteredAmount > returnedTotal;
 
       return BuildBoxShadowContainer(
@@ -2093,19 +2123,25 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             ),
                             decoration: InputDecoration(
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              constraints: const BoxConstraints.tightFor(height: 48),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
+                              constraints:
+                                  const BoxConstraints.tightFor(height: 48),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
                               ),
                               focusedBorder: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(8)),
-                                borderSide: BorderSide(color: ColorManager.kPrimaryColor),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide(
+                                    color: ColorManager.kPrimaryColor),
                               ),
                               filled: true,
                               fillColor: Colors.white,
@@ -2170,7 +2206,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           child: TextFormField(
                             controller: paidAmountController,
                             focusNode: paidAmountFocusNode,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
                             textAlignVertical: TextAlignVertical.center,
                             onTap: () {
                               paidAmountController.selection = TextSelection(
@@ -2181,24 +2218,31 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             decoration: InputDecoration(
                               isDense: true,
                               errorText: isExceedingMax
-                                  ? 'Return amount cannot exceed ₹${returnedTotal.toStringAsFixed(2)}'
+                                  ? 'Return amount cannot exceed ${returnedTotal.toStringAsFixed(2)}'
                                   : null,
-                              prefixIcon: const Icon(Icons.currency_rupee, size: 16),
-                              prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                              constraints: const BoxConstraints.tightFor(height: 48),
+                              prefixIcon:
+                                  const Icon(Icons.currency_rupee, size: 16),
+                              prefixIconConstraints: const BoxConstraints(
+                                  minWidth: 40, minHeight: 40),
+                              constraints:
+                                  const BoxConstraints.tightFor(height: 48),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: ColorManager.kPrimaryColor),
+                                borderSide: const BorderSide(
+                                    color: ColorManager.kPrimaryColor),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
                             ),
                             style: buildCustomStyle(
                               FontWeightManager.medium,
@@ -2215,7 +2259,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Maximum returnable amount: ₹${returnedTotal.toStringAsFixed(2)}',
+                'Maximum returnable amount: ${returnedTotal.toStringAsFixed(2)}',
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s11,

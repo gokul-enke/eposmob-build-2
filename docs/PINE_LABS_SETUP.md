@@ -75,13 +75,13 @@ After updating the credentials:
    ```
 
 2. **Test the integration:**
-   - Try processing a small test transaction (₹1 or ₹10)
+   - Try processing a small test transaction (1 or 10)
    - Check the logs for successful binding and transaction
 
 3. **Expected success logs:**
    ```
    ✅ [PineLabs] Binding SUCCESS
-   💳 [PineLabs] Processing sale: ₹10, Ref: REF-xxx
+   💳 [PineLabs] Processing sale: 10, Ref: REF-xxx
    📥 [PineLabs] Transaction result: {"Response":{"ResponseCode":0, ...}}
    ```
 

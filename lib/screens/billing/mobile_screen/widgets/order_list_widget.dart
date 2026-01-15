@@ -125,7 +125,7 @@ class ViewOrders extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        "₹${order.total.toStringAsFixed(2)}",
+                        "${order.total.toStringAsFixed(2)}",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -137,7 +137,8 @@ class ViewOrders extends StatelessWidget {
 
                   // Delete Button
                   IconButton(
-                    onPressed: () => _showDeleteDialog(context, provider, order),
+                    onPressed: () =>
+                        _showDeleteDialog(context, provider, order),
                     icon: const Icon(Icons.delete_outline, size: 20),
                     color: ColorManager.kButtonRed,
                     padding: EdgeInsets.zero,

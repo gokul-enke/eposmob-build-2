@@ -436,7 +436,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         debugPrint('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalCollected - widget.cartTotal;
         debugPrint(
-            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+            '💰 Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
 
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
@@ -446,13 +446,13 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
             debugPrint(
-                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to transaction excess: ${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = transaction excess - customer credit
           cashBal = transactionExcess - actualCustomerCredit;
           debugPrint(
-              '  - Cash Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+              '  - Cash Balance = Transaction Excess (${transactionExcess.toStringAsFixed(2)}) - Customer Credit (${actualCustomerCredit.toStringAsFixed(2)}) = ${cashBal.toStringAsFixed(2)}');
         } else {
           cashBal = 0.0;
           debugPrint('  - No transaction excess, cash balance = 0');
@@ -464,17 +464,16 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         double netDue = widget.cartTotal - widget.customerPrevBalance;
         debugPrint('💰 Net Due calculation:');
         debugPrint(
-            '  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
+            '  - Purchase Total: ${widget.cartTotal.toStringAsFixed(2)}');
         debugPrint(
-            '  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
-        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+            '  - Customer Prev Balance: ${widget.customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: ${netDue.toStringAsFixed(2)}');
 
         // Available balance = Total Collected - Net Due
         double availableBalance = totalCollected - netDue;
+        debugPrint('  - Total Collected: ${totalCollected.toStringAsFixed(2)}');
         debugPrint(
-            '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
-        debugPrint(
-            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+            '  - Available Balance: ${availableBalance.toStringAsFixed(2)}');
 
         if (availableBalance > 0) {
           // Get the actual customer credit amount being allocated
@@ -484,13 +483,13 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
             debugPrint(
-                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to available balance: ${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = available balance - customer credit
           cashBal = availableBalance - actualCustomerCredit;
           debugPrint(
-              '  - Cash Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+              '  - Cash Balance = Available Balance (${availableBalance.toStringAsFixed(2)}) - Customer Credit (${actualCustomerCredit.toStringAsFixed(2)}) = ${cashBal.toStringAsFixed(2)}');
         } else {
           cashBal = 0.0;
           debugPrint('  - No available balance, cash balance = 0');
@@ -501,18 +500,18 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       // Toggle OFF: Simple calculation without previous balance
       cashBal = totalCollected - widget.cartTotal;
       debugPrint(
-          '  - Cash Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${widget.cartTotal.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+          '  - Cash Balance = Total Collected (${totalCollected.toStringAsFixed(2)}) - Cart Total (${widget.cartTotal.toStringAsFixed(2)}) = ${cashBal.toStringAsFixed(2)}');
     }
 
     // Clamp cash balance to never show negative values in UI
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (cashBal < 0) {
       debugPrint(
-          '🚫 Clamping negative cash balance (₹${cashBal.toStringAsFixed(2)}) to 0 for UI display');
+          '🚫 Clamping negative cash balance (${cashBal.toStringAsFixed(2)}) to 0 for UI display');
       cashBal = 0.0;
     }
 
-    debugPrint('💵 Final cash balance: ₹${cashBal.toStringAsFixed(2)}');
+    debugPrint('💵 Final cash balance: ${cashBal.toStringAsFixed(2)}');
 
     setState(() {
       balanceAmount = cashBal;
@@ -935,27 +934,27 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
                           debugPrint('💰 Current Payment State:');
                           debugPrint(
-                              '  - Cash: ₹${cashAmount.toStringAsFixed(2)}');
+                              '  - Cash: ${cashAmount.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - Card: ₹${cardAmount.toStringAsFixed(2)}');
+                              '  - Card: ${cardAmount.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - UPI: ₹${upiAmount.toStringAsFixed(2)}');
+                              '  - UPI: ${upiAmount.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - COD: ₹${codAmount.toStringAsFixed(2)}');
+                              '  - COD: ${codAmount.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+                              '  - Total Collected: ${totalCollected.toStringAsFixed(2)}');
                           debugPrint('');
                           debugPrint('🎯 Purchase & Balance Info:');
                           debugPrint(
-                              '  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
+                              '  - Purchase Total: ${widget.cartTotal.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
+                              '  - Customer Prev Balance: ${widget.customerPrevBalance.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - Net Due (Toggle OFF): ₹${netDueWithoutToggle.toStringAsFixed(2)}');
+                              '  - Net Due (Toggle OFF): ${netDueWithoutToggle.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - Net Due (Toggle ON): ₹${netDueWithToggle.toStringAsFixed(2)}');
+                              '  - Net Due (Toggle ON): ${netDueWithToggle.toStringAsFixed(2)}');
                           debugPrint(
-                              '  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+                              '  - Available Cash Balance: ${currentBaseBalance.toStringAsFixed(2)}');
                           debugPrint('');
 
                           // Auto-fill logic with debt settlement priority
@@ -973,35 +972,35 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
                               debugPrint('💳 DEBT SETTLEMENT PRIORITY:');
                               debugPrint(
-                                  '  - Customer Debt: ₹${customerDebt.toStringAsFixed(2)}');
+                                  '  - Customer Debt: ${customerDebt.toStringAsFixed(2)}');
                               debugPrint(
-                                  '  - Transaction Excess: ₹${transactionExcess.toStringAsFixed(2)}');
+                                  '  - Transaction Excess: ${transactionExcess.toStringAsFixed(2)}');
                               debugPrint(
-                                  '  - Available Base Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+                                  '  - Available Base Balance: ${currentBaseBalance.toStringAsFixed(2)}');
 
                               if (customerDebt <= transactionExcess) {
                                 // Can settle full debt from transaction excess - auto-fill with debt amount
                                 prefillAmount = customerDebt;
                                 debugPrint(
-                                    '  - Auto-filling with debt amount: ₹${prefillAmount.toStringAsFixed(2)} (can settle full debt)');
+                                    '  - Auto-filling with debt amount: ${prefillAmount.toStringAsFixed(2)} (can settle full debt)');
                               } else {
                                 // Can't settle full debt - auto-fill with available transaction excess
                                 prefillAmount = transactionExcess;
                                 debugPrint(
-                                    '  - Auto-filling with transaction excess: ₹${prefillAmount.toStringAsFixed(2)} (partial debt settlement)');
+                                    '  - Auto-filling with transaction excess: ${prefillAmount.toStringAsFixed(2)} (partial debt settlement)');
                               }
                             } else {
                               // Customer has positive/zero balance - use available base balance as before
                               prefillAmount = currentBaseBalance;
                               debugPrint(
-                                  '  - Customer has credit/zero balance - auto-filling with base balance: ₹${prefillAmount.toStringAsFixed(2)}');
+                                  '  - Customer has credit/zero balance - auto-filling with base balance: ${prefillAmount.toStringAsFixed(2)}');
                             }
 
                             toCustomerCreditController.text =
                                 prefillAmount.toStringAsFixed(2);
                             toCustomerCredit = prefillAmount;
                             debugPrint(
-                                '✅ Auto-filled toCustomerCredit: ₹${prefillAmount.toStringAsFixed(2)}');
+                                '✅ Auto-filled toCustomerCredit: ${prefillAmount.toStringAsFixed(2)}');
                           } else {
                             toCustomerCreditController.clear();
                             toCustomerCredit = 0.0;
@@ -1373,10 +1372,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     debugPrint('🎯 MAX CREDIT HELPER CALCULATIONS:');
     debugPrint(
-        '  - Current Transaction Excess: ₹${currentTransactionExcess.toStringAsFixed(2)}');
+        '  - Current Transaction Excess: ${currentTransactionExcess.toStringAsFixed(2)}');
     debugPrint(
-        '  - Max Possible Credit (with prev balance): ₹${maxPossibleCredit.toStringAsFixed(2)}');
-    debugPrint('  - Customer Owes: ₹${customerOwesAmount.toStringAsFixed(2)}');
+        '  - Max Possible Credit (with prev balance): ${maxPossibleCredit.toStringAsFixed(2)}');
+    debugPrint('  - Customer Owes: ${customerOwesAmount.toStringAsFixed(2)}');
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -1410,7 +1409,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                             maxPossibleCredit.toStringAsFixed(2);
                         toCustomerCredit = maxPossibleCredit;
                         debugPrint(
-                            '📱 Quick fill: All available balance ₹${maxPossibleCredit.toStringAsFixed(2)}');
+                            '📱 Quick fill: All available balance ${maxPossibleCredit.toStringAsFixed(2)}');
                         _calculateBalance();
                       });
                     },

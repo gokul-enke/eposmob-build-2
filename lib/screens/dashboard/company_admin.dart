@@ -41,18 +41,18 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
 
   // Dummy data for demonstration
   final List<String> recentTransactions = [
-    "Transaction #12345 - ₹2,450.00",
-    "Transaction #12346 - ₹1,200.50",
-    "Transaction #12347 - ₹890.75",
-    "Transaction #12348 - ₹3,100.00",
-    "Transaction #12349 - ₹567.25",
+    "Transaction #12345 - 2,450.00",
+    "Transaction #12346 - 1,200.50",
+    "Transaction #12347 - 890.75",
+    "Transaction #12348 - 3,100.00",
+    "Transaction #12349 - 567.25",
   ];
 
   final List<Map<String, dynamic>> topProducts = [
-    {"name": "Smartphone", "sales": 245, "revenue": "₹2,45,000"},
-    {"name": "Laptop", "sales": 123, "revenue": "₹6,15,000"},
-    {"name": "Headphones", "sales": 567, "revenue": "₹1,13,400"},
-    {"name": "Tablet", "sales": 89, "revenue": "₹2,67,000"},
+    {"name": "Smartphone", "sales": 245, "revenue": "2,45,000"},
+    {"name": "Laptop", "sales": 123, "revenue": "6,15,000"},
+    {"name": "Headphones", "sales": 567, "revenue": "1,13,400"},
+    {"name": "Tablet", "sales": 89, "revenue": "2,67,000"},
   ];
 
   final List<Map<String, dynamic>> lowStockItems = [
@@ -508,24 +508,24 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                           "Bank Accounts",
                           "Total Bank Balance",
                           dashboardOverview != null
-                              ? "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}"
+                              : "0",
                           ColorManager.kPrimaryColor,
                           Icons.account_balance),
                       _buildCompanyAccountCard(
                           "Cash Accounts",
                           "Total Cash Balance",
                           dashboardOverview != null
-                              ? "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}"
+                              : "0",
                           ColorManager.kMagentha,
                           Icons.account_balance_wallet),
                       _buildCompanyAccountCard(
                           "Total Revenue",
                           "Overall Revenue",
                           dashboardOverview != null
-                              ? "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.revenue.totalSales)}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.revenue.totalSales)}"
+                              : "0",
                           ColorManager.kOrange,
                           Icons.trending_up),
                       _buildCompanyAccountCard(
@@ -673,8 +673,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                           "Total Sales",
                           "Overall Performance",
                           executivesOverview != null
-                              ? "₹${NumberFormat('#,##,###').format(executivesOverview!.salesExecutivesGraph.fold(0, (sum, executive) => sum + executive.sales.fold(0, (saleSum, sale) => saleSum + sale.amount)))}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###').format(executivesOverview!.salesExecutivesGraph.fold(0, (sum, executive) => sum + executive.sales.fold(0, (saleSum, sale) => saleSum + sale.amount)))}"
+                              : "0",
                           ColorManager.kMagentha,
                           Icons.check_circle),
                     ],
@@ -1367,7 +1367,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                       .sales
                       .fold(0, (sum, sale) => sum + sale.amount);
                   return BarTooltipItem(
-                    '₹${NumberFormat('#,##,###').format(totalSales)}',
+                    '${NumberFormat('#,##,###').format(totalSales)}',
                     const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1406,7 +1406,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                   reservedSize: 40,
                   getTitlesWidget: (double value, TitleMeta meta) {
                     return Text(
-                      '₹${NumberFormat('#,##').format(value.toInt())}',
+                      '${NumberFormat('#,##').format(value.toInt())}',
                       style: TextStyle(
                         color: ColorManager.textColor,
                         fontWeight: FontWeight.bold,
@@ -1772,7 +1772,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       case "Count":
         return periodStats.totalSales?.toString() ?? "0";
       case "Amount":
-        return "₹${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
+        return "${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       case "Products":
@@ -1781,7 +1781,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             .length
             .toString();
       case "Revenue":
-        return "₹${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
+        return "${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
       case "Orders":
         return "${(periodStats.totalSales ?? 0) + 15}";
       default:

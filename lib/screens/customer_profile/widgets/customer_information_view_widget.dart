@@ -34,7 +34,8 @@ class _CustomerInformationViewWidgetState
   @override
   Widget build(BuildContext context) {
     Size size = widget.size;
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
     return Expanded(
       child: BuildBoxShadowContainer(
@@ -95,14 +96,19 @@ class _CustomerInformationViewWidgetState
                   const SizedBox(width: 8),
                   // Customer Type Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: (widget.customer?.customerType ?? 'B2C').toUpperCase() == 'B2B'
+                      color: (widget.customer?.customerType ?? 'B2C')
+                                  .toUpperCase() ==
+                              'B2B'
                           ? Colors.green.shade50
                           : Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: (widget.customer?.customerType ?? 'B2C').toUpperCase() == 'B2B'
+                          color: (widget.customer?.customerType ?? 'B2C')
+                                      .toUpperCase() ==
+                                  'B2B'
                               ? Colors.green.shade300
                               : Colors.blue.shade300),
                     ),
@@ -112,7 +118,9 @@ class _CustomerInformationViewWidgetState
                         FontWeightManager.medium,
                         FontSize.s11,
                         0.18,
-                        (widget.customer?.customerType ?? 'B2C').toUpperCase() == 'B2B'
+                        (widget.customer?.customerType ?? 'B2C')
+                                    .toUpperCase() ==
+                                'B2B'
                             ? Colors.green.shade700
                             : Colors.blue.shade700,
                       ),
@@ -121,7 +129,8 @@ class _CustomerInformationViewWidgetState
                   const SizedBox(width: 8),
                   // Status Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: ColorManager.kSuccessColor,
                       borderRadius: BorderRadius.circular(20),
@@ -139,7 +148,7 @@ class _CustomerInformationViewWidgetState
                 ],
               ),
             ),
-            
+
             // Content Section
             Expanded(
               child: Padding(
@@ -159,22 +168,22 @@ class _CustomerInformationViewWidgetState
                             value: widget.customer?.email ?? "Not provided",
                           ),
                           const SizedBox(height: 16),
-                                                     _buildInfoRow(
-                             icon: Icons.phone_outlined,
-                             label: "Phone",
-                             value: widget.customer?.phone ?? "Not provided",
-                           ),
-                           const SizedBox(height: 16),
-                           _buildInfoRow(
-                             icon: Icons.phone_android_outlined,
-                             label: "Alt Phone",
-                             value: widget.customer?.altPhone ?? "Not provided",
-                           ),
+                          _buildInfoRow(
+                            icon: Icons.phone_outlined,
+                            label: "Phone",
+                            value: widget.customer?.phone ?? "Not provided",
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoRow(
+                            icon: Icons.phone_android_outlined,
+                            label: "Alt Phone",
+                            value: widget.customer?.altPhone ?? "Not provided",
+                          ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Account Information Card
                       _buildInfoCard(
                         title: "Account Information",
@@ -183,38 +192,45 @@ class _CustomerInformationViewWidgetState
                           _buildInfoRow(
                             icon: Icons.account_balance_wallet_outlined,
                             label: "Balance",
-                            value: "₹${widget.customer?.balance?.toStringAsFixed(2) ?? "0.00"}",
-                            valueColor: (widget.customer?.balance ?? 0) >= 0 
-                                ? ColorManager.kSuccessColor 
+                            value:
+                                "${widget.customer?.balance?.toStringAsFixed(2) ?? "0.00"}",
+                            valueColor: (widget.customer?.balance ?? 0) >= 0
+                                ? ColorManager.kSuccessColor
                                 : Colors.red,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.payment_outlined,
                             label: "Payment Type",
-                            value: _getPaymentTypeDisplay(widget.customer?.paymentType),
-                            valueColor: _getPaymentTypeColor(widget.customer?.paymentType),
+                            value: _getPaymentTypeDisplay(
+                                widget.customer?.paymentType),
+                            valueColor: _getPaymentTypeColor(
+                                widget.customer?.paymentType),
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.credit_score_outlined,
                             label: "Loyalty Points",
-                            value: widget.customer?.loyaltyPoints?.toString() ?? "0",
+                            value: widget.customer?.loyaltyPoints?.toString() ??
+                                "0",
                             valueColor: ColorManager.kSuccessColor,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.person_outlined,
                             label: "Gender",
-                            value: widget.customer?.gender != null && widget.customer!.gender!.isNotEmpty
-                                ? widget.customer!.gender![0].toUpperCase() + widget.customer!.gender!.substring(1)
+                            value: widget.customer?.gender != null &&
+                                    widget.customer!.gender!.isNotEmpty
+                                ? widget.customer!.gender![0].toUpperCase() +
+                                    widget.customer!.gender!.substring(1)
                                 : "Not provided",
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.calendar_today_outlined,
                             label: "Date of Birth",
-                            value: widget.customer?.dob != null && widget.customer!.dob!.isNotEmpty
+                            value: widget.customer?.dob != null &&
+                                    widget.customer!.dob!.isNotEmpty
                                 ? widget.customer!.dob!
                                 : "Not provided",
                           ),
@@ -222,7 +238,7 @@ class _CustomerInformationViewWidgetState
                           _buildInfoRow(
                             icon: Icons.calendar_today_outlined,
                             label: "Member Since",
-                            value: widget.customer?.createdAt != null 
+                            value: widget.customer?.createdAt != null
                                 ? "${widget.customer!.createdAt!.day}/${widget.customer!.createdAt!.month}/${widget.customer!.createdAt!.year}"
                                 : "Not available",
                           ),
@@ -230,45 +246,50 @@ class _CustomerInformationViewWidgetState
                           _buildInfoRow(
                             icon: Icons.shopping_bag_outlined,
                             label: "Total Orders",
-                            value: widget.customer?.orders?.length.toString() ?? "0",
+                            value: widget.customer?.orders?.length.toString() ??
+                                "0",
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // KYC Information Card (only when ZATCA Phase 1 is enabled)
-                      if (isZatcaPhase1Enabled && widget.customer?.kyc != null && widget.customer!.kyc!.isNotEmpty)
+                      if (isZatcaPhase1Enabled &&
+                          widget.customer?.kyc != null &&
+                          widget.customer!.kyc!.isNotEmpty)
                         Column(
                           children: [
                             _buildKycInfoCard(),
                             const SizedBox(height: 24),
                           ],
                         ),
-                      
+
                       // Store Information Card
-                      if (widget.customer?.storeName != null && widget.customer!.storeName!.isNotEmpty)
+                      if (widget.customer?.storeName != null &&
+                          widget.customer!.storeName!.isNotEmpty)
                         Column(
                           children: [
                             _buildStoreInfoCard(),
                             const SizedBox(height: 24),
                           ],
                         ),
-                      
+
                       // Loyalty Card Information Card
                       _buildLoyaltyCardInfoCard(),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Transaction History Card
-                      if (widget.customer?.transactions != null && widget.customer!.transactions!.isNotEmpty)
+                      if (widget.customer?.transactions != null &&
+                          widget.customer!.transactions!.isNotEmpty)
                         Column(
                           children: [
                             _buildTransactionHistoryCard(),
                             const SizedBox(height: 24),
                           ],
                         ),
-                      
+
                       // Quick Actions
                       _buildQuickActions(),
                     ],
@@ -499,39 +520,41 @@ class _CustomerInformationViewWidgetState
     return _buildInfoCard(
       title: "KYC Information",
       icon: Icons.verified_user,
-      children: widget.customer!.kyc!.map((kyc) => Column(
-        children: [
-          _buildInfoRow(
-            icon: Icons.document_scanner,
-            label: kyc.key ?? "Document",
-            value: kyc.value ?? "Not provided",
-          ),
-          if (kyc.expiryDate != null && kyc.expiryDate!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 48, top: 4),
-              child: Row(
+      children: widget.customer!.kyc!
+          .map((kyc) => Column(
                 children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 14,
-                    color: ColorManager.kGreyColor,
+                  _buildInfoRow(
+                    icon: Icons.document_scanner,
+                    label: kyc.key ?? "Document",
+                    value: kyc.value ?? "Not provided",
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Expires: ${kyc.expiryDate}",
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s11,
-                      0.30,
-                      ColorManager.kGreyColor,
+                  if (kyc.expiryDate != null && kyc.expiryDate!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48, top: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: ColorManager.kGreyColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Expires: ${kyc.expiryDate}",
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s11,
+                              0.30,
+                              ColorManager.kGreyColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ),
-          const SizedBox(height: 12),
-        ],
-      )).toList(),
+              ))
+          .toList(),
     );
   }
 
@@ -565,7 +588,8 @@ class _CustomerInformationViewWidgetState
       title: "Loyalty Card Information",
       icon: Icons.card_giftcard,
       children: [
-        if (widget.customer?.cardNumber != null && widget.customer!.cardNumber!.isNotEmpty)
+        if (widget.customer?.cardNumber != null &&
+            widget.customer!.cardNumber!.isNotEmpty)
           Column(
             children: [
               _buildInfoRow(
@@ -576,7 +600,8 @@ class _CustomerInformationViewWidgetState
               const SizedBox(height: 16),
             ],
           ),
-        if (widget.customer?.membershipName != null && widget.customer!.membershipName!.isNotEmpty)
+        if (widget.customer?.membershipName != null &&
+            widget.customer!.membershipName!.isNotEmpty)
           Column(
             children: [
               _buildInfoRow(
@@ -587,7 +612,8 @@ class _CustomerInformationViewWidgetState
               const SizedBox(height: 16),
             ],
           ),
-        if (widget.customer?.membershipCode != null && widget.customer!.membershipCode!.isNotEmpty)
+        if (widget.customer?.membershipCode != null &&
+            widget.customer!.membershipCode!.isNotEmpty)
           Column(
             children: [
               _buildInfoRow(
@@ -598,7 +624,8 @@ class _CustomerInformationViewWidgetState
               const SizedBox(height: 16),
             ],
           ),
-        if (widget.customer?.validFrom != null && widget.customer!.validFrom!.isNotEmpty)
+        if (widget.customer?.validFrom != null &&
+            widget.customer!.validFrom!.isNotEmpty)
           Column(
             children: [
               _buildInfoRow(
@@ -609,7 +636,8 @@ class _CustomerInformationViewWidgetState
               const SizedBox(height: 16),
             ],
           ),
-        if (widget.customer?.validUntil != null && widget.customer!.validUntil!.isNotEmpty)
+        if (widget.customer?.validUntil != null &&
+            widget.customer!.validUntil!.isNotEmpty)
           Column(
             children: [
               _buildInfoRow(
@@ -620,16 +648,18 @@ class _CustomerInformationViewWidgetState
               const SizedBox(height: 16),
             ],
           ),
-        if (widget.customer?.cardStatus != null && widget.customer!.cardStatus!.isNotEmpty)
+        if (widget.customer?.cardStatus != null &&
+            widget.customer!.cardStatus!.isNotEmpty)
           Column(
             children: [
               _buildInfoRow(
                 icon: Icons.info,
                 label: "Card Status",
                 value: widget.customer!.cardStatus!,
-                valueColor: widget.customer!.cardStatus!.toLowerCase() == 'active' 
-                    ? ColorManager.kSuccessColor 
-                    : ColorManager.kGreyColor,
+                valueColor:
+                    widget.customer!.cardStatus!.toLowerCase() == 'active'
+                        ? ColorManager.kSuccessColor
+                        : ColorManager.kGreyColor,
               ),
               const SizedBox(height: 16),
             ],
@@ -649,7 +679,7 @@ class _CustomerInformationViewWidgetState
           _buildInfoRow(
             icon: Icons.currency_rupee,
             label: "Price Per Point",
-            value: "₹${widget.customer!.pricePerPoint!.toStringAsFixed(2)}",
+            value: "${widget.customer!.pricePerPoint!.toStringAsFixed(2)}",
           ),
         // Show message if no loyalty information
         if ((widget.customer?.cardNumber?.isEmpty ?? true) &&
@@ -732,18 +762,25 @@ class _CustomerInformationViewWidgetState
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: widget.customer!.transactions!.length > 3 
-                ? 3 
+            itemCount: widget.customer!.transactions!.length > 3
+                ? 3
                 : widget.customer!.transactions!.length,
             itemBuilder: (context, index) {
               // Show last transactions (most recent first)
-              final transactionIndex = widget.customer!.transactions!.length - 1 - index;
-              final transaction = widget.customer!.transactions![transactionIndex];
+              final transactionIndex =
+                  widget.customer!.transactions!.length - 1 - index;
+              final transaction =
+                  widget.customer!.transactions![transactionIndex];
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: index < (widget.customer!.transactions!.length > 3 ? 2 : widget.customer!.transactions!.length - 1)
-                      ? const Border(bottom: BorderSide(color: ColorManager.kPrimaryWithOpacity10))
+                  border: index <
+                          (widget.customer!.transactions!.length > 3
+                              ? 2
+                              : widget.customer!.transactions!.length - 1)
+                      ? const Border(
+                          bottom: BorderSide(
+                              color: ColorManager.kPrimaryWithOpacity10))
                       : null,
                 ),
                 child: Row(
@@ -753,7 +790,8 @@ class _CustomerInformationViewWidgetState
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: _getTransactionTypeColor(transaction.type).withOpacity(0.1),
+                        color: _getTransactionTypeColor(transaction.type)
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
