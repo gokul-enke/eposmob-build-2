@@ -163,11 +163,13 @@ class ReceiptTableColumn {
   final double weight; // percentage of width (0.0 to 1.0)
   final TextAlign align;
   final bool isBold;
+  final double scale; // font scale multiplier (1.0 = normal)
 
   ReceiptTableColumn(this.text,
       {required this.weight,
       this.align = TextAlign.right,
-      this.isBold = false});
+      this.isBold = false,
+      this.scale = 1.0});
 
   TextPainter createPainter(
       double totalWidth, double fontSize, TextDirection textDirection) {
@@ -176,7 +178,7 @@ class ReceiptTableColumn {
         text: text,
         style: TextStyle(
           color: Colors.black,
-          fontSize: fontSize,
+          fontSize: fontSize * scale,
           fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           fontFamily: ArabicPrinterHelper.fontFamily,
         ),
@@ -343,3 +345,91 @@ class ImageRow extends ReceiptRow {
     );
   }
 }
+
+/// Row that displays Saudi Riyal symbol alongside an amount
+/// The symbol is rendered as an inline image next to the amount text
+class SarAmountRow extends ReceiptRow {
+  final String label;
+  final String amount;
+  final ui.Image? sarSymbol;
+  final bool isBold;
+  final double scale;
+  final double symbolSize;
+
+  SarAmountRow({
+    required this.label,
+    required this.amount,
+    this.sarSymbol,
+    this.isBold = false,
+    this.scale = 1.0,
+    this.symbolSize = 20.0,
+  });
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    final scaledFontSize = fontSize * scale;
+    return scaledFontSize + 16; // Add padding
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final scaledFontSize = fontSize * scale;
+    
+    // Render label on the right side (for Arabic layout)
+    final labelPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: scaledFontSize,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: textDirection,
+      textAlign: TextAlign.right,
+    )..layout(maxWidth: width * 0.6);
+
+    // Render amount on the left side
+    final amountPainter = TextPainter(
+      text: TextSpan(
+        text: amount,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: scaledFontSize,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.left,
+    )..layout(maxWidth: width * 0.3);
+
+    // Position label on right
+    final labelX = width - labelPainter.width;
+    labelPainter.paint(canvas, Offset(labelX, y + 8));
+
+    // Position SAR symbol and amount on left
+    double currentX = 0;
+    
+    // Draw SAR symbol if available
+    if (sarSymbol != null) {
+      final symbolRenderSize = symbolSize * scale;
+      final symbolY = y + 8 + (scaledFontSize - symbolRenderSize) / 2;
+      
+      canvas.drawImageRect(
+        sarSymbol!,
+        Rect.fromLTWH(0, 0, sarSymbol!.width.toDouble(), sarSymbol!.height.toDouble()),
+        Rect.fromLTWH(currentX, symbolY, symbolRenderSize, symbolRenderSize),
+        Paint(),
+      );
+      currentX += symbolRenderSize + 4; // Add small gap after symbol
+    }
+
+    // Draw amount
+    amountPainter.paint(canvas, Offset(currentX, y + 8));
+  }
+}
+

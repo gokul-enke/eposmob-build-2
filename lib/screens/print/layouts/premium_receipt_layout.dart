@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
@@ -84,6 +85,17 @@ class PremiumReceiptLayout implements ReceiptLayout {
       List<ReceiptRow> part1Rows = [];
       List<ReceiptRow> part2Rows = [];
 
+      // ========== LOAD SAR SYMBOL ==========
+      ui.Image? sarSymbol;
+      try {
+        sarSymbol = await _loadAssetImage('assets/images/saudi_riyal_symbol.png');
+        if (sarSymbol != null) {
+          debugPrint("[PREMIUM] SAR symbol loaded: ${sarSymbol.width}x${sarSymbol.height}");
+        }
+      } catch (e) {
+        debugPrint("[PREMIUM] Error loading SAR symbol: $e");
+      }
+
       // ========== LOGO SECTION ==========
       if (billDocumentConfig.showLogo == 1) {
         try {
@@ -115,7 +127,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
       _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
-      _buildTotalsSection(part1Rows, params, displayConfig, isEnglish);
+      _buildTotalsSection(part1Rows, params, displayConfig, isEnglish, sarSymbol);
 
       // ========== FOOTER SECTION (Part 2) ==========
       _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);
@@ -335,6 +347,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
       return;
     }
 
+    // Paper size aware scaling
+    final bool is58mm = params.is58mm;
+    final double scale = is58mm ? 0.85 : 1.0;
+
     final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
         isEnglish ? "Customer" : "العميل");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
@@ -346,9 +362,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
     if (params.customerName != null && params.customerName!.isNotEmpty) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(customerLabel,
-            weight: 0.35, align: TextAlign.left, isBold: true),
+            weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
         ReceiptTableColumn(params.customerName!,
-            weight: 0.65, align: TextAlign.right),
+            weight: 0.65, align: TextAlign.right, scale: scale),
       ]));
     }
 
@@ -361,18 +377,18 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(phoneLabel,
-            weight: 0.35, align: TextAlign.left, isBold: true),
+            weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
         ReceiptTableColumn(displayedPhone,
-            weight: 0.65, align: TextAlign.right),
+            weight: 0.65, align: TextAlign.right, scale: scale),
       ]));
     }
 
     if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(paymentLabel,
-            weight: 0.35, align: TextAlign.left, isBold: true),
+            weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
         ReceiptTableColumn(params.paymentMethod!,
-            weight: 0.65, align: TextAlign.right),
+            weight: 0.65, align: TextAlign.right, scale: scale),
       ]));
     }
 
@@ -476,6 +492,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     rows.add(SpacingRow(4));
+    // Add horizontal line after each item
+    rows.add(ThinDividerRow());
+    rows.add(SpacingRow(4));
   }
 
   // ==================== TOTALS SECTION (Bilingual Style) ====================
@@ -485,10 +504,17 @@ class PremiumReceiptLayout implements ReceiptLayout {
     ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
+    ui.Image? sarSymbol,
   ) {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
+
+    // Paper size aware scaling - 58mm needs smaller fonts
+    final bool is58mm = params.is58mm;
+    final double regularScale = is58mm ? 0.85 : 1.1;
+    final double boldScale = is58mm ? 0.95 : 1.2;
+    final double symbolSize = is58mm ? 16.0 : 24.0;
 
     double total = double.tryParse(params.formattedTotal) ?? 0.0;
     double discountAmountValue =
@@ -498,83 +524,110 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Calculate subtotal (total + discount - already included in total logic)
     double subtotal = total + discountAmountValue;
 
-    // Get labels with displayConfig priority
-    final subtotalLabel = _getLabel(displayConfig, 'showMRPTotal', null,
-        isEnglish ? "SUBTOTAL" : "SUBTOTAL المجموع");
-    final discountLabel = _getLabel(displayConfig, 'showDiscount', null,
-        isEnglish ? "DISCOUNTS" : "DISCOUNTS الخصم");
-    final taxLabel = _getLabel(displayConfig, 'showTax', resolvedLabels?.tax,
-        isEnglish ? "TAX" : "الضريبة");
-    final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
-        isEnglish ? "GRAND TOTAL" : "GRAND TOTAL المبلغ الاجمالي");
+    // Get tax percentage from params or default to 15%
+    double taxPercentage = 15.0;
+    if (subtotal > 0 && taxAmount > 0) {
+      taxPercentage = (taxAmount / (subtotal - taxAmount)) * 100;
+    }
+    String taxPercentageStr = taxPercentage.toStringAsFixed(1);
 
-    // Subtotal row (MRP Total)
+    // Get labels from displayConfig - use null for resolvedLabels fields that don't exist
+    // For 58mm, use shorter labels; for 80mm use bilingual labels
+    final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', 
+        null, isEnglish ? "SUBTOTAL" : "المجموع");
+    final subtotalLabel = is58mm ? subtotalLabelBase : "$subtotalLabelBase ${isEnglish ? '' : 'المجموع'}".trim();
+    
+    final discountLabelBase = _getLabel(displayConfig, 'showDiscount', 
+        null, isEnglish ? "DISCOUNT" : "الخصم");
+    final discountLabel = is58mm ? discountLabelBase : "$discountLabelBase ${isEnglish ? '' : 'الخصم'}".trim();
+    
+    // VAT label with percentage - use resolvedLabels.tax if available
+    final taxLabelBase = _getLabel(displayConfig, 'showTax', 
+        resolvedLabels?.tax, "VAT");
+    final vatLabel = is58mm 
+        ? "$taxPercentageStr% $taxLabelBase" 
+        : "$taxPercentageStr% $taxLabelBase $taxPercentageStr%     ${isEnglish ? '' : 'الضريبة'}".trim();
+    
+    final grandTotalLabelBase = _getLabel(displayConfig, 'showNetAmount', 
+        resolvedLabels?.total, isEnglish ? "TOTAL" : "المبلغ الاجمالي");
+    final grandTotalLabel = is58mm ? grandTotalLabelBase : "${isEnglish ? 'GRAND TOTAL' : grandTotalLabelBase} ${isEnglish ? '' : 'المبلغ الاجمالي'}".trim();
+
+    // Payment labels from displayConfig
+    final cashLabel = _getLabel(displayConfig, 'showCash', 
+        null, isEnglish ? "Cash" : "نقدي");
+    final changeLabel = _getLabel(displayConfig, 'showChange', 
+        null, isEnglish ? "CHANGE" : "متبقي");
+    final changeLabelFull = is58mm ? changeLabel : "$changeLabel ${isEnglish ? '' : 'متبقي'}".trim();
+
+    // Subtotal row (MRP Total) - with SAR symbol
     if (displayConfig?['showMRPTotal']?.visible != false) {
-      rows.add(ReceiptTableRow([
-        ReceiptTableColumn(subtotalLabel,
-            weight: 0.65, align: TextAlign.right),
-        ReceiptTableColumn(subtotal.toStringAsFixed(2),
-            weight: 0.35, align: TextAlign.left),
-      ]));
+      rows.add(SarAmountRow(
+        label: subtotalLabel,
+        amount: subtotal.toStringAsFixed(2),
+        sarSymbol: sarSymbol,
+        scale: regularScale,
+        symbolSize: symbolSize,
+      ));
     }
 
-    // Discounts row (if visible and has value)
+    // Discounts row (if visible and has value) - with SAR symbol
     if (displayConfig?['showDiscount']?.visible != false && discountAmountValue > 0) {
-      rows.add(ReceiptTableRow([
-        ReceiptTableColumn(discountLabel,
-            weight: 0.65, align: TextAlign.right),
-        ReceiptTableColumn(discountAmountValue.toStringAsFixed(2),
-            weight: 0.35, align: TextAlign.left),
-      ]));
+      rows.add(SarAmountRow(
+        label: discountLabel,
+        amount: discountAmountValue.toStringAsFixed(2),
+        sarSymbol: sarSymbol,
+        scale: regularScale,
+        symbolSize: symbolSize,
+      ));
     }
 
-    // VAT/Tax row (only if showTax is visible)
+    // VAT/Tax row (only if showTax is visible) - with SAR symbol
     if (displayConfig?['showTax']?.visible != false) {
-      rows.add(ReceiptTableRow([
-        ReceiptTableColumn(taxLabel,
-            weight: 0.65, align: TextAlign.right),
-        ReceiptTableColumn(taxAmount.toStringAsFixed(2),
-            weight: 0.35, align: TextAlign.left),
-      ]));
+      rows.add(SarAmountRow(
+        label: vatLabel,
+        amount: taxAmount.toStringAsFixed(2),
+        sarSymbol: sarSymbol,
+        scale: regularScale,
+        symbolSize: symbolSize,
+      ));
     }
 
-    rows.add(SpacingRow(5));
-    rows.add(DottedDividerRow());
-    rows.add(SpacingRow(5));
-
-    // Grand Total - Prominent (Net Amount)
+    // Grand Total - Prominent with larger bold font and SAR symbol
     if (displayConfig?['showNetAmount']?.visible != false) {
-      rows.add(ReceiptTableRow([
-        ReceiptTableColumn(grandTotalLabel,
-            weight: 0.65, align: TextAlign.right, isBold: true),
-        ReceiptTableColumn(total.toStringAsFixed(2),
-            weight: 0.35, align: TextAlign.left, isBold: true),
-      ]));
+      rows.add(SarAmountRow(
+        label: grandTotalLabel,
+        amount: total.toStringAsFixed(2),
+        sarSymbol: sarSymbol,
+        isBold: true,
+        scale: boldScale,
+        symbolSize: symbolSize,
+      ));
     }
 
     rows.add(SpacingRow(5));
     rows.add(DottedDividerRow());
 
-    // Payment details (Cash, Change) like reference
+    // Payment details (Cash, Change) - with SAR symbol and dynamic labels
     if (params.paidAmount != null) {
       rows.add(SpacingRow(_itemGap));
-      rows.add(ReceiptTableRow([
-        ReceiptTableColumn("Cash",
-            weight: 0.65, align: TextAlign.right),
-        ReceiptTableColumn(params.paidAmount!.toStringAsFixed(2),
-            weight: 0.35, align: TextAlign.left),
-      ]));
+      rows.add(SarAmountRow(
+        label: cashLabel,
+        amount: params.paidAmount!.toStringAsFixed(2),
+        sarSymbol: sarSymbol,
+        scale: regularScale,
+        symbolSize: symbolSize,
+      ));
 
       // Calculate change
       double change = params.paidAmount! - total;
       if (change >= 0) {
-        final changeLabel = isEnglish ? "CHANGE" : "CHANGE متبقي";
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(changeLabel,
-              weight: 0.65, align: TextAlign.right),
-          ReceiptTableColumn(change.toStringAsFixed(2),
-              weight: 0.35, align: TextAlign.left),
-        ]));
+        rows.add(SarAmountRow(
+          label: changeLabelFull,
+          amount: change.toStringAsFixed(2),
+          sarSymbol: sarSymbol,
+          scale: regularScale,
+          symbolSize: symbolSize,
+        ));
       }
     }
 
@@ -583,7 +636,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
       rows.add(SpacingRow(_itemGap));
       final amountInWords =
           '${AmountHelper().convertNumberToWords(total)} Only.';
-      rows.add(TextRow(amountInWords, scale: 0.85, isBold: true));
+      rows.add(TextRow(amountInWords, scale: is58mm ? 0.7 : 0.85, isBold: true));
     }
 
     // Customer Balance
@@ -613,26 +666,42 @@ class PremiumReceiptLayout implements ReceiptLayout {
       return;
     }
 
+    // Paper size aware scaling
+    final bool is58mm = params.is58mm;
+    final double scale = is58mm ? 0.85 : 1.0;
+
     rows.add(SpacingRow(_itemGap));
     rows.add(ThinDividerRow());
     rows.add(SpacingRow(_itemGap));
 
-    final prevBalanceLabel = _getLabel(displayConfig, 'showCustomerPrevBalance',
+    // Get labels from displayConfig - shorter for 58mm
+    final prevBalanceLabelBase = _getLabel(displayConfig, 'showCustomerPrevBalance',
         null, isEnglish ? "Previous Balance" : "الرصيد السابق");
-    final paidAmountLabel = _getLabel(displayConfig, 'showCustomerPaidAmount',
+    final prevBalanceLabel = is58mm 
+        ? (isEnglish ? "Prev Bal" : "السابق") 
+        : prevBalanceLabelBase;
+    
+    final paidAmountLabelBase = _getLabel(displayConfig, 'showCustomerPaidAmount',
         null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
-    final currentBalanceLabel = _getLabel(
+    final paidAmountLabel = is58mm 
+        ? (isEnglish ? "Paid" : "المدفوع") 
+        : paidAmountLabelBase;
+    
+    final currentBalanceLabelBase = _getLabel(
         displayConfig, 'showCustomerCurrentBalance',
         null, isEnglish ? "Current Balance" : "الرصيد الحالي");
+    final currentBalanceLabel = is58mm 
+        ? (isEnglish ? "Cur Bal" : "الحالي") 
+        : currentBalanceLabelBase;
 
     // Previous Balance
     if (displayConfig?['showCustomerPrevBalance']?.visible != false &&
         params.customerOldBalance != null) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(prevBalanceLabel,
-            weight: 0.6, align: TextAlign.right),
+            weight: 0.6, align: TextAlign.right, scale: scale),
         ReceiptTableColumn(params.customerOldBalance!.toStringAsFixed(2),
-            weight: 0.4, align: TextAlign.left),
+            weight: 0.4, align: TextAlign.left, scale: scale),
       ]));
     }
 
@@ -641,9 +710,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
         params.paidAmount != null) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(paidAmountLabel,
-            weight: 0.6, align: TextAlign.right),
+            weight: 0.6, align: TextAlign.right, scale: scale),
         ReceiptTableColumn(params.paidAmount!.toStringAsFixed(2),
-            weight: 0.4, align: TextAlign.left),
+            weight: 0.4, align: TextAlign.left, scale: scale),
       ]));
     }
 
@@ -652,9 +721,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
         params.customerCurrentBalance != null) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(currentBalanceLabel,
-            weight: 0.6, align: TextAlign.right, isBold: true),
+            weight: 0.6, align: TextAlign.right, isBold: true, scale: scale),
         ReceiptTableColumn(params.customerCurrentBalance!.toStringAsFixed(2),
-            weight: 0.4, align: TextAlign.left, isBold: true),
+            weight: 0.4, align: TextAlign.left, isBold: true, scale: scale),
       ]));
     }
   }
@@ -872,6 +941,19 @@ class PremiumReceiptLayout implements ReceiptLayout {
       }
     } catch (e) {
       debugPrint("[PremiumReceiptLayout] Error fetching image: $e");
+    }
+    return null;
+  }
+
+  /// Load an image from Flutter assets
+  Future<ui.Image?> _loadAssetImage(String assetPath) async {
+    try {
+      final ByteData data = await rootBundle.load(assetPath);
+      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final fi = await codec.getNextFrame();
+      return fi.image;
+    } catch (e) {
+      debugPrint("[PremiumReceiptLayout] Error loading asset image: $e");
     }
     return null;
   }
