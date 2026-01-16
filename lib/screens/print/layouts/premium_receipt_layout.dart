@@ -296,11 +296,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Invoice Title
     if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final invoiceTitle =
-          displayConfig?['showInvoiceTitle']?.value as String? ??
-              billDocumentConfig.header ??
-              appSettings?.printTitle ??
-              'INVOICE';
+      final invoiceTitle = _getDisplayValue(
+        displayConfig?['showInvoiceTitle']?.value,
+        appSettings?.printTitle,
+        'INVOICE',
+      );
       rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
     }
 
@@ -326,13 +326,21 @@ class PremiumReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
+    // Check if customer section should be visible
+    if (displayConfig?['showCustomerNameAndPhone']?.visible == false) {
+      return;
+    }
+
     if (params.customerName == null && params.customerPhone == null) {
       return;
     }
 
-    final customerLabel = isEnglish ? "Customer" : "العميل";
-    final phoneLabel = isEnglish ? "Phone" : "الهاتف";
-    final paymentLabel = isEnglish ? "Payment" : "الدفع";
+    final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
+        isEnglish ? "Customer" : "العميل");
+    final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
+        isEnglish ? "Phone" : "الهاتف");
+    final paymentLabel = _getLabel(displayConfig, 'showPaymentMethod', null,
+        isEnglish ? "Payment" : "الدفع");
 
     // Clean two-column layout
     if (params.customerName != null && params.customerName!.isNotEmpty) {
@@ -381,8 +389,6 @@ class PremiumReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
-    final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-
     // Build items with clean layout
     for (var i = 0; i < params.cartItems.length; i++) {
       _buildCartItemRow(rows, params.cartItems[i], i, params.isFromLocalStorage,
@@ -426,22 +432,48 @@ class PremiumReceiptLayout implements ReceiptLayout {
               .toStringAsFixed(2);
     }
 
+    // Check visibility settings
+    final showSLNumber = displayConfig?['showSLNumber']?.visible != false;
+    final showParticulars = displayConfig?['showParticulars']?.visible != false;
+    final showQty = displayConfig?['showQty']?.visible != false;
+    final showRate = displayConfig?['showRate']?.visible != false;
+    final showTotal = displayConfig?['showTotal']?.visible != false;
+
     // Premium style: Product name with quantity x price = total
     String slNumber = (index + 1).toString();
     
-    // Item name row
-    rows.add(ReceiptTableRow([
-      ReceiptTableColumn('$slNumber. $productName',
-          weight: 1.0, align: TextAlign.left),
-    ]));
+    // Item name row (with optional SL number)
+    if (showParticulars) {
+      String itemDisplayName = showSLNumber ? '$slNumber. $productName' : productName;
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(itemDisplayName,
+            weight: 1.0, align: TextAlign.left),
+      ]));
+    }
 
-    // Quantity x Price = Total row (indented)
-    rows.add(ReceiptTableRow([
-      ReceiptTableColumn('   $quantity x $unitPrice',
-          weight: 0.6, align: TextAlign.left),
-      ReceiptTableColumn(totalPrice,
-          weight: 0.4, align: TextAlign.right, isBold: true),
-    ]));
+    // Build quantity x price = total row based on visibility
+    List<String> priceParts = [];
+    if (showQty) priceParts.add(quantity);
+    if (showRate) priceParts.add(unitPrice);
+
+    if (priceParts.isNotEmpty || showTotal) {
+      String priceDisplay = priceParts.join(' x ');
+      if (priceDisplay.isNotEmpty) priceDisplay = '   $priceDisplay';
+
+      if (showTotal) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(priceDisplay,
+              weight: 0.6, align: TextAlign.left),
+          ReceiptTableColumn(totalPrice,
+              weight: 0.4, align: TextAlign.right, isBold: true),
+        ]));
+      } else if (priceDisplay.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(priceDisplay,
+              weight: 1.0, align: TextAlign.left),
+        ]));
+      }
+    }
 
     rows.add(SpacingRow(4));
   }
@@ -456,7 +488,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
   ) {
     rows.add(SpacingRow(_itemGap));
 
-    double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
+    final resolvedLabels = params.billDocumentConfig.resolvedLabels;
+
     double total = double.tryParse(params.formattedTotal) ?? 0.0;
     double discountAmountValue =
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
@@ -465,27 +498,28 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Calculate subtotal (total + discount - already included in total logic)
     double subtotal = total + discountAmountValue;
 
-    // Bilingual labels like the reference image
-    // "SUBTOTAL المجموع"
-    final subtotalLabel = isEnglish ? "SUBTOTAL" : "SUBTOTAL المجموع";
-    final discountLabel = isEnglish ? "DISCOUNTS" : "DISCOUNTS الخصم";
-    final vatLabel = "15.0% VAT 15%"; // Or use actual tax rate
-    final taxLabelBilingual = isEnglish ? "TAX" : "الضريبة";
-    final grandTotalLabel = isEnglish ? "GRAND TOTAL" : "GRAND TOTAL المبلغ الاجمالي";
+    // Get labels with displayConfig priority
+    final subtotalLabel = _getLabel(displayConfig, 'showMRPTotal', null,
+        isEnglish ? "SUBTOTAL" : "SUBTOTAL المجموع");
+    final discountLabel = _getLabel(displayConfig, 'showDiscount', null,
+        isEnglish ? "DISCOUNTS" : "DISCOUNTS الخصم");
+    final taxLabel = _getLabel(displayConfig, 'showTax', resolvedLabels?.tax,
+        isEnglish ? "TAX" : "الضريبة");
+    final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
+        isEnglish ? "GRAND TOTAL" : "GRAND TOTAL المبلغ الاجمالي");
 
-    // Get actual tax percentage from config if available
-    String taxPercentageLabel = taxLabelBilingual;
-    
-    // Subtotal row
-    rows.add(ReceiptTableRow([
-      ReceiptTableColumn(subtotalLabel,
-          weight: 0.65, align: TextAlign.right),
-      ReceiptTableColumn(subtotal.toStringAsFixed(2),
-          weight: 0.35, align: TextAlign.left),
-    ]));
+    // Subtotal row (MRP Total)
+    if (displayConfig?['showMRPTotal']?.visible != false) {
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(subtotalLabel,
+            weight: 0.65, align: TextAlign.right),
+        ReceiptTableColumn(subtotal.toStringAsFixed(2),
+            weight: 0.35, align: TextAlign.left),
+      ]));
+    }
 
-    // Discounts row (if any)
-    if (discountAmountValue > 0) {
+    // Discounts row (if visible and has value)
+    if (displayConfig?['showDiscount']?.visible != false && discountAmountValue > 0) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(discountLabel,
             weight: 0.65, align: TextAlign.right),
@@ -494,25 +528,29 @@ class PremiumReceiptLayout implements ReceiptLayout {
       ]));
     }
 
-    // VAT/Tax row
-    rows.add(ReceiptTableRow([
-      ReceiptTableColumn(taxPercentageLabel,
-          weight: 0.65, align: TextAlign.right),
-      ReceiptTableColumn(taxAmount.toStringAsFixed(2),
-          weight: 0.35, align: TextAlign.left),
-    ]));
+    // VAT/Tax row (only if showTax is visible)
+    if (displayConfig?['showTax']?.visible != false) {
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(taxLabel,
+            weight: 0.65, align: TextAlign.right),
+        ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+            weight: 0.35, align: TextAlign.left),
+      ]));
+    }
 
     rows.add(SpacingRow(5));
     rows.add(DottedDividerRow());
     rows.add(SpacingRow(5));
 
-    // Grand Total - Prominent
-    rows.add(ReceiptTableRow([
-      ReceiptTableColumn(grandTotalLabel,
-          weight: 0.65, align: TextAlign.right, isBold: true),
-      ReceiptTableColumn(total.toStringAsFixed(2),
-          weight: 0.35, align: TextAlign.left, isBold: true),
-    ]));
+    // Grand Total - Prominent (Net Amount)
+    if (displayConfig?['showNetAmount']?.visible != false) {
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(grandTotalLabel,
+            weight: 0.65, align: TextAlign.right, isBold: true),
+        ReceiptTableColumn(total.toStringAsFixed(2),
+            weight: 0.35, align: TextAlign.left, isBold: true),
+      ]));
+    }
 
     rows.add(SpacingRow(5));
     rows.add(DottedDividerRow());
@@ -560,6 +598,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
+    // Check if customer balance section should be visible
+    if (displayConfig?['showCustomerBalance']?.visible == false) {
+      return;
+    }
+
     // Hide balance information for default/walk-in customers
     if (params.isDefaultCustomer) {
       return;
@@ -574,10 +617,17 @@ class PremiumReceiptLayout implements ReceiptLayout {
     rows.add(ThinDividerRow());
     rows.add(SpacingRow(_itemGap));
 
-    final prevBalanceLabel = isEnglish ? "Previous Balance" : "الرصيد السابق";
-    final currentBalanceLabel = isEnglish ? "Current Balance" : "الرصيد الحالي";
+    final prevBalanceLabel = _getLabel(displayConfig, 'showCustomerPrevBalance',
+        null, isEnglish ? "Previous Balance" : "الرصيد السابق");
+    final paidAmountLabel = _getLabel(displayConfig, 'showCustomerPaidAmount',
+        null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
+    final currentBalanceLabel = _getLabel(
+        displayConfig, 'showCustomerCurrentBalance',
+        null, isEnglish ? "Current Balance" : "الرصيد الحالي");
 
-    if (params.customerOldBalance != null) {
+    // Previous Balance
+    if (displayConfig?['showCustomerPrevBalance']?.visible != false &&
+        params.customerOldBalance != null) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(prevBalanceLabel,
             weight: 0.6, align: TextAlign.right),
@@ -586,7 +636,20 @@ class PremiumReceiptLayout implements ReceiptLayout {
       ]));
     }
 
-    if (params.customerCurrentBalance != null) {
+    // Paid Amount (this transaction)
+    if (displayConfig?['showCustomerPaidAmount']?.visible != false &&
+        params.paidAmount != null) {
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(paidAmountLabel,
+            weight: 0.6, align: TextAlign.right),
+        ReceiptTableColumn(params.paidAmount!.toStringAsFixed(2),
+            weight: 0.4, align: TextAlign.left),
+      ]));
+    }
+
+    // Current Balance
+    if (displayConfig?['showCustomerCurrentBalance']?.visible != false &&
+        params.customerCurrentBalance != null) {
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(currentBalanceLabel,
             weight: 0.6, align: TextAlign.right, isBold: true),
@@ -690,17 +753,30 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_headerGap));
 
-    // Date and Time - Clean format
-    String formattedDate = params.isFromLocalStorage
-        ? DateHelper.formatToISODateOnlyFromISO(params.orderDate)
-        : DateHelper.formatISODate(params.orderDate);
-    String formattedTime = params.isFromLocalStorage
-        ? DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)
-        : DateHelper.formatISOTimeOnlyToIST(params.orderDate);
+    final resolvedLabels = params.billDocumentConfig.resolvedLabels;
 
-    rows.add(TextRow("$formattedDate  $formattedTime", scale: 0.85));
-    rows.add(SpacingRow(3));
-    rows.add(TextRow('#${params.orderNumber}', scale: 0.8));
+    // Date and Time - Clean format (with visibility check)
+    if (displayConfig?['showDate']?.visible != false) {
+      String formattedDate = params.isFromLocalStorage
+          ? DateHelper.formatToISODateOnlyFromISO(params.orderDate)
+          : DateHelper.formatISODate(params.orderDate);
+      String formattedTime = params.isFromLocalStorage
+          ? DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)
+          : DateHelper.formatISOTimeOnlyToIST(params.orderDate);
+
+      final dateLabel = _getLabel(displayConfig, 'showDate', resolvedLabels?.date, "");
+      if (dateLabel.isNotEmpty) {
+        rows.add(TextRow("$dateLabel: $formattedDate  $formattedTime", scale: 0.85));
+      } else {
+        rows.add(TextRow("$formattedDate  $formattedTime", scale: 0.85));
+      }
+    }
+
+    // Order Number (with visibility check)
+    if (displayConfig?['showOrderNumber']?.visible != false) {
+      rows.add(SpacingRow(3));
+      rows.add(TextRow('#${params.orderNumber}', scale: 0.8));
+    }
 
     rows.add(SpacingRow(_itemGap));
 
@@ -736,6 +812,42 @@ class PremiumReceiptLayout implements ReceiptLayout {
   }
 
   // ==================== UTILITY METHODS ====================
+
+  /// Get a display value with priority: displayConfig value > fallback > default
+  String _getDisplayValue(
+    dynamic displayConfigValue,
+    dynamic fallbackValue,
+    String defaultValue,
+  ) {
+    if (displayConfigValue != null && 
+        displayConfigValue is String && 
+        displayConfigValue.isNotEmpty) {
+      return displayConfigValue;
+    }
+    if (fallbackValue != null && 
+        fallbackValue is String && 
+        fallbackValue.isNotEmpty) {
+      return fallbackValue;
+    }
+    return defaultValue;
+  }
+
+  /// Get a label with priority: displayConfig value > resolvedLabel > default
+  String _getLabel(
+    Map<String, DisplayOption>? displayConfig,
+    String key,
+    String? resolvedLabel,
+    String defaultLabel,
+  ) {
+    final configValue = displayConfig?[key]?.value as String?;
+    if (configValue != null && configValue.isNotEmpty) {
+      return configValue;
+    }
+    if (resolvedLabel != null && resolvedLabel.isNotEmpty) {
+      return resolvedLabel;
+    }
+    return defaultLabel;
+  }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
     if (url == null || url.isEmpty) return null;
