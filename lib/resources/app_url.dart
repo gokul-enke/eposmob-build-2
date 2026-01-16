@@ -1,8 +1,8 @@
 class APPUrl {
   // static String baseURL = "https://eeezeeerp.cloudposai.com";
-  static String baseURL = "https://eposdemo.yougoit.in";
+  // static String baseURL = "https://eposdemo.yougoit.in";
   // static String baseURL = "https://linetolinepos.yougoit.in";
-  // static String baseURL = "https://epos.hypersouq.in";
+  static String baseURL = "https://epos.hypersouq.in";
 
   static String verifyApiKey = '$baseURL/api/v1/verify-api-key';
   static String categoryListUrl =
