@@ -56,7 +56,7 @@ import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
-import 'package:pos_machine/screens/print/print_kot.dart'; // Add KOT print import
+// import 'package:pos_machine/screens/print/print_kot.dart'; // Add KOT print import
 
 class BillingPageRestaurant extends StatefulWidget {
   const BillingPageRestaurant({super.key});
@@ -114,6 +114,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   bool _isUpiSelected = false;
   bool _isDebitSelected = false;
   bool _isCodSelected = false;
+  bool _hasOpenedPaymentModalOnce = false;
   bool isInitLoading = false;
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
@@ -3435,49 +3436,49 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   /// Helper method to print KOT for delivery and takeaway
-  Future<void> _printKOT(
-      String orderNumber, List<LocalCartItem> cartItems) async {
-    debugPrint("🖨️ Printing KOT for $orderNumber");
+  // Future<void> _printKOT(
+  //     String orderNumber, List<LocalCartItem> cartItems) async {
+  //   debugPrint("🖨️ Printing KOT for $orderNumber");
 
-    // Build print items
-    List<Map<String, dynamic>> printItems = [];
-    for (var item in cartItems) {
-      printItems.add({
-        'productName': item.product.productName ?? '',
-        'quantity': item.quantity.toString(),
-        'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
-        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
-        'mrp': item.mrp?.toStringAsFixed(2) ??
-            item.price?.toStringAsFixed(2) ??
-            '0.00',
-      });
-    }
+  //   // Build print items
+  //   List<Map<String, dynamic>> printItems = [];
+  //   for (var item in cartItems) {
+  //     printItems.add({
+  //       'productName': item.product.productName ?? '',
+  //       'quantity': item.quantity.toString(),
+  //       'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
+  //       'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+  //       'mrp': item.mrp?.toStringAsFixed(2) ??
+  //           item.price?.toStringAsFixed(2) ??
+  //           '0.00',
+  //     });
+  //   }
 
-    // Get current time for KOT
-    final now = DateTime.now();
-    final orderTime =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  //   // Get current time for KOT
+  //   final now = DateTime.now();
+  //   final orderTime =
+  //       '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
-    final tableName = deliveryMethod; // Use delivery method as table name
+  //   final tableName = deliveryMethod; // Use delivery method as table name
 
-    // Navigate to KOT print page
-    if (mounted) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => KotPrintPage(
-            orderNumber: orderNumber,
-            tableName: tableName,
-            orderTime: orderTime,
-            items: printItems,
-            comment: _commentController.text.isNotEmpty
-                ? _commentController.text
-                : null,
-          ),
-        ),
-      );
-    }
-  }
+  //   // Navigate to KOT print page
+  //   if (mounted) {
+  //     await Navigator.push(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => KotPrintPage(
+  //           orderNumber: orderNumber,
+  //           tableName: tableName,
+  //           orderTime: orderTime,
+  //           items: printItems,
+  //           comment: _commentController.text.isNotEmpty
+  //               ? _commentController.text
+  //               : null,
+  //         ),
+  //       ),
+  //     );
+  //   }
+  // }
 
   Widget _buildActionButtons() {
     return Align(
@@ -3587,12 +3588,13 @@ class BillingPageState extends State<BillingPageRestaurant>
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-        // Reset all payment methods to none
+// Reset all payment methods to none
         _isCashSelected = false;
         _isCardSelected = false;
         _isUpiSelected = false;
         _isCodSelected = false;
         _isDebitSelected = false;
+        _hasOpenedPaymentModalOnce = false;
         _cashAmountController.clear();
         _cardAmountController.clear();
         _upiAmountController.clear();
@@ -3826,7 +3828,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         return;
       }
 
-      // Check if customer is selected
+// Check if customer is selected
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
@@ -3840,6 +3842,12 @@ class BillingPageState extends State<BillingPageRestaurant>
             FocusScope.of(context).requestFocus(_customerTextFieldFocus);
           }
         });
+        return;
+      }
+
+      // Auto-show payment modal if never opened
+      if (!_hasOpenedPaymentModalOnce) {
+        _showPaymentMethodModal(onAfterApply: _saveOrderAndPrint);
         return;
       }
 
@@ -4039,12 +4047,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       // KOT Print for Delivery and Takeaway
-      if (deliveryMethod == "Car Delivery" ||
-          deliveryMethod == "Store Takeaway") {
-        // Build cart items from saved order for KOT printing
-        List<LocalCartItem> kotCartItems = orderToUse.items;
-        await _printKOT(orderToUse.orderNumber, kotCartItems);
-      }
+      // if (deliveryMethod == "Car Delivery" ||
+      //     deliveryMethod == "Store Takeaway") {
+      //   // Build cart items from saved order for KOT printing
+      //   List<LocalCartItem> kotCartItems = orderToUse.items;
+      //   await _printKOT(orderToUse.orderNumber, kotCartItems);
+      // }
 
       resetAutocomplete();
       // Centralized clear
@@ -4088,7 +4096,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _createOrderAndPrint() async {
+void _createOrderAndPrint() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4097,6 +4105,13 @@ class BillingPageState extends State<BillingPageRestaurant>
       );
       return; // Stop execution if no internet
     }
+
+    // Auto-show payment modal if never opened
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: _createOrderAndPrint);
+      return;
+    }
+
     debugPrint("Create Order and Print pressed");
     debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
 
@@ -4363,13 +4378,13 @@ class BillingPageState extends State<BillingPageRestaurant>
           }
 
           // KOT Print for Delivery and Takeaway
-          if (deliveryMethod == "Car Delivery" ||
-              deliveryMethod == "Store Takeaway") {
-            _printKOT(
-                response["order_number"]?.toString() ??
-                    'ORD-${response["order_id"]}',
-                cartItems);
-          }
+          // if (deliveryMethod == "Car Delivery" ||
+          //     deliveryMethod == "Store Takeaway") {
+          //   _printKOT(
+          //       response["order_number"]?.toString() ??
+          //           'ORD-${response["order_id"]}',
+          //       cartItems);
+          // }
 
           // Clear the mobile number after successful save
           setState(() {
@@ -4422,7 +4437,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _confirmOrder() async {
+void _confirmOrder() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4431,6 +4446,13 @@ class BillingPageState extends State<BillingPageRestaurant>
       );
       return; // Stop execution if no internet
     }
+
+    // Auto-show payment modal if never opened
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: _confirmOrder);
+      return;
+    }
+
     debugPrint("Confirm Order pressed");
     debugPrint("🚀 API REQUEST STARTING - Confirm Order");
 
@@ -4626,13 +4648,13 @@ class BillingPageState extends State<BillingPageRestaurant>
           _clearCart();
 
           // KOT Print for Delivery and Takeaway
-          if (deliveryMethod == "Car Delivery" ||
-              deliveryMethod == "Store Takeaway") {
-            await _printKOT(
-                response["order_number"]?.toString() ??
-                    'ORD-${response["order_id"]}',
-                cartItems);
-          }
+          // if (deliveryMethod == "Car Delivery" ||
+          //     deliveryMethod == "Store Takeaway") {
+          //   await _printKOT(
+          //       response["order_number"]?.toString() ??
+          //           'ORD-${response["order_id"]}',
+          //       cartItems);
+          // }
         } else {
           debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
@@ -5213,8 +5235,9 @@ class BillingPageState extends State<BillingPageRestaurant>
     );
   }
 
-  void _showPaymentMethodModal(
+void _showPaymentMethodModal(
       {VoidCallback? onAfterApply, String? customButtonTitle}) {
+    _hasOpenedPaymentModalOnce = true;
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
