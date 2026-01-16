@@ -630,23 +630,20 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                   Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
 
               paidMethods = [];
-              if (amounts['CASH'] != null && amounts['CASH'] != "0") {
-                paidMethods.add({
-                  "method": "CASH",
-                  "amount": double.tryParse(amounts['CASH']) ?? 0,
-                });
-              }
-              if (amounts['CARD'] != null && amounts['CARD'] != "0") {
-                paidMethods.add({
-                  "method": "CARD",
-                  "amount": double.tryParse(amounts['CARD']) ?? 0,
-                });
-              }
-              if (amounts['UPI'] != null && amounts['UPI'] != "0") {
-                paidMethods.add({
-                  "method": "UPI",
-                  "amount": double.tryParse(amounts['UPI']) ?? 0,
-                });
+              
+              // Iterate through the selected methods and get their amounts
+              // This handles both dynamic IDs (e.g., "1", "2") and legacy strings ("CASH", "CARD")
+              for (String methodId in paymentMethods) {
+                final amountStr = amounts[methodId]?.toString();
+                if (amountStr != null && amountStr != "0" && amountStr.isNotEmpty) {
+                  final amount = double.tryParse(amountStr) ?? 0;
+                  if (amount > 0) {
+                    paidMethods.add({
+                      "method": methodId,
+                      "amount": amount,
+                    });
+                  }
+                }
               }
 
               // ✅ For multi-payment, EXPLICITLY set single payment fields to null

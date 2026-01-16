@@ -3846,23 +3846,33 @@ class BillingPageState extends State<BillingPage>
           // Determine payment method and data using multi-payment JSON format
           List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
+          // Get payment method IDs from BillingProvider for consistency
+          final billingProvider =
+              Provider.of<BillingProvider>(context, listen: false);
+          final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
+          final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
+          final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
+          final codId = billingProvider.codPaymentMethodId ?? "COD";
+          // DEBIT is for customer credit/balance, not a standard payment method
+          const debitId = "DEBIT";
+
           // Always use multi-payment JSON format for consistency with sync button
           Map<String, dynamic> multiPaymentData = {
             "methods": selectedPaymentMethods,
             "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty
+              cashId: _cashAmountController.text.isNotEmpty
                   ? _cashAmountController.text
                   : "0",
-              "CARD": _cardAmountController.text.isNotEmpty
+              cardId: _cardAmountController.text.isNotEmpty
                   ? _cardAmountController.text
                   : "0",
-              "UPI": _upiAmountController.text.isNotEmpty
+              upiId: _upiAmountController.text.isNotEmpty
                   ? _upiAmountController.text
                   : "0",
-              "DEBIT": _debitAmountController.text.isNotEmpty
+              debitId: _debitAmountController.text.isNotEmpty
                   ? _debitAmountController.text
                   : "0",
-              "COD": _codAmountController.text.isNotEmpty
+              codId: _codAmountController.text.isNotEmpty
                   ? _codAmountController.text
                   : "0",
             },
@@ -3908,23 +3918,33 @@ class BillingPageState extends State<BillingPage>
         // Determine payment method and data using multi-payment JSON format
         List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
+        // Get payment method IDs from BillingProvider for consistency
+        final billingProvider =
+            Provider.of<BillingProvider>(context, listen: false);
+        final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
+        final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
+        final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
+        final codId = billingProvider.codPaymentMethodId ?? "COD";
+        // DEBIT is for customer credit/balance, not a standard payment method
+        const debitId = "DEBIT";
+
         // Always use multi-payment JSON format for consistency with sync button
         Map<String, dynamic> multiPaymentData = {
           "methods": selectedPaymentMethods,
           "amounts": {
-            "CASH": _cashAmountController.text.isNotEmpty
+            cashId: _cashAmountController.text.isNotEmpty
                 ? _cashAmountController.text
                 : "0",
-            "CARD": _cardAmountController.text.isNotEmpty
+            cardId: _cardAmountController.text.isNotEmpty
                 ? _cardAmountController.text
                 : "0",
-            "UPI": _upiAmountController.text.isNotEmpty
+            upiId: _upiAmountController.text.isNotEmpty
                 ? _upiAmountController.text
                 : "0",
-            "DEBIT": _debitAmountController.text.isNotEmpty
+            debitId: _debitAmountController.text.isNotEmpty
                 ? _debitAmountController.text
                 : "0",
-            "COD": _codAmountController.text.isNotEmpty
+            codId: _codAmountController.text.isNotEmpty
                 ? _codAmountController.text
                 : "0",
           },
