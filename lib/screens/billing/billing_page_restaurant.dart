@@ -39,6 +39,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
@@ -3436,49 +3437,49 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   /// Helper method to print KOT for delivery and takeaway
-  // Future<void> _printKOT(
-  //     String orderNumber, List<LocalCartItem> cartItems) async {
-  //   debugPrint("🖨️ Printing KOT for $orderNumber");
+  Future<void> _printKOT(
+      String orderNumber, List<LocalCartItem> cartItems) async {
+    debugPrint("🖨️ Printing KOT for $orderNumber");
 
-  //   // Build print items
-  //   List<Map<String, dynamic>> printItems = [];
-  //   for (var item in cartItems) {
-  //     printItems.add({
-  //       'productName': item.product.productName ?? '',
-  //       'quantity': item.quantity.toString(),
-  //       'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
-  //       'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
-  //       'mrp': item.mrp?.toStringAsFixed(2) ??
-  //           item.price?.toStringAsFixed(2) ??
-  //           '0.00',
-  //     });
-  //   }
+    // Build print items
+    List<Map<String, dynamic>> printItems = [];
+    for (var item in cartItems) {
+      printItems.add({
+        'productName': item.product.productName ?? '',
+        'quantity': item.quantity.toString(),
+        'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
+        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+        'mrp': item.mrp?.toStringAsFixed(2) ??
+            item.price?.toStringAsFixed(2) ??
+            '0.00',
+      });
+    }
 
-  //   // Get current time for KOT
-  //   final now = DateTime.now();
-  //   final orderTime =
-  //       '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    // Get current time for KOT
+    final now = DateTime.now();
+    final orderTime =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
-  //   final tableName = deliveryMethod; // Use delivery method as table name
+    final tableName = deliveryMethod; // Use delivery method as table name
 
-  //   // Navigate to KOT print page
-  //   if (mounted) {
-  //     await Navigator.push(
-  //       context,
-  //       MaterialPageRoute(
-  //         builder: (context) => KotPrintPage(
-  //           orderNumber: orderNumber,
-  //           tableName: tableName,
-  //           orderTime: orderTime,
-  //           items: printItems,
-  //           comment: _commentController.text.isNotEmpty
-  //               ? _commentController.text
-  //               : null,
-  //         ),
-  //       ),
-  //     );
-  //   }
-  // }
+    // Navigate to KOT print page
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KotPrintPage(
+            orderNumber: orderNumber,
+            tableName: tableName,
+            orderTime: orderTime,
+            items: printItems,
+            comment: _commentController.text.isNotEmpty
+                ? _commentController.text
+                : null,
+          ),
+        ),
+      );
+    }
+  }
 
   Widget _buildActionButtons() {
     return Align(
@@ -4047,12 +4048,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       // KOT Print for Delivery and Takeaway
-      // if (deliveryMethod == "Car Delivery" ||
-      //     deliveryMethod == "Store Takeaway") {
-      //   // Build cart items from saved order for KOT printing
-      //   List<LocalCartItem> kotCartItems = orderToUse.items;
-      //   await _printKOT(orderToUse.orderNumber, kotCartItems);
-      // }
+      if (deliveryMethod == "Car Delivery" ||
+          deliveryMethod == "Store Takeaway") {
+        // Build cart items from saved order for KOT printing
+        List<LocalCartItem> kotCartItems = orderToUse.items;
+        await _printKOT(orderToUse.orderNumber, kotCartItems);
+      }
 
       resetAutocomplete();
       // Centralized clear
@@ -4378,13 +4379,13 @@ void _createOrderAndPrint() async {
           }
 
           // KOT Print for Delivery and Takeaway
-          // if (deliveryMethod == "Car Delivery" ||
-          //     deliveryMethod == "Store Takeaway") {
-          //   _printKOT(
-          //       response["order_number"]?.toString() ??
-          //           'ORD-${response["order_id"]}',
-          //       cartItems);
-          // }
+          if (deliveryMethod == "Car Delivery" ||
+              deliveryMethod == "Store Takeaway") {
+            _printKOT(
+                response["order_number"]?.toString() ??
+                    'ORD-${response["order_id"]}',
+                cartItems);
+          }
 
           // Clear the mobile number after successful save
           setState(() {
@@ -4648,13 +4649,13 @@ void _confirmOrder() async {
           _clearCart();
 
           // KOT Print for Delivery and Takeaway
-          // if (deliveryMethod == "Car Delivery" ||
-          //     deliveryMethod == "Store Takeaway") {
-          //   await _printKOT(
-          //       response["order_number"]?.toString() ??
-          //           'ORD-${response["order_id"]}',
-          //       cartItems);
-          // }
+          if (deliveryMethod == "Car Delivery" ||
+              deliveryMethod == "Store Takeaway") {
+            await _printKOT(
+                response["order_number"]?.toString() ??
+                    'ORD-${response["order_id"]}',
+                cartItems);
+          }
         } else {
           debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
