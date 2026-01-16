@@ -8,9 +8,20 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class PrintService {
   const PrintService();
+
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
 
   /// Fetch order details by order id and navigate to PrintPage
   Future<void> printOrderById(BuildContext context, String ordersId) async {
@@ -64,6 +75,7 @@ class PrintService {
             customerPhone: customerPhone,
             customerEmail: customerEmail,
             customerAddress: customerAddress,
+            isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
           ),
         ),
       );
@@ -137,6 +149,7 @@ class PrintService {
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
             // Balance info not available for offline saved orders
+            isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
           ),
         ),
       );

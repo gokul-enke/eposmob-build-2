@@ -543,7 +543,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
         Expanded(
           child: Consumer<LocalProductProvider>(
             builder: (context, productProvider, child) {
-              final products = productProvider.filteredProducts;
+              // Use sellableFilteredProducts to only show products that are marked as sellable
+              final products = productProvider.sellableFilteredProducts;
 
               return products.isEmpty
                   ? Center(

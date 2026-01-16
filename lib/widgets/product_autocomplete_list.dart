@@ -83,6 +83,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
   }
 
   // Independent search method that doesn't affect the provider's filteredProducts
+  // Only searches sellable products for billing screens
   List<GetProduct> _searchProducts(String query) {
     if (query.isEmpty) {
       return const <GetProduct>[];
@@ -91,8 +92,8 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
     final productProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
-    // Search through the complete products list, not the filtered one
-    return productProvider.products
+    // Search through only sellable products for billing autocomplete
+    return productProvider.sellableProducts
         .where((product) => (product.productName ?? '')
             .toLowerCase()
             .contains(query.toLowerCase()))

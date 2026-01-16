@@ -89,6 +89,16 @@ class _SalesScreenState extends State<SalesScreen> {
     return eposDirectory;
   }
 
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
   final List<String> statusOptions = [
     'new',
     'pending',
@@ -1369,6 +1379,7 @@ Powered by CloudPOS''',
                       orderComment: orderComment,
                       orderReturns: orderDetails.data?.orderReturns,
                       // Balance info not available from order details API
+                      isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                     ),
                   ),
                 );

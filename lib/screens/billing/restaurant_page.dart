@@ -1778,14 +1778,14 @@ class _MenuPanelState extends State<_MenuPanel> {
         final categories = categoryProvider.category ?? [];
         final selectedCategoryId = widget.activeCategoryId ?? 0;
 
-        // Get products for selected category
+        // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
         if (selectedCategoryId == 0) {
-          // "ALL" category - show all products
-          items = productProvider.filteredProducts;
+          // "ALL" category - show all sellable products
+          items = productProvider.sellableFilteredProducts;
         } else {
-          // Specific category - filter products
-          items = productProvider.products
+          // Specific category - filter sellable products by category
+          items = productProvider.sellableProducts
               .where((product) => product.categoryId == selectedCategoryId)
               .toList();
         }
@@ -6453,6 +6453,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   customerAlternatePhone: customerAlternatePhone,
                   paymentMethod: paymentMethod,
                   orderComment: orderComment,
+                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
                 ),
               ),
             );

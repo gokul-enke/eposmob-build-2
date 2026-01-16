@@ -4017,6 +4017,15 @@ class BillingPageState extends State<BillingPageRestaurant>
       } catch (error) {
         debugPrint("Error printing saved order: ${error.toString()}");
       }
+
+      // KOT Print for Delivery and Takeaway
+      if (deliveryMethod == "Car Delivery" ||
+          deliveryMethod == "Store Takeaway") {
+        // Build cart items from saved order for KOT printing
+        List<LocalCartItem> kotCartItems = orderToUse.items;
+        await _printKOT(orderToUse.orderNumber, kotCartItems);
+      }
+
       resetAutocomplete();
       // Centralized clear
       _fetchCustomers();
@@ -4236,15 +4245,6 @@ class BillingPageState extends State<BillingPageRestaurant>
           // Clear cart without restoring stock (order is confirmed)
           localProductProvider.clearCartAfterOrder();
 
-          // KOT Print for Delivery and Takeaway
-          if (deliveryMethod == "Car Delivery" ||
-              deliveryMethod == "Store Takeaway") {
-            await _printKOT(
-                response["order_number"]?.toString() ??
-                    'ORD-${response["order_id"]}',
-                cartItems);
-          }
-
           try {
             String ordersId = response["order_number"].toString();
             String? accessToken =
@@ -4334,6 +4334,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                   customerAlternatePhone: customerAlternatePhone,
                   paymentMethod: paymentMethod,
                   orderComment: orderComment,
+                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
                 ),
               ),
             );
@@ -6644,7 +6645,8 @@ class BillingPageState extends State<BillingPageRestaurant>
   Widget _buildMainProductGrid() {
     return Consumer2<LocalProductProvider, CategoryProvider>(
       builder: (context, productProvider, categoryProvider, child) {
-        final products = productProvider.filteredProducts;
+        // Use sellableFilteredProducts to only show products that are marked as sellable
+        final products = productProvider.sellableFilteredProducts;
         final rawCategories =
             categoryProvider.category ?? categoryProvider.searchCategory ?? [];
 

@@ -282,6 +282,16 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     return DateHelper.formatToISODateFromIST(isoDateString);
   }
 
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
   void _printOrder(SavedOrder order) {
     try {
       // Convert SavedOrder items to the format expected by PrintPage
@@ -349,6 +359,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             customerAlternatePhone: order.alternatePhone,
             orderComment: order.comment,
             // Balance info not available for offline saved orders
+            isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
           ),
         ),
       );

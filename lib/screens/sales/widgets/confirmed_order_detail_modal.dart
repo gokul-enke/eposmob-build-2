@@ -20,6 +20,16 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
   const ConfirmedOrderDetailModal({Key? key, required this.order})
       : super(key: key);
 
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
   // Calculate total MRP from all order items
   double _calculateTotalMRP() {
     double totalMRP = 0.0;
@@ -508,6 +518,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             customerAlternatePhone: order.alternatePhone,
             orderComment: order.comment,
             // Balance info not available for offline saved orders
+            isDefaultCustomer: _isDefaultCustomerPhone(context, order.customerPhone),
           ),
         ),
       );

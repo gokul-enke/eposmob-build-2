@@ -30,6 +30,16 @@ class MobileOrderCard extends StatelessWidget {
     required this.onShareWhatsApp,
   });
 
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
@@ -280,6 +290,7 @@ class MobileOrderCard extends StatelessWidget {
               orderComment: orderComment,
               orderReturns: orderDetails.data?.orderReturns,
               // Balance info not available from order details API
+              isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
             ),
           ),
         );

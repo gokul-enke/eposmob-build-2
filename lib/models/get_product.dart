@@ -86,6 +86,9 @@ class GetProduct {
   final dynamic offerPrice;
   final dynamic productLocation;
   final String? hsnCode; // Added HSN code field
+  final int? reorderLevel; // Reorder threshold level
+  final bool? sellable; // Whether product can be sold
+  final bool? purchasable; // Whether product can be purchased
 
   GetProduct({
     this.productId,
@@ -112,6 +115,9 @@ class GetProduct {
     this.offerPrice,
     this.productLocation,
     this.hsnCode, // Added HSN code field
+    this.reorderLevel,
+    this.sellable,
+    this.purchasable,
   });
 
   factory GetProduct.fromJson(Map<String, dynamic> json) {
@@ -184,6 +190,15 @@ class GetProduct {
         offerPrice: json["offer_price"]?.toString(),
         productLocation: json["product_location"],
         hsnCode: json["hsn_code"],
+        reorderLevel: (() {
+          final rl = json["reorder_level"];
+          if (rl == null) return null;
+          if (rl is int) return rl;
+          if (rl is String) return int.tryParse(rl);
+          return null;
+        })(),
+        sellable: json["sellable"],
+        purchasable: json["purchasable"],
       );
     } catch (e, stack) {
       debugPrint("❌ GetProduct.fromJson error: $e");
@@ -232,6 +247,9 @@ class GetProduct {
         "offer_price": offerPrice,
         "product_location": productLocation,
         "hsn_code": hsnCode, // Added HSN code field
+        "reorder_level": reorderLevel,
+        "sellable": sellable,
+        "purchasable": purchasable,
       };
 }
 

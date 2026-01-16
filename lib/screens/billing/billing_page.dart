@@ -4274,6 +4274,7 @@ class BillingPageState extends State<BillingPage>
                   customerAlternatePhone: customerAlternatePhone,
                   paymentMethod: paymentMethod,
                   orderComment: orderComment,
+                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
                 ),
               ),
             );
@@ -5472,6 +5473,8 @@ class BillingPageState extends State<BillingPage>
             customerAlternatePhone: savedOrder.alternatePhone,
             orderComment: savedOrder.comment,
             // Balance info not available for offline saved orders
+            // Check if this is a default customer based on the app settings
+            isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
           ),
         ),
       );
@@ -5482,6 +5485,16 @@ class BillingPageState extends State<BillingPage>
         message: "billing.failed_print_order".tr,
       );
     }
+  }
+
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
   }
 
   // Function to scroll to the highlighted customer in the dropdown

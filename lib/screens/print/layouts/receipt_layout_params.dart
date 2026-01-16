@@ -33,6 +33,8 @@ class ReceiptLayoutParams {
   // ZATCA fields for Saudi Arabia e-invoicing
   final String? zatcaVatNumber;
   final String? zatcaCompanyName;
+  // Flag to indicate if the customer is the default/walk-in customer
+  final bool isDefaultCustomer;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -61,6 +63,7 @@ class ReceiptLayoutParams {
     this.paymentMethod,
     this.zatcaVatNumber,
     this.zatcaCompanyName,
+    this.isDefaultCustomer = false,
   });
 
   /// Get the display configuration options from the document config

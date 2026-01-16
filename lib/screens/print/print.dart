@@ -41,6 +41,7 @@ class PrintPage extends StatefulWidget {
   final String? orderComment;
   final String? customerAlternatePhone;
   final String? paymentMethod;
+  final bool isDefaultCustomer;
 
   const PrintPage({
     super.key,
@@ -63,6 +64,7 @@ class PrintPage extends StatefulWidget {
     this.orderComment,
     this.customerAlternatePhone,
     this.paymentMethod,
+    this.isDefaultCustomer = false,
   });
 
   @override
@@ -494,6 +496,7 @@ class _PrintPageState extends State<PrintPage> {
       paymentMethod: widget.paymentMethod,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
+      isDefaultCustomer: widget.isDefaultCustomer,
     );
     
     // Print using the selected layout

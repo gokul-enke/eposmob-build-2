@@ -115,6 +115,16 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
     }
   }
 
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -395,6 +405,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                     orderComment: orderComment,
                     orderReturns: orderDetailsModelData?.orderReturns,
                     // Balance info not available from order details API
+                    isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   ),
                 ),
               );

@@ -837,6 +837,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
+    // Hide balance information for default/walk-in customers
+    if (params.isDefaultCustomer) {
+      return;
+    }
+    
     if (params.customerOldBalance == null &&
         params.customerCurrentBalance == null &&
         params.paidAmount == null) {
