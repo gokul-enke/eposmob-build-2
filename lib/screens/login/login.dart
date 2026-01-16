@@ -460,6 +460,18 @@ class _SignInScreenState extends State<SignInScreen> {
                                                   storesJson: storesJson,
                                                 );
 
+                                                // Save ZATCA credentials for Saudi Arabia e-invoicing
+                                                if (executiveModelData?.vatNumber != null ||
+                                                    executiveModelData?.zatcaCompanyName != null) {
+                                                  SharedPreferenceProvider()
+                                                      .saveZatcaCredentials(
+                                                    vatNumber: executiveModelData?.vatNumber,
+                                                    companyName: executiveModelData?.zatcaCompanyName,
+                                                  );
+                                                  debugPrint(
+                                                      "ZATCA credentials saved - VAT: ${executiveModelData?.vatNumber}, Company: ${executiveModelData?.zatcaCompanyName}");
+                                                }
+
                                                 SalesProvider salesProvider =
                                                     Provider.of<SalesProvider>(
                                                         context,

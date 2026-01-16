@@ -44,6 +44,9 @@ class ExecutiveModelData {
   final String? companyName;
   final String? userRole;
   final List<Store>? stores;
+  // ZATCA fields for Saudi Arabia e-invoicing
+  final String? vatNumber;
+  final String? zatcaCompanyName;
 
   ExecutiveModelData({
     this.accessToken,
@@ -54,6 +57,8 @@ class ExecutiveModelData {
     this.companyName,
     this.userRole,
     this.stores,
+    this.vatNumber,
+    this.zatcaCompanyName,
   });
 
   factory ExecutiveModelData.fromJson(Map<String, dynamic> json) =>
@@ -68,6 +73,8 @@ class ExecutiveModelData {
         stores: json["stores"] == null
             ? null
             : List<Store>.from(json["stores"].map((x) => Store.fromJson(x))),
+        vatNumber: json["vat_number"],
+        zatcaCompanyName: json["zatca_company_name"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -81,6 +88,8 @@ class ExecutiveModelData {
         "stores": stores == null
             ? null
             : List<dynamic>.from(stores!.map((x) => x.toJson())),
+        "vat_number": vatNumber,
+        "zatca_company_name": zatcaCompanyName,
       };
 }
 

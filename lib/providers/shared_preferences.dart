@@ -67,6 +67,10 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('company_name');
     prefs.remove('stores');
     prefs.remove('active_store_id');
+
+    // Remove ZATCA fields
+    prefs.remove('zatca_vat_number');
+    prefs.remove('zatca_company_name');
   }
 
   Future<String?> getToken() async {
@@ -178,5 +182,63 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.remove('default_printer');
     await prefs.remove('default_paper_size');
     await prefs.remove('default_font_style');
+  }
+
+  // ==================== ZATCA METHODS ====================
+
+  /// Save ZATCA VAT number for Saudi Arabia e-invoicing
+  Future<void> saveZatcaVatNumber(String vatNumber) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zatca_vat_number', vatNumber);
+  }
+
+  /// Get ZATCA VAT number
+  Future<String?> getZatcaVatNumber() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('zatca_vat_number');
+  }
+
+  /// Save ZATCA company name for Saudi Arabia e-invoicing
+  Future<void> saveZatcaCompanyName(String companyName) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zatca_company_name', companyName);
+  }
+
+  /// Get ZATCA company name
+  Future<String?> getZatcaCompanyName() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('zatca_company_name');
+  }
+
+  /// Save both ZATCA credentials at once
+  Future<void> saveZatcaCredentials({
+    String? vatNumber,
+    String? companyName,
+  }) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (vatNumber != null && vatNumber.isNotEmpty) {
+      await prefs.setString('zatca_vat_number', vatNumber);
+    }
+    if (companyName != null && companyName.isNotEmpty) {
+      await prefs.setString('zatca_company_name', companyName);
+    }
+  }
+
+  /// Check if ZATCA credentials are available
+  Future<bool> hasZatcaCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final vatNumber = prefs.getString('zatca_vat_number');
+    final companyName = prefs.getString('zatca_company_name');
+    return vatNumber != null &&
+        vatNumber.isNotEmpty &&
+        companyName != null &&
+        companyName.isNotEmpty;
+  }
+
+  /// Remove ZATCA credentials
+  Future<void> removeZatcaCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('zatca_vat_number');
+    await prefs.remove('zatca_company_name');
   }
 }

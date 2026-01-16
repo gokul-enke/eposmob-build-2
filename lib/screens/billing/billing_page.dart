@@ -3790,23 +3790,8 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if any payment method is selected
+      // Get selected payment methods (no longer required - can be empty)
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-      if (selectedPaymentMethods.isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: "billing.select_payment_method".tr,
-        );
-        // Show the payment method modal for user to select payment methods and auto-apply save & print
-        setState(() {
-          isLoadingSaveOrderAndPrint = false;
-        });
-        _showPaymentMethodModal(
-          onAfterApply: _saveOrderAndPrint,
-          customButtonTitle: "billing.apply_save_print".tr,
-        );
-        return;
-      }
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -4055,23 +4040,8 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if any payment method is selected
+      // Get selected payment methods (no longer required - can be empty)
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-      if (selectedPaymentMethods.isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: "billing.select_payment_method".tr,
-        );
-        // Show the payment method modal for user to select payment methods
-        setState(() {
-          isLoadingCreateOrder = false;
-        });
-        _showPaymentMethodModal(
-          onAfterApply: _createOrderAndPrint,
-          customButtonTitle: "Apply & Create Order",
-        );
-        return;
-      }
 
       if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
         showScaffoldError(
@@ -4395,23 +4365,8 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if any payment method is selected
+      // Get selected payment methods (no longer required - can be empty)
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-      if (selectedPaymentMethods.isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: "billing.select_payment_method".tr,
-        );
-        // Show the payment method modal for user to select payment methods
-        setState(() {
-          isLoadingConfirmOrder = false;
-        });
-        _showPaymentMethodModal(
-          onAfterApply: _confirmOrder,
-          customButtonTitle: "billing.apply_confirm".tr,
-        );
-        return;
-      }
 
       if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
         showScaffoldError(
@@ -4809,7 +4764,8 @@ class BillingPageState extends State<BillingPage>
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
 
-    if (_isCashSelected) {
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
       // Use payment method ID if available, otherwise fallback to string
       methods.add(billingProvider.cashPaymentMethodId ?? "CASH");
     }
@@ -4839,7 +4795,8 @@ class BillingPageState extends State<BillingPage>
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
 
-    if (_isCashSelected) {
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
       paidMethods.add({
         // Use payment method ID if available, otherwise fallback to string
         "method": billingProvider.cashPaymentMethodId ?? "CASH",

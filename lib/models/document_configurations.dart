@@ -66,6 +66,7 @@ class DocumentConfig {
   final dynamic createdAt; // Can be null
   final String? updatedAt;
   final String? language; // Added language field
+  final String? activeTheme; // Theme identifier for layout selection (e.g., "classic", "modern", "minimal")
   final DisplayConfiguration? displayConfiguration; // Nested object
   final ResolvedLabels? resolvedLabels; // Nested object
 
@@ -94,6 +95,7 @@ class DocumentConfig {
     this.createdAt,
     this.updatedAt,
     this.language, // Added to constructor
+    this.activeTheme, // Theme identifier
     this.displayConfiguration,
     this.resolvedLabels,
   });
@@ -140,6 +142,7 @@ class DocumentConfig {
       createdAt: json["created_at"],
       updatedAt: json["updated_at"],
       language: json["language"], // Parse language from JSON
+      activeTheme: json["active_theme"], // Parse active theme from JSON
       displayConfiguration: displayConfiguration,
       resolvedLabels: json["resolved_labels"] == null
           ? null
@@ -172,6 +175,7 @@ class DocumentConfig {
         "created_at": createdAt,
         "updated_at": updatedAt,
         "language": language,
+        "active_theme": activeTheme,
         "display_configuration": displayConfiguration?.toJson(),
         "resolved_labels": resolvedLabels?.toJson(),
       };

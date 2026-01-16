@@ -11,6 +11,7 @@ import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
+import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -133,6 +134,9 @@ class StandardPrinter {
     String? orderComment,
     String? customerAlternatePhone,
     String? paymentMethod,
+    // ZATCA fields for Saudi Arabia e-invoicing
+    String? zatcaVatNumber,
+    String? zatcaCompanyName,
   }) async {
     debugPrint(
         "[LOGO_DEBUG] generateAndPrintPDF started for order: $orderNumber");
@@ -385,6 +389,18 @@ class StandardPrinter {
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.black,
       );
+
+      // Calculate total tax from cart items for ZATCA QR
+      double totalTax = 0.0;
+      for (var item in cartItems) {
+        if (isFromLocalStorage) {
+          totalTax +=
+              double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+        } else {
+          totalTax += double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+        }
+      }
+      debugPrint('[StandardPrinter] Total tax calculated for QR: $totalTax');
 
       // Add content to a multi-page PDF with minimal margins and optimized spacing
       pdf.addPage(
@@ -746,34 +762,20 @@ class StandardPrinter {
             // Footer section - compact design
             pw.Column(
               children: [
-                // QR Code for payment - compact size
+                // QR Code - ZATCA compliant if credentials available, otherwise payment QR
                 if (updatedSettings?['showQRCode']?.visible == true) ...[
-                  pw.Center(
-                    child: pw.Column(
-                      children: [
-                        pw.BarcodeWidget(
-                          barcode: pw.Barcode.qrCode(),
-                          data: manualPaymentGateway.link
-                              .replaceAll('{formattedTotal}', formattedTotal)
-                              .replaceAll('{orderNumber}', orderNumber),
-                          width: selectedPaperSize == 'A5' ? 80 : 100,
-                          height: selectedPaperSize == 'A5' ? 80 : 100,
-                        ),
-                        pw.SizedBox(height: 3), // Reduced from 5
-                        pw.Text(
-                          (updatedSettings?['showQRCode']?.value as String?)
-                                      ?.isNotEmpty ==
-                                  true
-                              ? updatedSettings!['showQRCode']!.value as String
-                              : (isRtl ? 'امسح للدفع' : 'Scan to Pay'),
-                          style: pw.TextStyle(
-                            font: arabicFontBold,
-                            fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                  _buildQrCodeSection(
+                    zatcaVatNumber: zatcaVatNumber,
+                    zatcaCompanyName: zatcaCompanyName,
+                    orderDate: orderDate,
+                    formattedTotal: formattedTotal,
+                    totalTax: totalTax,
+                    manualPaymentGateway: manualPaymentGateway,
+                    orderNumber: orderNumber,
+                    selectedPaperSize: selectedPaperSize,
+                    isRtl: isRtl,
+                    arabicFontBold: arabicFontBold,
+                    updatedSettings: updatedSettings,
                   ),
                   pw.SizedBox(height: 5), // Reduced from 10
                 ],
@@ -1497,6 +1499,113 @@ class StandardPrinter {
             pw.SizedBox(height: 5), // Reduced from 10
           ],
         ),
+      ),
+    );
+  }
+
+  // Build QR Code Section - ZATCA compliant if credentials available
+  pw.Widget _buildQrCodeSection({
+    required String? zatcaVatNumber,
+    required String? zatcaCompanyName,
+    required String orderDate,
+    required String formattedTotal,
+    required double totalTax,
+    required PaymentGateway manualPaymentGateway,
+    required String orderNumber,
+    required String selectedPaperSize,
+    required bool isRtl,
+    required pw.Font arabicFontBold,
+    required Map<String, DisplayOption>? updatedSettings,
+  }) {
+    String qrData = '';
+    String qrMessage = '';
+
+    // Check if ZATCA credentials are available for Saudi Arabia e-invoicing
+    final bool hasZatcaCredentials = zatcaVatNumber != null &&
+        zatcaVatNumber.isNotEmpty &&
+        zatcaCompanyName != null &&
+        zatcaCompanyName.isNotEmpty;
+
+    if (hasZatcaCredentials) {
+      debugPrint('[StandardPrinter] ZATCA credentials found, generating ZATCA QR');
+
+      // Generate ZATCA Phase 1 compliant QR code
+      final zatcaHelper = ZatcaQrHelper();
+      final totalAmount = double.tryParse(formattedTotal) ?? 0.0;
+
+      qrData = zatcaHelper.generateQrForInvoice(
+        sellerName: zatcaCompanyName,
+        vatNumber: zatcaVatNumber,
+        invoiceDate: orderDate,
+        totalAmount: totalAmount,
+        vatAmount: totalTax,
+      );
+
+      qrMessage = isRtl ? 'فاتورة الكترونية' : 'ZATCA E-Invoice QR';
+
+      debugPrint('[StandardPrinter] ZATCA QR generated: ${qrData.isNotEmpty}');
+    } else {
+      debugPrint('[StandardPrinter] No ZATCA credentials, using payment QR');
+
+      // Fallback to payment gateway QR
+      qrData = manualPaymentGateway.link;
+      if (qrData.isNotEmpty) {
+        if (qrData.contains('{formattedTotal}') ||
+            qrData.contains('{orderNumber}')) {
+          qrData = qrData
+              .replaceAll('{formattedTotal}', formattedTotal)
+              .replaceAll('{orderNumber}', orderNumber);
+        } else if (qrData.contains('@')) {
+          qrData =
+              'upi://pay?pa=$qrData&am=$formattedTotal&tn=$orderNumber&cu=INR';
+        }
+      }
+
+      qrMessage = (updatedSettings?['showQRCode']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? updatedSettings!['showQRCode']!.value as String
+          : (isRtl ? 'امسح للدفع' : 'Scan to Pay');
+    }
+
+    // Return empty container if no QR data
+    if (qrData.isEmpty) {
+      return pw.SizedBox();
+    }
+
+    // Build QR code widget
+    return pw.Center(
+      child: pw.Column(
+        children: [
+          pw.BarcodeWidget(
+            barcode: pw.Barcode.qrCode(),
+            data: qrData,
+            width: selectedPaperSize == 'A5' ? 80 : 100,
+            height: selectedPaperSize == 'A5' ? 80 : 100,
+          ),
+          pw.SizedBox(height: 3),
+          pw.Text(
+            qrMessage,
+            style: pw.TextStyle(
+              font: arabicFontBold,
+              fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          // Show VAT number below QR for ZATCA receipts
+          if (hasZatcaCredentials) ...[
+            pw.SizedBox(height: 2),
+            pw.Text(
+              isRtl
+                  ? 'الرقم الضريبي: $zatcaVatNumber'
+                  : 'VAT No: $zatcaVatNumber',
+              style: pw.TextStyle(
+                font: arabicFontBold,
+                fontSize: selectedPaperSize == 'A5' ? 6.0 : 8.0,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -2859,14 +2968,14 @@ class StandardPrinter {
                       arabicFont: arabicFont,
                       arabicFontBold: arabicFontBold,
                     ),
-                  ),
+                ),
 
                 pw.SizedBox(height: 5), // Reduced from 10
 
                 // Footer section - compact design
                 pw.Column(
                   children: [
-                    // QR Code for payment - compact size
+                    // QR Code for payment - compact size (no ZATCA in sharing method)
                     if (updatedSettings?['showQRCode']?.visible == true) ...[
                       pw.Center(
                         child: pw.Column(

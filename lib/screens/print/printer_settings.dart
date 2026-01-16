@@ -35,6 +35,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   String selectedPaperSize = '80mm';
   String selectedFontStyle = 'Font A (Small & Sharp)';
   String selectedSettingsType = 'Billing'; // 'Billing' or 'Kitchen'
+  String selectedReceiptTheme = 'classic'; // Receipt theme selection
 
   // Printer scanning variables
   var printerManager = PrinterManager.instance;
@@ -49,6 +50,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   final List<String> fontStyles = [
     'Font A (Small & Sharp)',
     'Font B (Default)',
+  ];
+
+  // List of available receipt themes
+  final List<Map<String, String>> receiptThemes = [
+    {'id': 'classic', 'name': 'Classic'},
+    {'id': 'premium', 'name': 'Premium'},
   ];
 
   @override
@@ -246,10 +253,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final fontStyleKey = selectedSettingsType == 'Billing'
         ? 'default_font_style'
         : 'kot_font_style';
+    final themeKey = selectedSettingsType == 'Billing'
+        ? 'billing_receipt_theme'
+        : 'kot_receipt_theme';
 
     final defaultPrinterJson = prefs.getString(printerKey);
     final defaultPaperSize = prefs.getString(paperSizeKey);
     final defaultFontStyle = prefs.getString(fontStyleKey);
+    final savedTheme = prefs.getString(themeKey);
 
     // Load paper size
     if (defaultPaperSize != null) {
@@ -280,6 +291,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       // Default to Font A if no preference is set
       setState(() {
         selectedFontStyle = 'Font A (Small & Sharp)';
+      });
+    }
+
+    // Load receipt theme
+    if (savedTheme != null) {
+      setState(() {
+        selectedReceiptTheme = savedTheme;
+      });
+    } else {
+      // Default to classic if no preference is set
+      setState(() {
+        selectedReceiptTheme = 'classic';
       });
     }
 
@@ -455,6 +478,21 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       showScaffold(
         context: context,
         message: "Default font style saved",
+      );
+    }
+  }
+
+  Future<void> _saveReceiptTheme(String theme) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = selectedSettingsType == 'Billing'
+        ? 'billing_receipt_theme'
+        : 'kot_receipt_theme';
+    await prefs.setString(key, theme.toLowerCase());
+
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "Receipt theme saved",
       );
     }
   }
@@ -1394,6 +1432,124 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                               ),
                             ),
                             const SizedBox(height: 24),
+
+                            // Receipt Theme Selection (only for Billing)
+                            if (selectedSettingsType == 'Billing')
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.03),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: ColorManager.kPrimaryColor
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                            Icons.palette_outlined,
+                                            color: ColorManager.kPrimaryColor,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          'Receipt Theme',
+                                          style: TextStyle(
+                                            color: ColorManager.kPrimaryColor,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Text(
+                                            'Theme:',
+                                            style: TextStyle(
+                                              color:
+                                                  ColorManager.kTitleTextColor,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: DropdownButton<String>(
+                                                value: selectedReceiptTheme,
+                                                isExpanded: true,
+                                                underline: const SizedBox(),
+                                                items: receiptThemes.map(
+                                                    (Map<String, String>
+                                                        theme) {
+                                                  return DropdownMenuItem<
+                                                      String>(
+                                                    value: theme['id'],
+                                                    child: Text(theme['name']!),
+                                                  );
+                                                }).toList(),
+                                                onChanged: (String? newValue) {
+                                                  if (newValue != null) {
+                                                    setState(() {
+                                                      selectedReceiptTheme =
+                                                          newValue;
+                                                    });
+                                                    _saveReceiptTheme(newValue);
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      selectedReceiptTheme == 'classic'
+                                          ? 'Traditional receipt layout with standard formatting'
+                                          : 'Modern & clean design with enhanced spacing',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (selectedSettingsType == 'Billing')
+                              const SizedBox(height: 24),
 
                             // Font Style Selection
                             // Container(

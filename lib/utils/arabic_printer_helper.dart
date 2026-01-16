@@ -229,30 +229,54 @@ class QrRow extends ReceiptRow {
   @override
   double calculateHeight(
           double width, double fontSize, TextDirection textDirection) =>
-      size + 10;
+      size + 20; // Extra space for quiet zone
 
   @override
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
     // Generate QR Code
-    final qrCode = QrCode(4, QrErrorCorrectLevel.L)..addData(data);
+    // Use fromData for automatic version selection based on data length
+    // This prevents QrInputTooLongException for longer data like ZATCA QR codes
+    // Use Error Correction Level M for better scannability on thermal printers
+    // (Level M provides 15% error correction vs Level L's 7%)
+    final qrCode = QrCode.fromData(
+      data: data,
+      errorCorrectLevel: QrErrorCorrectLevel.M,
+    );
     final qrImage = QrImage(qrCode);
 
-    // Calculate position to center
+    // Add quiet zone (white margin) around QR code - 4 modules is standard
+    const int quietZoneModules = 4;
+    final int totalModules = qrImage.moduleCount + (quietZoneModules * 2);
+    
+    // Calculate module size based on total area including quiet zone
+    final double moduleSize = size / totalModules;
+    
+    // Calculate position to center the entire QR (including quiet zone)
     final double x = (width - size) / 2;
+    final double qrStartY = y + 10; // Top padding
 
     final paint = Paint()..color = Colors.black;
-    final double moduleSize = size / qrImage.moduleCount;
+    
+    // Shrink factor to prevent thermal ink bleed (0.85 = 15% gap between modules)
+    // This creates small white gaps that prevent ink from bleeding together
+    const double shrinkFactor = 0.85;
+    final double drawnModuleSize = moduleSize * shrinkFactor;
+    final double moduleOffset = (moduleSize - drawnModuleSize) / 2;
 
     for (int ix = 0; ix < qrImage.moduleCount; ix++) {
       for (int iy = 0; iy < qrImage.moduleCount; iy++) {
         if (qrImage.isDark(iy, ix)) {
+          // Offset by quiet zone and apply shrink factor
+          final double drawX = x + ((ix + quietZoneModules) * moduleSize) + moduleOffset;
+          final double drawY = qrStartY + ((iy + quietZoneModules) * moduleSize) + moduleOffset;
+          
           canvas.drawRect(
             Rect.fromLTWH(
-              x + (ix * moduleSize),
-              y + 5 + (iy * moduleSize),
-              moduleSize,
-              moduleSize,
+              drawX,
+              drawY,
+              drawnModuleSize,
+              drawnModuleSize,
             ),
             paint,
           );

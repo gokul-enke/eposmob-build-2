@@ -4022,11 +4022,18 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   bool _hasPaymentMethod() {
-    return _isCashSelected ||
-        _isCardSelected ||
-        _isUpiSelected ||
-        _isCodSelected ||
-        _isDebitSelected;
+    // Check if any payment method is selected AND has amount > 0
+    final cashAmount = double.tryParse(_cashAmount) ?? 0;
+    final cardAmount = double.tryParse(_cardAmount) ?? 0;
+    final upiAmount = double.tryParse(_upiAmount) ?? 0;
+    final codAmount = double.tryParse(_codAmount) ?? 0;
+    final debitAmount = double.tryParse(_debitAmount) ?? 0;
+
+    return (_isCashSelected && cashAmount > 0) ||
+        (_isCardSelected && cardAmount > 0) ||
+        (_isUpiSelected && upiAmount > 0) ||
+        (_isCodSelected && codAmount > 0) ||
+        (_isDebitSelected && debitAmount > 0);
   }
 
   // Comment editor dialog
@@ -6584,20 +6591,8 @@ class _OrderPanelState extends State<_OrderPanel> {
         return false;
       }
 
-      // Validate payment method selection (mandatory)
-      if (!_hasPaymentMethod()) {
-        showScaffoldError(
-          context: context,
-          message: 'Please select a payment method',
-        );
-        if (mounted) {
-          setState(() {
-            _isLoadingConfirm = false;
-          });
-        }
-        _showPaymentMethodModal();
-        return false;
-      }
+      // Payment method selection is optional - no validation required
+      // Just prepare the payment data if methods are selected
 
       // Prepare payment method data
       String? paymentMethod;
@@ -6616,10 +6611,15 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         // Multi-payment handling with dynamic IDs
         List<String> selectedMethods = [];
-        if (_isCashSelected) selectedMethods.add(cashId);
-        if (_isCardSelected) selectedMethods.add(cardId);
-        if (_isUpiSelected) selectedMethods.add(upiId);
-        if (_isCodSelected) selectedMethods.add(codId);
+        final cashAmountVal = double.tryParse(_cashAmount) ?? 0;
+        final cardAmountVal = double.tryParse(_cardAmount) ?? 0;
+        final upiAmountVal = double.tryParse(_upiAmount) ?? 0;
+        final codAmountVal = double.tryParse(_codAmount) ?? 0;
+
+        if (_isCashSelected && cashAmountVal > 0) selectedMethods.add(cashId);
+        if (_isCardSelected && cardAmountVal > 0) selectedMethods.add(cardId);
+        if (_isUpiSelected && upiAmountVal > 0) selectedMethods.add(upiId);
+        if (_isCodSelected && codAmountVal > 0) selectedMethods.add(codId);
 
         if (selectedMethods.length > 1) {
           // Multi-payment: store as JSON with IDs as keys
@@ -6635,51 +6635,47 @@ class _OrderPanelState extends State<_OrderPanel> {
           };
           paymentMethod = json.encode(multiPaymentData);
 
-          // Calculate total paid amount
-          final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
-          final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
-          final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
-          final codAmount = double.tryParse(_codAmount) ?? 0.0;
+          // Calculate total paid amount (using already-parsed values)
           paidAmount =
-              (cashAmount + cardAmount + upiAmount + codAmount).toString();
+              (cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal).toString();
 
-          // Prepare paidMethods array with IDs
-          if (_isCashSelected) {
+          // Prepare paidMethods array with IDs (only include methods with amount > 0)
+          if (_isCashSelected && cashAmountVal > 0) {
             paidMethods.add({
               "method": cashId,
-              "amount": double.tryParse(_cashAmount) ?? 0.0
+              "amount": cashAmountVal
             });
           }
-          if (_isCardSelected) {
+          if (_isCardSelected && cardAmountVal > 0) {
             paidMethods.add({
               "method": cardId,
-              "amount": double.tryParse(_cardAmount) ?? 0.0
+              "amount": cardAmountVal
             });
           }
-          if (_isUpiSelected) {
+          if (_isUpiSelected && upiAmountVal > 0) {
             paidMethods.add({
               "method": upiId,
-              "amount": double.tryParse(_upiAmount) ?? 0.0
+              "amount": upiAmountVal
             });
           }
-          if (_isCodSelected) {
+          if (_isCodSelected && codAmountVal > 0) {
             paidMethods.add({
               "method": codId,
-              "amount": double.tryParse(_codAmount) ?? 0.0
+              "amount": codAmountVal
             });
           }
 
           paymentMethods = selectedMethods;
-        } else {
+        } else if (selectedMethods.isNotEmpty) {
           // Single payment method with ID
           paymentMethod = selectedMethods.first;
-          if (_isCashSelected) {
+          if (_isCashSelected && cashAmountVal > 0) {
             paidAmount = _cashAmount;
-          } else if (_isCardSelected) {
+          } else if (_isCardSelected && cardAmountVal > 0) {
             paidAmount = _cardAmount;
-          } else if (_isUpiSelected) {
+          } else if (_isUpiSelected && upiAmountVal > 0) {
             paidAmount = _upiAmount;
-          } else if (_isCodSelected) {
+          } else if (_isCodSelected && codAmountVal > 0) {
             paidAmount = _codAmount;
           }
         }

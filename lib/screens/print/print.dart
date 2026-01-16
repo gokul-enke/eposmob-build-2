@@ -10,14 +10,15 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/thermal/thermal_printer.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/screens/print/layouts/layouts.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -448,10 +449,26 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _printThermalReceipt(
       String customerCareNumber, String customerCareEmail) async {
-    final thermalPrinter = ThermalPrinter(context);
-
-    // Use image-based printing for proper Arabic/English support
-    await thermalPrinter.printReceiptAsImage(
+    // Get theme with priority: Local SharedPreferences > API fallback
+    final theme = await _getReceiptTheme();
+    final layout = ReceiptLayoutFactory.getLayout(theme);
+    
+    debugPrint("[PrintPage] Using receipt theme: $theme");
+    
+    // Fetch ZATCA credentials for Saudi Arabia e-invoicing
+    final sharedPrefProvider = SharedPreferenceProvider();
+    final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+    final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
+    
+    if (zatcaVatNumber != null && zatcaCompanyName != null) {
+      debugPrint("[PrintPage] ZATCA credentials found - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
+    } else {
+      debugPrint("[PrintPage] No ZATCA credentials found, using standard QR");
+    }
+    
+    // Create params object for the layout
+    final params = ReceiptLayoutParams(
+      context: context,
       selectedPrinter: selectedPrinter!,
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
@@ -461,7 +478,7 @@ class _PrintPageState extends State<PrintPage> {
       orderNumber: widget.orderNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
-      billDocumentConfig: _billDocumentConfig,
+      billDocumentConfig: _billDocumentConfig!,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
       customerName: widget.customerName,
@@ -475,12 +492,51 @@ class _PrintPageState extends State<PrintPage> {
       orderComment: widget.orderComment,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
+      zatcaVatNumber: zatcaVatNumber,
+      zatcaCompanyName: zatcaCompanyName,
     );
+    
+    // Print using the selected layout
+    await layout.printThermal(params);
+  }
+
+  /// Get receipt theme with priority: Local setting > API fallback
+  Future<String> _getReceiptTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final localTheme = prefs.getString('billing_receipt_theme');
+    
+    // Priority: Local setting takes precedence
+    if (localTheme != null && localTheme.isNotEmpty) {
+      debugPrint("[PrintPage] Using local theme preference: $localTheme");
+      return localTheme;
+    }
+    
+    // Fallback to API theme from document config
+    final apiTheme = _billDocumentConfig?.activeTheme;
+    if (apiTheme != null && apiTheme.isNotEmpty) {
+      debugPrint("[PrintPage] Using API theme: $apiTheme");
+      return apiTheme;
+    }
+    
+    // Default to classic
+    debugPrint("[PrintPage] No theme set, using default: classic");
+    return 'classic';
   }
 
   Future<void> _generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
     final standardPrinter = StandardPrinter(context);
+
+    // Fetch ZATCA credentials for Saudi Arabia e-invoicing
+    final sharedPrefProvider = SharedPreferenceProvider();
+    final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+    final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
+
+    if (zatcaVatNumber != null && zatcaCompanyName != null) {
+      debugPrint("[PrintPage] ZATCA credentials found for PDF - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
+    } else {
+      debugPrint("[PrintPage] No ZATCA credentials found for PDF, using standard QR");
+    }
 
     await standardPrinter.generateAndPrintPDF(
       selectedPrinter: selectedPrinter,
@@ -506,6 +562,8 @@ class _PrintPageState extends State<PrintPage> {
       orderComment: widget.orderComment,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
+      zatcaVatNumber: zatcaVatNumber,
+      zatcaCompanyName: zatcaCompanyName,
     );
   }
 
