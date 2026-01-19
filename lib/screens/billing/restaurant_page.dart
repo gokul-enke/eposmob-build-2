@@ -847,25 +847,30 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _orderPanelKey.currentState?.refreshSavedOrders();
         }
 
-        // Get current time for KOT
-        final now = DateTime.now();
-        final orderTime =
-            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        // Check if KOT print is enabled in app settings
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+          // Get current time for KOT
+          final now = DateTime.now();
+          final orderTime =
+              '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
-        // Navigate to simple KOT print page
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => KotPrintPage(
-                orderNumber: orderNumber,
-                tableName: tableName,
-                orderTime: orderTime,
-                items: printItems,
-                comment: currentComment.isNotEmpty ? currentComment : null,
+          // Navigate to simple KOT print page
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => KotPrintPage(
+                  orderNumber: orderNumber,
+                  tableName: tableName,
+                  orderTime: orderTime,
+                  items: printItems,
+                  comment: currentComment.isNotEmpty ? currentComment : null,
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
       } else {
         showScaffoldError(
@@ -5212,19 +5217,24 @@ class _OrderPanelState extends State<_OrderPanel> {
       }
     }
 
-    // Navigate to KOT print page
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => KotPrintPage(
-          orderNumber: orderNumber,
-          tableName: tableName,
-          orderTime: orderTime,
-          items: printItems,
-          comment: comment,
+    // Check if KOT print is enabled in app settings
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+      // Navigate to KOT print page
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KotPrintPage(
+            orderNumber: orderNumber,
+            tableName: tableName,
+            orderTime: orderTime,
+            items: printItems,
+            comment: comment,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   Color _statusColor(String? status) {

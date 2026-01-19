@@ -3462,7 +3462,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     final tableName = deliveryMethod; // Use delivery method as table name
 
-    // Navigate to KOT print page
+    // Navigate to KOT print page (caller should check if enabled)
     if (mounted) {
       await Navigator.push(
         context,
@@ -4050,9 +4050,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       // KOT Print for Delivery and Takeaway
       if (deliveryMethod == "Car Delivery" ||
           deliveryMethod == "Store Takeaway") {
-        // Build cart items from saved order for KOT printing
-        List<LocalCartItem> kotCartItems = orderToUse.items;
-        await _printKOT(orderToUse.orderNumber, kotCartItems);
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+          List<LocalCartItem> kotCartItems = orderToUse.items;
+          await _printKOT(orderToUse.orderNumber, kotCartItems);
+        }
       }
 
       resetAutocomplete();
@@ -4097,7 +4100,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-void _createOrderAndPrint() async {
+  void _createOrderAndPrint() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4370,7 +4373,10 @@ void _createOrderAndPrint() async {
                   customerAlternatePhone: customerAlternatePhone,
                   paymentMethod: paymentMethod,
                   orderComment: orderComment,
-                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
+                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                          context,
+                          listen: false)
+                      .isDefaultCustomer,
                 ),
               ),
             );
@@ -4381,10 +4387,14 @@ void _createOrderAndPrint() async {
           // KOT Print for Delivery and Takeaway
           if (deliveryMethod == "Car Delivery" ||
               deliveryMethod == "Store Takeaway") {
-            _printKOT(
-                response["order_number"]?.toString() ??
-                    'ORD-${response["order_id"]}',
-                cartItems);
+            final appSettingsProvider =
+                Provider.of<AppSettingsProvider>(context, listen: false);
+            if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+              _printKOT(
+                  response["order_number"]?.toString() ??
+                      'ORD-${response["order_id"]}',
+                  cartItems);
+            }
           }
 
           // Clear the mobile number after successful save
@@ -4438,7 +4448,7 @@ void _createOrderAndPrint() async {
     }
   }
 
-void _confirmOrder() async {
+  void _confirmOrder() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4647,15 +4657,6 @@ void _confirmOrder() async {
 
           _fetchCustomers();
           _clearCart();
-
-          // KOT Print for Delivery and Takeaway
-          if (deliveryMethod == "Car Delivery" ||
-              deliveryMethod == "Store Takeaway") {
-            await _printKOT(
-                response["order_number"]?.toString() ??
-                    'ORD-${response["order_id"]}',
-                cartItems);
-          }
         } else {
           debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
@@ -5236,7 +5237,7 @@ void _confirmOrder() async {
     );
   }
 
-void _showPaymentMethodModal(
+  void _showPaymentMethodModal(
       {VoidCallback? onAfterApply, String? customButtonTitle}) {
     _hasOpenedPaymentModalOnce = true;
     final localProductProvider =

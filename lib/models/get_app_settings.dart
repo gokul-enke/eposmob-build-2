@@ -18,6 +18,7 @@ class AppSettings {
   final bool showMrpPos;
   final bool showTaxRatePos;
   final bool showConfirmOrderButton;
+  final bool enableKOTPrint;
 
   AppSettings({
     required this.barcodeSales,
@@ -37,6 +38,7 @@ class AppSettings {
     required this.showMrpPos,
     required this.showTaxRatePos,
     required this.showConfirmOrderButton,
+    required this.enableKOTPrint,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -103,6 +105,7 @@ class AppSettings {
       showTaxRatePos: settingsMap['SHOW_TAXRATE_POS']?['status'] ?? false,
       showConfirmOrderButton:
           settingsMap['SHOW_CONFIRM_ORDER_BUTTON']?['status'] ?? true,
+      enableKOTPrint: settingsMap['ENABLE_KOT_PRINT']?['status'] ?? false,
     );
   }
 
@@ -204,6 +207,12 @@ class AppSettings {
           "code": "SHOW_CONFIRM_ORDER_BUTTON",
           "value": "",
           "status": showConfirmOrderButton.toString(),
+        },
+        {
+          "name": "Enable KOT Print",
+          "code": "ENABLE_KOT_PRINT",
+          "value": "",
+          "status": enableKOTPrint.toString(),
         },
       ],
     };
