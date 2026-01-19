@@ -126,8 +126,6 @@ class _CouponModalState extends State<CouponModal> {
     }
   }
 
-  String get _couponCode => _selectedDiscount?.couponCode ?? '';
-
   void _onManualDiscountChanged() {
     final hasFlat = flatDiscountController.text.isNotEmpty;
     final hasPercentage = percentageDiscountController.text.isNotEmpty;
@@ -142,7 +140,8 @@ class _CouponModalState extends State<CouponModal> {
   }
 
   void _onDiscountSelected(DiscountData discount) {
-    debugPrint('🎫 Discount selected: ${discount.couponName} (${discount.couponCode})');
+    debugPrint(
+        '🎫 Discount selected: ${discount.couponName} (${discount.couponCode})');
     debugPrint('  - Type: ${discount.discountType}');
     debugPrint('  - Value: ${discount.discountValue}');
     debugPrint('  - Min Amount: ${discount.discountCouponMinAmount}');
@@ -170,7 +169,8 @@ class _CouponModalState extends State<CouponModal> {
 
   bool _validateDiscountInputs(double originalSubTotal) {
     final flatDiscount = double.tryParse(flatDiscountController.text) ?? 0.0;
-    final percentageDiscount = double.tryParse(percentageDiscountController.text) ?? 0.0;
+    final percentageDiscount =
+        double.tryParse(percentageDiscountController.text) ?? 0.0;
 
     if (flatDiscount < 0) {
       showScaffoldError(
@@ -209,8 +209,10 @@ class _CouponModalState extends State<CouponModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<LocalProductProvider, AppSettingsProvider, DiscountProvider>(
-      builder: (context, localProductProvider, appSettingsProvider, discountProvider, child) {
+    return Consumer3<LocalProductProvider, AppSettingsProvider,
+        DiscountProvider>(
+      builder: (context, localProductProvider, appSettingsProvider,
+          discountProvider, child) {
         final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
 
         final priceSummary = localProductProvider.priceSummary;
@@ -228,7 +230,8 @@ class _CouponModalState extends State<CouponModal> {
         final isCartEmpty = originalSubTotal == 0;
 
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: BuildBoxShadowContainer(
             circleRadius: 12,
             color: Colors.white,
@@ -257,7 +260,6 @@ class _CouponModalState extends State<CouponModal> {
                   ],
                 ),
                 const SizedBox(height: 20),
-
                 Row(
                   children: [
                     Expanded(
@@ -281,9 +283,12 @@ class _CouponModalState extends State<CouponModal> {
                             height: 50,
                             child: TextField(
                               controller: flatDiscountController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true, signed: false),
                               inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[\d\.]')),
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'[\d\.]')),
                               ],
                               decoration: InputDecoration(
                                 hintText: '0.00',
@@ -348,9 +353,12 @@ class _CouponModalState extends State<CouponModal> {
                             height: 50,
                             child: TextField(
                               controller: percentageDiscountController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: false, signed: false),
                               inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[\d]')),
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'[\d]')),
                               ],
                               decoration: InputDecoration(
                                 hintText: '0',
@@ -397,7 +405,6 @@ class _CouponModalState extends State<CouponModal> {
                   ],
                 ),
                 const SizedBox(height: 20),
-
                 Text(
                   'Select Coupon',
                   style: buildCustomStyle(
@@ -417,17 +424,19 @@ class _CouponModalState extends State<CouponModal> {
                       _onDiscountSelected(val!);
                     }
                   },
-                  displayText: (discount) => '${discount.couponCode} - ${discount.couponName}',
+                  displayText: (discount) =>
+                      '${discount.couponCode} - ${discount.couponName}',
                   searchHintText: 'Search by code or name...',
                   showName: false,
-                  margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                   height: 50,
                   autofocus: false,
                 ),
                 const SizedBox(height: 20),
-
-                if (_selectedDiscount != null) _buildDiscountDetailsCard(_selectedDiscount!, currency, discountProvider),
-
+                if (_selectedDiscount != null)
+                  _buildDiscountDetailsCard(
+                      _selectedDiscount!, currency, discountProvider),
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -550,7 +559,6 @@ class _CouponModalState extends State<CouponModal> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 if (isCartEmpty)
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -558,7 +566,8 @@ class _CouponModalState extends State<CouponModal> {
                     decoration: BoxDecoration(
                       color: Colors.orange.shade50,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade300, width: 1),
+                      border:
+                          Border.all(color: Colors.orange.shade300, width: 1),
                     ),
                     child: Row(
                       children: [
@@ -582,7 +591,6 @@ class _CouponModalState extends State<CouponModal> {
                       ],
                     ),
                   ),
-
                 Row(
                   children: [
                     Expanded(
@@ -607,53 +615,61 @@ class _CouponModalState extends State<CouponModal> {
                       flex: 2,
                       child: CustomRoundButton(
                         title: _isLoading ? "Applying..." : "Apply Discount",
-                        fct: _isLoading ? () {} : () {
-                          if (originalSubTotal == 0) {
-                            showScaffoldError(
-                              context: context,
-                              message: 'Cannot apply discount to empty cart',
-                            );
-                            return;
-                          }
+                        fct: _isLoading
+                            ? () {}
+                            : () {
+                                if (originalSubTotal == 0) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message:
+                                        'Cannot apply discount to empty cart',
+                                  );
+                                  return;
+                                }
 
-                          if (!_validateDiscountInputs(originalSubTotal)) {
-                            return;
-                          }
+                                if (!_validateDiscountInputs(
+                                    originalSubTotal)) {
+                                  return;
+                                }
 
-                          if (_selectedDiscount != null) {
-                            final localProductProvider =
-                                Provider.of<LocalProductProvider>(context, listen: false);
-                            final priceSummary = localProductProvider.priceSummary;
-                            final cartTotal = widget.subTotal ?? priceSummary?.originalSubTotal ?? 0.0;
-                            final validity = discountProvider.getValidityForDiscount(
-                              _selectedDiscount!,
-                              cartTotal,
-                            );
-                            if (validity != DiscountValidity.valid) {
-                              showScaffoldError(
-                                context: context,
-                                message: 'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
-                              );
-                              return;
-                            }
-                          }
-                          double flatDiscount =
-                              double.tryParse(flatDiscountController.text) ??
-                                  0.0;
-                          double percentageDiscount = double.tryParse(
-                                  percentageDiscountController.text) ??
-                              0.0;
+                                if (_selectedDiscount != null) {
+                                  final localProductProvider =
+                                      Provider.of<LocalProductProvider>(context,
+                                          listen: false);
+                                  final priceSummary =
+                                      localProductProvider.priceSummary;
+                                  final cartTotal = widget.subTotal ??
+                                      priceSummary?.originalSubTotal ??
+                                      0.0;
+                                  final validity =
+                                      discountProvider.getValidityForDiscount(
+                                    _selectedDiscount!,
+                                    cartTotal,
+                                  );
+                                  if (validity != DiscountValidity.valid) {
+                                    showScaffoldError(
+                                      context: context,
+                                      message:
+                                          'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
+                                    );
+                                    return;
+                                  }
+                                }
+                                double flatDiscount = double.tryParse(
+                                        flatDiscountController.text) ??
+                                    0.0;
+                                double percentageDiscount = double.tryParse(
+                                        percentageDiscountController.text) ??
+                                    0.0;
 
-                          widget.onCouponAction(
-                            _couponCode,
-                            flatDiscount > 0 ||
-                                percentageDiscount > 0 ||
-                                _selectedDiscount != null,
-                            flatDiscount: flatDiscount,
-                            percentageDiscount: percentageDiscount,
-                          );
-                          Navigator.of(context).pop();
-                        },
+                                widget.onCouponAction(
+                                  '', // Send empty code to treat as simple discount
+                                  flatDiscount > 0 || percentageDiscount > 0,
+                                  flatDiscount: flatDiscount,
+                                  percentageDiscount: percentageDiscount,
+                                );
+                                Navigator.of(context).pop();
+                              },
                         fontSize: FontSize.s14,
                         height: 45,
                         width: double.infinity,
@@ -761,7 +777,8 @@ class _CouponModalState extends State<CouponModal> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: validity == DiscountValidity.valid
                       ? Colors.green.shade600
