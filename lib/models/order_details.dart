@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:pos_machine/models/get_product.dart';
 
 OrderDetailsModel orderDetailsModelFromJson(String str) =>
     OrderDetailsModel.fromJson(json.decode(str));
@@ -252,6 +253,7 @@ class OrderDetailsModelDataCartItem {
   final String? taxAmount; // Added tax_amount field
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final Names? names; // Add bilingual names support
 
   OrderDetailsModelDataCartItem({
     this.id,
@@ -269,6 +271,7 @@ class OrderDetailsModelDataCartItem {
     this.taxAmount, // Added tax_amount field
     this.createdAt,
     this.updatedAt,
+    this.names, // Add to constructor
   });
 
   factory OrderDetailsModelDataCartItem.fromJson(Map<String, dynamic> json) =>
@@ -296,6 +299,11 @@ class OrderDetailsModelDataCartItem {
         updatedAt: json["updated_at"] == null
             ? null
             : DateTime.parse(json["updated_at"]),
+        names: json["product_names"] == null // Fix: Parse from "product_names" key (API returns this)
+            ? null
+            : json["product_names"] is List && (json["product_names"] as List).isEmpty
+                ? null // Handle empty array case
+                : Names.fromJson(json["product_names"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -316,6 +324,7 @@ class OrderDetailsModelDataCartItem {
         "tax_amount": taxAmount, // Added tax_amount serialization
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
+        "names": names?.toJson(), // Add names to serialization
       };
 }
 

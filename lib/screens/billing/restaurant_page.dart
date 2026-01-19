@@ -5032,27 +5032,45 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Print KOT for ONLY new items (status == null)
   void _printNewKOT() async {
-    if (_selectedOrder == null) return;
-
-    // Get all cart items
-    List<dynamic> allCartItems = _getCartItemsFromOrder(_selectedOrder);
-
-    // Filter for items where status is null
-    List<dynamic> newItems = allCartItems.where((item) {
-      if (item is Map<String, dynamic>) {
-        return item['status'] == null;
-      }
-      return false;
-    }).toList();
-
-    if (newItems.isEmpty) {
+    debugPrint('🖨️ _printNewKOT() called');
+    
+    if (_selectedOrder == null) {
+      debugPrint('❌ _printNewKOT: No order selected');
       showScaffoldError(
         context: context,
-        message: 'No new items to print (Status: null)',
+        message: 'Please select an order first',
       );
       return;
     }
 
+    debugPrint('📋 _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
+
+    // Get all cart items
+    List<dynamic> allCartItems = _getCartItemsFromOrder(_selectedOrder);
+    debugPrint('📦 _printNewKOT: Total cart items: ${allCartItems.length}');
+
+    // Filter for items where status is null
+    List<dynamic> newItems = allCartItems.where((item) {
+      if (item is Map<String, dynamic>) {
+        final status = item['status'];
+        debugPrint('🔍 Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
+        return status == null;
+      }
+      return false;
+    }).toList();
+
+    debugPrint('🆕 _printNewKOT: New items (status=null): ${newItems.length}');
+
+    if (newItems.isEmpty) {
+      debugPrint('⚠️ _printNewKOT: No new items to print');
+      showScaffoldError(
+        context: context,
+        message: 'No new items to print (all items already sent to kitchen)',
+      );
+      return;
+    }
+
+    debugPrint('🖨️ _printNewKOT: Calling _printSavedOrderKot with ${newItems.length} items');
     // Reuse existing print logic with filtered items
     _printSavedOrderKot(_selectedOrder, newItems);
 
@@ -5061,7 +5079,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-      final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+      final orderIdValue = _selectedOrder['order_id'];
       final orderId = int.tryParse(orderIdValue.toString());
 
       if (orderId != null) {
@@ -5088,6 +5106,8 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Print KOT for a saved order
   void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
+    debugPrint('🖨️ _printSavedOrderKot() called with ${cartItems.length} items');
+    
     // Get order number
     final orderNumber = order['order_number']?.toString() ?? 'Unknown';
 
@@ -5220,7 +5240,12 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Check if KOT print is enabled in app settings
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+    final enableKOTPrint = appSettingsProvider.appSettings?.enableKOTPrint ?? true;
+    debugPrint('⚙️ _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
+    
+    if (enableKOTPrint) {
+      debugPrint('🖨️ _printSavedOrderKot: Navigating to KotPrintPage');
+      debugPrint('📋 Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
       // Navigate to KOT print page
       Navigator.push(
         context,
@@ -5233,6 +5258,12 @@ class _OrderPanelState extends State<_OrderPanel> {
             comment: comment,
           ),
         ),
+      );
+    } else {
+      debugPrint('⚠️ _printSavedOrderKot: KOT printing is disabled in app settings');
+      showScaffoldError(
+        context: context,
+        message: 'KOT printing is disabled in settings',
       );
     }
   }
@@ -6340,24 +6371,47 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   List<dynamic> _getCartItemsFromOrder(dynamic order) {
-    if (order == null) return [];
+    debugPrint('📦 _getCartItemsFromOrder called');
+    if (order == null) {
+      debugPrint('❌ _getCartItemsFromOrder: Order is null');
+      return [];
+    }
+    
+    debugPrint('🔍 _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
+    
     if (order['cart_items'] != null) {
+      debugPrint('✓ Found cart_items key');
       if (order['cart_items']['cart_items'] is List) {
-        return order['cart_items']['cart_items'];
+        final items = order['cart_items']['cart_items'];
+        debugPrint('✓ Returning ${items.length} items from cart_items.cart_items');
+        return items;
       } else if (order['cart_items'] is List) {
-        return order['cart_items'];
+        final items = order['cart_items'];
+        debugPrint('✓ Returning ${items.length} items from cart_items (List)');
+        return items;
       }
     } else if (order['cart'] != null) {
+      debugPrint('✓ Found cart key');
       if (order['cart']['cart_items'] is List) {
-        return order['cart']['cart_items'];
+        final items = order['cart']['cart_items'];
+        debugPrint('✓ Returning ${items.length} items from cart.cart_items');
+        return items;
       } else if (order['cart']['items'] is List) {
-        return order['cart']['items'];
+        final items = order['cart']['items'];
+        debugPrint('✓ Returning ${items.length} items from cart.items');
+        return items;
       }
     } else if (order['items'] is List) {
-      return order['items'];
+      final items = order['items'];
+      debugPrint('✓ Returning ${items.length} items from items');
+      return items;
     } else if (order['order_items'] is List) {
-      return order['order_items'];
+      final items = order['order_items'];
+      debugPrint('✓ Returning ${items.length} items from order_items');
+      return items;
     }
+    
+    debugPrint('❌ _getCartItemsFromOrder: No cart items found');
     return [];
   }
 

@@ -705,6 +705,16 @@ class LocalProductProvider extends ChangeNotifier {
     // Ensure discount doesn't exceed subtotal
     if (totalDiscount > subTotal) {
       totalDiscount = subTotal;
+
+      // Update the stored discount values to reflect the capped amount
+      // Prioritize flat discount first, then percentage
+      if (flatDiscountAmount > 0) {
+        _flatDiscount = subTotal;
+        _percentageDiscount = 0.0;
+      } else {
+        // Adjust percentage to match the capped discount
+        _percentageDiscount = (totalDiscount / subTotal) * 100;
+      }
     }
 
     // Net Payable = SubTotal - Discount (tax is already included in prices)

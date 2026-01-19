@@ -9,6 +9,7 @@ import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/providers/discount_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
@@ -296,6 +297,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ReportsProvider()),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => DiscountProvider()),
         ChangeNotifierProvider(create: (_) => DeliveryMethodsProvider()),
         ChangeNotifierProvider(create: (_) => LocalProductProvider()),
         ChangeNotifierProvider(create: (_) => PaymentGatewaysProvider()),

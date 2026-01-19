@@ -5284,9 +5284,12 @@ class BillingPageState extends State<BillingPage>
         onCouponAction: (couponCode, shouldApply,
             {double? flatDiscount, double? percentageDiscount}) async {
           if (shouldApply) {
-            coupenCodeTextController.text = couponCode;
+            // Apply coupon to API first if provided
+            if (couponCode.isNotEmpty) {
+              await _applyCoupon();
+            }
 
-            // Apply manual discounts to local product provider
+            // Then apply manual discounts to local product provider
             final localProductProvider =
                 Provider.of<LocalProductProvider>(context, listen: false);
             localProductProvider.applyDiscount(
@@ -5294,10 +5297,7 @@ class BillingPageState extends State<BillingPage>
               percentageDiscount: percentageDiscount ?? 0.0,
             );
 
-            // Apply coupon if provided
-            if (couponCode.isNotEmpty) {
-              await _applyCoupon();
-            }
+            coupenCodeTextController.text = couponCode;
 
             setState(() {
               isCouponApplied = true;
@@ -5332,16 +5332,23 @@ class BillingPageState extends State<BillingPage>
 
   Future<void> _applyCoupon() async {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    double? totalAmount =
-        Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal;
+    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+
+    if (localProductProvider.priceSummary == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Cart is empty or data not available',
+      );
+      return;
+    }
+
+    double? totalAmount = localProductProvider.priceSummary!.netTotal;
     String couponCode = coupenCodeTextController.text;
 
-    if (accessToken != null) {
+    if (accessToken != null && totalAmount != null) {
       final result =
           await Provider.of<CartProvider>(context, listen: false).applyCoupon(
-        totalAmount: totalAmount!,
+        totalAmount: totalAmount,
         couponCode: couponCode,
         accessToken: accessToken,
       );

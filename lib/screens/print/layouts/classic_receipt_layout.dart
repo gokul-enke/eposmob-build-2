@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:get/get.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
@@ -14,6 +14,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/utils/arabic_printer_helper.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
@@ -580,12 +581,13 @@ class ClassicReceiptLayout implements ReceiptLayout {
     bool isEnglish,
   ) {
     String productName = '';
+    String productNameArabic = ''; // Add Arabic name field
     String mrp = '';
     String quantity = '';
     String unitPrice = '';
     String totalPrice = '';
     String itemTaxAmount = '';
-
+ 
     if (isFromLocalStorage) {
       productName = item['productName'] ?? '';
       mrp = (double.tryParse(item['mrp']?.toString() ?? '0') ?? 0.0)
@@ -601,7 +603,17 @@ class ClassicReceiptLayout implements ReceiptLayout {
           (double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0)
               .toStringAsFixed(2);
     } else {
-      productName = item.productName ?? '';
+      // Handle bilingual names for Arabic template
+      if (!isEnglish && item.names != null && item.names!.ar != null && item.names!.ar!.isNotEmpty) {
+        // Arabic template with bilingual support: Arabic on line 1, English on line 2
+        productNameArabic = item.names!.ar ?? '';
+        productName = item.names!.en ?? item.productName ?? '';
+      } else {
+        // English template or no names: use single productName
+        productName = item.productName ?? '';
+        productNameArabic = '';
+      }
+      
       mrp = (double.tryParse(item.mrp?.toString() ?? '0') ?? 0.0)
           .toStringAsFixed(2);
       quantity = item.quantity?.toString() ?? '0';
@@ -619,7 +631,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
     String slNumber = (index + 1).toString();
 
     if (isEnglish) {
-      // Product name row
+      // Product name row (English - single name or bilingual fallback)
       if (displayConfig?['showParticulars']?.visible == true ||
           displayConfig?['showSLNumber']?.visible == true) {
         String itemText = displayConfig?['showSLNumber']?.visible == true
@@ -657,15 +669,38 @@ class ClassicReceiptLayout implements ReceiptLayout {
         rows.add(ReceiptTableRow(priceCols));
       }
     } else {
-      // Arabic: RTL layout
+      // Arabic: RTL layout with bilingual names
       if (displayConfig?['showParticulars']?.visible == true ||
           displayConfig?['showSLNumber']?.visible == true) {
-        String itemText = displayConfig?['showSLNumber']?.visible == true
-            ? '$slNumber. $productName'
-            : productName;
+        // Show Arabic name (line 1) and English name (line 2) when available
+        String itemText = '';
+        String englishText = '';
+        if (productNameArabic.isNotEmpty) {
+          // Bilingual: Arabic on line 1, English on line 2
+          if (displayConfig?['showSLNumber']?.visible == true) {
+            itemText = '$slNumber. $productNameArabic';
+          } else {
+            itemText = productNameArabic;
+          }
+          englishText = productName;
+        } else {
+          // Fallback to single name (English or Arabic)
+          if (displayConfig?['showSLNumber']?.visible == true) {
+            itemText = '$slNumber. $productName';
+          } else {
+            itemText = productName;
+          }
+        }
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
         ]));
+        
+        // Add English name on second line when bilingual
+        if (englishText.isNotEmpty) {
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(englishText, weight: 1.0, align: TextAlign.right),
+          ]));
+        }
       }
       // Price details row (RTL order)
       List<ReceiptTableColumn> priceCols = [];

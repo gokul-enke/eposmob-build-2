@@ -156,6 +156,7 @@ class APPUrl {
   static String supplierSalesReport =
       '$baseURL/api/v1/reports/supplier-sales-report';
   static String applyCoupon = '$baseURL/api/v1/discount/apply-coupon';
+  static String listDiscounts = '$baseURL/api/v1/discount/list-discounts';
   static String listFaqs = '$baseURL/api/v1/faq/faqs/company/1';
   static String getGeneralSettings = '$baseURL/api/v1/general';
   static String getAppSettings = '$baseURL/api/v1/website-settings';
