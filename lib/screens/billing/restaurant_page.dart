@@ -5070,38 +5070,61 @@ class _OrderPanelState extends State<_OrderPanel> {
       return;
     }
 
-    debugPrint('🖨️ _printNewKOT: Calling _printSavedOrderKot with ${newItems.length} items');
-    // Reuse existing print logic with filtered items
-    _printSavedOrderKot(_selectedOrder, newItems);
-
-    // Call API to update status for null items
+    // Call API to update status for null items BEFORE printing
+    debugPrint('📡 [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
+    debugPrint('📡 [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
+    
     try {
+      debugPrint('📡 [KOT STATUS UPDATE] Step 1: Getting providers...');
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      debugPrint('📡 [KOT STATUS UPDATE] Step 1: Providers obtained ✅');
 
-      final orderIdValue = _selectedOrder['order_id'];
+      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsing order ID...');
+      final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+      debugPrint('📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
       final orderId = int.tryParse(orderIdValue.toString());
+      final accessToken = authModel.token ?? '';
+      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
+      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
 
+      debugPrint('📡 [KOT STATUS UPDATE] Step 3: Checking orderId...');
       if (orderId != null) {
-        debugPrint(
-            '➡️ Calling CartProvider.updateNullOrderItemsStatus for Order $orderId');
+        debugPrint('📡 [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
+        debugPrint('📡 [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
+        
+        debugPrint('📡 [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
         final response = await cartProvider.updateNullOrderItemsStatus(
           orderId: orderId,
-          accessToken: authModel.token ?? '',
+          accessToken: accessToken,
         );
 
+        debugPrint('📡 [KOT STATUS UPDATE] Step 4: API call completed ✅');
+        debugPrint('📥 [KOT STATUS UPDATE] Full response: $response');
+        debugPrint('📥 [KOT STATUS UPDATE] Response status: ${response['status']}');
+        debugPrint('📥 [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
+
         if (response['status'] == 'success') {
-          debugPrint('✅ updateNullOrderItemsStatus successful');
-          // Refresh the order details to reflect status changes
+          debugPrint('✅ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
+          debugPrint('🔄 [KOT STATUS UPDATE] Refreshing order details...');
           await _refreshSelectedOrderAfterCartUpdate();
+          debugPrint('✅ [KOT STATUS UPDATE] Order refresh completed');
         } else {
-          debugPrint(
-              '⚠️ updateNullOrderItemsStatus failed: ${response['message']}');
+          debugPrint('⚠️ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
         }
+      } else {
+        debugPrint('❌ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
       }
-    } catch (e) {
-      debugPrint('❌ Error updating KOT status: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ [KOT STATUS UPDATE] EXCEPTION: $e');
+      debugPrint('❌ [KOT STATUS UPDATE] Stack trace: $stackTrace');
     }
+    
+    debugPrint('📡 [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
+    
+    // Reuse existing print logic with filtered items
+    debugPrint('🖨️ _printNewKOT: Now calling _printSavedOrderKot...');
+    _printSavedOrderKot(_selectedOrder, newItems);
   }
 
   // Print KOT for a saved order
