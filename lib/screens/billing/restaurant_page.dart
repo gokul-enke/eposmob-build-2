@@ -2820,8 +2820,13 @@ class _OrderPanelState extends State<_OrderPanel> {
               0.0;
     }
 
+    // Apply discounts if any
+    double totalDiscountAmount =
+        _flatDiscount + (orderTotal * _percentageDiscount / 100);
+    orderTotal = orderTotal - totalDiscountAmount;
+
     debugPrint(
-        '💰 Payment Modal - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
+        '💰 Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
 
@@ -4253,6 +4258,12 @@ class _OrderPanelState extends State<_OrderPanel> {
     debugPrint(
         '  - Customer Credit Amount: ${_toCustomerCreditAmount.toStringAsFixed(2)}');
 
+    // Calculate discount amounts
+    final flatDiscountAmount = _flatDiscount;
+    final percentageDiscountAmount = (orderTotal * _percentageDiscount / 100);
+    final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
+    final finalOrderTotal = orderTotal - totalDiscountAmount;
+
     // Calculate balance using the same logic as billing_page.dart
     double cashBalance = 0.0;
 
@@ -4263,7 +4274,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (customerBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
         debugPrint('💳 Customer has debt - using transaction excess logic');
-        final transactionExcess = totalPaidAmount - orderTotal;
+        final transactionExcess = totalPaidAmount - finalOrderTotal;
         debugPrint(
             '💰 Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
 
@@ -4289,10 +4300,10 @@ class _OrderPanelState extends State<_OrderPanel> {
       } else {
         // Customer has positive/zero balance - use Net Due logic
         debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
-        // Net Due = Purchase Total - Customer Previous Balance
-        double netDue = orderTotal - customerBalance;
+        // Net Due = Final Order Total - Customer Previous Balance
+        double netDue = finalOrderTotal - customerBalance;
         debugPrint('💰 Net Due calculation:');
-        debugPrint('  - Purchase Total: ${orderTotal.toStringAsFixed(2)}');
+        debugPrint('  - Purchase Total: ${finalOrderTotal.toStringAsFixed(2)}');
         debugPrint(
             '  - Customer Prev Balance: ${customerBalance.toStringAsFixed(2)}');
         debugPrint('  - Net Due: ${netDue.toStringAsFixed(2)}');
@@ -4328,9 +4339,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint(
           '🔴 RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
-      cashBalance = totalPaidAmount - orderTotal;
+      cashBalance = totalPaidAmount - finalOrderTotal;
       debugPrint(
-          '  - Balance = Total Collected (${totalPaidAmount.toStringAsFixed(2)}) - Cart Total (${orderTotal.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
+          '  - Balance = Total Collected (${totalPaidAmount.toStringAsFixed(2)}) - Final Order Total (${finalOrderTotal.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
     }
 
     // Store the raw balance before clamping for comparison
@@ -4348,12 +4359,6 @@ class _OrderPanelState extends State<_OrderPanel> {
     debugPrint(
         '💵 Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
     debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
-
-    // Calculate discount amounts
-    final flatDiscountAmount = _flatDiscount;
-    final percentageDiscountAmount = (orderTotal * _percentageDiscount / 100);
-    final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-    final finalOrderTotal = orderTotal - totalDiscountAmount;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -5033,7 +5038,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Print KOT for ONLY new items (status == null)
   void _printNewKOT() async {
     debugPrint('🖨️ _printNewKOT() called');
-    
+
     if (_selectedOrder == null) {
       debugPrint('❌ _printNewKOT: No order selected');
       showScaffoldError(
@@ -5043,7 +5048,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       return;
     }
 
-    debugPrint('📋 _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
+    debugPrint(
+        '📋 _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
 
     // Get all cart items
     List<dynamic> allCartItems = _getCartItemsFromOrder(_selectedOrder);
@@ -5053,7 +5059,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     List<dynamic> newItems = allCartItems.where((item) {
       if (item is Map<String, dynamic>) {
         final status = item['status'];
-        debugPrint('🔍 Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
+        debugPrint(
+            '🔍 Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
         return status == null;
       }
       return false;
@@ -5071,9 +5078,11 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     // Call API to update status for null items BEFORE printing
-    debugPrint('📡 [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
-    debugPrint('📡 [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
-    
+    debugPrint(
+        '📡 [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
+    debugPrint(
+        '📡 [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
+
     try {
       debugPrint('📡 [KOT STATUS UPDATE] Step 1: Getting providers...');
       final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -5082,18 +5091,23 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsing order ID...');
       final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
-      debugPrint('📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
+      debugPrint(
+          '📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
       final orderId = int.tryParse(orderIdValue.toString());
       final accessToken = authModel.token ?? '';
       debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
-      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
+      debugPrint(
+          '📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
 
       debugPrint('📡 [KOT STATUS UPDATE] Step 3: Checking orderId...');
       if (orderId != null) {
-        debugPrint('📡 [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
-        debugPrint('📡 [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
-        
-        debugPrint('📡 [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
+
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
         final response = await cartProvider.updateNullOrderItemsStatus(
           orderId: orderId,
           accessToken: accessToken,
@@ -5101,27 +5115,33 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         debugPrint('📡 [KOT STATUS UPDATE] Step 4: API call completed ✅');
         debugPrint('📥 [KOT STATUS UPDATE] Full response: $response');
-        debugPrint('📥 [KOT STATUS UPDATE] Response status: ${response['status']}');
-        debugPrint('📥 [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
+        debugPrint(
+            '📥 [KOT STATUS UPDATE] Response status: ${response['status']}');
+        debugPrint(
+            '📥 [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
 
         if (response['status'] == 'success') {
-          debugPrint('✅ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
+          debugPrint(
+              '✅ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
           debugPrint('🔄 [KOT STATUS UPDATE] Refreshing order details...');
           await _refreshSelectedOrderAfterCartUpdate();
           debugPrint('✅ [KOT STATUS UPDATE] Order refresh completed');
         } else {
-          debugPrint('⚠️ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
+          debugPrint(
+              '⚠️ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
         }
       } else {
-        debugPrint('❌ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
+        debugPrint(
+            '❌ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
       }
     } catch (e, stackTrace) {
       debugPrint('❌ [KOT STATUS UPDATE] EXCEPTION: $e');
       debugPrint('❌ [KOT STATUS UPDATE] Stack trace: $stackTrace');
     }
-    
-    debugPrint('📡 [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
-    
+
+    debugPrint(
+        '📡 [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
+
     // Reuse existing print logic with filtered items
     debugPrint('🖨️ _printNewKOT: Now calling _printSavedOrderKot...');
     _printSavedOrderKot(_selectedOrder, newItems);
@@ -5129,8 +5149,9 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Print KOT for a saved order
   void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
-    debugPrint('🖨️ _printSavedOrderKot() called with ${cartItems.length} items');
-    
+    debugPrint(
+        '🖨️ _printSavedOrderKot() called with ${cartItems.length} items');
+
     // Get order number
     final orderNumber = order['order_number']?.toString() ?? 'Unknown';
 
@@ -5263,12 +5284,14 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Check if KOT print is enabled in app settings
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    final enableKOTPrint = appSettingsProvider.appSettings?.enableKOTPrint ?? true;
+    final enableKOTPrint =
+        appSettingsProvider.appSettings?.enableKOTPrint ?? true;
     debugPrint('⚙️ _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
-    
+
     if (enableKOTPrint) {
       debugPrint('🖨️ _printSavedOrderKot: Navigating to KotPrintPage');
-      debugPrint('📋 Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
+      debugPrint(
+          '📋 Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
       // Navigate to KOT print page
       Navigator.push(
         context,
@@ -5283,7 +5306,8 @@ class _OrderPanelState extends State<_OrderPanel> {
         ),
       );
     } else {
-      debugPrint('⚠️ _printSavedOrderKot: KOT printing is disabled in app settings');
+      debugPrint(
+          '⚠️ _printSavedOrderKot: KOT printing is disabled in app settings');
       showScaffoldError(
         context: context,
         message: 'KOT printing is disabled in settings',
@@ -6399,14 +6423,16 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('❌ _getCartItemsFromOrder: Order is null');
       return [];
     }
-    
-    debugPrint('🔍 _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
-    
+
+    debugPrint(
+        '🔍 _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
+
     if (order['cart_items'] != null) {
       debugPrint('✓ Found cart_items key');
       if (order['cart_items']['cart_items'] is List) {
         final items = order['cart_items']['cart_items'];
-        debugPrint('✓ Returning ${items.length} items from cart_items.cart_items');
+        debugPrint(
+            '✓ Returning ${items.length} items from cart_items.cart_items');
         return items;
       } else if (order['cart_items'] is List) {
         final items = order['cart_items'];
@@ -6433,7 +6459,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('✓ Returning ${items.length} items from order_items');
       return items;
     }
-    
+
     debugPrint('❌ _getCartItemsFromOrder: No cart items found');
     return [];
   }
@@ -6540,7 +6566,10 @@ class _OrderPanelState extends State<_OrderPanel> {
                   customerAlternatePhone: customerAlternatePhone,
                   paymentMethod: paymentMethod,
                   orderComment: orderComment,
-                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
+                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                          context,
+                          listen: false)
+                      .isDefaultCustomer,
                 ),
               ),
             );
@@ -6654,7 +6683,52 @@ class _OrderPanelState extends State<_OrderPanel> {
           1;
       final customerPhone =
           _selectedCustomer?.phone ?? _selectedOrder['customer_phone'] ?? '';
-      final totalPrice = _selectedOrder['grand_total']?.toString() ?? '0';
+      // Get order items to calculate subtotal
+      List<dynamic> cartItems = [];
+      if (_selectedOrder['cart_items'] != null) {
+        if (_selectedOrder['cart_items']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items']['cart_items'];
+        } else if (_selectedOrder['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items'];
+        }
+      } else if (_selectedOrder['cart'] != null) {
+        if (_selectedOrder['cart']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart']['cart_items'];
+        } else if (_selectedOrder['cart']['items'] is List) {
+          cartItems = _selectedOrder['cart']['items'];
+        }
+      } else if (_selectedOrder['items'] is List) {
+        cartItems = _selectedOrder['items'];
+      } else if (_selectedOrder['order_items'] is List) {
+        cartItems = _selectedOrder['order_items'];
+      }
+
+      double rawOrderTotal = 0.0;
+      for (var item in cartItems) {
+        final quantity =
+            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+                item['price']?.toString() ??
+                item['product_price']?.toString() ??
+                '0') ??
+            0.0;
+        rawOrderTotal += quantity * unitPrice;
+      }
+
+      // Fallback to grand_total if items calculation is 0
+      if (rawOrderTotal == 0.0) {
+        rawOrderTotal =
+            double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+                0.0;
+      }
+
+      final flatDiscountAmount = _flatDiscount;
+      final percentageDiscountAmount =
+          (rawOrderTotal * _percentageDiscount / 100);
+      final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
+      final finalOrderTotal = rawOrderTotal - totalDiscountAmount;
+
+      final totalPrice = finalOrderTotal.toString();
       final transactionId = _transactionNumber.isNotEmpty
           ? _transactionNumber
           : (_selectedOrder['transaction_number'] ?? '');
@@ -6725,32 +6799,21 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           // Calculate total paid amount (using already-parsed values)
           paidAmount =
-              (cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal).toString();
+              (cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal)
+                  .toString();
 
           // Prepare paidMethods array with IDs (only include methods with amount > 0)
           if (_isCashSelected && cashAmountVal > 0) {
-            paidMethods.add({
-              "method": cashId,
-              "amount": cashAmountVal
-            });
+            paidMethods.add({"method": cashId, "amount": cashAmountVal});
           }
           if (_isCardSelected && cardAmountVal > 0) {
-            paidMethods.add({
-              "method": cardId,
-              "amount": cardAmountVal
-            });
+            paidMethods.add({"method": cardId, "amount": cardAmountVal});
           }
           if (_isUpiSelected && upiAmountVal > 0) {
-            paidMethods.add({
-              "method": upiId,
-              "amount": upiAmountVal
-            });
+            paidMethods.add({"method": upiId, "amount": upiAmountVal});
           }
           if (_isCodSelected && codAmountVal > 0) {
-            paidMethods.add({
-              "method": codId,
-              "amount": codAmountVal
-            });
+            paidMethods.add({"method": codId, "amount": codAmountVal});
           }
 
           paymentMethods = selectedMethods;
@@ -6773,13 +6836,6 @@ class _OrderPanelState extends State<_OrderPanel> {
       final totalPaid = double.tryParse(paidAmount ?? '0') ?? 0.0;
       final orderAmount = double.tryParse(totalPrice) ?? 0.0;
       final balanceAmount = (totalPaid - orderAmount).toString();
-
-      // Calculate discount amount for API
-      final orderSubTotal = orderAmount; // Use order amount as subtotal base
-      final flatDiscountAmount = _flatDiscount;
-      final percentageDiscountAmount =
-          (orderSubTotal * _percentageDiscount / 100);
-      final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
 
       debugPrint('📦 Order details for confirmation:');
       debugPrint('   - Customer ID: $customerId');
