@@ -5279,13 +5279,13 @@ class BillingPageState extends State<BillingPageRestaurant>
           isCash,
           isCard,
           isUpi,
-          isDebit,
           isCod,
+          isDebit,
           cashAmount,
           cardAmount,
           upiAmount,
-          debitAmount,
           codAmount,
+          debitAmount,
           transactionNumber,
           toCustomerCredit, {
           String? cashMethodId,
@@ -5297,13 +5297,13 @@ class BillingPageState extends State<BillingPageRestaurant>
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
-            _isDebitSelected = isDebit;
             _isCodSelected = isCod;
+            _isDebitSelected = isDebit;
             _cashAmountController.text = cashAmount;
             _cardAmountController.text = cardAmount;
             _upiAmountController.text = upiAmount;
-            _debitAmountController.text = debitAmount;
             _codAmountController.text = codAmount;
+            _debitAmountController.text = debitAmount;
             _transactionNumberController.text = transactionNumber;
             _toCustomerCreditEnabled = toCustomerCredit;
 

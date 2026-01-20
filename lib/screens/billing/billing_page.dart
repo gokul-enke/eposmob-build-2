@@ -5216,11 +5216,12 @@ class BillingPageState extends State<BillingPage>
             isCash: isCash,
             isCard: isCard,
             isUpi: isUpi,
+            isCod: isCod,
             isDebit: isDebit,
-            isCod: isCod, // Pass isCod
             cashAmount: cashAmount,
             cardAmount: cardAmount,
             upiAmount: upiAmount,
+            codAmount: codAmount,
             debitAmount: debitAmount,
             transactionNumber: transactionNumber,
             toCustomerCredit: toCustomerCredit,
@@ -5228,7 +5229,6 @@ class BillingPageState extends State<BillingPage>
             cardMethodId: cardMethodId,
             upiMethodId: upiMethodId,
             codMethodId: codMethodId,
-            codAmount: codAmount, // Pass codAmount
           );
         },
       ),
