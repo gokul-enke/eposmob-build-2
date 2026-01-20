@@ -766,7 +766,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
   }
 
-  // ==================== TOTALS SECTION (Bilingual Style) ====================
+  // ==================== TOTALS SECTION (Boxed Style) ====================
 
   void _buildTotalsSection(
     List<ReceiptRow> rows,
@@ -779,44 +779,34 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
 
-    // Paper size aware scaling - 58mm needs smaller fonts
+    // Paper size aware scaling
     final bool is58mm = params.is58mm;
-    final double regularScale = is58mm ? 0.85 : 1.1;
-    final double boldScale = is58mm ? 0.95 : 1.2;
-    final double symbolSize = is58mm ? 16.0 : 24.0;
 
     double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
     double total = double.tryParse(params.formattedTotal) ?? 0.0;
     double discountAmountValue =
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
-    double totalMrp = saved + total;
-    double totalQuantity = params.totalQuantity;
     double taxAmount = params.totalTax;
 
-    // Calculate subtotal (total + discount - already included in total logic)
+    // Calculate subtotal
     double subtotal = total + discountAmountValue;
 
-    // Get tax percentage from params or default to 15%
+    // Get tax percentage
     double taxPercentage = 15.0;
     if (subtotal > 0 && taxAmount > 0) {
       taxPercentage = (taxAmount / (subtotal - taxAmount)) * 100;
     }
     String taxPercentageStr = taxPercentage.toStringAsFixed(1);
 
-    final qtyLabel = _getLabel(displayConfig, 'showQty', resolvedLabels?.qty,
-        isEnglish ? "Qty" : "الكمية");
-
-    // Get labels from displayConfig - use null for resolvedLabels fields that don't exist
-    // For 58mm, use shorter labels; for 80mm use bilingual labels
+    // Labels
     final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', 
         null, isEnglish ? "SUBTOTAL" : "المجموع");
     final subtotalLabel = is58mm ? subtotalLabelBase : "$subtotalLabelBase ${isEnglish ? '' : 'المجموع'}".trim();
     
     final discountLabelBase = _getLabel(displayConfig, 'showDiscount', 
-        null, isEnglish ? "DISCOUNT" : "الخصم");
+        null, isEnglish ? "DISCOUNTS" : "الخصم");
     final discountLabel = is58mm ? discountLabelBase : "$discountLabelBase ${isEnglish ? '' : 'الخصم'}".trim();
     
-    // VAT label with percentage - use resolvedLabels.tax if available
     final taxLabelBase = _getLabel(displayConfig, 'showTax', 
         resolvedLabels?.tax, "VAT");
     final vatLabel = is58mm 
@@ -824,197 +814,81 @@ class PremiumReceiptLayout implements ReceiptLayout {
         : "$taxPercentageStr% $taxLabelBase $taxPercentageStr%     ${isEnglish ? '' : 'الضريبة'}".trim();
     
     final grandTotalLabelBase = _getLabel(displayConfig, 'showNetAmount', 
-        resolvedLabels?.total, isEnglish ? "TOTAL" : "المبلغ الاجمالي");
-    final grandTotalLabel = is58mm ? grandTotalLabelBase : "${isEnglish ? 'GRAND TOTAL' : grandTotalLabelBase} ${isEnglish ? '' : 'المبلغ الاجمالي'}".trim();
+        resolvedLabels?.total, isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
+    final grandTotalLabel = is58mm ? grandTotalLabelBase : "${grandTotalLabelBase} ${isEnglish ? '' : 'المبلغ الاجمالي'}".trim();
 
-    // Payment labels from displayConfig
     final cashLabel = _getLabel(displayConfig, 'showCash', 
         null, isEnglish ? "Cash" : "نقدي");
     final changeLabel = _getLabel(displayConfig, 'showChange', 
         null, isEnglish ? "CHANGE" : "متبقي");
     final changeLabelFull = is58mm ? changeLabel : "$changeLabel ${isEnglish ? '' : 'متبقي'}".trim();
 
-    if (isEnglish) {
-      // Summary rows (English)
-      final itemsCountLabel = _getLabel(
-          displayConfig, 'showItemsCount', null, "Items:");
-      final mrpTotalLabel =
-          _getLabel(displayConfig, 'showMRPTotal', null, "Total MRP:");
-      final taxLabel = _getLabel(displayConfig, 'showTax', resolvedLabels?.tax,
-          "Tax :");
+    // Visibility settings
+    final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+    final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
+    final showTax = displayConfig?['showTax']?.visible ?? true;
+    final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
-      // Check visibility settings
-      final showItemsCount = displayConfig?['showItemsCount']?.visible ?? true;
-      final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
-      final showQty = displayConfig?['showQty']?.visible ?? true;
-      final showTax = displayConfig?['showTax']?.visible ?? true;
-      final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
-      final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
+    // Prepare boxed items
+    List<BoxedLineItem> boxedItems = [];
 
-      // Items count and Discount row
-      if (showItemsCount || showDiscount) {
-        List<ReceiptTableColumn> summaryRow = [];
-        
-        if (showItemsCount) {
-          summaryRow.add(ReceiptTableColumn(itemsCountLabel,
-              weight: 0.25, align: TextAlign.left));
-          summaryRow.add(ReceiptTableColumn(params.cartItems.length.toString(),
-              weight: 0.25, align: TextAlign.left));
-        } else {
-          summaryRow.add(ReceiptTableColumn("", weight: 0.50));
-        }
-        
-        summaryRow.add(ReceiptTableColumn(" ", weight: 0.05));
-        
-        if (showDiscount) {
-          summaryRow.add(ReceiptTableColumn(discountLabel,
-              weight: 0.25, align: TextAlign.right));
-          summaryRow.add(ReceiptTableColumn(discountAmountValue.toStringAsFixed(2),
-              weight: 0.20, align: TextAlign.right));
-        } else {
-          summaryRow.add(ReceiptTableColumn("", weight: 0.45));
-        }
-        
-        rows.add(ReceiptTableRow(summaryRow));
-      }
-
-      // Total Qty and Tax row
-      if (showQty || showTax) {
-        final totalQtyLabel = "$qtyLabel Total:";
-        List<ReceiptTableColumn> qtyTaxRow = [];
-        
-        if (showQty) {
-          qtyTaxRow.add(ReceiptTableColumn(totalQtyLabel, weight: 0.25, align: TextAlign.left));
-          qtyTaxRow.add(ReceiptTableColumn(
-              totalQuantity % 1 == 0
-                  ? totalQuantity.toInt().toString()
-                  : totalQuantity.toStringAsFixed(2),
-              weight: 0.25,
-              align: TextAlign.left));
-        } else {
-          qtyTaxRow.add(ReceiptTableColumn("", weight: 0.50));
-        }
-        
-        qtyTaxRow.add(ReceiptTableColumn(" ", weight: 0.05));
-        
-        if (showTax) {
-          qtyTaxRow.add(ReceiptTableColumn(taxLabel, weight: 0.25, align: TextAlign.right));
-          qtyTaxRow.add(ReceiptTableColumn(taxAmount.toStringAsFixed(2),
-              weight: 0.20, align: TextAlign.right));
-        } else {
-          qtyTaxRow.add(ReceiptTableColumn("", weight: 0.45));
-        }
-        
-        rows.add(ReceiptTableRow(qtyTaxRow));
-      }
-
-      if (showMRPTotal) {
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(mrpTotalLabel,
-              weight: 0.25, align: TextAlign.left),
-          ReceiptTableColumn(totalMrp.toStringAsFixed(2),
-              weight: 0.25, align: TextAlign.left),
-          ReceiptTableColumn(" ", weight: 0.50),
-        ]));
-      }
-
-      rows.add(SpacingRow(5));
-
-      // Net Total
-      if (showNetAmount) {
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(grandTotalLabel,
-              weight: 0.5, align: TextAlign.center, isBold: true),
-          ReceiptTableColumn(total.toStringAsFixed(2),
-              weight: 0.5, align: TextAlign.center, isBold: true),
-        ]));
-      }
-    } else {
-      // Arabic/Bilingual totals
-      final subtotalLabel = _getLabel(
-          displayConfig, 'showMRPTotal', null, "SUBTOTAL المجموع");
-      final discountLabel =
-          _getLabel(displayConfig, 'showDiscount', null, "DISCOUNTS الخصم");
-      final taxLabelArabic = _getLabel(
-          displayConfig, 'showTax', resolvedLabels?.tax, "TAX الضريبة");
-      final netTotalLabel = _getLabel(
-          displayConfig, 'showNetAmount', null, "GRAND TOTAL المبلغ الاجمالي");
-
-      // Check visibility settings
-      final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
-      final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
-      final showTax = displayConfig?['showTax']?.visible ?? true;
-      final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
-
-      // Subtotal
-      if (showMRPTotal) {
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(subtotal.toStringAsFixed(2),
-              weight: 0.35, align: TextAlign.left),
-          ReceiptTableColumn(subtotalLabel,
-              weight: 0.65, align: TextAlign.right),
-        ]));
-      }
-
-      // Discounts
-      if (showDiscount && discountAmountValue > 0) {
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(discountAmountValue.toStringAsFixed(2),
-              weight: 0.35, align: TextAlign.left),
-          ReceiptTableColumn(discountLabel,
-              weight: 0.65, align: TextAlign.right),
-        ]));
-      }
-
-      // Tax
-      if (showTax) {
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
-              weight: 0.35, align: TextAlign.left),
-          ReceiptTableColumn(taxLabelArabic,
-              weight: 0.65, align: TextAlign.right),
-        ]));
-      }
-
-      rows.add(SpacingRow(5));
-
-      // Net Total
-      if (showNetAmount) {
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(total.toStringAsFixed(2),
-              weight: 0.35, align: TextAlign.left, isBold: true),
-          ReceiptTableColumn(netTotalLabel,
-              weight: 0.65, align: TextAlign.right, isBold: true),
-        ]));
-      }
+    // 1. Subtotal
+    if (showMRPTotal) {
+      boxedItems.add(BoxedLineItem(
+        label: subtotalLabel,
+        value: subtotal.toStringAsFixed(2),
+      ));
     }
 
-    rows.add(SpacingRow(5));
-    rows.add(DottedDividerRow());
+    // 2. Discounts
+    if (showDiscount && discountAmountValue > 0) {
+      boxedItems.add(BoxedLineItem(
+        label: discountLabel,
+        value: discountAmountValue.toStringAsFixed(2),
+      ));
+    }
 
-    // Payment details (Cash, Change) - with SAR symbol and dynamic labels
+    // 3. VAT
+    if (showTax) {
+      boxedItems.add(BoxedLineItem(
+        label: vatLabel,
+        value: taxAmount.toStringAsFixed(2),
+      ));
+    }
+
+    // 4. Grand Total (Bold)
+    if (showNetAmount) {
+      boxedItems.add(BoxedLineItem(
+        label: grandTotalLabel,
+        value: total.toStringAsFixed(2),
+        isBold: true,
+        scale: 1.1,
+      ));
+    }
+
+    // 5. Payment details (Separator + Cash + Change)
     if (params.paidAmount != null) {
-      rows.add(SpacingRow(_itemGap));
-      rows.add(SarAmountRow(
+      boxedItems.add(BoxedLineItem(isSeparator: true));
+
+      // Payment Method (Value | Label)
+      boxedItems.add(BoxedLineItem(
         label: cashLabel,
-        amount: params.paidAmount!.toStringAsFixed(2),
-        sarSymbol: sarSymbol,
-        scale: regularScale,
-        symbolSize: symbolSize,
+        value: params.paidAmount!.toStringAsFixed(2),
       ));
 
-      // Calculate change
+      // Change
       double change = params.paidAmount! - total;
       if (change >= 0) {
-        rows.add(SarAmountRow(
+        boxedItems.add(BoxedLineItem(
           label: changeLabelFull,
-          amount: change.toStringAsFixed(2),
-          sarSymbol: sarSymbol,
-          scale: regularScale,
-          symbolSize: symbolSize,
+          value: change.toStringAsFixed(2),
+          isBold: true,
         ));
       }
     }
+
+    // Add the boxed row
+    rows.add(BoxedTotalsRow(items: boxedItems));
 
     // Amount in Words
     if (displayConfig?['showAmountInWords']?.visible == true) {
@@ -1036,13 +910,14 @@ class PremiumReceiptLayout implements ReceiptLayout {
       ));
     }
 
-    rows.add(DottedDividerRow());
-
+    rows.add(SpacingRow(_itemGap));
+    
     // Customer Balance
     _buildCustomerBalance(rows, params, displayConfig, isEnglish);
 
     rows.add(SpacingRow(_sectionGap));
   }
+
 
   void _buildCustomerBalance(
     List<ReceiptRow> rows,
@@ -1402,4 +1277,127 @@ class DottedDividerRow extends ReceiptRow {
       currentX += dashWidth + dashSpace;
     }
   }
+}
+
+/// Row that displays totals in a rounded box
+class BoxedTotalsRow extends ReceiptRow {
+  final List<BoxedLineItem> items;
+  final double cornerRadius;
+  final double padding;
+
+  BoxedTotalsRow({
+    required this.items,
+    this.cornerRadius = 12.0,
+    this.padding = 15.0,
+  });
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    double h = padding * 2;
+    for (var item in items) {
+      if (item.isSeparator) {
+        h += 12; // Space for separator
+      } else {
+        h += (fontSize * item.scale) + 8; // Line height + spacing
+      }
+    }
+    return h;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    // Draw rounded border
+    final paint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(1, y, width - 2, calculateHeight(width, fontSize, textDirection) - 2),
+      Radius.circular(cornerRadius),
+    );
+    canvas.drawRRect(rect, paint);
+
+    double currentY = y + padding;
+
+    for (var item in items) {
+      if (item.isSeparator) {
+        // Draw dashed separator
+        final sepPaint = Paint()
+          ..color = Colors.black
+          ..strokeWidth = 1;
+        
+        const double dashWidth = 4.0;
+        const double dashSpace = 3.0;
+        double currentX = padding;
+        double endX = width - padding;
+        
+        while (currentX < endX) {
+          canvas.drawLine(
+            Offset(currentX, currentY + 6),
+            Offset(currentX + dashWidth, currentY + 6),
+            sepPaint,
+          );
+          currentX += dashWidth + dashSpace;
+        }
+        currentY += 12;
+      } else {
+        final itemFontSize = fontSize * item.scale;
+        
+        // Value on Left
+        final valuePainter = TextPainter(
+          text: TextSpan(
+            text: item.value,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: itemFontSize,
+              fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+              fontFamily: ArabicPrinterHelper.fontFamily,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.left,
+        )..layout(maxWidth: width * 0.45);
+        
+        valuePainter.paint(canvas, Offset(padding, currentY));
+
+        // Label on Right
+        final labelPainter = TextPainter(
+          text: TextSpan(
+            text: item.label,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: itemFontSize,
+              fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+              fontFamily: ArabicPrinterHelper.fontFamily,
+            ),
+          ),
+          textDirection: textDirection,
+          textAlign: TextAlign.right,
+        )..layout(maxWidth: width * 0.45);
+        
+        labelPainter.paint(canvas, Offset(width - padding - labelPainter.width, currentY));
+        
+        currentY += itemFontSize + 8;
+      }
+    }
+  }
+}
+
+class BoxedLineItem {
+  final String label;
+  final String value;
+  final bool isBold;
+  final double scale;
+  final bool isSeparator;
+
+  BoxedLineItem({
+    this.label = '',
+    this.value = '',
+    this.isBold = false,
+    this.scale = 1.0,
+    this.isSeparator = false,
+  });
 }
