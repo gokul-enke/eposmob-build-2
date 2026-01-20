@@ -207,6 +207,7 @@ class BillingPageState extends State<BillingPage>
 
     // Initialize with dynamic default delivery method
     _initializeDeliveryMethod();
+    _initializePaymentMethod();
 
     // Initialize multi-payment with no defaults - let user select manually
     _isCashSelected = false;
@@ -5141,18 +5142,51 @@ class BillingPageState extends State<BillingPage>
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
-    // Auto-fill cash amount if no payment methods are currently selected
-    String autoFillCashAmount = _cashAmountController.text;
-    bool autoSelectCash = _isCashSelected;
+    // Prepare initial amounts
+    String initialCash = _cashAmountController.text;
+    String initialCard = _cardAmountController.text;
+    String initialUpi = _upiAmountController.text;
+    String initialCod = _codAmountController.text;
+    String initialDebit = _debitAmountController.text;
 
+    // Check if any amount is already entered
+    bool hasAnyAmount = (double.tryParse(initialCash) ?? 0) > 0 ||
+        (double.tryParse(initialCard) ?? 0) > 0 ||
+        (double.tryParse(initialUpi) ?? 0) > 0 ||
+        (double.tryParse(initialCod) ?? 0) > 0 ||
+        (double.tryParse(initialDebit) ?? 0) > 0;
+
+    // If no amount is entered yet, auto-fill the selected method with the full total
+    if (!hasAnyAmount && localProductProvider.cartTotal > 0) {
+      String totalStr = localProductProvider.cartTotal.toStringAsFixed(2);
+      if (_isCashSelected) {
+        initialCash = totalStr;
+      } else if (_isCardSelected) {
+        initialCard = totalStr;
+      } else if (_isUpiSelected) {
+        initialUpi = totalStr;
+      } else if (_isCodSelected) {
+        initialCod = totalStr;
+      } else if (_isDebitSelected) {
+        initialDebit = totalStr;
+      } else {
+        // Fallback: If nothing selected (shouldn't happen with defaults, but safety), default to Cash
+        initialCash = totalStr;
+        // We might need to set the flag too, but the modal takes initialIsCashSelected
+      }
+    }
+
+    // Legacy fallback logic (kept for safety, though covered above)
+    bool autoSelectCash = _isCashSelected;
     if (!_isCashSelected &&
         !_isCardSelected &&
         !_isUpiSelected &&
         !_isCodSelected &&
         !_isDebitSelected) {
-      // No payment method selected, auto-fill cash with cart total
-      autoFillCashAmount = localProductProvider.cartTotal.toStringAsFixed(2);
       autoSelectCash = true;
+      if (initialCash.isEmpty || double.tryParse(initialCash) == 0) {
+        initialCash = localProductProvider.cartTotal.toStringAsFixed(2);
+      }
     }
 
     showDialog(
@@ -5163,11 +5197,11 @@ class BillingPageState extends State<BillingPage>
         initialIsUpiSelected: _isUpiSelected,
         initialIsCodSelected: _isCodSelected,
         initialIsDebitSelected: _isDebitSelected,
-        initialCashAmount: autoFillCashAmount,
-        initialCardAmount: _cardAmountController.text,
-        initialUpiAmount: _upiAmountController.text,
-        initialCodAmount: _codAmountController.text,
-        initialDebitAmount: _debitAmountController.text,
+        initialCashAmount: initialCash,
+        initialCardAmount: initialCard,
+        initialUpiAmount: initialUpi,
+        initialCodAmount: initialCod,
+        initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
         customerPrevBalance: selectedCustomer?.balance ?? 0.0,
@@ -5419,7 +5453,22 @@ class BillingPageState extends State<BillingPage>
       }
 
       deliveryMethodId = _getDefaultDeliveryMethodId();
-      deliveryMethod = "Store Takeaway";
+
+      // Find name for the ID
+      String defaultName = "Store Takeaway";
+      try {
+        final deliveryMethodsProvider =
+            Provider.of<DeliveryMethodsProvider>(context, listen: false);
+        if (deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
+              (m) => m.id == deliveryMethodId,
+              orElse: () => deliveryMethodsProvider.deliveryMethods.first);
+          defaultName = match.name;
+        }
+      } catch (e) {
+        // fallback
+      }
+      deliveryMethod = defaultName;
       // Remove iconColor reset
       // iconColor = 1; // DELETE THIS LINE
     });
@@ -5720,41 +5769,128 @@ class BillingPageState extends State<BillingPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
 
-      // Add listener to update default when delivery methods are loaded
-      deliveryMethodsProvider.addListener(() {
+      void updateDeliveryMethod() {
         if (!deliveryMethodsProvider.isLoading &&
             deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          // 1. Try App Settings Default
+          final appSettingsDefault =
+              appSettingsProvider.appSettings?.defaultDeliveryMethod;
+          if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
+            try {
+              // Try to match by name or ID
+              final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
+                (m) =>
+                    m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+                    m.id == appSettingsDefault,
+              );
+
+              // Only update if different to avoid unnecessary rebuilds
+              if (deliveryMethod != match.name ||
+                  deliveryMethodId != match.id) {
+                setState(() {
+                  deliveryMethod = match.name;
+                  deliveryMethodId = match.id;
+                });
+                debugPrint(
+                    "🚚 Set delivery method from AppSettings: ${match.name} (ID: ${match.id})");
+              }
+              return; // Found match in AppSettings, skip provider default
+            } catch (e) {
+              debugPrint(
+                  "🚚 AppSettings default '$appSettingsDefault' not found in delivery methods");
+            }
+          }
+
+          // 2. Fallback to DeliveryMethodsProvider default
           final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
           if (defaultMethod != null) {
-            setState(() {
-              deliveryMethod = defaultMethod.name;
-              deliveryMethodId = defaultMethod.id;
-            });
-            debugPrint(
-                "🚚 Updated default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+            // Only update if different
+            if (deliveryMethod != defaultMethod.name ||
+                deliveryMethodId != defaultMethod.id) {
+              setState(() {
+                deliveryMethod = defaultMethod.name;
+                deliveryMethodId = defaultMethod.id;
+              });
+              debugPrint(
+                  "🚚 Updated default delivery method from Provider: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+            }
           }
         }
-      });
-
-      // If delivery methods are already loaded, set the default immediately
-      if (!deliveryMethodsProvider.isLoading &&
-          deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
-        final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
-        if (defaultMethod != null) {
-          deliveryMethod = defaultMethod.name;
-          deliveryMethodId = defaultMethod.id;
-          debugPrint(
-              "🚚 Set initial default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
-        }
       }
+
+      // Add listeners
+      deliveryMethodsProvider.addListener(updateDeliveryMethod);
+      appSettingsProvider.addListener(updateDeliveryMethod);
+
+      // Initial check
+      updateDeliveryMethod();
     });
+  }
+
+  void _initializePaymentMethod() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+
+      void updatePaymentMethod() {
+        setState(() {
+          _applyDefaultPaymentMethod();
+        });
+      }
+
+      appSettingsProvider.addListener(updatePaymentMethod);
+      updatePaymentMethod();
+    });
+  }
+
+  void _applyDefaultPaymentMethod() {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+
+    // Only set default if no method is currently selected
+    if (_isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected) {
+      return;
+    }
+
+    final defaultPayment =
+        appSettingsProvider.appSettings?.defaultPaymentMethod;
+    if (defaultPayment != null && defaultPayment.isNotEmpty) {
+      debugPrint("💰 Applying default payment method: $defaultPayment");
+      _isCashSelected = defaultPayment.toUpperCase() == 'CASH';
+      _isCardSelected = defaultPayment.toUpperCase() == 'CARD';
+      _isUpiSelected = defaultPayment.toUpperCase() == 'UPI';
+      _isCodSelected = defaultPayment.toUpperCase() == 'COD';
+    }
   }
 
   String _getDefaultDeliveryMethodId() {
     try {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+      // 1. Check AppSettings
+      final appSettingsDefault =
+          appSettingsProvider.appSettings?.defaultDeliveryMethod;
+      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
+        try {
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere((m) =>
+              m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+              m.id == appSettingsDefault);
+          return match.id;
+        } catch (e) {
+          // Not found
+        }
+      }
+
       final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
       return defaultMethod?.id ??
           "11"; // Fallback to Store Takeaway ID from API

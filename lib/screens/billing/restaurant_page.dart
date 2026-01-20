@@ -2834,29 +2834,77 @@ class _OrderPanelState extends State<_OrderPanel> {
     String autoFillCashAmount = _cashAmount;
     bool autoSelectCash = _isCashSelected;
 
-    if (!_isCashSelected &&
-        !_isCardSelected &&
-        !_isUpiSelected &&
-        !_isCodSelected &&
-        !_isDebitSelected) {
-      // No payment method selected, auto-fill cash with order total
-      autoFillCashAmount = orderTotal.toStringAsFixed(2);
+    // Check if any payment method is already selected
+    bool hasSelection = _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected;
+
+    // If no selection, check for default payment method from AppSettings
+    if (!hasSelection) {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final defaultPayment =
+          appSettingsProvider.appSettings?.defaultPaymentMethod;
+
+      if (defaultPayment != null && defaultPayment.isNotEmpty) {
+        debugPrint(
+            '💰 Applying default payment method from AppSettings: $defaultPayment');
+        switch (defaultPayment.toUpperCase()) {
+          case 'CASH':
+            _isCashSelected = true;
+            break;
+          case 'CARD':
+            _isCardSelected = true;
+            break;
+          case 'UPI':
+            _isUpiSelected = true;
+            break;
+          case 'COD':
+            _isCodSelected = true;
+            break;
+        }
+        hasSelection = true; // Now we have a selection
+      }
+    }
+
+    // If still no selection (no default set), fallback to Cash
+    if (!hasSelection) {
+      _isCashSelected = true;
       autoSelectCash = true;
-      debugPrint(
-          '🔧 Auto-fill triggered: Cash amount set to ${autoFillCashAmount}, Cash selected: $autoSelectCash');
-    } else {
-      debugPrint('🔧 Auto-fill skipped: Payment methods already selected');
+    }
+
+    // Auto-fill amount logic:
+    // If the selected method has no amount entered (is empty or 0), fill it with the total
+    if (_isCashSelected &&
+        (_cashAmount.isEmpty || double.tryParse(_cashAmount) == 0)) {
+      autoFillCashAmount = orderTotal.toStringAsFixed(2);
+      _cashAmount = autoFillCashAmount; // Update state immediately
+      debugPrint('🔧 Auto-fill triggered for CASH: $autoFillCashAmount');
+    } else if (_isCardSelected &&
+        (_cardAmount.isEmpty || double.tryParse(_cardAmount) == 0)) {
+      _cardAmount = orderTotal.toStringAsFixed(2);
+      debugPrint('🔧 Auto-fill triggered for CARD: $_cardAmount');
+    } else if (_isUpiSelected &&
+        (_upiAmount.isEmpty || double.tryParse(_upiAmount) == 0)) {
+      _upiAmount = orderTotal.toStringAsFixed(2);
+      debugPrint('🔧 Auto-fill triggered for UPI: $_upiAmount');
+    } else if (_isCodSelected &&
+        (_codAmount.isEmpty || double.tryParse(_codAmount) == 0)) {
+      _codAmount = orderTotal.toStringAsFixed(2);
+      debugPrint('🔧 Auto-fill triggered for COD: $_codAmount');
     }
 
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
-        initialIsCashSelected: autoSelectCash,
+        initialIsCashSelected: _isCashSelected,
         initialIsCardSelected: _isCardSelected,
         initialIsUpiSelected: _isUpiSelected,
         initialIsCodSelected: _isCodSelected,
         initialIsDebitSelected: _isDebitSelected,
-        initialCashAmount: autoFillCashAmount,
+        initialCashAmount: _cashAmount,
         initialCardAmount: _cardAmount,
         initialUpiAmount: _upiAmount,
         initialCodAmount: _codAmount,
@@ -4180,8 +4228,25 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Default Delivery Method (mirror of BillingPage)
   String _getDefaultDeliveryMethodId() {
     try {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+      // 1. Check AppSettings
+      final appSettingsDefault =
+          appSettingsProvider.appSettings?.defaultDeliveryMethod;
+      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
+        try {
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere((m) =>
+              m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+              m.id == appSettingsDefault);
+          return match.id;
+        } catch (e) {
+          // Not found
+        }
+      }
+
       final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
       return defaultMethod?.id ??
           "11"; // Fallback to Store Takeaway ID from API

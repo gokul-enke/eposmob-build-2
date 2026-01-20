@@ -19,6 +19,8 @@ class AppSettings {
   final bool showTaxRatePos;
   final bool showConfirmOrderButton;
   final bool enableKOTPrint;
+  final String defaultDeliveryMethod;
+  final String defaultPaymentMethod;
 
   AppSettings({
     required this.barcodeSales,
@@ -39,6 +41,8 @@ class AppSettings {
     required this.showTaxRatePos,
     required this.showConfirmOrderButton,
     required this.enableKOTPrint,
+    required this.defaultDeliveryMethod,
+    required this.defaultPaymentMethod,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -106,6 +110,10 @@ class AppSettings {
       showConfirmOrderButton:
           settingsMap['SHOW_CONFIRM_ORDER_BUTTON']?['status'] ?? true,
       enableKOTPrint: settingsMap['ENABLE_KOT_PRINT']?['status'] ?? false,
+      defaultDeliveryMethod:
+          settingsMap['DEFAULT_DELIVERY_METHOD']?['value'] ?? "",
+      defaultPaymentMethod:
+          settingsMap['DEFAULT_PAYMENT_METHOD']?['value'] ?? "",
     );
   }
 
@@ -213,6 +221,18 @@ class AppSettings {
           "code": "ENABLE_KOT_PRINT",
           "value": "",
           "status": enableKOTPrint.toString(),
+        },
+        {
+          "name": "Default Delivery Method",
+          "code": "DEFAULT_DELIVERY_METHOD",
+          "value": defaultDeliveryMethod.toString(),
+          "status": defaultDeliveryMethod.toString(),
+        },
+        {
+          "name": "Default Payment Method",
+          "code": "DEFAULT_PAYMENT_METHOD",
+          "value": defaultPaymentMethod.toString(),
+          "status": defaultPaymentMethod.toString(),
         },
       ],
     };
