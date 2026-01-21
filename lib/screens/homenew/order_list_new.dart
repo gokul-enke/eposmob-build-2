@@ -1156,7 +1156,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                     ?.toString() ??
                                 "0.00",
                             orderDate: DateHelper.formatInputToDisplay(
-                                DateTime.now().toString()),
+                                DateHelper.now().toString()),
                             orderNumber: "#000000",
                           ),
                         ),

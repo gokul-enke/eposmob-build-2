@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/get_product.dart';
@@ -1866,7 +1867,7 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateTime.now().toIso8601String(),
+      createdAt: DateHelper.now().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -2054,7 +2055,7 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateTime.now().toIso8601String(),
+      createdAt: DateHelper.now().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -2220,7 +2221,7 @@ class LocalProductProvider extends ChangeNotifier {
         customerPhone: customerPhone ?? _savedOrders[index].customerPhone,
         comment: comment ?? _savedOrders[index].comment,
         createdAt:
-            DateTime.now().toIso8601String(), // Keep original creation date
+            DateHelper.now().toIso8601String(), // Keep original creation date
         total: total,
         deliveryMethod: deliveryMethod ?? _savedOrders[index].deliveryMethod,
         // Update or preserve API-compatible fields
