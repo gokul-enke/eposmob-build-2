@@ -1028,12 +1028,12 @@ class PremiumReceiptLayout implements ReceiptLayout {
       ));
     }
 
-    rows.add(SpacingRow(_itemGap));
+    // rows.add(SpacingRow(_itemGap));
 
     // Customer Balance
     _buildCustomerBalance(rows, params, displayConfig, isEnglish);
 
-    rows.add(SpacingRow(_sectionGap));
+    // rows.add(SpacingRow(_sectionGap));
   }
 
   void _buildCustomerBalance(
