@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
@@ -6619,7 +6620,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   discountAmount:
                       orderDetails.data!.priceSummary?.discount?.toString() ??
                           "0.00",
-                  orderDate: orderDate,
+                  orderDate: DateHelper.formatInputToDisplay(orderDate),
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                   customerName: customerName,
                   customerPhone: customerPhone,
@@ -6970,6 +6971,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         percentageDiscount:
             _percentageDiscount > 0 ? _percentageDiscount : null,
         discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
+        toCustomerCredit: _toCustomerCreditEnabled,
       );
 
       debugPrint('\n📥 updateOrderAPI RESPONSE:');

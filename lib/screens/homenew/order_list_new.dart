@@ -1149,13 +1149,14 @@ class _OrderListNewState extends State<OrderListNew> {
                           builder: (context) => PrintPage(
                             cartItems: cartProductItems!,
                             formattedTotal: formattedTotal,
-                            discountAmount: Provider.of<CartProvider>(context,
+                                    discountAmount: Provider.of<CartProvider>(context,
                                         listen: false)
                                     .priceSummary
                                     ?.discount
                                     ?.toString() ??
                                 "0.00",
-                            orderDate: DateHelper.formatDate(DateTime.now()),
+                            orderDate: DateHelper.formatInputToDisplay(
+                                DateTime.now().toString()),
                             orderNumber: "#000000",
                           ),
                         ),

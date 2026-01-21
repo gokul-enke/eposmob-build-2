@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/add_to_cart.dart';
 import '../models/list_cart.dart';
 import '../resources/app_url.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:http/http.dart' as http;
 
 class CartProvider with ChangeNotifier {
@@ -820,7 +821,7 @@ class CartProvider with ChangeNotifier {
     debugPrint("📊 Percentage Discount: $percentageDiscount");
     debugPrint("💰 Discount Amount: $discountAmount");
 
-    DateTime now = DateTime.now();
+    DateTime now = DateHelper.now();
 
     String formattedDate = DateFormat('yyyy-MM-dd').format(now);
     // debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
@@ -991,6 +992,7 @@ class CartProvider with ChangeNotifier {
     double? flatDiscount,
     double? percentageDiscount,
     double? discountAmount,
+    bool? toCustomerCredit,
     String? address,
   }) async {
     debugPrint("📤 UPDATE ORDER API - Starting request");
@@ -1047,6 +1049,7 @@ class CartProvider with ChangeNotifier {
         if (percentageDiscount != null)
           "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
+        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
       };
     } else {
       // Fallback to single payment method format
@@ -1068,6 +1071,7 @@ class CartProvider with ChangeNotifier {
         if (percentageDiscount != null)
           "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
+        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
       };
     }
 

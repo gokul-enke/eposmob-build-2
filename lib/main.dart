@@ -54,9 +54,11 @@ import 'screens/login/login.dart';
 import 'screens/login/base_url_wrapper.dart';
 import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
+import 'helpers/date_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'resources/localization_service.dart';
 import 'resources/app_translations.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -93,7 +95,9 @@ void main() async {
   // Open boxes with error handling and retry logic
   await _initializeHiveBoxes();
 
+  tz.initializeTimeZones();
   await LocalizationService.init();
+  await DateHelper.init();
 
   Get.put(SideBarController());
 

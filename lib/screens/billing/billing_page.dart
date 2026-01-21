@@ -13,6 +13,7 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
@@ -4283,7 +4284,7 @@ class BillingPageState extends State<BillingPage>
                   discountAmount:
                       orderDetails.data!.priceSummary?.discount?.toString() ??
                           "0.00",
-                  orderDate: orderDate,
+                  orderDate: DateHelper.formatInputToDisplay(orderDate),
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                   customerName: customerName,
                   customerPhone: customerPhone,

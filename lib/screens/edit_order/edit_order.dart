@@ -2078,7 +2078,7 @@ class _EditOrderState extends State<EditOrder> {
                     discountAmount:
                         orderDetails.data!.priceSummary?.discount?.toString() ??
                             "0.00",
-                    orderDate: orderDate,
+                    orderDate: DateHelper.formatInputToDisplay(orderDate),
                     orderNumber: orderDetails.data!.orderNumber ?? "",
                   ),
                 ),

@@ -22,6 +22,7 @@ import '../../providers/auth_model.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import '../../helpers/date_helper.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
@@ -437,30 +438,41 @@ class _SignInScreenState extends State<SignInScreen> {
                                                           .toList());
                                                 }
 
-                                                SharedPreferenceProvider()
-                                                    .saveAccessTokenandCustomerId(
-                                                  executiveModelData
-                                                          ?.accessToken ??
-                                                      "",
-                                                  executiveModelData?.userId ??
-                                                      0,
-                                                  executiveModelData
-                                                          ?.userName ??
-                                                      "",
-                                                  executiveModelData
-                                                          ?.userRole ??
-                                                      "",
-                                                  tokenType: executiveModelData
-                                                      ?.tokenType,
-                                                  companyId: executiveModelData
-                                                      ?.companyId,
-                                                  companyName:
-                                                      executiveModelData
-                                                          ?.companyName,
-                                                  storesJson: storesJson,
-                                                );
+                                                  SharedPreferenceProvider()
+                                                      .saveAccessTokenandCustomerId(
+                                                    executiveModelData
+                                                            ?.accessToken ??
+                                                        "",
+                                                    executiveModelData?.userId ??
+                                                        0,
+                                                    executiveModelData
+                                                            ?.userName ??
+                                                        "",
+                                                    executiveModelData
+                                                            ?.userRole ??
+                                                        "",
+                                                    tokenType: executiveModelData
+                                                        ?.tokenType,
+                                                    companyId: executiveModelData
+                                                        ?.companyId,
+                                                    companyName:
+                                                        executiveModelData
+                                                            ?.companyName,
+                                                    storesJson: storesJson,
+                                                    timeZone: executiveModelData
+                                                        ?.timeZone,
+                                                  );
 
-                                                // Save ZATCA credentials for Saudi Arabia e-invoicing
+                                                  // Update DateHelper with the new timezone
+                                                  if (executiveModelData
+                                                          ?.timeZone !=
+                                                      null) {
+                                                    DateHelper.setTimeZone(
+                                                        executiveModelData!
+                                                            .timeZone!);
+                                                  }
+
+                                                  // Save ZATCA credentials for Saudi Arabia e-invoicing
                                                 if (executiveModelData?.vatNumber != null ||
                                                     executiveModelData?.zatcaCompanyName != null) {
                                                   SharedPreferenceProvider()

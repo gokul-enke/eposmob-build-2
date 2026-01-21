@@ -279,7 +279,7 @@ class MobileOrderCard extends StatelessWidget {
               discountAmount:
                   orderDetails.data?.priceSummary?.discount?.toString() ??
                       "0.00",
-              orderDate: orderDate,
+              orderDate: DateHelper.formatInputToDisplay(orderDate),
               orderNumber: orderDetails.data!.orderNumber.toString(),
               customerName: customerName,
               customerPhone: customerPhone,

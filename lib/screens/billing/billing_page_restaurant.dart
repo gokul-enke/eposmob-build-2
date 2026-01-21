@@ -12,6 +12,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -1054,7 +1055,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                   children: [
                     // Main content area
                     Expanded(
-                      flex: _isSidebarVisible ? 3 : 4,
+                      flex: _isSidebarVisible ? (size.width < 1300 ? 2 : 3) : 4,
                       child: BuildBoxShadowContainer(
                         circleRadius: 10,
                         margin: const EdgeInsets.only(
@@ -4366,7 +4367,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                   discountAmount:
                       orderDetails.data!.priceSummary?.discount?.toString() ??
                           "0.00",
-                  orderDate: orderDate,
+                  orderDate: DateHelper.formatInputToDisplay(orderDate),
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                   customerName: customerName,
                   customerPhone: customerPhone,
@@ -4983,91 +4984,99 @@ class BillingPageState extends State<BillingPageRestaurant>
         // Use the helper method for consistent balance calculation
         double balance = _calculateBalanceAmount();
 
+        bool isSmallScreen = MediaQuery.of(context).size.width < 1300;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                const SizedBox(width: 5),
-                // Payment Method Icon
-                _buildQuickAccessIcon(
-                  icon: _getPaymentIcon(),
-                  label: _getPaymentLabel(),
-                  color: ColorManager.kPrimaryColor,
-                  onTap: () => _showPaymentMethodModal(),
-                ),
-                const SizedBox(width: 12),
-                // Delivery Method Icon
-                _buildQuickAccessIcon(
-                  icon: deliveryMethod == "Store Takeaway"
-                      ? Icons.store
-                      : deliveryMethod == "Car Delivery"
-                          ? Icons.car_rental
-                          : deliveryMethod == "Door Delivery"
-                              ? Icons.doorbell_outlined
-                              : Icons.local_shipping,
-                  label: _getDeliveryMethodLabel(),
-                  color: ColorManager.kButtonBlue,
-                  onTap: () => _showDeliveryMethodModal(),
-                ),
-                const SizedBox(width: 12),
-                // Coupon Icon
-                Consumer<AppSettingsProvider>(
-                    builder: (context, appSettingsProvider, child) {
-                  // Debug logging for coupon button visibility
-                  debugPrint('🎫 COUPON BUTTON DEBUG:');
-                  debugPrint(
-                      '  - appSettingsProvider.appSettings: ${appSettingsProvider.appSettings}');
-                  if (appSettingsProvider.appSettings != null) {
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const SizedBox(width: 5),
+                  // Payment Method Icon
+                  _buildQuickAccessIcon(
+                    icon: _getPaymentIcon(),
+                    label: _getPaymentLabel(),
+                    color: ColorManager.kPrimaryColor,
+                    onTap: () => _showPaymentMethodModal(),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  const SizedBox(width: 12),
+                  // Delivery Method Icon
+                  _buildQuickAccessIcon(
+                    icon: deliveryMethod == "Store Takeaway"
+                        ? Icons.store
+                        : deliveryMethod == "Car Delivery"
+                            ? Icons.car_rental
+                            : deliveryMethod == "Door Delivery"
+                                ? Icons.doorbell_outlined
+                                : Icons.local_shipping,
+                    label: _getDeliveryMethodLabel(),
+                    color: ColorManager.kButtonBlue,
+                    onTap: () => _showDeliveryMethodModal(),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  const SizedBox(width: 12),
+                  // Coupon Icon
+                  Consumer<AppSettingsProvider>(
+                      builder: (context, appSettingsProvider, child) {
+                    // Debug logging for coupon button visibility
+                    debugPrint('🎫 COUPON BUTTON DEBUG:');
                     debugPrint(
-                        '  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
-                    debugPrint(
-                        '  - All app settings: ${appSettingsProvider.appSettings.toString()}');
+                        '  - appSettingsProvider.appSettings: ${appSettingsProvider.appSettings}');
+                    if (appSettingsProvider.appSettings != null) {
+                      debugPrint(
+                          '  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+                      debugPrint(
+                          '  - All app settings: ${appSettingsProvider.appSettings.toString()}');
 
-                    // More detailed debugging
-                    debugPrint(
-                        '  - AppSettings runtimeType: ${appSettingsProvider.appSettings.runtimeType}');
-                    debugPrint('  - AppSettings properties:');
-                    try {
-                      // Use reflection to see all properties
-                      final settings = appSettingsProvider.appSettings!;
+                      // More detailed debugging
                       debugPrint(
-                          '    - barcodeSales: ${settings.barcodeSales}');
-                      debugPrint(
-                          '    - discountAndCoupon: ${settings.discountAndCoupon}');
-                      debugPrint(
-                          '    - priceRoundOff: ${settings.priceRoundOff}');
-                      // Add other properties you know exist
-                    } catch (e) {
-                      debugPrint('    - Error accessing properties: $e');
+                          '  - AppSettings runtimeType: ${appSettingsProvider.appSettings.runtimeType}');
+                      debugPrint('  - AppSettings properties:');
+                      try {
+                        // Use reflection to see all properties
+                        final settings = appSettingsProvider.appSettings!;
+                        debugPrint(
+                            '    - barcodeSales: ${settings.barcodeSales}');
+                        debugPrint(
+                            '    - discountAndCoupon: ${settings.discountAndCoupon}');
+                        debugPrint(
+                            '    - priceRoundOff: ${settings.priceRoundOff}');
+                        // Add other properties you know exist
+                      } catch (e) {
+                        debugPrint('    - Error accessing properties: $e');
+                      }
+                    } else {
+                      debugPrint('  - appSettings is NULL');
                     }
-                  } else {
-                    debugPrint('  - appSettings is NULL');
-                  }
 
-                  if (appSettingsProvider.appSettings == null ||
-                      !appSettingsProvider.appSettings!.discountAndCoupon) {
-                    debugPrint(
-                        '  - ❌ Hiding coupon button (settings null or discountAndCoupon disabled)');
-                    return Container();
-                  }
+                    if (appSettingsProvider.appSettings == null ||
+                        !appSettingsProvider.appSettings!.discountAndCoupon) {
+                      debugPrint(
+                          '  - ❌ Hiding coupon button (settings null or discountAndCoupon disabled)');
+                      return Container();
+                    }
 
-                  debugPrint('  - ✅ Showing coupon button');
-                  return _buildQuickAccessIcon(
-                    icon: isCouponApplied
-                        ? Icons.discount
-                        : Icons.local_offer_outlined,
-                    label: isCouponApplied
-                        ? 'billing.applied_label'.tr
-                        : 'billing.discount_label'.tr,
-                    color: isCouponApplied
-                        ? ColorManager.kButtonGreen
-                        : ColorManager.kButtonYellow,
-                    onTap: () => _showCouponModal(),
-                  );
-                }),
-              ],
+                    debugPrint('  - ✅ Showing coupon button');
+                    return _buildQuickAccessIcon(
+                      icon: isCouponApplied
+                          ? Icons.discount
+                          : Icons.local_offer_outlined,
+                      label: isCouponApplied
+                          ? 'billing.applied_label'.tr
+                          : 'billing.discount_label'.tr,
+                      color: isCouponApplied
+                          ? ColorManager.kButtonGreen
+                          : ColorManager.kButtonYellow,
+                      onTap: () => _showCouponModal(),
+                      isSmallScreen: isSmallScreen,
+                    );
+                  }),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             // Payment Summary in minimized view
@@ -5211,7 +5220,9 @@ class BillingPageState extends State<BillingPageRestaurant>
     required String label,
     required Color color,
     required VoidCallback onTap,
+    bool isSmallScreen = false,
   }) {
+    bool showIcon = !isSmallScreen;
     return GestureDetector(
       onTap: onTap,
       child: BuildBoxShadowContainer(
@@ -5221,11 +5232,12 @@ class BillingPageState extends State<BillingPageRestaurant>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: color,
-            ),
+            if (showIcon)
+              Icon(
+                icon,
+                size: 18,
+                color: color,
+              ),
             const SizedBox(width: 6),
             Text(
               label,

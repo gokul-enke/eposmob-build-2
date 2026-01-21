@@ -356,7 +356,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   "0.00";
               String storeName =
                   orderDetailsModelData?.cart?.storeName ?? "Store";
-              String orderDate = orderDetailsModelData?.orderDate ?? "";
+              // Format the date here to ensure it's displayed correctly in the print
+              // The API returns date already in timezone, so we just format it without conversion
+              String rawOrderDate = orderDetailsModelData?.orderDate ?? "";
+              String orderDate = DateHelper.formatInputToDisplay(rawOrderDate);
 
               String? customerName = customerDetails?.name;
               String? customerPhone = customerDetails?.phone;

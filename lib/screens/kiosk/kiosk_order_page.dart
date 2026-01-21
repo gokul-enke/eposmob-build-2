@@ -920,7 +920,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                   ?.discount
                   ?.toString() ??
               "0.00",
-          orderDate: DateTime.now().toString(),
+          orderDate: DateHelper.formatInputToDisplay(DateTime.now().toString()),
           orderNumber: "#000000",
         ),
       ),

@@ -20,6 +20,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     int? companyId,
     String? companyName,
     String? storesJson,
+    String? timeZone,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
@@ -41,6 +42,9 @@ class SharedPreferenceProvider extends ChangeNotifier {
     }
     if (storesJson != null) {
       prefs.setString('stores', storesJson);
+    }
+    if (timeZone != null) {
+      prefs.setString('time_zone', timeZone);
     }
     // debugPrint('inside shared ,$customerName');
   }
@@ -67,6 +71,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('company_name');
     prefs.remove('stores');
     prefs.remove('active_store_id');
+    prefs.remove('time_zone');
 
     // Remove ZATCA fields
     prefs.remove('zatca_vat_number');
@@ -146,6 +151,11 @@ class SharedPreferenceProvider extends ChangeNotifier {
     return prefs.getString('stores');
   }
 
+  Future<String?> getTimeZone() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('time_zone');
+  }
+
   Future<List<dynamic>?> getStores() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? storesJson = prefs.getString('stores');
@@ -182,6 +192,16 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.remove('default_printer');
     await prefs.remove('default_paper_size');
     await prefs.remove('default_font_style');
+  }
+
+  Future<void> saveServerTimeOffset(int offsetMilliseconds) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('server_time_offset', offsetMilliseconds);
+  }
+
+  Future<int?> getServerTimeOffset() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('server_time_offset');
   }
 
   // ==================== ZATCA METHODS ====================

@@ -6,6 +6,8 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:pos_machine/helpers/date_helper.dart';
+
 class AuthenticationProvider {
   //                 *********************** Login API ***************************************************
 
@@ -34,6 +36,18 @@ class AuthenticationProvider {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       });
+      
+      // Sync server time from headers
+      if (response.headers['date'] != null) {
+        try {
+          // Date header format: Wed, 21 Oct 2015 07:28:00 GMT
+          final serverTime = HttpDate.parse(response.headers['date']!);
+          DateHelper.setServerTime(serverTime);
+        } catch (e) {
+          debugPrint("Error parsing server date header: $e");
+        }
+      }
+
       debugPrint('Login response status code: ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||

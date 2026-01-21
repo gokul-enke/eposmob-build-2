@@ -47,6 +47,7 @@ class ExecutiveModelData {
   // ZATCA fields for Saudi Arabia e-invoicing
   final String? vatNumber;
   final String? zatcaCompanyName;
+  final String? timeZone;
 
   ExecutiveModelData({
     this.accessToken,
@@ -59,6 +60,7 @@ class ExecutiveModelData {
     this.stores,
     this.vatNumber,
     this.zatcaCompanyName,
+    this.timeZone,
   });
 
   factory ExecutiveModelData.fromJson(Map<String, dynamic> json) =>
@@ -75,6 +77,7 @@ class ExecutiveModelData {
             : List<Store>.from(json["stores"].map((x) => Store.fromJson(x))),
         vatNumber: json["vat_number"],
         zatcaCompanyName: json["zatca_company_name"],
+        timeZone: json["time_zone"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -90,6 +93,7 @@ class ExecutiveModelData {
             : List<dynamic>.from(stores!.map((x) => x.toJson())),
         "vat_number": vatNumber,
         "zatca_company_name": zatcaCompanyName,
+        "time_zone": timeZone,
       };
 }
 

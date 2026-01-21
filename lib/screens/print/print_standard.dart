@@ -1443,13 +1443,31 @@ class StandardPrinter {
       pw.Font? arabicFontBold,
       Map<String, DisplayOption>? displayConfig}) {
     // Use appropriate date formatting based on source
-    String formattedDate = isFromLocalStorage
-        ? DateHelper.formatToISODateOnlyFromISO(orderDate)
-        : DateHelper.formatISODate(orderDate);
+    String formattedDate;
+    String formattedTime;
 
-    String formattedTime = isFromLocalStorage
-        ? DateHelper.formatToISODateFromIST(orderDate)
-        : DateHelper.formatISODateToIST(orderDate);
+    try {
+      // Try to parse as ISO string
+      if (isFromLocalStorage) {
+        formattedDate = DateHelper.formatToISODateOnlyFromISO(orderDate);
+        formattedTime = DateHelper.formatToISODateFromIST(orderDate);
+      } else {
+        // Check if already formatted (contains AM/PM or specific format)
+        if (orderDate.contains(' AM') || orderDate.contains(' PM')) {
+          // Already formatted, split date and time
+          final parts = orderDate.split(' ');
+          formattedDate = parts[0];
+          formattedTime = orderDate; // Use full string for time/datetime
+        } else {
+          formattedDate = DateHelper.formatISODate(orderDate);
+          formattedTime = DateHelper.formatISODateToIST(orderDate);
+        }
+      }
+    } catch (e) {
+      // Fallback if parsing fails
+      formattedDate = orderDate;
+      formattedTime = orderDate;
+    }
 
     final dateTimeStyle = pw.TextStyle(
       font: arabicFontBold,

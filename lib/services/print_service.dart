@@ -9,6 +9,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 
 class PrintService {
   const PrintService();
@@ -69,7 +70,7 @@ class PrintService {
             savedTotal: savedTotal,
             discountAmount:
                 orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
-            orderDate: orderDate,
+            orderDate: DateHelper.formatInputToDisplay(orderDate),
             orderNumber: orderDetails.data!.orderNumber ?? '',
             customerName: customerName,
             customerPhone: customerPhone,
