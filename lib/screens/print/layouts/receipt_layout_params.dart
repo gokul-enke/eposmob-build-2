@@ -30,6 +30,7 @@ class ReceiptLayoutParams {
   final String? orderComment;
   final String? customerAlternatePhone;
   final String? paymentMethod;
+  final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
   // ZATCA fields for Saudi Arabia e-invoicing
   final String? zatcaVatNumber;
   final String? zatcaCompanyName;
@@ -61,6 +62,7 @@ class ReceiptLayoutParams {
     this.orderComment,
     this.customerAlternatePhone,
     this.paymentMethod,
+    this.paymentBreakdown,
     this.zatcaVatNumber,
     this.zatcaCompanyName,
     this.isDefaultCustomer = false,

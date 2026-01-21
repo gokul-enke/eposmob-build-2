@@ -1397,14 +1397,14 @@ class StandardPrinter {
       padding: const pw.EdgeInsets.symmetric(vertical: 5),
       child: pw.Column(
         children: [
-          // Old Balance line - respects showCustomerPrevBalance visibility
+          // Old Balanceance line - respects showCustomerPrevBalance visibility
           if (oldBalance != null && showPrevBalance)
             _buildLabelValueRow(
                 (displayConfig?['showCustomerPrevBalance']?.value as String?)
                             ?.isNotEmpty ==
                         true
                     ? displayConfig!['showCustomerPrevBalance']!.value as String
-                    : (isRtl ? 'الرصيد السابق:' : 'Old Bal:'),
+                    : (isRtl ? 'الرصيد السابق:' : 'Old Balance:'),
                 oldBalance.toStringAsFixed(2),
                 balanceStyle,
                 isRtl: isRtl),
@@ -1415,7 +1415,7 @@ class StandardPrinter {
                             ?.isNotEmpty ==
                         true
                     ? displayConfig!['showCustomerPaidAmount']!.value as String
-                    : (isRtl ? 'المبلغ المدفوع:' : 'Paid Amt:'),
+                    : (isRtl ? 'المبلغ المدفوع:' : 'Paid Amount:'),
                 paidAmount.toStringAsFixed(2),
                 balanceStyle,
                 isRtl: isRtl),
@@ -1427,7 +1427,7 @@ class StandardPrinter {
                         true
                     ? displayConfig!['showCustomerCurrentBalance']!.value
                         as String
-                    : (isRtl ? 'الرصيد الحالي:' : 'Cur Bal:'),
+                    : (isRtl ? 'الرصيد الحالي:' : 'Current Balance:'),
                 currentBalance.toStringAsFixed(2),
                 balanceBoldStyle,
                 isRtl: isRtl),

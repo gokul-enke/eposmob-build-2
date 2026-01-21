@@ -356,11 +356,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             customerName: order.customerName,
             customerPhone: order.customerPhone,
             paymentMethod: order.paymentMethod,
-            customerAlternatePhone: order.alternatePhone,
-            orderComment: order.comment,
-            // Balance info not available for offline saved orders
-            isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
-          ),
+          customerAlternatePhone: order.alternatePhone,
+          orderComment: order.comment,
+          paidAmount: (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
+              ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
+              : null,
+          // Balance info not available for offline saved orders
+          isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
+        ),
         ),
       );
     } catch (error) {

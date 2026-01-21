@@ -88,11 +88,11 @@ class BalanceSectionBuilder {
       return bytes;
     }
 
-    // Old Balance
+    // Old Balanceance
     if (oldBalance != null && oldBalance != 0) {
       bytes += generator.row([
         PosColumn(
-            text: 'Old Bal:',
+            text: 'Old Balance:',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,
@@ -112,7 +112,7 @@ class BalanceSectionBuilder {
     if (paidAmount != null && paidAmount != 0) {
       bytes += generator.row([
         PosColumn(
-            text: 'Paid Amt:',
+            text: 'Paid Amount:',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,
@@ -132,7 +132,7 @@ class BalanceSectionBuilder {
     if (currentBalance != null) {
       bytes += generator.row([
         PosColumn(
-            text: 'Cur Bal:',
+            text: 'Current Balance:',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,

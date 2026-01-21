@@ -265,8 +265,30 @@ class MobileOrderCard extends StatelessWidget {
           }
         }
 
-        // Note: Balance info not available from order details API
-        // customerOldBalance, customerCurrentBalance, paidAmount will be null
+        // Calculate Paid Amount from payments map
+        double paidAmount = 0.0;
+        if (orderDetails.data?.payments != null) {
+          orderDetails.data!.payments!.forEach((key, value) {
+            paidAmount += double.tryParse(value.toString()) ?? 0.0;
+          });
+        }
+
+        // Calculate Balance from orderProps
+        double? customerCurrentBalance;
+        if (orderDetails.data?.orderProps != null) {
+          try {
+            final balanceProp = orderDetails.data!.orderProps!.firstWhere(
+              (prop) => prop.propsCode == "BALANCE",
+              orElse: () => OrderDetailsModelDataOrderProp(),
+            );
+            if (balanceProp.propsValue != null) {
+              customerCurrentBalance =
+                  double.tryParse(balanceProp.propsValue.toString());
+            }
+          } catch (e) {
+            debugPrint("Error extracting balance: $e");
+          }
+        }
 
         Navigator.push(
           context,
@@ -289,7 +311,8 @@ class MobileOrderCard extends StatelessWidget {
               paymentMethod: paymentMethod,
               orderComment: orderComment,
               orderReturns: orderDetails.data?.orderReturns,
-              // Balance info not available from order details API
+              paidAmount: paidAmount > 0 ? paidAmount : null,
+              customerCurrentBalance: customerCurrentBalance,
               isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
             ),
           ),

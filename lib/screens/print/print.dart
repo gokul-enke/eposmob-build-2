@@ -41,6 +41,7 @@ class PrintPage extends StatefulWidget {
   final String? orderComment;
   final String? customerAlternatePhone;
   final String? paymentMethod;
+  final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
 
   const PrintPage({
@@ -64,6 +65,7 @@ class PrintPage extends StatefulWidget {
     this.orderComment,
     this.customerAlternatePhone,
     this.paymentMethod,
+    this.paymentBreakdown,
     this.isDefaultCustomer = false,
   });
 
@@ -494,6 +496,7 @@ class _PrintPageState extends State<PrintPage> {
       orderComment: widget.orderComment,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
+      paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,

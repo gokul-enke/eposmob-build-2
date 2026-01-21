@@ -1316,13 +1316,16 @@ Powered by CloudPOS''',
                 OrderDetailsModel orderDetails =
                     OrderDetailsModel.fromJson(OrderDetailsresponse);
 
-                String? formattedTotal = orderDetails
+                String formattedTotal = orderDetails
                         .data?.cart?.priceSummary?.netPayable
                         ?.toString() ??
-                    orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+                    orderDetails.data?.cart?.priceSummary?.netTotal.toString() ??
+                    "0.00";
                 String? savedTotal = orderDetails
                     .data?.cart?.priceSummary?.savedTotal
                     .toString();
+                String? discountAmount =
+                    orderDetails.data?.priceSummary?.discount?.toString();
 
                 String storeName = orderDetails.data!.cart!.storeName ?? "";
                 String orderDate = orderDetails.data!.orderDate ?? "";
@@ -1340,49 +1343,96 @@ Powered by CloudPOS''',
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
 
-                String? orderComment;
-                if (orderDetails.data?.orderProps != null) {
-                  try {
-                    final commentProp =
-                        orderDetails.data!.orderProps!.firstWhere(
-                      (prop) => prop.propsCode == "COMMENT",
-                      orElse: () => OrderDetailsModelDataOrderProp(),
-                    );
-                    orderComment = commentProp.propsValue;
-                  } catch (e) {
-                    debugPrint("Error extracting order comment: $e");
+              String? orderComment;
+              if (orderDetails.data?.orderProps != null) {
+                try {
+                  final commentProp =
+                      orderDetails.data!.orderProps!.firstWhere(
+                    (prop) => prop.propsCode == "COMMENT",
+                    orElse: () => OrderDetailsModelDataOrderProp(),
+                  );
+                  orderComment = commentProp.propsValue;
+                } catch (e) {
+                  debugPrint("Error extracting order comment: $e");
+                }
+              }
+
+              // Calculate Paid Amount and Payment Breakdown
+              double paidAmount = 0.0;
+              Map<String, dynamic> paymentBreakdown = {};
+              
+              if (orderDetails.data?.payments != null) {
+                // If payments map is available, use it directly
+                orderDetails.data!.payments!.forEach((key, value) {
+                  double amount = double.tryParse(value.toString()) ?? 0.0;
+                  paidAmount += amount;
+                  if (amount > 0) {
+                    paymentBreakdown[key] = amount;
+                  }
+                });
+              } else if (orderDetails.data?.paymentStatus?.toLowerCase() == 'paid') {
+                // Fallback: If paid but no breakdown, assume full amount paid via paymentMethod
+                paidAmount = double.tryParse(formattedTotal) ?? 0.0;
+                
+                if (paymentMethod != null && paymentMethod.isNotEmpty) {
+                  // If multiple methods (comma separated), we can't split amount accurately
+                  // so we just list them. But for PrintPage we need a map.
+                  // If it's a single method, assign full amount.
+                  if (!paymentMethod.contains(',')) {
+                    paymentBreakdown[paymentMethod] = paidAmount;
+                  } else {
+                    // Multiple methods but no breakdown amounts available.
+                    // We can't populate paymentBreakdown accurately.
+                    // The PrintPage will fall back to displaying paymentMethod string.
                   }
                 }
+              }
 
-                // Note: Balance info not available from order details API
-                // customerOldBalance, customerCurrentBalance, paidAmount will be null
+              // Calculate Balance from orderProps
+              double? customerCurrentBalance;
+              if (orderDetails.data?.orderProps != null) {
+                try {
+                  final balanceProp =
+                      orderDetails.data!.orderProps!.firstWhere(
+                    (prop) => prop.propsCode == "BALANCE",
+                    orElse: () => OrderDetailsModelDataOrderProp(),
+                  );
+                  if (balanceProp.propsValue != null) {
+                    customerCurrentBalance =
+                        double.tryParse(balanceProp.propsValue.toString());
+                  }
+                } catch (e) {
+                  debugPrint("Error extracting balance: $e");
+                }
+              }
 
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PrintPage(
-                      storeName: storeName,
-                      cartItems: orderDetails.data?.cart?.cartItems ?? [],
-                      formattedTotal: formattedTotal!,
-                      savedTotal: savedTotal!,
-                      discountAmount: orderDetails.data?.priceSummary?.discount
-                              ?.toString() ??
-                          "0.00",
-                      orderDate: DateHelper.formatInputToDisplay(orderDate),
-                      orderNumber: orderDetails.data!.orderNumber.toString(),
-                      customerName: customerName,
-                      customerPhone: customerPhone,
-                      customerEmail: customerEmail,
-                      customerAddress: customerAddress,
-                      customerAlternatePhone: customerAlternatePhone,
-                      paymentMethod: paymentMethod,
-                      orderComment: orderComment,
-                      orderReturns: orderDetails.data?.orderReturns,
-                      // Balance info not available from order details API
-                      isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                    ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrintPage(
+                    storeName: storeName,
+                    cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                    formattedTotal: formattedTotal,
+                    savedTotal: savedTotal,
+                    discountAmount: discountAmount,
+                    orderDate: orderDate,
+                    orderNumber: orderNumber,
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    customerEmail: customerEmail,
+                    customerAddress: customerAddress,
+                    customerAlternatePhone: customerAlternatePhone,
+                    paymentMethod: paymentMethod,
+                    paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+                    orderComment: orderComment,
+                    orderReturns: orderDetails.data?.orderReturns,
+                    paidAmount: paidAmount > 0 ? paidAmount : null,
+                    customerCurrentBalance: customerCurrentBalance,
+                    isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   ),
-                );
+                ),
+              );
+
               }
             } catch (error) {
               debugPrint(error.toString());

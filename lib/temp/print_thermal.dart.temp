@@ -892,7 +892,7 @@ class ThermalPrinter {
         if (isEnglish) {
           if (customerOldBalance != null) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn("Old Balance:",
+              ReceiptTableColumn("Old Balanceance:",
                   weight: 0.5, align: TextAlign.left),
               ReceiptTableColumn(customerOldBalance.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.right),
@@ -1888,11 +1888,11 @@ class ThermalPrinter {
     // Add space above
     // bytes += generator.emptyLines(1);
 
-    // Old Balance line
+    // Old Balanceance line
     if (oldBalance != null) {
       bytes += generator.row([
         PosColumn(
-          text: 'Old Bal:',
+          text: 'Old Balance:',
           width: 6,
           styles: PosStyles(
             fontType: fontType,
@@ -1916,7 +1916,7 @@ class ThermalPrinter {
     if (paidAmount != null) {
       bytes += generator.row([
         PosColumn(
-          text: 'Paid Amt:',
+          text: 'Paid Amount:',
           width: 6,
           styles: PosStyles(
             fontType: fontType,
@@ -1940,7 +1940,7 @@ class ThermalPrinter {
     if (currentBalance != null) {
       bytes += generator.row([
         PosColumn(
-          text: 'Cur Bal:',
+          text: 'Current Balance:',
           width: 6,
           styles: PosStyles(
             fontType: fontType,

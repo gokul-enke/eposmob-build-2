@@ -140,7 +140,7 @@ class OrderDetailsModelData {
       );
       if (addressProp.propsValue != null &&
           addressProp.propsValue!.isNotEmpty) {
-        return addressProp.propsValue;
+        return _formatAddress(addressProp.propsValue!);
       }
 
       // Fallback to DELIVERY_ADDRESS if needed
@@ -150,12 +150,120 @@ class OrderDetailsModelData {
       );
       if (deliveryAddressProp.propsValue != null &&
           deliveryAddressProp.propsValue!.isNotEmpty) {
-        return deliveryAddressProp.propsValue;
+        return _formatAddress(deliveryAddressProp.propsValue!);
       }
     } catch (e) {
       // ignore
     }
     return null;
+  }
+
+  // Helper to format address string from JSON string or raw string
+  String _formatAddress(String rawAddress) {
+    try {
+      // Check if it looks like a JSON object (starts with {)
+      if (rawAddress.trim().startsWith('{')) {
+        // It might be a raw string representation of a Map like "{city: thalassery, ...}"
+        // which is not valid JSON. We need to parse it carefully or use regex.
+        
+        // If it's valid JSON, decode it
+        try {
+          final Map<String, dynamic> addressMap = json.decode(rawAddress);
+          return _buildAddressString(addressMap);
+        } catch (e) {
+          // Not valid JSON, try to parse the raw string representation
+          // Example: {city: thalassery, name: Athira, ...}
+          
+          String address = "";
+          String city = "";
+          String state = "";
+          String pincode = "";
+          
+          // Extract address
+          final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
+          if (addressMatch != null) address = addressMatch.group(1)?.trim() ?? "";
+          
+          // Extract city
+          final cityMatch = RegExp(r'city:\s*([^,]+)').firstMatch(rawAddress);
+          if (cityMatch != null) city = cityMatch.group(1)?.trim() ?? "";
+          
+          // Extract state (might be nested or simple)
+          final stateMatch = RegExp(r'state:\s*([^,]+)').firstMatch(rawAddress);
+          if (stateMatch != null) {
+             // If state is an object {id: 10, name: KERALA...}
+             if (stateMatch.group(1)?.trim().startsWith('{') ?? false) {
+                final stateNameMatch = RegExp(r'name:\s*([^,]+)').firstMatch(stateMatch.group(1)!);
+                if (stateNameMatch != null) state = stateNameMatch.group(1)?.trim() ?? "";
+             } else {
+                state = stateMatch.group(1)?.trim() ?? "";
+             }
+          }
+          
+          // Extract pincode
+          final pincodeMatch = RegExp(r'pincode:\s*([^,]+)').firstMatch(rawAddress);
+          if (pincodeMatch != null) {
+             // If pincode is an object {id: 3382, pin_code: 670101...}
+             if (pincodeMatch.group(1)?.trim().startsWith('{') ?? false) {
+                final pinCodeValMatch = RegExp(r'pin_code:\s*([^,]+)').firstMatch(pincodeMatch.group(1)!);
+                if (pinCodeValMatch != null) pincode = pinCodeValMatch.group(1)?.trim() ?? "";
+             } else {
+                pincode = pincodeMatch.group(1)?.trim() ?? "";
+             }
+          }
+          
+          List<String> parts = [];
+          if (address.isNotEmpty) parts.add(address);
+          if (city.isNotEmpty) parts.add(city);
+          if (state.isNotEmpty) parts.add(state);
+          if (pincode.isNotEmpty) parts.add(pincode);
+          
+          if (parts.isNotEmpty) return parts.join(', ');
+        }
+      }
+      
+      // If it's a list string "[{...}]"
+      if (rawAddress.trim().startsWith('[')) {
+         try {
+            final List<dynamic> list = json.decode(rawAddress);
+            if (list.isNotEmpty && list[0] is Map) {
+               return _buildAddressString(list[0]);
+            }
+         } catch (e) {
+            // Regex fallback for list string
+            final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
+            if (addressMatch != null) return addressMatch.group(1)?.trim() ?? rawAddress;
+         }
+      }
+      
+      return rawAddress;
+    } catch (e) {
+      return rawAddress;
+    }
+  }
+
+  String _buildAddressString(Map<dynamic, dynamic> map) {
+    List<String> parts = [];
+    
+    if (map['address'] != null) parts.add(map['address'].toString());
+    if (map['city'] != null) parts.add(map['city'].toString());
+    
+    if (map['state'] != null) {
+      if (map['state'] is Map) {
+        if (map['state']['name'] != null) parts.add(map['state']['name'].toString());
+      } else {
+        parts.add(map['state'].toString());
+      }
+    }
+    
+    if (map['pincode'] != null) {
+      if (map['pincode'] is Map) {
+        if (map['pincode']['pin_code'] != null) parts.add(map['pincode']['pin_code'].toString());
+      } else {
+        parts.add(map['pincode'].toString());
+      }
+    }
+    
+    return parts.join(', ');
   }
 
   Map<String, dynamic> toJson() => {

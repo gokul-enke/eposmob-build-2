@@ -4272,7 +4272,7 @@ class BillingPageState extends State<BillingPage>
             debugPrint(
                 "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
             debugPrint(
-                "💰 Customer Old Balance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
+                "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -5549,6 +5549,9 @@ class BillingPageState extends State<BillingPage>
             paymentMethod: savedOrder.paymentMethod,
             customerAlternatePhone: savedOrder.alternatePhone,
             orderComment: savedOrder.comment,
+            paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+                ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+                : null,
             // Balance info not available for offline saved orders
             // Check if this is a default customer based on the app settings
             isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),

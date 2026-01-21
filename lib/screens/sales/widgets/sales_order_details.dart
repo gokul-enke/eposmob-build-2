@@ -385,8 +385,31 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 }
               }
 
-              // Note: Balance info not available from order details API
-              // customerOldBalance, customerCurrentBalance, paidAmount will be null
+              // Calculate Paid Amount from payments map
+              double paidAmount = 0.0;
+              if (orderDetailsModelData?.payments != null) {
+                orderDetailsModelData!.payments!.forEach((key, value) {
+                  paidAmount += double.tryParse(value.toString()) ?? 0.0;
+                });
+              }
+
+              // Calculate Balance from orderProps
+              double? customerCurrentBalance;
+              if (orderDetailsModelData?.orderProps != null) {
+                try {
+                  final balanceProp =
+                      orderDetailsModelData!.orderProps!.firstWhere(
+                    (prop) => prop.propsCode == "BALANCE",
+                    orElse: () => OrderDetailsModelDataOrderProp(),
+                  );
+                  if (balanceProp.propsValue != null) {
+                    customerCurrentBalance =
+                        double.tryParse(balanceProp.propsValue.toString());
+                  }
+                } catch (e) {
+                  debugPrint("Error extracting balance: $e");
+                }
+              }
 
               Navigator.push(
                 context,
@@ -407,7 +430,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                     paymentMethod: paymentMethod,
                     orderComment: orderComment,
                     orderReturns: orderDetailsModelData?.orderReturns,
-                    // Balance info not available from order details API
+                    paidAmount: paidAmount > 0 ? paidAmount : null,
+                    customerCurrentBalance: customerCurrentBalance,
                     isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   ),
                 ),

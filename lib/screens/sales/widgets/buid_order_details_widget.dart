@@ -42,6 +42,57 @@ class OrderDetailWidget extends StatelessWidget {
     return totalMRP;
   }
 
+  String _formatCustomerAddressList(List<dynamic>? addressList) {
+    if (addressList == null || addressList.isEmpty) return '';
+    
+    try {
+      // If the first item is a Map (parsed JSON)
+      if (addressList[0] is Map) {
+        final map = addressList[0];
+        List<String> parts = [];
+        
+        if (map['address'] != null) parts.add(map['address'].toString());
+        if (map['city'] != null) parts.add(map['city'].toString());
+        
+        // Handle state
+        if (map['state_id'] != null) {
+           // If we have state ID but no name, we might just show ID or skip
+           // Ideally we'd look up the name, but for now let's skip if no name
+        }
+        
+        // Handle pincode
+        if (map['pincode_id'] != null) {
+           // Same for pincode
+        }
+        
+        return parts.join(', ');
+      }
+      
+      // If it's a string representation of a map "{id: 6, ...}"
+      String raw = addressList[0].toString();
+      if (raw.startsWith('{')) {
+         String address = "";
+         String city = "";
+         
+         final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(raw);
+         if (addressMatch != null) address = addressMatch.group(1)?.trim() ?? "";
+         
+         final cityMatch = RegExp(r'city:\s*([^,]+)').firstMatch(raw);
+         if (cityMatch != null) city = cityMatch.group(1)?.trim() ?? "";
+         
+         List<String> parts = [];
+         if (address.isNotEmpty) parts.add(address);
+         if (city.isNotEmpty) parts.add(city);
+         
+         if (parts.isNotEmpty) return parts.join(', ');
+      }
+      
+      return addressList.join(', ');
+    } catch (e) {
+      return addressList.join(', ');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (customerDetails == null || cartItem == null || priceSummary == null) {
@@ -454,8 +505,10 @@ class OrderDetailWidget extends StatelessWidget {
                                 'Email', customerDetails?.email ?? ''),
                           if (customerDetails?.address != null &&
                               (customerDetails?.address?.isNotEmpty ?? false))
-                            _buildInfoRow('Address',
-                                customerDetails?.address?.join(', ') ?? ''),
+                            _buildInfoRow(
+                                'Address',
+                                _formatCustomerAddressList(
+                                    customerDetails?.address)),
                         ],
                       ),
                     ),

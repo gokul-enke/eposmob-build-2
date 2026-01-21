@@ -1181,7 +1181,7 @@ class ThermalPrinter {
                         ?.isNotEmpty ==
                     true
                 ? displayConfig!['showCustomerPrevBalance']!.value as String
-                : (isEnglish ? "Old Balance:" : "الرصيد السابق:");
+                : (isEnglish ? "Old Balanceance:" : "الرصيد السابق:");
         final paidAmountLabel =
             (displayConfig?['showCustomerPaidAmount']?.value as String?)
                         ?.isNotEmpty ==

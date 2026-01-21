@@ -968,7 +968,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
     // Get labels from displayConfig
     final prevBalanceLabel = _getLabel(displayConfig, 'showCustomerPrevBalance',
-        null, isEnglish ? "Old Balance:" : "الرصيد السابق:");
+        null, isEnglish ? "Old Balanceance:" : "الرصيد السابق:");
     final paidAmountLabel = _getLabel(displayConfig, 'showCustomerPaidAmount',
         null, isEnglish ? "Paid Amount:" : "المدفوع:");
     final currentBalanceLabel = _getLabel(

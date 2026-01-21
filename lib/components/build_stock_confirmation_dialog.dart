@@ -160,7 +160,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     final double supplierOldBalance = widget.supplierOldBalance ?? 0;
 
     // Calculate current supplier balance correctly
-    // Current Balance = (Old Balance + New Purchase) - Payment Made
+    // Current Balance = (Old Balanceance + New Purchase) - Payment Made
     final double totalDue = supplierOldBalance + widget.totalAmount;
     final double currentSupplierBalance = totalDue - paidAmount;
 

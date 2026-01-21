@@ -517,6 +517,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             paymentMethod: order.paymentMethod,
             customerAlternatePhone: order.alternatePhone,
             orderComment: order.comment,
+            paidAmount: (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
+                ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
+                : null,
             // Balance info not available for offline saved orders
             isDefaultCustomer: _isDefaultCustomerPhone(context, order.customerPhone),
           ),

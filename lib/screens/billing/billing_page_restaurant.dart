@@ -4355,7 +4355,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             debugPrint(
                 "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
             debugPrint(
-                "💰 Customer Old Balance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
+                "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -5587,6 +5587,16 @@ class BillingPageState extends State<BillingPageRestaurant>
         .resetSelectedProduct();
   }
 
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
   void printFromSavedOrder(SavedOrder savedOrder) {
     try {
       // Extract cart items from the saved order
@@ -5659,7 +5669,11 @@ class BillingPageState extends State<BillingPageRestaurant>
             paymentMethod: savedOrder.paymentMethod,
             customerAlternatePhone: savedOrder.alternatePhone,
             orderComment: savedOrder.comment,
+            paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+                ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+                : null,
             // Balance info not available for offline saved orders
+            isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
           ),
         ),
       );
