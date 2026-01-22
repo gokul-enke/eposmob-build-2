@@ -3473,10 +3473,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       });
     }
 
-    // Get current time for KOT
-    final now = DateTime.now();
-    final orderTime =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    // Get current time for KOT (using DateHelper for timezone support)
+    final orderTime = DateHelper.getCurrentFormattedTime();
 
     final tableName = deliveryMethod; // Use delivery method as table name
 

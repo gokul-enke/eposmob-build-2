@@ -831,15 +831,6 @@ class PremiumReceiptLayout implements ReceiptLayout {
         "  showNetAmount: $showNetAmount (API: ${displayConfig?['showNetAmount']?.visible})");
     debugPrint("=======================================");
 
-    // Get tax percentage
-    double taxPercentage = 0.0;
-    if (total > 0 && taxAmount > 0) {
-      // Calculate tax percentage based on Gross Total
-      // Rate = Tax / Total
-      taxPercentage = (taxAmount / total) * 100;
-    }
-    String taxPercentageStr = taxPercentage.toStringAsFixed(1);
-
     // Labels
     final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
         isEnglish ? "NET TOTAL" : "المجموع");
@@ -856,9 +847,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final taxLabelBase =
         _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "VAT");
     final vatLabel = is58mm
-        ? "$taxPercentageStr% $taxLabelBase"
-        : "$taxPercentageStr% $taxLabelBase $taxPercentageStr%     ${isEnglish ? '' : 'الضريبة'}"
-            .trim();
+        ? taxLabelBase
+        : "$taxLabelBase ${isEnglish ? '' : 'الضريبة'}".trim();
 
     final grandTotalLabelBase = isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي";
     final grandTotalLabel = is58mm

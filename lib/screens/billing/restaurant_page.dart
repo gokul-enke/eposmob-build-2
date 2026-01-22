@@ -855,10 +855,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
-          // Get current time for KOT
-          final now = DateTime.now();
-          final orderTime =
-              '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+          // Get current time for KOT (using DateHelper for timezone support)
+          final orderTime = DateHelper.getCurrentFormattedTime();
 
           // Navigate to simple KOT print page
           if (mounted) {
