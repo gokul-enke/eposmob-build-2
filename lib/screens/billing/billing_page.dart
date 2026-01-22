@@ -113,6 +113,7 @@ class BillingPageState extends State<BillingPage>
   bool _isUpiSelected = false;
   bool _isCodSelected = false;
   bool _isDebitSelected = false;
+  bool _hasOpenedPaymentModalOnce = false;
   bool isInitLoading = false;
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
@@ -3552,6 +3553,7 @@ class BillingPageState extends State<BillingPage>
         selectedProductIdController.clear();
         unitPriceController.clear();
         isCouponApplied = false;
+        _hasOpenedPaymentModalOnce = false;
         _isCustomerManuallySelected = false;
         _toCustomerCreditEnabled = false;
         // Clear delivery date and time
@@ -3789,6 +3791,12 @@ class BillingPageState extends State<BillingPage>
             FocusScope.of(context).requestFocus(_customerTextFieldFocus);
           }
         });
+        return;
+      }
+
+      // Auto-show payment modal if never opened
+      if (!_hasOpenedPaymentModalOnce) {
+        _showPaymentMethodModal(onAfterApply: _confirmOrder);
         return;
       }
 
@@ -4041,6 +4049,12 @@ class BillingPageState extends State<BillingPage>
     }
     debugPrint("Create Order and Print pressed");
     debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
+
+    // Auto-show payment modal if never opened
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: _createOrderAndPrint);
+      return;
+    }
 
     setState(() {
       isLoadingCreateOrder = true;
@@ -4367,6 +4381,12 @@ class BillingPageState extends State<BillingPage>
     }
     debugPrint("Confirm Order pressed");
     debugPrint("🚀 API REQUEST STARTING - Confirm Order");
+
+    // Auto-show payment modal if never opened
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: _confirmOrder);
+      return;
+    }
 
     setState(() {
       isLoadingConfirmOrder = true;
@@ -5140,6 +5160,7 @@ class BillingPageState extends State<BillingPage>
 
   void _showPaymentMethodModal(
       {VoidCallback? onAfterApply, String? customButtonTitle}) {
+    _hasOpenedPaymentModalOnce = true;
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 

@@ -521,10 +521,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
     for (var i = 0; i < params.cartItems.length; i++) {
       _buildCartItemRow(rows, params.cartItems[i], i, params.isFromLocalStorage,
           displayConfig, isEnglish);
+      rows.add(ThinDividerRow());
     }
 
     rows.add(SpacingRow(_itemGap));
-    rows.add(ThinDividerRow());
   }
 
   void _buildTableHeader(
