@@ -842,7 +842,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Labels
     final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
-        isEnglish ? "SUBTOTAL" : "المجموع");
+        isEnglish ? "NET TOTAL" : "المجموع");
     final subtotalLabel = is58mm
         ? subtotalLabelBase
         : "$subtotalLabelBase ${isEnglish ? '' : 'المجموع'}".trim();
