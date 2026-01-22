@@ -61,30 +61,9 @@ jobs:
       - name: Build Installer
         run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
 
-      # 1. Prepare file for Google Drive (needs to be cloudpos.exe)
-      - name: Rename for Google Drive
-        run: |
-          Get-ChildItem -Path Output\*.exe | Rename-Item -NewName "cloudpos.exe"
-
-      - name: Set Drive Folder ID
-        run: |
-          if ("${{ matrix.name }}" -eq "eeezeeerp") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EEEZEEERP }}" >> $env:GITHUB_ENV }
-          if ("${{ matrix.name }}" -eq "eposdemo") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EPOSDEMO }}" >> $env:GITHUB_ENV }
-          if ("${{ matrix.name }}" -eq "linetolinepos") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}" >> $env:GITHUB_ENV }
-          if ("${{ matrix.name }}" -eq "hypersouq") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}" >> $env:GITHUB_ENV }
-
-      # Note: Uploading to Drive is moved to a separate job because the Action requires Linux (Docker).
-      # Here we upload the artifact so the Linux job can pick it up.
-      - name: Upload Artifact for Drive
-        uses: actions/upload-artifact@v4
-        with:
-          name: drive-artifact-${{ matrix.name }}
-          path: Output/cloudpos.exe
-
-      # 2. Rename for GitHub Release (needs to be unique)
       - name: Rename for GitHub Release
         run: |
-           Rename-Item -Path "Output/cloudpos.exe" -NewName "cloudpos-${{ matrix.name }}.exe"
+           Rename-Item -Path "Output\*.exe" -NewName "cloudpos-${{ matrix.name }}.exe"
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
@@ -92,42 +71,4 @@ jobs:
           files: Output/cloudpos-${{ matrix.name }}.exe
           draft: true
           prerelease: true
-
-  upload-to-drive-windows:
-    needs: build-and-release-windows
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: eeezeeerp
-          - name: eposdemo
-          - name: linetolinepos
-          - name: hypersouq
-    steps:
-      - name: Set Drive Folder ID
-        run: |
-          if [ "${{ matrix.name }}" == "eeezeeerp" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EEEZEEERP }}" >> $GITHUB_ENV; fi
-          if [ "${{ matrix.name }}" == "eposdemo" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EPOSDEMO }}" >> $GITHUB_ENV; fi
-          if [ "${{ matrix.name }}" == "linetolinepos" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}" >> $GITHUB_ENV; fi
-          if [ "${{ matrix.name }}" == "hypersouq" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}" >> $GITHUB_ENV; fi
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: drive-artifact-${{ matrix.name }}
-          path: download
-
-      - name: Verify Download
-        run: ls -R download
-
-      - name: Upload to Google Drive
-        if: ${{ env.DRIVE_FOLDER_ID != '' }}
-        uses: adityak74/google-drive-upload-git-action@main
-        with:
-          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
-          filename: download/cloudpos.exe
-          folderId: ${{ env.DRIVE_FOLDER_ID }}
-          name: cloudpos.exe
-          overwrite: "true"
 

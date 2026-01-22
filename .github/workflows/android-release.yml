@@ -56,30 +56,8 @@ jobs:
       - name: Verify APK Build
         run: ls -la build/app/outputs/flutter-apk/
 
-      # 1. Prepare file for Google Drive (needs to be cloudpos.apk)
-      - name: Rename APK for Google Drive
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/cloudpos.apk
-
-      - name: Set Drive Folder ID
-        run: |
-          if [ "${{ matrix.name }}" == "eeezeeerp" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EEEZEEERP }}" >> $GITHUB_ENV; fi
-          if [ "${{ matrix.name }}" == "eposdemo" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EPOSDEMO }}" >> $GITHUB_ENV; fi
-          if [ "${{ matrix.name }}" == "linetolinepos" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}" >> $GITHUB_ENV; fi
-          if [ "${{ matrix.name }}" == "hypersouq" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}" >> $GITHUB_ENV; fi
-
-      - name: Upload to Google Drive
-        if: ${{ env.DRIVE_FOLDER_ID != '' }}
-        uses: adityak74/google-drive-upload-git-action@main
-        with:
-          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
-          filename: build/app/outputs/flutter-apk/cloudpos.apk
-          folderId: ${{ env.DRIVE_FOLDER_ID }}
-          name: cloudpos.apk
-          overwrite: "true"
-
-      # 2. Rename for GitHub Release (needs to be unique)
       - name: Rename APK for GitHub Release
-        run: mv build/app/outputs/flutter-apk/cloudpos.apk build/app/outputs/flutter-apk/cloudpos-${{ matrix.name }}.apk
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/cloudpos-${{ matrix.name }}.apk
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
