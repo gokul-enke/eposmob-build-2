@@ -73,15 +73,13 @@ jobs:
           if ("${{ matrix.name }}" -eq "linetolinepos") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}" >> $env:GITHUB_ENV }
           if ("${{ matrix.name }}" -eq "hypersouq") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}" >> $env:GITHUB_ENV }
 
-      - name: Upload to Google Drive
-        if: ${{ env.DRIVE_FOLDER_ID != '' }}
-        uses: adityak74/google-drive-upload-git-action@main
+      # Note: Uploading to Drive is moved to a separate job because the Action requires Linux (Docker).
+      # Here we upload the artifact so the Linux job can pick it up.
+      - name: Upload Artifact for Drive
+        uses: actions/upload-artifact@v4
         with:
-          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
-          filename: Output/cloudpos.exe
-          folderId: ${{ env.DRIVE_FOLDER_ID }}
-          name: cloudpos.exe
-          overwrite: "true"
+          name: drive-artifact-${{ matrix.name }}
+          path: Output/cloudpos.exe
 
       # 2. Rename for GitHub Release (needs to be unique)
       - name: Rename for GitHub Release
@@ -94,4 +92,42 @@ jobs:
           files: Output/cloudpos-${{ matrix.name }}.exe
           draft: true
           prerelease: true
+
+  upload-to-drive-windows:
+    needs: build-and-release-windows
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: eeezeeerp
+          - name: eposdemo
+          - name: linetolinepos
+          - name: hypersouq
+    steps:
+      - name: Set Drive Folder ID
+        run: |
+          if [ "${{ matrix.name }}" == "eeezeeerp" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EEEZEEERP }}" >> $GITHUB_ENV; fi
+          if [ "${{ matrix.name }}" == "eposdemo" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EPOSDEMO }}" >> $GITHUB_ENV; fi
+          if [ "${{ matrix.name }}" == "linetolinepos" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}" >> $GITHUB_ENV; fi
+          if [ "${{ matrix.name }}" == "hypersouq" ]; then echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}" >> $GITHUB_ENV; fi
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: drive-artifact-${{ matrix.name }}
+          path: download
+
+      - name: Verify Download
+        run: ls -R download
+
+      - name: Upload to Google Drive
+        if: ${{ env.DRIVE_FOLDER_ID != '' }}
+        uses: adityak74/google-drive-upload-git-action@main
+        with:
+          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
+          filename: download/cloudpos.exe
+          folderId: ${{ env.DRIVE_FOLDER_ID }}
+          name: cloudpos.exe
+          overwrite: "true"
 
