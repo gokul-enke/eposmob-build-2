@@ -858,11 +858,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
         : "$taxPercentageStr% $taxLabelBase $taxPercentageStr%     ${isEnglish ? '' : 'الضريبة'}"
             .trim();
 
-    final grandTotalLabelBase = _getLabel(displayConfig, 'showNetAmount',
-        resolvedLabels?.total, isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
+    final grandTotalLabelBase = isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي";
     final grandTotalLabel = is58mm
         ? grandTotalLabelBase
-        : "${grandTotalLabelBase} ${isEnglish ? '' : 'المبلغ الاجمالي'}".trim();
+        : "$grandTotalLabelBase ${isEnglish ? '' : 'المبلغ الاجمالي'}".trim();
 
     final cashLabel =
         _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
@@ -1438,7 +1437,8 @@ class BoxedTotalsRow extends ReceiptRow {
     final paint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0; // Changed from 1.5 to 2.0 to prevent dithering/dotted look
+      ..strokeWidth =
+          2.0; // Changed from 1.5 to 2.0 to prevent dithering/dotted look
 
     final rect = RRect.fromRectAndRadius(
       Rect.fromLTWH(

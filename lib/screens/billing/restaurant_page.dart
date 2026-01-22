@@ -712,6 +712,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _activeTableId = null;
     });
 
+    // Reset payment modal flag in OrderPanel
+    _orderPanelKey.currentState?.resetPaymentModalFlag();
+
     showScaffold(
       context: context,
       message: 'New order started. Cart cleared and table deselected.',
@@ -2553,6 +2556,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   bool _toCustomerCreditEnabled = false;
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
   String _orderComment = "";
+  bool _hasOpenedPaymentModalOnce = false;
 
   // Expose current comment to parent (RestaurantPage) for new order flow
   String get orderComment => _orderComment;
@@ -2778,7 +2782,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-  void _showPaymentMethodModal() {
+  void _showPaymentMethodModal({VoidCallback? onAfterApply}) {
     if (_selectedOrder == null) return;
 
     // Calculate current total from cart items (dynamic calculation)
@@ -2913,6 +2917,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
+        onAfterApply: onAfterApply,
         onPaymentMethodSelected: (
           isCash,
           isCard,
@@ -2944,6 +2949,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             _debitAmount = debit;
             _transactionNumber = transaction;
             _toCustomerCreditEnabled = toCustomerCredit;
+            _hasOpenedPaymentModalOnce = true;
             // Capture the actual customer credit amount from the debit parameter
             _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0;
 
@@ -3734,6 +3740,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
+              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data');
             } else {
               // Keep the current selection - don't clear it immediately
@@ -3796,6 +3803,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
+              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data (silent)');
             } else {
               debugPrint(
@@ -3875,6 +3883,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       _balanceAmount = 0.0;
       _toCustomerCreditEnabled = false;
       _toCustomerCreditAmount = 0.0;
+
+      // Reset payment modal flag
+      _hasOpenedPaymentModalOnce = false;
     });
     debugPrint('✅ Order editing state cleared');
   }
@@ -3912,7 +3923,17 @@ class _OrderPanelState extends State<_OrderPanel> {
     _toCustomerCreditEnabled = false;
     _toCustomerCreditAmount = 0.0;
 
+    // Reset payment modal flag
+    _hasOpenedPaymentModalOnce = false;
+
     debugPrint('✅ Order editing state cleared');
+  }
+
+  // Public method to reset payment modal flag (called from parent)
+  void resetPaymentModalFlag() {
+    setState(() {
+      _hasOpenedPaymentModalOnce = false;
+    });
   }
 
   // Load order-specific data (customer, payment, etc.) from the selected order
@@ -6533,6 +6554,11 @@ class _OrderPanelState extends State<_OrderPanel> {
   Future<void> _confirmOrderAndPrintBill() async {
     if (_selectedOrder == null) return;
 
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: _confirmOrderAndPrintBill);
+      return;
+    }
+
     // Capture order data before confirmation (in case it cleans up)
     final capturedOrder = _selectedOrder;
 
@@ -6724,6 +6750,11 @@ class _OrderPanelState extends State<_OrderPanel> {
         context: context,
         message: 'No order selected to confirm',
       );
+      return false;
+    }
+
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: () => _confirmOrder(closeOnSuccess: closeOnSuccess));
       return false;
     }
 

@@ -7,6 +7,22 @@ permissions:
   contents: write
 jobs:
   build-and-release-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: eeezeeerp
+            url: "https://eeezeeerp.cloudposai.com"
+            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_EEEZEEERP }}
+          - name: eposdemo
+            url: "https://eposdemo.yougoit.in"
+            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_EPOSDEMO }}
+          - name: linetolinepos
+            url: "https://linetolinepos.yougoit.in"
+            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}
+          - name: hypersouq
+            url: "https://epos.hypersouq.in"
+            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +36,7 @@ jobs:
         run: flutter pub get
 
       - name: Build artifacts
-        run: flutter build windows --release -v
+        run: flutter build windows --release -v --dart-define=BASE_URL=${{ matrix.url }}
 
       - name: Copy DLLs to Release Folder
         run: |
@@ -36,18 +52,32 @@ jobs:
       - name: Build Installer
         run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
 
+      - name: Rename Installer
+        run: |
+          Get-ChildItem -Path Output\*.exe | Rename-Item -NewName "cloudpos.exe"
+
       - name: Upload Executable Artifact
         uses: actions/upload-artifact@v4
         with:
-          path: "Output/*.exe"
-          name: EposMachine-windows-${{github.ref_name}}.exe
+          path: "Output/cloudpos.exe"
+          name: cloudpos-${{ matrix.name }}.exe
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Output/*.exe
+            Output/cloudpos.exe
           draft: true
           prerelease: true
           generate_release_notes: true
+
+      - name: Upload to Google Drive
+        if: ${{ matrix.folder_id != '' }}
+        uses: adityak74/google-drive-upload-git-action@v4.9
+        with:
+          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
+          filename: Output/cloudpos.exe
+          folderId: ${{ matrix.folder_id }}
+          name: cloudpos.exe
+          overwrite: "true"
 
