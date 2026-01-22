@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload to Google Drive
         if: ${{ env.DRIVE_FOLDER_ID != '' }}
-        uses: adityak74/google-drive-upload-git-action@v4.9
+        uses: adityak74/google-drive-upload-git-action@main
         with:
           credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
           filename: build/app/outputs/flutter-apk/cloudpos.apk
