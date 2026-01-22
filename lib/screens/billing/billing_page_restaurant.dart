@@ -293,6 +293,10 @@ class BillingPageState extends State<BillingPageRestaurant>
               '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
         }
       });
+
+      // Listen for cart changes to reset payment modal flag
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.addListener(_onCartChanged);
     });
 
     // Ensure UI updates when virtual keyboard edits the customer phone field
@@ -349,6 +353,9 @@ class BillingPageState extends State<BillingPageRestaurant>
 
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.removeListener(_onUserSwitched);
+
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.removeListener(_onCartChanged);
     } catch (e) {
       debugPrint("Error removing listeners: $e");
     }
@@ -826,6 +833,15 @@ class BillingPageState extends State<BillingPageRestaurant>
       } catch (e) {
         // debugPrint("Error handling key press: $e");
       }
+    }
+  }
+
+  void _onCartChanged() {
+    if (_hasOpenedPaymentModalOnce && mounted) {
+      debugPrint("🛒 Cart changed - Resetting payment modal flag");
+      setState(() {
+        _hasOpenedPaymentModalOnce = false;
+      });
     }
   }
 
@@ -5256,7 +5272,6 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   void _showPaymentMethodModal(
       {VoidCallback? onAfterApply, String? customButtonTitle}) {
-    _hasOpenedPaymentModalOnce = true;
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -5356,6 +5371,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             _debitAmountController.text = debitAmount;
             _transactionNumberController.text = transactionNumber;
             _toCustomerCreditEnabled = toCustomerCredit;
+            _hasOpenedPaymentModalOnce = true;
 
             // Update balance amount using the same calculation logic as the modal
             _updateBalanceAmount();

@@ -289,6 +289,11 @@ class BillingPageState extends State<BillingPage>
               '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
         }
       });
+
+      // Listen for cart changes to reset payment modal flag
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.addListener(_onCartChanged);
     });
 
     // Ensure UI updates when virtual keyboard edits the customer phone field
@@ -345,6 +350,10 @@ class BillingPageState extends State<BillingPage>
 
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.removeListener(_onUserSwitched);
+
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.removeListener(_onCartChanged);
     } catch (e) {
       debugPrint("Error removing listeners: $e");
     }
@@ -362,6 +371,15 @@ class BillingPageState extends State<BillingPage>
     // We don't necessarily need to do anything here, just having the listener
     // attached allows us to check focus state later.
     // debugPrint('Paid Amount field focus: ${_paidAmountFocusNode.hasFocus}');
+  }
+
+  void _onCartChanged() {
+    if (_hasOpenedPaymentModalOnce && mounted) {
+      debugPrint("🛒 Cart changed - Resetting payment modal flag");
+      setState(() {
+        _hasOpenedPaymentModalOnce = false;
+      });
+    }
   }
 
   // Function to initialize the connectivity listener
@@ -5160,7 +5178,7 @@ class BillingPageState extends State<BillingPage>
 
   void _showPaymentMethodModal(
       {VoidCallback? onAfterApply, String? customButtonTitle}) {
-    _hasOpenedPaymentModalOnce = true;
+    // _hasOpenedPaymentModalOnce = true; // Moved to onPaymentMethodSelected to ensure it only sets when user actually applies
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -5248,6 +5266,7 @@ class BillingPageState extends State<BillingPage>
           String? codMethodId,
         }) {
           setState(() {
+            _hasOpenedPaymentModalOnce = true; // Set flag here to indicate user manually made a selection (even if None)
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;

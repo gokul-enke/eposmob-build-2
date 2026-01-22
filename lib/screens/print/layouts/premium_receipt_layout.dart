@@ -521,7 +521,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
     for (var i = 0; i < params.cartItems.length; i++) {
       _buildCartItemRow(rows, params.cartItems[i], i, params.isFromLocalStorage,
           displayConfig, isEnglish);
-      rows.add(ThinDividerRow());
+      if (i < params.cartItems.length - 1) {
+        rows.add(ThinDividerRow());
+      }
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -1369,7 +1371,7 @@ class ThinDividerRow extends ReceiptRow {
       TextDirection textDirection) {
     final paint = Paint()
       ..color = Colors.black87
-      ..strokeWidth = 1;
+      ..strokeWidth = 2;
     canvas.drawLine(Offset(0, y + 3), Offset(width, y + 3), paint);
   }
 }
@@ -1386,7 +1388,7 @@ class DottedDividerRow extends ReceiptRow {
       TextDirection textDirection) {
     final paint = Paint()
       ..color = Colors.black54
-      ..strokeWidth = 1;
+      ..strokeWidth = 2;
 
     const double dashWidth = 4.0;
     const double dashSpace = 3.0;
@@ -1452,7 +1454,7 @@ class BoxedTotalsRow extends ReceiptRow {
         // Draw dashed separator
         final sepPaint = Paint()
           ..color = Colors.black
-          ..strokeWidth = 1;
+          ..strokeWidth = 2;
 
         const double dashWidth = 4.0;
         const double dashSpace = 3.0;
