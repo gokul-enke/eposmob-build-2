@@ -7332,42 +7332,42 @@ class _OrderPanelState extends State<_OrderPanel> {
               ),
             ),
             const SizedBox(height: 12),
-            // Bottom row: New, Save, Sent, Print (4 buttons)
+            // Bottom row: Save, Send & Print
             Row(
               children: [
-                // New button
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => widget.onNewOrder(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: const Color(0xFF64748B),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'New',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s12 : FontSize.s13,
-                                0.21,
-                                const Color(0xFF64748B)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
+                // New button - REMOVED
+                // Expanded(
+                //   child: Material(
+                //     color: Colors.transparent,
+                //     child: InkWell(
+                //       onTap: () => widget.onNewOrder(),
+                //       borderRadius: BorderRadius.circular(12),
+                //       child: AnimatedContainer(
+                //         duration: const Duration(milliseconds: 200),
+                //         height: widget.isCompact ? 44 : 48,
+                //         decoration: BoxDecoration(
+                //           color: Colors.white,
+                //           border: Border.all(
+                //             color: const Color(0xFF64748B),
+                //             width: 1.5,
+                //           ),
+                //           borderRadius: BorderRadius.circular(12),
+                //         ),
+                //         child: Center(
+                //           child: Text(
+                //             'New',
+                //             style: buildCustomStyle(
+                //                 FontWeightManager.semiBold,
+                //                 widget.isCompact ? FontSize.s12 : FontSize.s13,
+                //                 0.21,
+                //                 const Color(0xFF64748B)),
+                //           ),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                // const SizedBox(width: 8),
                 // Save button
                 Expanded(
                   child: Material(
@@ -7429,77 +7429,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Sent button (renamed from Send to Kitchen)
+                // Send & Print KOT button (Mixed)
                 Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap:
-                          (cartItems.isEmpty || widget.isLoadingSendToKitchen)
-                              ? null
-                              : () => widget.onSendToKitchen(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: (cartItems.isEmpty ||
-                                  widget.isLoadingSendToKitchen)
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF059669),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: (cartItems.isNotEmpty &&
-                                  !widget.isLoadingSendToKitchen)
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF059669)
-                                        .withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: Center(
-                          child: widget.isLoadingSendToKitchen
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 20,
-                                  height: widget.isCompact ? 16 : 20,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.send,
-                                      color: Colors.white,
-                                      size: widget.isCompact ? 14 : 16,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Sent',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s12
-                                              : FontSize.s13,
-                                          0.21,
-                                          Colors.white),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Print button (new)
-                Expanded(
+                  flex: 2, // Give it more space as it's the primary action
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -7513,13 +7445,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                         decoration: BoxDecoration(
                           color: (cartItems.isEmpty || widget.isLoadingPrint)
                               ? const Color(0xFF94A3B8)
-                              : const Color(0xFF64748B),
+                              : const Color(0xFF059669),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow:
                               (cartItems.isNotEmpty && !widget.isLoadingPrint)
                                   ? [
                                       BoxShadow(
-                                        color: const Color(0xFF2563EB)
+                                        color: const Color(0xFF059669)
                                             .withOpacity(0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
@@ -7542,13 +7474,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.print,
+                                      Icons.send,
                                       color: Colors.white,
                                       size: widget.isCompact ? 14 : 16,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Print',
+                                      'Send To Kitchen',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact

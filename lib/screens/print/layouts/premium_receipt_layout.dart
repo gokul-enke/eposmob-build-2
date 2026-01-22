@@ -792,7 +792,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final bool is58mm = params.is58mm;
 
     double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
-    double total = double.tryParse(params.formattedTotal) ?? 0.0;
+    double total = double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     double discountAmountValue =
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
     double taxAmount = params.totalTax;
@@ -832,9 +832,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
     debugPrint("=======================================");
 
     // Get tax percentage
-    double taxPercentage = 15.0;
-    if (subtotal > 0 && taxAmount > 0) {
-      taxPercentage = (taxAmount / (subtotal - taxAmount)) * 100;
+    double taxPercentage = 0.0;
+    if (total > 0 && taxAmount > 0) {
+      // Calculate tax percentage based on Gross Total
+      // Rate = Tax / Total
+      taxPercentage = (taxAmount / total) * 100;
     }
     String taxPercentageStr = taxPercentage.toStringAsFixed(1);
 
