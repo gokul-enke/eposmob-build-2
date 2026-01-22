@@ -13,16 +13,12 @@ jobs:
         include:
           - name: eeezeeerp
             url: "https://eeezeeerp.cloudposai.com"
-            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_EEEZEEERP }}
           - name: eposdemo
             url: "https://eposdemo.yougoit.in"
-            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_EPOSDEMO }}
           - name: linetolinepos
             url: "https://linetolinepos.yougoit.in"
-            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}
           - name: hypersouq
             url: "https://epos.hypersouq.in"
-            folder_id: ${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,13 +67,20 @@ jobs:
           prerelease: true
           generate_release_notes: true
 
+      - name: Set Drive Folder ID
+        run: |
+          if ("${{ matrix.name }}" -eq "eeezeeerp") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EEEZEEERP }}" >> $env:GITHUB_ENV }
+          if ("${{ matrix.name }}" -eq "eposdemo") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_EPOSDEMO }}" >> $env:GITHUB_ENV }
+          if ("${{ matrix.name }}" -eq "linetolinepos") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_LINETOLINEPOS }}" >> $env:GITHUB_ENV }
+          if ("${{ matrix.name }}" -eq "hypersouq") { echo "DRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID_HYPERSOUQ }}" >> $env:GITHUB_ENV }
+
       - name: Upload to Google Drive
-        if: ${{ matrix.folder_id != '' }}
+        if: ${{ env.DRIVE_FOLDER_ID != '' }}
         uses: adityak74/google-drive-upload-git-action@v4.9
         with:
           credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
           filename: Output/cloudpos.exe
-          folderId: ${{ matrix.folder_id }}
+          folderId: ${{ env.DRIVE_FOLDER_ID }}
           name: cloudpos.exe
           overwrite: "true"
 
