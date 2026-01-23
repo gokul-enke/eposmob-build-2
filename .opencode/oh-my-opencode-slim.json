@@ -1,0 +1,30 @@
+{
+    "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+    "permission": "allow",
+    "agents": {
+        "oracle": {
+            "model": "zai-coding-plan/glm-4.7"
+        },
+        "explore": {
+            "model": "opencode/grok-code"
+        },
+        "librarian": {
+            "model": "zai-coding-plan/glm-4.7"
+        },
+        "general": {
+            "model": "zai-coding-plan/glm-4.7"
+        },
+        "frontend-ui-ux-engineer": {
+            "model": "google/gemini-3-pro-preview"
+        },
+        "designer": {
+            "model": "google/gemini-3-pro-preview"
+        },
+        "document-writer": {
+            "model": "zai-coding-plan/glm-4.7"
+        },
+        "multimodal-looker": {
+            "model": "zai-coding-plan/glm-4.7"
+        }
+    }
+}
