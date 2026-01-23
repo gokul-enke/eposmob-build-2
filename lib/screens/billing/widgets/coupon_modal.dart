@@ -25,6 +25,7 @@ class CouponModal extends StatefulWidget {
   final bool isCouponApplied;
   final Function(String, bool,
       {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+  final bool closeOnApply; // Optional flag to control modal closing behavior
 
   const CouponModal({
     super.key,
@@ -34,6 +35,7 @@ class CouponModal extends StatefulWidget {
     required this.initialCouponCode,
     required this.isCouponApplied,
     required this.onCouponAction,
+    this.closeOnApply = true,
   });
 
   @override
@@ -731,7 +733,9 @@ class _CouponModalState extends State<CouponModal> {
                                                   percentageDiscount:
                                                       percentageDiscount,
                                                 );
-                                                Navigator.of(context).pop();
+                                                if (widget.closeOnApply) {
+                                                  Navigator.of(context).pop();
+                                                }
                                               },
                                         fontSize: FontSize.s14,
                                         height: 45,

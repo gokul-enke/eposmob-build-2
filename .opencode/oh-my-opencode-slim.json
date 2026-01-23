@@ -6,7 +6,7 @@
             "model": "zai-coding-plan/glm-4.7"
         },
         "explore": {
-            "model": "opencode/grok-code"
+            "model": "github-copilot/gemini-3-flash-preview"
         },
         "librarian": {
             "model": "zai-coding-plan/glm-4.7"
@@ -15,10 +15,10 @@
             "model": "zai-coding-plan/glm-4.7"
         },
         "frontend-ui-ux-engineer": {
-            "model": "google/gemini-3-pro-preview"
+            "model": "github-copilot/gemini-3-flash-preview"
         },
         "designer": {
-            "model": "google/gemini-3-pro-preview"
+            "model": "github-copilot/gemini-3-flash-preview"
         },
         "document-writer": {
             "model": "zai-coding-plan/glm-4.7"

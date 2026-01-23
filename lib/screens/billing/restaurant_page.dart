@@ -13,6 +13,7 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 
@@ -2574,6 +2575,10 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _percentageDiscount = 0.0;
   String _couponCode = "";
 
+  // Cart Item Status Variables (for Mark Served functionality)
+  List<CartItemStatus> _availableStatuses = [];
+  bool _isMarkingServed = false;
+
   @override
   void initState() {
     super.initState();
@@ -2584,6 +2589,10 @@ class _OrderPanelState extends State<_OrderPanel> {
         _refreshLocalDrafts();
       });
     }
+    // Fetch cart item statuses for Mark Served functionality
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchCartItemStatuses();
+    });
   }
 
   @override
@@ -2707,6 +2716,142 @@ class _OrderPanelState extends State<_OrderPanel> {
       _applyDefaultCustomer();
     } catch (e) {
       debugPrint('❌ [DEBUG] Error fetching customers: $e');
+    }
+  }
+
+  /// Fetch cart item statuses for Mark Served functionality
+  Future<void> _fetchCartItemStatuses() async {
+    debugPrint('🚀 === FETCHING CART ITEM STATUSES (Restaurant) ===');
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      final response = await cartProvider.getCartItemStatuses(
+        accessToken: authModel.token ?? '',
+      );
+
+      if ((response['status'] as String?)?.toLowerCase() == 'success') {
+        final statusResponse = CartItemStatusResponse.fromJson(response);
+        setState(() {
+          _availableStatuses = statusResponse.data;
+        });
+
+        debugPrint('✅ Fetched ${_availableStatuses.length} cart item statuses');
+        for (var status in _availableStatuses) {
+          debugPrint('   📊 ID: ${status.id}, Value: "${status.value}"');
+        }
+      } else {
+        debugPrint('❌ Failed to fetch cart item statuses: ${response['message']}');
+      }
+    } catch (e) {
+      debugPrint('❌ Exception fetching cart item statuses: $e');
+    }
+  }
+
+  /// Helper method to find status ID by value
+  int? _findStatusIdByValue(String value) {
+    if (_availableStatuses.isEmpty) {
+      debugPrint('⚠️ No available statuses loaded yet');
+      return null;
+    }
+
+    final status = _availableStatuses.firstWhere(
+      (s) => s.value.toUpperCase() == value.toUpperCase(),
+      orElse: () => CartItemStatus(id: 0, value: '', description: ''),
+    );
+
+    if (status.id == 0) {
+      debugPrint('⚠️ Status value "$value" not found in available statuses');
+      return null;
+    }
+
+    debugPrint('🔍 Found status ID ${status.id} for value "$value"');
+    return status.id;
+  }
+
+  /// Mark all order items as SERVED
+  Future<void> _markAllOrderItemsServed() async {
+    if (_selectedOrder == null) return;
+
+    final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
+    final displayOrderId = _selectedOrder['order_number']?.toString() ?? 
+                           _selectedOrder['display_order_id']?.toString() ?? 
+                           orderId.toString();
+
+    debugPrint('🚀 === MARKING ALL ORDER ITEMS AS SERVED ===');
+    debugPrint('📦 Order ID: $orderId');
+
+    final statusId = _findStatusIdByValue('SERVED');
+    if (statusId == null) {
+      showScaffoldError(context: context, message: 'Status "SERVED" not found');
+      return;
+    }
+
+    setState(() {
+      _isMarkingServed = true;
+    });
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      final response = await cartProvider.updateAllOrderItemsStatus(
+        orderId: orderId,
+        statusId: statusId,
+        accessToken: authModel.token ?? '',
+      );
+
+      debugPrint('📥 API Response: $response');
+
+      if ((response['status'] as String?)?.toLowerCase() == 'success') {
+        debugPrint('✅ All order items updated to SERVED');
+        
+        // Refresh the saved orders to get updated statuses
+        await _refreshSavedOrdersSilently();
+        
+        // Re-select the order to refresh details
+        if (_selectedOrder != null) {
+          final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
+          final refreshedOrder = _savedOrders.firstWhere(
+            (o) => (o['order_id'] ?? o['id']) == orderId,
+            orElse: () => _selectedOrder,
+          );
+          setState(() {
+            _selectedOrder = refreshedOrder;
+          });
+          widget.onOrderSelected(refreshedOrder);
+        }
+
+        if (mounted) {
+          showScaffold(
+            context: context,
+            message: 'Order $displayOrderId items marked as SERVED',
+          );
+        }
+      } else {
+        debugPrint('❌ Failed to update all order items');
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Failed to mark items as served: ${response['message']}',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Exception updating all order items: $e');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error marking items as served: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isMarkingServed = false;
+        });
+      }
+      debugPrint('🏁 === MARK ALL SERVED COMPLETED ===');
     }
   }
 
@@ -2916,6 +3061,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
+        isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
         onAfterApply: onAfterApply,
         onPaymentMethodSelected: (
           isCash,
@@ -4532,7 +4678,9 @@ class _OrderPanelState extends State<_OrderPanel> {
           //   ),
           // ],
 
-          if (_selectedCustomer != null) ...[
+          // Only show customer balance if a customer is selected AND it's NOT the default customer
+          if (_selectedCustomer != null && 
+              !Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer) ...[
             const SizedBox(height: 8),
             Container(
               height: 1,
@@ -5781,33 +5929,37 @@ class _OrderPanelState extends State<_OrderPanel> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 2. Confirm Button (Right Side) - Opens Checkout Modal
+                // 2. Confirm or Mark Served Button (Right Side)
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: (cartItems.isEmpty ||
-                              !allItemsServed ||
-                              _isLoadingConfirm)
+                      onTap: cartItems.isEmpty
                           ? null
-                          : () => _showCheckoutModal(),
+                          : allItemsServed
+                              ? (_isLoadingConfirm ? null : () => _showCheckoutModal())
+                              : (_isMarkingServed ? null : () => _markAllOrderItemsServed()),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: (cartItems.isEmpty ||
-                                  !allItemsServed ||
-                                  _isLoadingConfirm)
+                          color: cartItems.isEmpty
                               ? const Color(0xFF94A3B8)
-                              : const Color(0xFF2563EB),
+                              : allItemsServed
+                                  ? (_isLoadingConfirm
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF2563EB))
+                                  : (_isMarkingServed
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF059669)), // Green for Mark Served
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: (cartItems.isNotEmpty &&
-                                  allItemsServed &&
-                                  !_isLoadingConfirm)
+                          boxShadow: cartItems.isNotEmpty && !_isLoadingConfirm && !_isMarkingServed
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF2563EB)
+                                    color: (allItemsServed
+                                            ? const Color(0xFF2563EB)
+                                            : const Color(0xFF059669))
                                         .withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
@@ -5816,7 +5968,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                               : [],
                         ),
                         child: Center(
-                          child: _isLoadingConfirm
+                          child: (_isLoadingConfirm || _isMarkingServed)
                               ? SizedBox(
                                   width: widget.isCompact ? 16 : 20,
                                   height: widget.isCompact ? 16 : 20,
@@ -5830,13 +5982,15 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.check_circle,
+                                      allItemsServed
+                                          ? Icons.check_circle
+                                          : Icons.room_service,
                                       color: Colors.white,
                                       size: widget.isCompact ? 16 : 18,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Confirm',
+                                      allItemsServed ? 'Confirm' : 'Mark Served',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
@@ -5887,9 +6041,6 @@ class _OrderPanelState extends State<_OrderPanel> {
         _flatDiscount + (orderTotal * _percentageDiscount / 100);
     double finalOrderTotal = orderTotal - totalDiscountAmount;
 
-    // Customer Balance
-    final customerBalance = _selectedCustomer?.balance ?? 0.0;
-
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: BoxDecoration(
@@ -5898,55 +6049,83 @@ class _OrderPanelState extends State<_OrderPanel> {
         border: Border.all(color: Colors.blue.shade100),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Text(
-                'Total: ',
-                style: buildCustomStyle(
-                    FontWeightManager.semiBold, 16, 0.2, Colors.black87),
-              ),
-              Text(
-                finalOrderTotal.toStringAsFixed(2),
-                style: buildCustomStyle(
-                    FontWeightManager.bold, 16, 0.2, const Color(0xFF2563EB)),
-              ),
-            ],
+          Text(
+            'Total: ',
+            style: buildCustomStyle(
+                FontWeightManager.semiBold, 16, 0.2, Colors.black87),
           ),
-          if (_selectedCustomer != null)
-            Row(
-              children: [
-                Text(
-                  'Cust. Bal: ',
-                  style: buildCustomStyle(
-                      FontWeightManager.semiBold, 16, 0.2, Colors.black87),
-                ),
-                Text(
-                  customerBalance.toStringAsFixed(2),
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      16,
-                      0.2,
-                      customerBalance >= 0
-                          ? const Color(0xFF059669)
-                          : const Color(0xFFDC2626)),
-                ),
-              ],
-            ),
+          Text(
+            finalOrderTotal.toStringAsFixed(2),
+            style: buildCustomStyle(
+                FontWeightManager.bold, 16, 0.2, const Color(0xFF2563EB)),
+          ),
         ],
       ),
     );
   }
 
   void _showCheckoutModal() {
+    // Mark that payment modal opportunity has been given (via checkout dialog)
+    setState(() {
+      _hasOpenedPaymentModalOnce = true;
+    });
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogContext) {
         return _CheckoutDialog(
           orderPanelState: this,
           cartTotal: _calculateOrderTotal(),
+          onCloseDialog: () {
+            Navigator.of(dialogContext).pop();
+          },
+          customers: _customers,
+          onCustomerSelected: (customer) {
+            setState(() {
+              _selectedCustomer = customer;
+              _selectedCustomerID = customer.id;
+              _selectedCustomerPhone = customer.phone;
+              _isCustomerManuallySelected = true;
+            });
+            // Also update the global provider
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .setSelectedCustomer(customer);
+          },
+          onAddNewCustomer: (String searchQuery) async {
+            // Close the checkout dialog temporarily
+            Navigator.of(dialogContext).pop();
+            // Check if search query is a 10-digit number
+            String phoneToPreFill = '';
+            if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+              phoneToPreFill = searchQuery;
+            }
+            final result = await showAddCustomerModal(
+              context, 
+              MediaQuery.of(context).size,
+              mobileNumber: phoneToPreFill
+            );
+            if (result != null && result['status'] == 'success') {
+              await _fetchCustomers();
+              // Find and auto-select the newly added customer by phone
+              final addedPhone = result['phone'];
+              final matchingCustomer = _customers.firstWhere(
+                (customer) => customer.phone == addedPhone,
+                orElse: () => CustomerListModelData(),
+              );
+              if (matchingCustomer.phone == addedPhone) {
+                setState(() {
+                  _selectedCustomer = matchingCustomer;
+                  _selectedCustomerID = matchingCustomer.id;
+                  _selectedCustomerPhone = matchingCustomer.phone;
+                });
+              }
+            }
+            // Reopen the checkout modal
+            _showCheckoutModal();
+          },
         );
       },
     );
@@ -8230,6 +8409,7 @@ class _RestaurantCouponModalWrapperState
         initialCouponCode: widget.initialCouponCode,
         isCouponApplied: widget.isCouponApplied,
         onCouponAction: widget.onCouponAction,
+        closeOnApply: false, // Don't close - we're embedded in checkout dialog
       ),
     );
   }
@@ -8288,10 +8468,18 @@ class MockLocalProductProvider extends LocalProductProvider {
 class _CheckoutDialog extends StatefulWidget {
   final _OrderPanelState orderPanelState;
   final double cartTotal;
+  final VoidCallback onCloseDialog;
+  final List<CustomerListModelData> customers;
+  final Function(CustomerListModelData) onCustomerSelected;
+  final Function(String searchQuery) onAddNewCustomer;
 
   const _CheckoutDialog({
     required this.orderPanelState,
     required this.cartTotal,
+    required this.onCloseDialog,
+    required this.customers,
+    required this.onCustomerSelected,
+    required this.onAddNewCustomer,
   });
 
   @override
@@ -8301,16 +8489,67 @@ class _CheckoutDialog extends StatefulWidget {
 class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   
+  // Customer search state
+  String _customerSearchQuery = '';
+  List<CustomerListModelData> _filteredCustomers = [];
+  final TextEditingController _customerSearchController = TextEditingController();
+  
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _filteredCustomers = widget.customers;
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _customerSearchController.dispose();
     super.dispose();
+  }
+  
+  void _filterCustomers(String query) {
+    setState(() {
+      _customerSearchQuery = query.toLowerCase();
+      if (_customerSearchQuery.isEmpty) {
+        _filteredCustomers = widget.customers;
+      } else {
+        _filteredCustomers = widget.customers.where((customer) {
+          final name = (customer.name ?? '').toLowerCase();
+          final phone = (customer.phone ?? '').toLowerCase();
+          return name.contains(_customerSearchQuery) || phone.contains(_customerSearchQuery);
+        }).toList();
+      }
+    });
+  }
+  
+  // Helper to build tab with completion indicator
+  Widget _buildTabWithIndicator({
+    required IconData icon,
+    required String text,
+    required bool isCompleted,
+  }) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon),
+          const SizedBox(width: 8),
+          Text(text),
+          if (isCompleted) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Color(0xFF059669),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check, size: 12, color: Colors.white),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -8318,6 +8557,11 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
     // Access state from parent
     final state = widget.orderPanelState;
     final size = MediaQuery.of(context).size;
+    
+    // Determine completion status for each section
+    final hasCustomer = state._selectedCustomer != null;
+    final hasPayment = state._hasPaymentMethod();
+    final hasDiscount = state._isCouponApplied || state._flatDiscount > 0 || state._percentageDiscount > 0;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -8345,11 +8589,23 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
                       labelColor: const Color(0xFF2563EB),
                       unselectedLabelColor: const Color(0xFF64748B),
                       indicatorColor: const Color(0xFF2563EB),
-                      tabs: const [
-                        Tab(icon: Icon(Icons.receipt_long), text: 'Review & Pay'),
-                        Tab(icon: Icon(Icons.payment), text: 'Payment Method'),
-                        Tab(icon: Icon(Icons.person), text: 'Customer'),
-                        Tab(icon: Icon(Icons.discount), text: 'Discount'),
+                      tabs: [
+                        const Tab(icon: Icon(Icons.receipt_long), text: 'Review & Pay'),
+                        _buildTabWithIndicator(
+                          icon: Icons.payment,
+                          text: 'Payment',
+                          isCompleted: hasPayment,
+                        ),
+                        _buildTabWithIndicator(
+                          icon: Icons.person,
+                          text: 'Customer',
+                          isCompleted: hasCustomer,
+                        ),
+                        _buildTabWithIndicator(
+                          icon: Icons.discount,
+                          text: 'Discount',
+                          isCompleted: hasDiscount,
+                        ),
                       ],
                     ),
                   ),
@@ -8373,7 +8629,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
                   // Tab 2: Payment Methods (Embedding PaymentMethodModal logic)
                   _buildPaymentTab(state),
                   
-                  // Tab 3: Customer (Embedding Customer Selection)
+                  // Tab 3: Customer (Inline Customer Selection)
                   _buildCustomerTab(state),
                   
                   // Tab 4: Discount (Embedding Coupon/Discount logic)
@@ -8445,9 +8701,10 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
                     foregroundColor: Colors.black87,
                     side: BorderSide(color: Colors.grey.shade300),
                   ),
-                  onPressed: () {
-                    state._confirmOrderAndPrintBill();
-                    // Dialog will close if successful inside the method or we handle it
+                  onPressed: () async {
+                    // Close the dialog first, then confirm and print
+                    widget.onCloseDialog();
+                    await state._confirmOrderAndPrintBill();
                   },
                 ),
                 const SizedBox(height: 12),
@@ -8459,8 +8716,11 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () {
-                    state._confirmOrder();
+                  onPressed: () async {
+                    final success = await state._confirmOrder();
+                    if (success) {
+                      widget.onCloseDialog();
+                    }
                   },
                 ),
               ],
@@ -8499,21 +8759,33 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
   }
 
   Widget _buildPaymentTab(_OrderPanelState state) {
+    // Calculate the effective cart total after discounts
+    final discountAmount = state._flatDiscount + (widget.cartTotal * state._percentageDiscount / 100);
+    final effectiveCartTotal = widget.cartTotal - discountAmount;
+    
+    // If no payment method is selected, default to Cash with discounted total pre-filled
+    final bool shouldAutoFillCash = !state._isCashSelected && 
+                                     !state._isCardSelected && 
+                                     !state._isUpiSelected && 
+                                     !state._isCodSelected &&
+                                     state._cashAmount.isEmpty;
+    
     // Embedding PaymentMethodModal logic
     return PaymentMethodModal(
-      initialIsCashSelected: state._isCashSelected,
+      initialIsCashSelected: shouldAutoFillCash ? true : state._isCashSelected,
       initialIsCardSelected: state._isCardSelected,
       initialIsUpiSelected: state._isUpiSelected,
       initialIsCodSelected: state._isCodSelected,
       initialIsDebitSelected: state._isDebitSelected,
-      initialCashAmount: state._cashAmount,
+      initialCashAmount: shouldAutoFillCash ? effectiveCartTotal.toStringAsFixed(2) : state._cashAmount,
       initialCardAmount: state._cardAmount,
       initialUpiAmount: state._upiAmount,
       initialCodAmount: state._codAmount,
       initialDebitAmount: state._debitAmount,
       initialTransactionNumber: state._transactionNumber,
-      cartTotal: widget.cartTotal,
+      cartTotal: effectiveCartTotal,
       customerPrevBalance: state._selectedCustomer?.balance ?? 0.0,
+      isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
       customButtonTitle: "Update Payment",
       closeOnApply: false,
       onPaymentMethodSelected: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
@@ -8531,7 +8803,6 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
           state._transactionNumber = trans;
           state._toCustomerCreditEnabled = toCredit;
           state._hasOpenedPaymentModalOnce = true;
-          // state._toCustomerCreditAmount = double.tryParse(debit) ?? 0.0; // This logic needs to be verified
         });
         
         // Also update provider
@@ -8543,6 +8814,9 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
           cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
         );
         
+        // Refresh checkout dialog to update review tab
+        setState(() {});
+        
         // Automatically switch back to Review tab
         _tabController.animateTo(0);
       },
@@ -8550,42 +8824,297 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
   }
 
   Widget _buildCustomerTab(_OrderPanelState state) {
-    // Customer Selection Tab
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (state._selectedCustomer != null)
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
+    // Inline Customer Selection Tab
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left: Search and Customer List
+          Expanded(
+            flex: 3,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.person, size: 48, color: Colors.blue),
-                const SizedBox(height: 8),
-                Text(state._selectedCustomer!.name ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text(state._selectedCustomer!.phone ?? '', style: const TextStyle(fontSize: 16)),
-                Text('Balance: ${state._selectedCustomer!.balance?.toStringAsFixed(2) ?? "0.00"}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: (state._selectedCustomer!.balance ?? 0) >= 0 ? Colors.green : Colors.red)),
+                // Search Bar
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: TextField(
+                    controller: _customerSearchController,
+                    onChanged: _filterCustomers,
+                    decoration: InputDecoration(
+                      hintText: 'Search by name or phone number...',
+                      hintStyle: TextStyle(color: Colors.grey.shade500),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
+                      suffixIcon: _customerSearchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear, color: Colors.grey.shade500),
+                              onPressed: () {
+                                _customerSearchController.clear();
+                                _filterCustomers('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Customer List
+                Expanded(
+                  child: _filteredCustomers.isEmpty && _customerSearchQuery.isNotEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF59E0B).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(Icons.search_off, size: 48, color: Color(0xFFF59E0B)),
+                              ),
+                              const SizedBox(height: 16),
+                              Text('No customers found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+                              const SizedBox(height: 8),
+                              Text('Try different keywords or add a new customer', style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        )
+                      : _filteredCustomers.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.person_outline, size: 48, color: Colors.grey.shade400),
+                                  const SizedBox(height: 16),
+                                  Text('No customers available', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: _filteredCustomers.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              itemBuilder: (context, index) {
+                                final customer = _filteredCustomers[index];
+                                final isSelected = state._selectedCustomer?.id == customer.id;
+                                
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      widget.onCustomerSelected(customer);
+                                      setState(() {}); // Refresh to update selection
+                                      // Switch to review tab after selection
+                                      _tabController.animateTo(0);
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? const Color(0xFF2563EB).withOpacity(0.1) : Colors.white,
+                                        border: Border.all(
+                                          color: isSelected ? const Color(0xFF2563EB) : Colors.grey.shade200,
+                                          width: isSelected ? 2 : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: isSelected ? const Color(0xFF2563EB) : Colors.grey.shade300,
+                                              borderRadius: BorderRadius.circular(22),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                (customer.name ?? 'U').substring(0, 1).toUpperCase(),
+                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  customer.name ?? 'Unknown',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isSelected ? const Color(0xFF2563EB) : Colors.black87,
+                                                  ),
+                                                ),
+                                                if (customer.phone != null && customer.phone!.isNotEmpty)
+                                                  Text(customer.phone!, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                              ],
+                                            ),
+                                          ),
+                                          if (customer.balance != null)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: (customer.balance ?? 0) >= 0 
+                                                    ? const Color(0xFF059669).withOpacity(0.1) 
+                                                    : const Color(0xFFDC2626).withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                customer.balance!.toStringAsFixed(2),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: (customer.balance ?? 0) >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                                ),
+                                              ),
+                                            ),
+                                          const SizedBox(width: 8),
+                                          if (isSelected)
+                                            Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF059669),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(Icons.check, color: Colors.white, size: 14),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                ),
               ],
             ),
           ),
+          const SizedBox(width: 24),
+          const VerticalDivider(width: 1),
+          const SizedBox(width: 24),
           
-        ElevatedButton.icon(
-          icon: const Icon(Icons.search),
-          label: Text(state._selectedCustomer == null ? 'Select Customer' : 'Change Customer'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          // Right: Selected Customer Info & Add New
+          Expanded(
+            flex: 2,
+            child: Column(
+              children: [
+                // Selected Customer Card
+                if (state._selectedCustomer != null)
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB).withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB),
+                            borderRadius: BorderRadius.circular(32),
+                          ),
+                          child: Center(
+                            child: Text(
+                              (state._selectedCustomer!.name ?? 'U').substring(0, 1).toUpperCase(),
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          state._selectedCustomer!.name ?? '',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (state._selectedCustomer!.phone != null && state._selectedCustomer!.phone!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(state._selectedCustomer!.phone!, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                          ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: (state._selectedCustomer!.balance ?? 0) >= 0 
+                                ? const Color(0xFF059669).withOpacity(0.1) 
+                                : const Color(0xFFDC2626).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Balance: ', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+                              Text(
+                                state._selectedCustomer!.balance?.toStringAsFixed(2) ?? '0.00',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: (state._selectedCustomer!.balance ?? 0) >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.person_outline, size: 48, color: Colors.grey.shade400),
+                        const SizedBox(height: 12),
+                        Text('No Customer Selected', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+                        const SizedBox(height: 4),
+                        Text('Select from the list or add new', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                      ],
+                    ),
+                  ),
+                
+                const Spacer(),
+                
+                // Add New Customer Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Add New Customer'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.grey.shade100,
+                      foregroundColor: Colors.grey.shade700,
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    onPressed: () {
+                      widget.onAddNewCustomer(_customerSearchQuery);
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-          onPressed: () {
-            // Call existing modal method from state
-            state._showCustomerSelectionModal();
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -8598,18 +9127,40 @@ class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProvi
         initialPercentageDiscount: state._percentageDiscount,
         isCouponApplied: state._isCouponApplied,
         onCouponAction: (couponCode, isApplied, {flatDiscount, percentageDiscount}) {
+          // Calculate old and new totals
+          final oldDiscountAmount = state._flatDiscount + (widget.cartTotal * state._percentageDiscount / 100);
+          final oldEffectiveTotal = widget.cartTotal - oldDiscountAmount;
+          
+          final newFlatDiscount = flatDiscount ?? 0.0;
+          final newPercentageDiscount = percentageDiscount ?? 0.0;
+          final newDiscountAmount = newFlatDiscount + (widget.cartTotal * newPercentageDiscount / 100);
+          final newEffectiveTotal = widget.cartTotal - newDiscountAmount;
+          
           state.setState(() {
             state._couponCode = couponCode;
             state._isCouponApplied = isApplied;
-            state._flatDiscount = flatDiscount ?? 0.0;
-            state._percentageDiscount = percentageDiscount ?? 0.0;
+            state._flatDiscount = newFlatDiscount;
+            state._percentageDiscount = newPercentageDiscount;
 
             if (!isApplied) {
               state._couponCode = "";
               state._flatDiscount = 0.0;
               state._percentageDiscount = 0.0;
             }
+            
+            // If payment was already selected and cash amount was auto-filled with old total,
+            // update it to the new discounted total
+            if (state._isCashSelected && state._cashAmount.isNotEmpty) {
+              final currentCashAmount = double.tryParse(state._cashAmount) ?? 0.0;
+              // Check if cash amount matches old effective total (was auto-filled)
+              if ((currentCashAmount - oldEffectiveTotal).abs() < 0.01) {
+                state._cashAmount = newEffectiveTotal.toStringAsFixed(2);
+                debugPrint('💰 Updated cash amount from ${oldEffectiveTotal.toStringAsFixed(2)} to ${newEffectiveTotal.toStringAsFixed(2)} after discount change');
+              }
+            }
           });
+          // Refresh checkout dialog to update review tab and tab indicators
+          setState(() {});
           // Switch to review tab
           _tabController.animateTo(0);
         },

@@ -132,3 +132,86 @@ class Pagination {
     lastPage = json['last_page'];
   }
 }
+
+class DailySalesCloseSummaryResponse {
+  bool? success;
+  String? message;
+  DailySalesCloseSummary? data;
+
+  DailySalesCloseSummaryResponse({this.success, this.message, this.data});
+
+  DailySalesCloseSummaryResponse.fromJson(Map<String, dynamic> json) {
+    success = json['success'];
+    message = json['message'];
+    data = json['data'] != null
+        ? DailySalesCloseSummary.fromJson(json['data'])
+        : null;
+  }
+}
+
+class DailySalesCloseSummary {
+  String? userName;
+  int? storeId;
+  String? openingDate;
+  String? openingTime;
+  String? closingDate;
+  String? closingTime;
+  int? totalOrders;
+  String? totalSales;
+  String? paymentReceived;
+  String? collectedOnSale;
+  String? cashSales;
+  String? onlineSales;
+  String? creditAmount;
+  String? creditCollected;
+
+  DailySalesCloseSummary({
+    this.userName,
+    this.storeId,
+    this.openingDate,
+    this.openingTime,
+    this.closingDate,
+    this.closingTime,
+    this.totalOrders,
+    this.totalSales,
+    this.paymentReceived,
+    this.collectedOnSale,
+    this.cashSales,
+    this.onlineSales,
+    this.creditAmount,
+    this.creditCollected,
+  });
+
+  DailySalesCloseSummary.fromJson(Map<String, dynamic> json) {
+    userName = json['user_name'];
+    storeId = json['store_id'];
+    openingDate = json['opening_date'];
+    openingTime = json['opening_time'];
+    closingDate = json['closing_date'];
+    closingTime = json['closing_time'];
+    totalOrders = json['total_orders'];
+    totalSales = json['total_sales'];
+    paymentReceived = json['payment_received'];
+    collectedOnSale = json['collected_on_sale'];
+    cashSales = json['cash_sales'];
+    onlineSales = json['online_sales'];
+    creditAmount = json['credit_amount'];
+    creditCollected = json['credit_collected'];
+  }
+}
+
+class DailySalesCloseCreateResponse {
+  bool? success;
+  String? message;
+  DailySalesCloseData? data;
+
+  DailySalesCloseCreateResponse({this.success, this.message, this.data});
+
+  DailySalesCloseCreateResponse.fromJson(Map<String, dynamic> json) {
+    success = json['success'];
+    message = json['message'];
+    data = json['data'] != null
+        ? DailySalesCloseData.fromJson(json['data'])
+        : null;
+  }
+}

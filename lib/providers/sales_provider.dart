@@ -689,9 +689,116 @@ class SalesProvider with ChangeNotifier {
       debugPrint('=== DEBUG: fetchDailySalesClose ERROR ===');
       debugPrint('Error: $error');
       debugPrint('Stack Trace: $stackTrace');
-      dailySalesCloseList = [];
+dailySalesCloseList = [];
       notifyListeners();
       rethrow;
+    }
+  }
+
+  Future<DailySalesCloseSummary?> fetchDailySalesCloseSummary({
+    required String accessToken,
+    required int storeId,
+  }) async {
+    final queryParameters = <String, String>{
+      'store_id': storeId.toString(),
+    };
+
+    final uri = Uri.parse(APPUrl.dailySalesCloseSummary)
+        .replace(queryParameters: queryParameters);
+
+    debugPrint('=== DEBUG: fetchDailySalesCloseSummary START ===');
+    debugPrint('Full URL: $uri');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
+      debugPrint('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final model = DailySalesCloseSummaryResponse.fromJson(jsonData);
+        return model.data;
+      } else {
+        throw HttpException('Failed to fetch summary: ${response.statusCode}');
+      }
+    } catch (error, stackTrace) {
+      debugPrint('=== DEBUG: fetchDailySalesCloseSummary ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> createDailySalesClose({
+    required String accessToken,
+    required int storeId,
+  }) async {
+    final queryParameters = <String, String>{
+      'store_id': storeId.toString(),
+    };
+
+    final uri = Uri.parse(APPUrl.dailySalesCloseCreate)
+        .replace(queryParameters: queryParameters);
+
+    debugPrint('=== DEBUG: createDailySalesClose START ===');
+    debugPrint('Full URL: $uri');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
+      debugPrint('Response Body: ${response.body}');
+
+      final jsonData = json.decode(response.body);
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': jsonData['success'] ?? true,
+          'message': jsonData['message'] ?? 'Day close created successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': jsonData['message'] ?? 'Failed to create day close',
+        };
+      }
+    } catch (error, stackTrace) {
+      debugPrint('=== DEBUG: createDailySalesClose ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
+      return {
+        'success': false,
+        'message': error.toString(),
+      };
     }
   }
 }

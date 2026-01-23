@@ -52,6 +52,7 @@ class PaymentMethodModal extends StatefulWidget {
       onAfterApply; // Optional callback to execute after applying payment methods
   final String? customButtonTitle; // Optional custom button title
   final bool closeOnApply; // Optional flag to control modal closing behavior
+  final bool isDefaultCustomer; // Flag to hide previous balance for default customer
 
   const PaymentMethodModal({
     Key? key,
@@ -72,6 +73,7 @@ class PaymentMethodModal extends StatefulWidget {
     this.onAfterApply,
     this.customButtonTitle,
     this.closeOnApply = true,
+    this.isDefaultCustomer = false,
   }) : super(key: key);
 
 
@@ -890,29 +892,31 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           color: ColorManager.textColor,
                         ),
 
-                        BuildPaymentRow(
-                          amount: _formatSignedWithCurrency(widget.customerPrevBalance),
-                          title: 'billing.customer_prev_balance'.tr,
-                          secondRowTextStyle: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s15,
-                            0.18,
-                            widget.customerPrevBalance >= 0
+                        // Only show customer previous balance if NOT default customer
+                        if (!widget.isDefaultCustomer)
+                          BuildPaymentRow(
+                            amount: _formatSignedWithCurrency(widget.customerPrevBalance),
+                            title: 'billing.customer_prev_balance'.tr,
+                            secondRowTextStyle: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s15,
+                              0.18,
+                              widget.customerPrevBalance >= 0
+                                  ? ColorManager.kButtonGreen
+                                  : ColorManager.textColorRed,
+                            ),
+                            firstRowTextStyle: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s15,
+                              0.20,
+                              widget.customerPrevBalance >= 0
+                                  ? ColorManager.kButtonGreen
+                                  : ColorManager.textColorRed,
+                            ),
+                            color: widget.customerPrevBalance >= 0
                                 ? ColorManager.kButtonGreen
                                 : ColorManager.textColorRed,
                           ),
-                          firstRowTextStyle: buildCustomStyle(
-                            FontWeightManager.bold,
-                            FontSize.s15,
-                            0.20,
-                            widget.customerPrevBalance >= 0
-                                ? ColorManager.kButtonGreen
-                                : ColorManager.textColorRed,
-                          ),
-                          color: widget.customerPrevBalance >= 0
-                              ? ColorManager.kButtonGreen
-                              : ColorManager.textColorRed,
-                        ),
 
                         const SizedBox(height: 8),
                         const Divider(thickness: 1),
