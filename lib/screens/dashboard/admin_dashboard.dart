@@ -45,98 +45,118 @@ class _AdminDashboardState extends State<AdminDashboard> {
     super.initState();
     debugPrint('=== AdminDashboard initState called ===');
     debugPrint('Starting initial data fetching...');
-    fetchAllPeriodData(); // Fetch data for all periods once
+    fetchDataForPeriod('today'); // Fetch data only for default period 'today'
     debugPrint('=== Initial data fetching initiated ===');
   }
 
-  Future<void> fetchAllPeriodData() async {
-    debugPrint('=== FETCHING SUPPLIER DATA FOR ALL PERIODS ===');
+  Future<void> fetchDataForPeriod(String period) async {
+    debugPrint('=== FETCHING SUPPLIER DATA FOR PERIOD: $period ===');
     try {
+      // Check if data is already cached for this period
+      if (cachedSuppliersOverview.containsKey(period) &&
+          cachedSuppliersPurchaseGraph.containsKey(period) &&
+          cachedSupplierTransactionsGraph.containsKey(period) &&
+          cachedSupplierCreditBalanceGraph.containsKey(period)) {
+        debugPrint('Data already cached for period: $period, using cached data');
+        setState(() {
+          suppliersOverview = cachedSuppliersOverview[period];
+          suppliersPurchaseGraph = cachedSuppliersPurchaseGraph[period];
+          supplierTransactionsGraph = cachedSupplierTransactionsGraph[period];
+          supplierCreditBalanceGraph = cachedSupplierCreditBalanceGraph[period];
+        });
+        return;
+      }
+
+      // Data not cached, need to fetch
+      debugPrint('Data not cached for period: $period, fetching from API');
       setState(() {
-        isInitialLoading = true;
+        isLoading = true;
       });
+
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       if (accessToken == null) {
         debugPrint('ERROR: No access token available');
+        setState(() {
+          isLoading = false;
+          isInitialLoading = false;
+        });
         return;
       }
 
-      // Fetch data for each period
-      final periods = ['today', 'week', 'month', 'year'];
+      // Get date range based on the period
+      final DateTime now = DateTime.now();
+      String startDate;
+      String endDate = DateFormat('yyyy-MM-dd').format(now);
 
-      for (String period in periods) {
-        debugPrint('Fetching supplier data for period: $period');
-
-        // Get date range based on the period
-        final DateTime now = DateTime.now();
-        String startDate;
-        String endDate = DateFormat('yyyy-MM-dd').format(now);
-
-        switch (period) {
-          case "today":
-            startDate = DateFormat('yyyy-MM-dd').format(now);
-            break;
-          case "week":
-            startDate = DateFormat('yyyy-MM-dd')
-                .format(now.subtract(const Duration(days: 7)));
-            break;
-          case "month":
-            startDate = DateFormat('yyyy-MM-dd')
-                .format(DateTime(now.year, now.month, 1));
-            break;
-          case "year":
-            startDate =
-                DateFormat('yyyy-MM-dd').format(DateTime(now.year, 1, 1));
-            break;
-          default:
-            startDate = DateFormat('yyyy-MM-dd')
-                .format(now.subtract(const Duration(days: 30)));
-        }
-
-        // Fetch supplier dashboard data for this period
-        try {
-          final dashboardProvider = DashboardProvider();
-
-          // Fetch suppliers overview
-          final suppliersOverview = await dashboardProvider
-              .fetchSuppliersOverview(accessToken, startDate, endDate);
-          cachedSuppliersOverview[period] = suppliersOverview;
-
-          // Fetch suppliers purchase graph
-          final suppliersPurchaseGraph = await dashboardProvider
-              .fetchSuppliersPurchaseGraph(accessToken, startDate, endDate);
-          cachedSuppliersPurchaseGraph[period] = suppliersPurchaseGraph;
-
-          // Fetch supplier transactions graph
-          final supplierTransactionsGraph = await dashboardProvider
-              .fetchSupplierTransactionsGraph(accessToken, startDate, endDate);
-          cachedSupplierTransactionsGraph[period] = supplierTransactionsGraph;
-
-          // Fetch supplier credit balance graph
-          final supplierCreditBalanceGraph = await dashboardProvider
-              .fetchSupplierCreditBalance(accessToken, startDate, endDate);
-          cachedSupplierCreditBalanceGraph[period] = supplierCreditBalanceGraph;
-
-          debugPrint('Cached supplier data for period: $period');
-        } catch (error) {
-          debugPrint('Error fetching supplier data for period $period: $error');
-        }
+      switch (period) {
+        case "today":
+          startDate = DateFormat('yyyy-MM-dd').format(now);
+          break;
+        case "week":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7)));
+          break;
+        case "month":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(DateTime(now.year, now.month, 1));
+          break;
+        case "year":
+          startDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, 1, 1));
+          break;
+        default:
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 30)));
       }
 
-      // Set initial data to today's data
-      setState(() {
-        suppliersOverview = cachedSuppliersOverview['today'];
-        suppliersPurchaseGraph = cachedSuppliersPurchaseGraph['today'];
-        supplierTransactionsGraph = cachedSupplierTransactionsGraph['today'];
-        supplierCreditBalanceGraph = cachedSupplierCreditBalanceGraph['today'];
-        isInitialLoading = false;
-      });
+      // Fetch supplier dashboard data for this period
+      try {
+        final dashboardProvider = DashboardProvider();
 
-      debugPrint('=== ALL SUPPLIER PERIOD DATA FETCHING COMPLETE ===');
+        // Fetch suppliers overview
+        final suppliersOverview = await dashboardProvider
+            .fetchSuppliersOverview(accessToken, startDate, endDate);
+        cachedSuppliersOverview[period] = suppliersOverview;
+
+        // Fetch suppliers purchase graph
+        final suppliersPurchaseGraph = await dashboardProvider
+            .fetchSuppliersPurchaseGraph(accessToken, startDate, endDate);
+        cachedSuppliersPurchaseGraph[period] = suppliersPurchaseGraph;
+
+        // Fetch supplier transactions graph
+        final supplierTransactionsGraph = await dashboardProvider
+            .fetchSupplierTransactionsGraph(accessToken, startDate, endDate);
+        cachedSupplierTransactionsGraph[period] = supplierTransactionsGraph;
+
+        // Fetch supplier credit balance graph
+        final supplierCreditBalanceGraph = await dashboardProvider
+            .fetchSupplierCreditBalance(accessToken, startDate, endDate);
+        cachedSupplierCreditBalanceGraph[period] = supplierCreditBalanceGraph;
+
+        debugPrint('Successfully cached supplier data for period: $period');
+
+        // Update state with fetched data
+        setState(() {
+          this.suppliersOverview = suppliersOverview;
+          this.suppliersPurchaseGraph = suppliersPurchaseGraph;
+          this.supplierTransactionsGraph = supplierTransactionsGraph;
+          this.supplierCreditBalanceGraph = supplierCreditBalanceGraph;
+          isLoading = false;
+          isInitialLoading = false;
+        });
+      } catch (error) {
+        debugPrint('Error fetching supplier data for period $period: $error');
+        setState(() {
+          isLoading = false;
+          isInitialLoading = false;
+        });
+      }
+
+      debugPrint('=== SUPPLIER PERIOD DATA FETCHING COMPLETE ===');
     } catch (error) {
-      debugPrint('Error in fetchAllPeriodData: $error');
+      debugPrint('Error in fetchDataForPeriod: $error');
       setState(() {
+        isLoading = false;
         isInitialLoading = false;
       });
     }
@@ -262,17 +282,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: DropdownButton<String>(
                 value: value,
                 onChanged: (String? newValue) {
+                  final newPeriod = newValue?.toLowerCase() ?? "today";
                   setState(() {
-                    value = newValue?.toLowerCase() ?? "today";
-                    // Switch to cached data instead of refetching
-                    suppliersOverview = cachedSuppliersOverview[value];
-                    suppliersPurchaseGraph =
-                        cachedSuppliersPurchaseGraph[value];
-                    supplierTransactionsGraph =
-                        cachedSupplierTransactionsGraph[value];
-                    supplierCreditBalanceGraph =
-                        cachedSupplierCreditBalanceGraph[value];
+                    value = newPeriod;
                   });
+                  // Fetch data for the selected period (uses cache if available)
+                  fetchDataForPeriod(newPeriod);
                 },
                 dropdownColor: Colors.white,
                 menuMaxHeight: 200,

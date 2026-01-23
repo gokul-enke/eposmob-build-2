@@ -48,7 +48,9 @@ import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:provider/provider.dart';
+
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
@@ -295,7 +297,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       });
 
       // Listen for cart changes to reset payment modal flag
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       localProductProvider.addListener(_onCartChanged);
     });
 
@@ -354,7 +357,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.removeListener(_onUserSwitched);
 
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       localProductProvider.removeListener(_onCartChanged);
     } catch (e) {
       debugPrint("Error removing listeners: $e");
@@ -1147,7 +1151,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                     MainAxisAlignment.start,
                                                 children: [
                                                   _buildPaymentSummary(
-                                                      compact: true),
+                                                      compact: false),
                                                 ],
                                               ),
                                             ),
@@ -1463,6 +1467,9 @@ class BillingPageState extends State<BillingPageRestaurant>
         ),
         Row(
           children: [
+            // Live Clock
+            const LiveClock(),
+            const SizedBox(width: 12),
             // Keyboard toggle button
             IconButton(
               icon: Icon(
@@ -2396,174 +2403,6 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     localProductProvider.cartTotal; // Call this to ensure priceSummary is set
 
-    if (compact) {
-      // Compact view: Only show Net amount, Discount, and Total
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          BuildPaymentRow(
-            amount: "",
-            title: "billing.payment_summary".tr,
-            firstRowTextStyle: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s14,
-              0.21,
-              ColorManager.kPrimaryColor,
-            ),
-            color: ColorManager.kPrimaryColor,
-          ),
-          const SizedBox(height: 5),
-          BuildPaymentRow(
-            amount:
-                "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
-            title: "billing.net_amount".tr,
-            color: ColorManager.textColor,
-            titleWidget: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: "billing.net_amount".tr,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s15,
-                      0.18,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  TextSpan(
-                    text: " ${"billing.incl_tax".tr}",
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s11, // Smaller font for "(incl. tax)"
-                      0.18,
-                      ColorManager.kGreyColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            secondRowTextStyle: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s15,
-              0.18,
-              ColorManager.textColor,
-            ),
-          ),
-          // Tax Amount (Optional based on toggle)
-          if (Provider.of<AppSettingsProvider>(context, listen: false)
-                  .appSettings
-                  ?.showTaxPos ==
-              true)
-            BuildPaymentRow(
-              amount:
-                  "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
-              title: "billing.tax_amount".tr,
-              color: ColorManager.textColor,
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s15,
-                0.18,
-                ColorManager.textColor,
-              ),
-              secondRowTextStyle: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.18,
-                ColorManager.textColor,
-              ),
-            ),
-
-          // 📊 Dynamic Tax Breakdown
-          if (Provider.of<AppSettingsProvider>(context, listen: false)
-                  .appSettings
-                  ?.showTaxPos ==
-              true)
-            ...localProductProvider.taxBreakdown.entries.map((entry) {
-              return BuildPaymentRow(
-                amount: "$currency ${AmountHelper.formatAmount(entry.value)}",
-                title: entry.key, // Tax Name (e.g. GST, VAT)
-                color: ColorManager.textColor,
-                firstRowTextStyle: buildCustomStyle(
-                  FontWeightManager.regular,
-                  FontSize.s12, // Smaller font for "(incl. tax)"
-                  0.18,
-                  ColorManager.kGreyColor,
-                ),
-                secondRowTextStyle: buildCustomStyle(
-                  FontWeightManager.regular,
-                  FontSize.s12,
-                  0.18,
-                  ColorManager.kGreyColor,
-                ),
-              );
-            }),
-
-          (Provider.of<AppSettingsProvider>(context, listen: false)
-                      .appSettings
-                      ?.priceRoundOff ==
-                  true)
-              ? BuildPaymentRow(
-                  amount:
-                      "$currency ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-                  title: "billing.discount".tr,
-                  color: ColorManager.kButtonGreen,
-                  firstRowTextStyle: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                  secondRowTextStyle: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                )
-              : BuildPaymentRow(
-                  amount:
-                      "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-                  title: "billing.discount".tr,
-                  color: ColorManager.kButtonGreen,
-                  firstRowTextStyle: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                  secondRowTextStyle: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                ),
-
-          const Divider(thickness: 2),
-          BuildPaymentRow(
-            amount:
-                "$currency ${AmountHelper.roundOffAmount(localProductProvider.cartTotal)}",
-            title: "billing.total_payable".tr,
-            secondRowTextStyle: buildCustomStyle(
-              FontWeightManager.bold,
-              FontSize.s15,
-              0.23,
-              ColorManager.kPrimaryColor,
-            ),
-            firstRowTextStyle: buildCustomStyle(
-              FontWeightManager.bold,
-              FontSize.s15,
-              0.23,
-              ColorManager.textColor,
-            ),
-            color: ColorManager.textColor,
-          ),
-        ],
-      );
-    }
-
-    // Full view
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.start,
@@ -3474,7 +3313,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
 
     // Get current time for KOT (using DateHelper for timezone support)
-    final orderTime = DateHelper.getCurrentFormattedTime();
+    final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
 
     final tableName = deliveryMethod; // Use delivery method as table name
 
@@ -5683,11 +5522,13 @@ class BillingPageState extends State<BillingPageRestaurant>
             paymentMethod: savedOrder.paymentMethod,
             customerAlternatePhone: savedOrder.alternatePhone,
             orderComment: savedOrder.comment,
-            paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                : null,
+            paidAmount:
+                (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+                    ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+                    : null,
             // Balance info not available for offline saved orders
-            isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
+            isDefaultCustomer:
+                _isDefaultCustomerPhone(savedOrder.customerPhone),
           ),
         ),
       );
@@ -6009,9 +5850,10 @@ class BillingPageState extends State<BillingPageRestaurant>
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
       if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
         try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere((m) =>
-              m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-              m.id == appSettingsDefault);
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
+              (m) =>
+                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+                  m.id == appSettingsDefault);
           return match.id;
         } catch (e) {
           // Not found
@@ -7097,21 +6939,41 @@ class BillingPageState extends State<BillingPageRestaurant>
                             return LayoutBuilder(
                               builder: (context, constraints) {
                                 // Calculate columns based on available width and font size level
-                                // Level 0 (Small): 140, Level 1 (Medium): 180, Level 2 (Large): 220
-                                double baseWidth =
-                                    140.0 + (fontProvider.fontSizeLevel * 40.0);
+                                // Level 0 (Small): Compact Mode (No Image)
+                                // Level 1 (Medium): Normal Mode
+                                // Level 2 (Large): Large Mode
+                                final bool showImage =
+                                    fontProvider.fontSizeLevel > 0;
+
+                                double baseWidth;
+                                double childAspectRatio;
+
+                                if (!showImage) {
+                                  // Compact mode - denser grid, no images
+                                  baseWidth = 110.0;
+                                  childAspectRatio = 1.3;
+                                } else {
+                                  // Normal/Large mode with images
+                                  // Modified to allow more products visible at a time (smaller cards)
+                                  // Level 1 -> 125, Level 2 -> 145 (previously 150 -> 190)
+                                  baseWidth = 125.0 +
+                                      ((fontProvider.fontSizeLevel - 1) * 20.0);
+                                  // Slightly adjusted aspect ratio
+                                  childAspectRatio = 0.80;
+                                }
+
                                 int columns =
                                     (constraints.maxWidth / baseWidth).floor();
-                                columns = columns.clamp(2, 8);
+                                columns = columns.clamp(2, 12);
 
                                 return GridView.builder(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(8),
                                   gridDelegate:
                                       SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: columns,
-                                    childAspectRatio: 0.85,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 10,
+                                    childAspectRatio: childAspectRatio,
+                                    crossAxisSpacing: 6,
+                                    mainAxisSpacing: 6,
                                   ),
                                   physics: const BouncingScrollPhysics(),
                                   itemCount: products.length,
@@ -7121,7 +6983,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         productProvider.selectedProduct;
 
                                     String? primaryImage;
-                                    if (product.attachment != null &&
+                                    if (showImage &&
+                                        product.attachment != null &&
                                         product.attachment!.isNotEmpty) {
                                       for (final attachment
                                           in product.attachment!) {
@@ -7147,7 +7010,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           borderRadius:
-                                              BorderRadius.circular(12),
+                                              BorderRadius.circular(8),
                                           border: isSelected
                                               ? Border.all(
                                                   color: ColorManager
@@ -7160,184 +7023,19 @@ class BillingPageState extends State<BillingPageRestaurant>
                                               color:
                                                   Colors.grey.withOpacity(0.1),
                                               spreadRadius: 1,
-                                              blurRadius: 3,
-                                              offset: const Offset(0, 2),
+                                              blurRadius: 2,
+                                              offset: const Offset(0, 1),
                                             ),
                                           ],
                                         ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            // Product image
-                                            Expanded(
-                                              flex: 5,
-                                              child: Stack(
-                                                fit: StackFit.expand,
-                                                children: [
-                                                  ClipRRect(
-                                                    borderRadius:
-                                                        const BorderRadius.only(
-                                                      topLeft:
-                                                          Radius.circular(12),
-                                                      topRight:
-                                                          Radius.circular(12),
-                                                    ),
-                                                    child: Container(
-                                                      color:
-                                                          Colors.grey.shade50,
-                                                      child: primaryImage !=
-                                                              null
-                                                          ? Image.network(
-                                                              primaryImage,
-                                                              fit: BoxFit.cover,
-                                                              errorBuilder: (context,
-                                                                      error,
-                                                                      stackTrace) =>
-                                                                  const Icon(
-                                                                Icons
-                                                                    .image_not_supported,
-                                                                size: 32,
-                                                                color:
-                                                                    Colors.grey,
-                                                              ),
-                                                            )
-                                                          : const Icon(
-                                                              Icons
-                                                                  .inventory_2_outlined,
-                                                              size: 32,
-                                                              color:
-                                                                  Colors.grey,
-                                                            ),
-                                                    ),
-                                                  ),
-                                                  // Info button (top-right corner)
-                                                  Positioned(
-                                                    top: 4,
-                                                    right: 4,
-                                                    child: GestureDetector(
-                                                      onTap: () {
-                                                        // Show product details dialog
-                                                        showDialog(
-                                                          context: context,
-                                                          builder: (context) =>
-                                                              ProductDetailsDialog(
-                                                            product: product,
-                                                          ),
-                                                        );
-                                                      },
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(4),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.black
-                                                              .withOpacity(0.5),
-                                                          shape:
-                                                              BoxShape.circle,
-                                                        ),
-                                                        child: const Icon(
-                                                          Icons.info_outline,
-                                                          color: Colors.white,
-                                                          size: 16,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  // Price badge
-                                                  Positioned(
-                                                    bottom: 0,
-                                                    right: 0,
-                                                    child: Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 3),
-                                                      decoration: BoxDecoration(
-                                                        color: ColorManager
-                                                            .kPrimaryColor
-                                                            .withOpacity(0.9),
-                                                        borderRadius:
-                                                            const BorderRadius
-                                                                .only(
-                                                          topLeft:
-                                                              Radius.circular(
-                                                                  8),
-                                                        ),
-                                                      ),
-                                                      child: Consumer<
-                                                          AppSettingsProvider>(
-                                                        builder: (context,
-                                                            appSettingsProvider,
-                                                            _) {
-                                                          final currency =
-                                                              appSettingsProvider
-                                                                      .appSettings
-                                                                      ?.currency ??
-                                                                  'INR';
-                                                          final raw = product
-                                                              .price?.price;
-                                                          String amount;
-                                                          if (raw is num) {
-                                                            amount = raw
-                                                                .toStringAsFixed(
-                                                                    2);
-                                                          } else if (raw
-                                                              is String) {
-                                                            final parsed =
-                                                                double.tryParse(
-                                                                    raw);
-                                                            amount = parsed !=
-                                                                    null
-                                                                ? parsed
-                                                                    .toStringAsFixed(
-                                                                        2)
-                                                                : raw;
-                                                          } else {
-                                                            amount = '0.00';
-                                                          }
-                                                          return Text(
-                                                            '$currency $amount',
-                                                            style: TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontSize: fontProvider
-                                                                      .billingTableItemSize -
-                                                                  1,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            // Product name
-                                            Expanded(
-                                              flex: 3,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(6),
-                                                child: Text(
-                                                  "${product.productName} / ${product.unit}",
-                                                  maxLines: 3,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontSize: fontProvider
-                                                        .productCardTitleSize,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                        child: showImage
+                                            ? _buildProductCardWithImage(
+                                                context,
+                                                product,
+                                                primaryImage,
+                                                fontProvider)
+                                            : _buildCompactProductCard(
+                                                context, product, fontProvider),
                                       ),
                                     );
                                   },
@@ -7352,6 +7050,236 @@ class BillingPageState extends State<BillingPageRestaurant>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildProductCardWithImage(BuildContext context, GetProduct product,
+      String? primaryImage, AppFontProvider fontProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Product image
+        Expanded(
+          flex: 5,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+                child: Container(
+                  color: Colors.grey.shade50,
+                  child: primaryImage != null
+                      ? Image.network(
+                          primaryImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.image_not_supported,
+                            size: 32,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 32,
+                          color: Colors.grey,
+                        ),
+                ),
+              ),
+              // Info button (top-right corner)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => ProductDetailsDialog(
+                        product: product,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+              // Price badge
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                    ),
+                  ),
+                  child: Consumer<AppSettingsProvider>(
+                    builder: (context, appSettingsProvider, _) {
+                      final currency =
+                          appSettingsProvider.appSettings?.currency ?? 'INR';
+                      final raw = product.price?.price;
+                      String amount;
+                      if (raw is num) {
+                        amount = raw.toStringAsFixed(2);
+                      } else if (raw is String) {
+                        final parsed = double.tryParse(raw);
+                        amount =
+                            parsed != null ? parsed.toStringAsFixed(2) : raw;
+                      } else {
+                        amount = '0.00';
+                      }
+                      return Text(
+                        '$currency $amount',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: fontProvider.billingTableItemSize - 1,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Product name
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Text(
+              "${product.productName} / ${product.unit}",
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: fontProvider.productCardTitleSize,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactProductCard(
+      BuildContext context, GetProduct product, AppFontProvider fontProvider) {
+    return Stack(
+      children: [
+        // Product Name
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 26),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Text(
+              product.productName ?? '',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade800,
+                height: 1.2,
+              ),
+            ),
+          ),
+        ),
+        // Info Icon
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => ProductDetailsDialog(
+                  product: product,
+                ),
+              );
+            },
+            child: Icon(
+              Icons.info_outline,
+              size: 14,
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ),
+        // Bottom Bar with Unit and Price
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              ),
+              border: Border(top: BorderSide(color: Colors.grey.shade100)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    product.unit ?? '',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Consumer<AppSettingsProvider>(
+                  builder: (context, appSettingsProvider, _) {
+                    final currency =
+                        appSettingsProvider.appSettings?.currency ?? 'INR';
+                    final raw = product.price?.price;
+                    String amount;
+                    if (raw is num) {
+                      amount = raw.toStringAsFixed(2);
+                    } else if (raw is String) {
+                      final parsed = double.tryParse(raw);
+                      amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                    } else {
+                      amount = '0.00';
+                    }
+                    return Text(
+                      '$currency $amount',
+                      style: const TextStyle(
+                        color: ColorManager.kPrimaryColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

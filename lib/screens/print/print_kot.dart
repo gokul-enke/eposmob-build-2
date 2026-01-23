@@ -7,7 +7,9 @@ import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
@@ -381,11 +383,14 @@ class _KotPrintPageState extends State<KotPrintPage> {
     try {
       final kotPrinter = KotThermalPrinter(context);
 
+      // Ensure time is in 12-hour format
+      String formattedTime = DateHelper.formatISODateToIST(widget.orderTime);
+
       await kotPrinter.printKot(
         selectedPrinter: selectedPrinter!,
         orderNumber: widget.orderNumber,
         tableName: widget.tableName,
-        orderTime: widget.orderTime,
+        orderTime: formattedTime,
         items: widget.items,
         comment: widget.comment,
         selectedPaperSize: selectedPaperSize,
@@ -393,6 +398,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       );
 
       if (mounted) {
+
         showScaffold(
           context: context,
           message: "KOT printed successfully!",
@@ -413,10 +419,13 @@ class _KotPrintPageState extends State<KotPrintPage> {
     try {
       final kotStandardPrinter = KotStandardPrinter(context);
 
+      // Ensure time is in 12-hour format
+      String formattedTime = DateHelper.formatISODateToIST(widget.orderTime);
+
       await kotStandardPrinter.generateAndPrintKotPDF(
         orderNumber: widget.orderNumber,
         tableName: widget.tableName,
-        orderTime: widget.orderTime,
+        orderTime: formattedTime,
         items: widget.items,
         comment: widget.comment,
         selectedPaperSize: selectedPaperSize,
@@ -424,6 +433,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       );
 
       if (mounted) {
+
         showScaffold(
           context: context,
           message: "KOT PDF generated successfully!",

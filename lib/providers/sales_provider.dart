@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,8 @@ class SalesProvider with ChangeNotifier {
   List<ListOrderModelData> _orders = [];
   List<SalesReturnOrder> _salesReturnOrders = [];
   List<SalesReturnCart> _salesReturnItems = [];
+  List<DailySalesCloseData> dailySalesCloseList = [];
+  Pagination? dailySalesClosePagination;
   int currentPage = 1;
   int totalPages = 1;
   int salesReturnCurrentPage = 1;
@@ -611,6 +614,84 @@ class SalesProvider with ChangeNotifier {
       debugPrint(
           'Failed to submit sales return: ${response.statusCode} - ${response.body}');
       throw Exception('Failed to submit sales return');
+    }
+  }
+
+  Future<void> fetchDailySalesClose({
+    required String accessToken,
+    String? date,
+    int page = 1,
+    required int userId,
+    required int storeId,
+  }) async {
+    final queryParameters = <String, String>{
+      'user_id': userId.toString(),
+      'store_id': storeId.toString(),
+      'page': page.toString(),
+    };
+    if (date != null) queryParameters['date'] = date;
+
+    final uri = Uri.parse(APPUrl.listDailySalesClose)
+        .replace(queryParameters: queryParameters);
+
+    // DEBUG: Print request details
+    debugPrint('=== DEBUG: fetchDailySalesClose START ===');
+    debugPrint('Full URL: $uri');
+    debugPrint('Query Parameters: $queryParameters');
+    debugPrint('User ID: $userId');
+    debugPrint('Store ID: $storeId');
+    debugPrint('Date: $date');
+    debugPrint('Page: $page');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      };
+
+      // DEBUG: Print headers (masking sensitive data)
+      debugPrint('=== DEBUG: Request Headers ===');
+      debugPrint('Authorization: Bearer ${accessToken.length > 10 ? accessToken.substring(0, 10) + '...' : accessToken}');
+      debugPrint('Content-Type: ${headers['Content-Type']}');
+      debugPrint('X-Tenant: ${apiKey.length > 8 ? apiKey.substring(0, 8) + '...' : apiKey}');
+
+      final response = await http.get(
+        uri,
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
+
+      // DEBUG: Print response details
+      debugPrint('=== DEBUG: Response Details ===');
+      debugPrint('Response Status Code: ${response.statusCode}');
+      debugPrint('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final model = DailySalesCloseModel.fromJson(jsonData);
+        dailySalesCloseList = model.data ?? [];
+        dailySalesClosePagination = model.pagination;
+        notifyListeners();
+        debugPrint('=== DEBUG: fetchDailySalesClose SUCCESS ===');
+      } else {
+        dailySalesCloseList = [];
+        notifyListeners();
+        debugPrint('=== DEBUG: fetchDailySalesClose FAILED (Non-200 Status) ===');
+      }
+    } catch (error, stackTrace) {
+      debugPrint('=== DEBUG: fetchDailySalesClose ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
+      dailySalesCloseList = [];
+      notifyListeners();
+      rethrow;
     }
   }
 }

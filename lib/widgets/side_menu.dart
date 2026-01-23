@@ -412,13 +412,18 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle3: () {
                     sideBarController.index.value = 50;
                   },
+                  onTapTitle4: () {
+                    sideBarController.index.value = 78;
+                  },
                   listTitle1: "Sales",
                   listTitle2: "Confirmed Orders",
                   listTitle3: "Sales Return",
+                  listTitle4: "Day Sale Closing",
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
                   showTitle2: hasConfirmedOrdersPermission,
                   showTitle3: hasSalesReturnPermission,
+                  showTitle4: hasSalesPermission,
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'Sales',
                   onTap: () {
@@ -437,7 +442,8 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 49 ||
                       sideBarController.index.value == 50 ||
                       sideBarController.index.value == 51 ||
-                      sideBarController.index.value == 54,
+                      sideBarController.index.value == 54 ||
+                      sideBarController.index.value == 78,
                 ),
               );
             },

@@ -29,6 +29,11 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   String? _loggedInUserEmail; // Logged in email from SalesExecutive
   String? _apiKey;
   String? _companyName;
+  String? _timeZone;
+  int? _customerId;
+  String? _userRole;
+  String? _tokenType;
+  int? _companyId;
   bool _loading = true;
 
   @override
@@ -50,6 +55,13 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
       // Get API key
       _apiKey = await sharedPrefsProvider.getApiKey();
+
+      // Get other login details
+      _timeZone = await sharedPrefsProvider.getTimeZone();
+      _customerId = await sharedPrefsProvider.getCustomerId();
+      _userRole = await sharedPrefsProvider.getUserRole();
+      _tokenType = await sharedPrefsProvider.getTokenType();
+      _companyId = await sharedPrefsProvider.getCompanyId();
 
       // Fetch logged in user info from SalesExecutive
       await _fetchLoggedInUserInfo();
@@ -316,6 +328,11 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         _buildTableRow('Company Name', _companyName ?? 'Loading...'),
         _buildTableRow('Logged In Username', _loggedInUserName ?? 'Loading...'),
         _buildTableRow('Logged In Email', _loggedInUserEmail ?? 'Loading...'),
+        _buildTableRow('User Role', _userRole ?? 'Loading...'),
+        _buildTableRow('Customer ID', _customerId?.toString() ?? 'Loading...'),
+        _buildTableRow('Company ID', _companyId?.toString() ?? 'Loading...'),
+        _buildTableRow('Token Type', _tokenType ?? 'Loading...'),
+        _buildTableRow('Timezone', _timeZone ?? 'Not available'),
         _buildTableRow('Base URL', APPUrl.baseURL),
         _buildTableRow('API Key', _apiKey ?? 'Not available'),
       ],

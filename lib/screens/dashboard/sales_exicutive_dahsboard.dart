@@ -2,7 +2,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -54,12 +56,28 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     super.initState();
     debugPrint('=== SalesExecutiveDashboard initState called ===');
     debugPrint('Starting initial data fetching...');
-    fetchAllPeriodData(); // Fetch data for all periods once
+    fetchDataForPeriod('month'); // Fetch data for month by default to show some data
     debugPrint('=== Initial data fetching initiated ===');
   }
 
-  Future<void> fetchAllPeriodData() async {
-    debugPrint('=== FETCHING DATA FOR ALL PERIODS ===');
+  Future<void> fetchDataForPeriod(String period) async {
+    debugPrint('=== FETCHING DATA FOR PERIOD: $period ===');
+
+    // Check if data is already cached
+    if (cachedDashboardData.containsKey(period) &&
+        cachedOverviewData.containsKey(period)) {
+      debugPrint('Using cached data for period: $period');
+      setState(() {
+        dashBoardModelData = cachedDashboardData[period];
+        totalSales = cachedTotalSales[period];
+        dashboardOverview = cachedOverviewData[period];
+        value = period;
+      });
+      return;
+    }
+
+    // Data not cached, fetch it
+    debugPrint('Data not cached for period: $period. Fetching from API...');
     try {
       setState(() {
         isInitialLoading = true;
@@ -68,82 +86,94 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
           Provider.of<AuthModel>(context, listen: false).token;
       if (accessToken == null) {
         debugPrint('ERROR: No access token available');
+        setState(() {
+          isInitialLoading = false;
+        });
         return;
       }
 
-      // Fetch data for each period
-      final periods = ['today', 'week', 'month', 'year'];
+      // Get date range based on the period
+      final DateTime now = DateTime.now();
+      String startDate;
+      String endDate = DateFormat('yyyy-MM-dd').format(now);
+      int currentYear = now.year;
 
-      for (String period in periods) {
-        debugPrint('Fetching data for period: $period');
-
-        // Get date range based on the period
-        final DateTime now = DateTime.now();
-        String startDate;
-        String endDate = DateFormat('yyyy-MM-dd').format(now);
-        int currentYear = now.year;
-
-        switch (period) {
-          case "today":
-            startDate = DateFormat('yyyy-MM-dd').format(now);
-            break;
-          case "week":
-            startDate = DateFormat('yyyy-MM-dd')
-                .format(now.subtract(const Duration(days: 7)));
-            break;
-          case "month":
-            startDate = DateFormat('yyyy-MM-dd')
-                .format(DateTime(now.year, now.month, 1));
-            break;
-          case "year":
-            startDate =
-                DateFormat('yyyy-MM-dd').format(DateTime(now.year, 1, 1));
-            currentYear = now.year;
-            break;
-          default:
-            startDate = DateFormat('yyyy-MM-dd')
-                .format(now.subtract(const Duration(days: 30)));
-        }
-
-        // Fetch dashboard data for this period
-        try {
-          // Fetch legacy dashboard data
-          final dashboardResponse =
-              await DashboardProvider().dashbaord(accessToken, context);
-          if (dashboardResponse["status"] == "success") {
-            DashBoardModel dashBoardModel =
-                DashBoardModel.fromJson(dashboardResponse);
-            if (dashBoardModel.data != null) {
-              cachedDashboardData[period] = dashBoardModel.data!;
-              if (dashBoardModel.data!.totalSales != null) {
-                cachedTotalSales[period] = dashBoardModel.data!.totalSales!;
-              }
-            }
-          }
-
-          // Fetch new dashboard overview data
-          final dashboardProvider = DashboardProvider();
-          final overview = await dashboardProvider.fetchDashboardOverview(
-              accessToken, startDate, endDate);
-          cachedOverviewData[period] = overview;
-
-          debugPrint('Cached data for period: $period');
-        } catch (error) {
-          debugPrint('Error fetching data for period $period: $error');
-        }
+      switch (period) {
+        case "today":
+          startDate = DateFormat('yyyy-MM-dd').format(now);
+          break;
+        case "week":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7)));
+          break;
+        case "month":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(DateTime(now.year, now.month, 1));
+          break;
+        case "year":
+          startDate =
+              DateFormat('yyyy-MM-dd').format(DateTime(now.year, 1, 1));
+          currentYear = now.year;
+          break;
+        default:
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 30)));
       }
 
-      // Set initial data to today's data
-      setState(() {
-        dashBoardModelData = cachedDashboardData['today'];
-        totalSales = cachedTotalSales['today'];
-        dashboardOverview = cachedOverviewData['today'];
-        isInitialLoading = false;
-      });
+      // Fetch dashboard data for this period
+      try {
+        // Fetch legacy dashboard data
+        final dashboardResponse =
+            await DashboardProvider().dashbaord(accessToken, context);
+        if (dashboardResponse["status"] == "success") {
+          DashBoardModel dashBoardModel =
+              DashBoardModel.fromJson(dashboardResponse);
+          if (dashBoardModel.data != null) {
+            cachedDashboardData[period] = dashBoardModel.data!;
+            if (dashBoardModel.data!.totalSales != null) {
+              cachedTotalSales[period] = dashBoardModel.data!.totalSales!;
+            }
+          }
+        }
 
-      debugPrint('=== ALL PERIOD DATA FETCHING COMPLETE ===');
+        // Fetch new dashboard overview data
+        final dashboardProvider = DashboardProvider();
+        final overview = await dashboardProvider.fetchDashboardOverview(
+            accessToken, startDate, endDate);
+        cachedOverviewData[period] = overview;
+
+        debugPrint('Cached data for period: $period');
+
+        // Update state with the newly fetched data
+        setState(() {
+          dashBoardModelData = cachedDashboardData[period];
+          totalSales = cachedTotalSales[period];
+          dashboardOverview = cachedOverviewData[period];
+          value = period;
+          isInitialLoading = false;
+        });
+      } catch (error) {
+        debugPrint('Error fetching data for period $period: $error');
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Failed to load dashboard data: $error',
+          );
+        }
+        setState(() {
+          isInitialLoading = false;
+        });
+      }
+
+      debugPrint('=== PERIOD DATA FETCHING COMPLETE ===');
     } catch (error) {
-      debugPrint('Error in fetchAllPeriodData: $error');
+      debugPrint('Error in fetchDataForPeriod: $error');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'An unexpected error occurred: $error',
+        );
+      }
       setState(() {
         isInitialLoading = false;
       });
@@ -319,13 +349,9 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
           child: DropdownButton<String>(
             value: value,
             onChanged: (String? newValue) {
-              setState(() {
-                value = newValue?.toLowerCase() ?? "today";
-                // Switch to cached data instead of refetching
-                dashBoardModelData = cachedDashboardData[value];
-                totalSales = cachedTotalSales[value];
-                dashboardOverview = cachedOverviewData[value];
-              });
+              if (newValue != null) {
+                fetchDataForPeriod(newValue.toLowerCase());
+              }
             },
             dropdownColor: Colors.white,
             menuMaxHeight: 200,
@@ -395,27 +421,26 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    shrinkWrap: true,
-                    children: [
-                      _buildSalesCard("Count", ColorManager.kPrimaryColor,
-                          Icons.receipt_long),
-                      _buildSalesCard(
-                          "Amount", ColorManager.kMagentha, Icons.attach_money),
-                      _buildSalesCard(
-                          "Customers", ColorManager.kOrange, Icons.people),
-                      _buildSalesCard(
-                          "Products", ColorManager.kBlue, Icons.inventory),
-                      _buildSalesCard("Revenue", const Color(0xFF4CAF50),
-                          Icons.trending_up),
-                      _buildSalesCard("Orders", const Color(0xFF9C27B0),
-                          Icons.shopping_cart),
-                    ],
-                  ),
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  shrinkWrap: true,
+                  children: [
+                    _buildSalesCard("Count", ColorManager.kPrimaryColor,
+                        Icons.receipt_long),
+                    _buildSalesCard(
+                        "Amount", ColorManager.kMagentha, Icons.attach_money),
+                    _buildSalesCard(
+                        "Customers", ColorManager.kOrange, Icons.people),
+                    _buildSalesCard(
+                        "Products", ColorManager.kBlue, Icons.inventory),
+                    _buildSalesCard("Revenue", const Color(0xFF4CAF50),
+                        Icons.trending_up),
+                    _buildSalesCard("Orders", const Color(0xFF9C27B0),
+                        Icons.shopping_cart),
+                  ],
                 ),
               ),
+
             ],
           ),
         ),
@@ -1710,10 +1735,11 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       case "Products":
-        return Provider.of<LocalProductProvider>(context, listen: false)
+        return Provider.of<LocalProductProvider>(context, listen: true)
             .products
             .length
             .toString();
+
       case "Revenue":
         return "${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
       case "Orders":

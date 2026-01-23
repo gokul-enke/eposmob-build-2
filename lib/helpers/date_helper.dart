@@ -165,6 +165,20 @@ class DateHelper {
     return formatter.format(localNow);
   }
 
+  static String getCurrentFormattedTimeWithAMPM() {
+    final now = DateHelper.now();
+    final localNow = _convertToLocal(now.toUtc());
+    final DateFormat formatter = DateFormat('hh:mm a');
+    return formatter.format(localNow);
+  }
+
+  static String getCurrentFormattedTimeWithSecondsAMPM() {
+    final now = DateHelper.now();
+    final localNow = _convertToLocal(now.toUtc());
+    final DateFormat formatter = DateFormat('hh:mm:ss a');
+    return formatter.format(localNow);
+  }
+
   // To Print Local to Local Date and Time
   static String formatToISODateFromIST(String isoDateString) {
     final DateTime local = DateTime.parse(isoDateString).toLocal();

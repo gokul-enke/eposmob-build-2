@@ -332,7 +332,7 @@ class MyApp extends StatelessWidget {
       child: KeyboardDispatcher(
         child: GetMaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'CLOUD POS',
+          title: 'CLOUDPOS',
           theme: ThemeData(),
           translations: AppTranslations(LocalizationService.translations),
           locale: LocalizationService.locale,

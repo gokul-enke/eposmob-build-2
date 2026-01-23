@@ -46,7 +46,9 @@ import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:provider/provider.dart';
+
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
@@ -1455,8 +1457,12 @@ class BillingPageState extends State<BillingPage>
         ),
         Row(
           children: [
+            // Live Clock
+            const LiveClock(),
+            const SizedBox(width: 12),
             // Keyboard toggle button
             IconButton(
+
               icon: Icon(
                 Provider.of<KeyboardProvider>(context).showKeyboardFeature
                     ? Icons.keyboard_hide

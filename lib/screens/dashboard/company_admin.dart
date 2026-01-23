@@ -2,7 +2,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -117,10 +119,71 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     } catch (error) {
       // In case of error, we'll continue with existing dummy data
       debugPrint('Error fetching new dashboard data: $error');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to load dashboard data: $error',
+        );
+      }
     }
   }
 
+  Future<void> fetchGraphDataForPeriod(String period) async {
+    debugPrint('=== FETCHING GRAPH DATA FOR PERIOD: $period ===');
+    try {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      if (accessToken == null) return;
+
+      // Get date range based on the period
+      final DateTime now = DateTime.now();
+      String startDate;
+      String endDate = DateFormat('yyyy-MM-dd').format(now);
+
+      switch (period) {
+        case "today":
+          startDate = DateFormat('yyyy-MM-dd').format(now);
+          break;
+        case "week":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7)));
+          break;
+        case "month":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(DateTime(now.year, now.month, 1));
+          break;
+        default:
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7))); // Default to week
+      }
+
+      // Map UI period to API period parameter
+      String apiPeriod = 'week';
+      if (period == 'today') apiPeriod = 'day';
+      if (period == 'week') apiPeriod = 'week';
+      if (period == 'month') apiPeriod = 'month';
+
+      final dashboardProvider = DashboardProvider();
+      final executiveSalesGraph = await dashboardProvider
+          .fetchExecutiveSalesGraph(accessToken, apiPeriod, startDate, endDate);
+
+      setState(() {
+        this.executiveSalesGraph = executiveSalesGraph;
+      });
+    } catch (error) {
+      debugPrint('Error fetching graph data: $error');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to load graph data: $error',
+        );
+      }
+    }
+  }
+
+
   Future<void> fetchGraphData() async {
+
     setState(() {
       isLoading = true;
     });
@@ -1776,10 +1839,11 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       case "Products":
-        return Provider.of<LocalProductProvider>(context, listen: false)
+        return Provider.of<LocalProductProvider>(context, listen: true)
             .products
             .length
             .toString();
+
       case "Revenue":
         return "${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
       case "Orders":

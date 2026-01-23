@@ -13,7 +13,7 @@ import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
 import 'package:pos_machine/screens/dashboard/company_admin.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
-import 'package:pos_machine/screens/dashboard/dashboard_ui_only.dart';
+
 import 'package:pos_machine/screens/dashboard/sales_exicutive_dahsboard.dart';
 import 'package:pos_machine/screens/edit_order/edit_order.dart';
 import 'package:pos_machine/screens/homenew/home_new.dart';
@@ -80,6 +80,7 @@ import '../widgets/category_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_details.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
+import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 
 class SideBarController extends GetxController {
   RxInt index =
@@ -94,7 +95,7 @@ class SideBarController extends GetxController {
 
   var screens = const [
     HomeNew(), //0
-    DashboardUIScreen(), //1 - Using the role-based dashboard
+    DashboardScreen(), //1 - Using the role-based dashboard
     SalesScreen(), //2
     CartScreen(), //3
     TransactionScreen(), //4
@@ -171,5 +172,6 @@ class SideBarController extends GetxController {
     SupplierVoucherListScreen(), // 75 Supplier Voucher List (alias for Transactions)
     CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
     NonStockReportScreen(), // 77 Non-Stock Report
+    DailySalesCloseListScreen(), // 78 Daily Sales Close List
   ];
 }

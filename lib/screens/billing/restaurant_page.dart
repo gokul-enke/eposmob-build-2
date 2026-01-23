@@ -851,15 +851,16 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _orderPanelKey.currentState?.refreshSavedOrders();
         }
 
-        // Check if KOT print is enabled in app settings
+          // Check if KOT print is enabled in app settings
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
           // Get current time for KOT (using DateHelper for timezone support)
-          final orderTime = DateHelper.getCurrentFormattedTime();
+          final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
 
           // Navigate to simple KOT print page
           if (mounted) {
+
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -5728,250 +5729,59 @@ class _OrderPanelState extends State<_OrderPanel> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Payment Summary Section
-            _buildPaymentSummary(),
-            const SizedBox(height: 16),
-            // Payment Method, Customer Selection, and Discount buttons row
-            Row(
-              children: [
-                // Payment Method Button
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showPaymentMethodModal(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _hasPaymentMethod()
-                              ? const Color(0xFF2563EB).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          border: Border.all(
-                            color: _hasPaymentMethod()
-                                ? const Color(0xFF2563EB)
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.payment,
-                                color: _hasPaymentMethod()
-                                    ? const Color(0xFF2563EB)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  _hasPaymentMethod() ? 'Paid' : 'Payment',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s11
-                                          : FontSize.s12,
-                                      0.21,
-                                      _hasPaymentMethod()
-                                          ? const Color(0xFF2563EB)
-                                          : const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // Customer Selection Button
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCustomerSelectionModal(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _selectedCustomer != null
-                              ? const Color(0xFF059669).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          border: Border.all(
-                            color: _selectedCustomer != null
-                                ? const Color(0xFF059669)
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.person,
-                                color: _selectedCustomer != null
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  _selectedCustomer != null
-                                      ? (_selectedCustomer!.name
-                                              ?.split(' ')
-                                              .first ??
-                                          'Customer')
-                                      : 'Customer',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s11
-                                          : FontSize.s12,
-                                      0.21,
-                                      _selectedCustomer != null
-                                          ? const Color(0xFF059669)
-                                          : const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Discount Button
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCouponModal(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _hasDiscount()
-                              ? const Color(0xFFD97706).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          border: Border.all(
-                            color: _hasDiscount()
-                                ? const Color(0xFFD97706)
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.discount,
-                                color: _hasDiscount()
-                                    ? const Color(0xFFD97706)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  _hasDiscount() ? 'Applied' : 'Discount',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s11
-                                          : FontSize.s12,
-                                      0.21,
-                                      _hasDiscount()
-                                          ? const Color(0xFFD97706)
-                                          : const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // New Compact Summary
+            _buildCompactOneLineSummary(),
             const SizedBox(height: 12),
-            // First row: Confirm Order button - REMOVED (using bottom Confirm button instead)
-            // SizedBox(
-            //   width: double.infinity,
-            //   child: Material(
-            //     color: Colors.transparent,
-            //     child: InkWell(
-            //       onTap: allItemsReadyOrServed ? () => _confirmOrder() : null,
-            //       borderRadius: BorderRadius.circular(12),
-            //       child: AnimatedContainer(
-            //         duration: const Duration(milliseconds: 200),
-            //         height: widget.isCompact ? 44 : 48,
-            //         decoration: BoxDecoration(
-            //           color: !allItemsReadyOrServed
-            //               ? const Color(0xFF94A3B8)
-            //               : const Color(0xFF2563EB),
-            //           borderRadius: BorderRadius.circular(12),
-            //           boxShadow: allItemsReadyOrServed
-            //               ? [
-            //                   BoxShadow(
-            //                     color: const Color(0xFF2563EB).withOpacity(0.3),
-            //                     blurRadius: 8,
-            //                     offset: const Offset(0, 2),
-            //                   ),
-            //                 ]
-            //               : [],
-            //         ),
-            //         child: Center(
-            //           child: Row(
-            //             mainAxisAlignment: MainAxisAlignment.center,
-            //             children: [
-            //               Icon(
-            //                 Icons.check_circle,
-            //                 color: Colors.white,
-            //                 size: widget.isCompact ? 16 : 18,
-            //               ),
-            //               const SizedBox(width: 8),
-            //               Text(
-            //                 'Confirm Order',
-            //                 style: buildCustomStyle(
-            //                     FontWeightManager.semiBold,
-            //                     widget.isCompact ? FontSize.s13 : FontSize.s14,
-            //                     0.21,
-            //                     Colors.white),
-            //               ),
-            //             ],
-            //           ),
-            //         ),
-            //       ),
-            //     ),
-            //   ),
-            // ),
-            // const SizedBox(height: 12),
-            // Second row: Back and Update Order buttons
-            // Row: Confirm and Print buttons
+            // Row: Print KOT and Confirm buttons
             Row(
               children: [
-                // 1. Confirm Button (Left Side)
+                // 1. Print KOT Button (Left Side)
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _printNewKOT(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: const Color(0xFFD97706),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long,
+                                color: const Color(0xFFD97706),
+                                size: widget.isCompact ? 16 : 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Print KOT',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    widget.isCompact
+                                        ? FontSize.s13
+                                        : FontSize.s14,
+                                    0.21,
+                                    const Color(0xFFD97706)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 2. Confirm Button (Right Side) - Opens Checkout Modal
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
@@ -5980,7 +5790,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                               !allItemsServed ||
                               _isLoadingConfirm)
                           ? null
-                          : () => _confirmOrder(),
+                          : () => _showCheckoutModal(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -6042,114 +5852,6 @@ class _OrderPanelState extends State<_OrderPanel> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                // 2. Print Button (Right Side)
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: (cartItems.isEmpty ||
-                              !allItemsServed ||
-                              _isLoadingConfirm)
-                          ? null
-                          : () => _confirmOrderAndPrintBill(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: (cartItems.isEmpty ||
-                                    !allItemsServed ||
-                                    _isLoadingConfirm)
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFF2563EB),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.print,
-                                color: (cartItems.isEmpty ||
-                                        !allItemsServed ||
-                                        _isLoadingConfirm)
-                                    ? const Color(0xFF94A3B8)
-                                    : const Color(0xFF2563EB),
-                                size: widget.isCompact ? 16 : 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Print',
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    widget.isCompact
-                                        ? FontSize.s13
-                                        : FontSize.s14,
-                                    0.21,
-                                    (cartItems.isEmpty ||
-                                            !allItemsServed ||
-                                            _isLoadingConfirm)
-                                        ? const Color(0xFF94A3B8)
-                                        : const Color(0xFF2563EB)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // 3. Print KOT Button (Right Side)
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _printNewKOT(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: const Color(0xFFD97706),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long,
-                                color: const Color(0xFFD97706),
-                                size: widget.isCompact ? 16 : 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Print KOT',
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    widget.isCompact
-                                        ? FontSize.s13
-                                        : FontSize.s14,
-                                    0.21,
-                                    const Color(0xFFD97706)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ],
@@ -6157,6 +5859,121 @@ class _OrderPanelState extends State<_OrderPanel> {
       ),
     );
   }
+
+  Widget _buildCompactOneLineSummary() {
+    if (_selectedOrder == null) return const SizedBox.shrink();
+
+    // Calculate totals (reuse logic from _buildPaymentSummary logic or similar)
+    List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
+    double orderTotal = 0.0;
+    for (var item in cartItems) {
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
+      orderTotal += quantity * unitPrice;
+    }
+    if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
+      orderTotal =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
+    }
+
+    // Apply discounts
+    double totalDiscountAmount =
+        _flatDiscount + (orderTotal * _percentageDiscount / 100);
+    double finalOrderTotal = orderTotal - totalDiscountAmount;
+
+    // Customer Balance
+    final customerBalance = _selectedCustomer?.balance ?? 0.0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Total: ',
+                style: buildCustomStyle(
+                    FontWeightManager.semiBold, 16, 0.2, Colors.black87),
+              ),
+              Text(
+                finalOrderTotal.toStringAsFixed(2),
+                style: buildCustomStyle(
+                    FontWeightManager.bold, 16, 0.2, const Color(0xFF2563EB)),
+              ),
+            ],
+          ),
+          if (_selectedCustomer != null)
+            Row(
+              children: [
+                Text(
+                  'Cust. Bal: ',
+                  style: buildCustomStyle(
+                      FontWeightManager.semiBold, 16, 0.2, Colors.black87),
+                ),
+                Text(
+                  customerBalance.toStringAsFixed(2),
+                  style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      16,
+                      0.2,
+                      customerBalance >= 0
+                          ? const Color(0xFF059669)
+                          : const Color(0xFFDC2626)),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showCheckoutModal() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return _CheckoutDialog(
+          orderPanelState: this,
+          cartTotal: _calculateOrderTotal(),
+        );
+      },
+    );
+  }
+
+  double _calculateOrderTotal() {
+    if (_selectedOrder == null) return 0.0;
+    List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
+    double total = 0.0;
+    for (var item in cartItems) {
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
+      total += quantity * unitPrice;
+    }
+    if (total == 0.0 && _selectedOrder['grand_total'] != null) {
+      total =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
+    }
+    return total;
+  }
+
 
   // Wrapper method for quantity updates with loading state
   Future<void> _updateCartItemQuantityWithLoading(
@@ -8465,5 +8282,338 @@ class MockLocalProductProvider extends LocalProductProvider {
     _flatDiscount = flatDiscount;
     _percentageDiscount = percentageDiscount;
     notifyListeners();
+  }
+}
+
+class _CheckoutDialog extends StatefulWidget {
+  final _OrderPanelState orderPanelState;
+  final double cartTotal;
+
+  const _CheckoutDialog({
+    required this.orderPanelState,
+    required this.cartTotal,
+  });
+
+  @override
+  State<_CheckoutDialog> createState() => _CheckoutDialogState();
+}
+
+class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Access state from parent
+    final state = widget.orderPanelState;
+    final size = MediaQuery.of(context).size;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Colors.white,
+      child: Container(
+        width: 900,
+        height: 700,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            // Header with Tabs
+            Container(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TabBar(
+                      controller: _tabController,
+                      isScrollable: true,
+                      labelColor: const Color(0xFF2563EB),
+                      unselectedLabelColor: const Color(0xFF64748B),
+                      indicatorColor: const Color(0xFF2563EB),
+                      tabs: const [
+                        Tab(icon: Icon(Icons.receipt_long), text: 'Review & Pay'),
+                        Tab(icon: Icon(Icons.payment), text: 'Payment Method'),
+                        Tab(icon: Icon(Icons.person), text: 'Customer'),
+                        Tab(icon: Icon(Icons.discount), text: 'Discount'),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Tab 1: Review & Pay
+                  _buildReviewTab(state, size),
+                  
+                  // Tab 2: Payment Methods (Embedding PaymentMethodModal logic)
+                  _buildPaymentTab(state),
+                  
+                  // Tab 3: Customer (Embedding Customer Selection)
+                  _buildCustomerTab(state),
+                  
+                  // Tab 4: Discount (Embedding Coupon/Discount logic)
+                  _buildDiscountTab(state),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewTab(_OrderPanelState state, Size size) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left: Order Summary (Detailed)
+          Expanded(
+            flex: 3,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Order Summary', style: buildCustomStyle(FontWeightManager.bold, 18, 0.2, Colors.black)),
+                  const SizedBox(height: 16),
+                  state._buildPaymentSummary(), // Reuse existing detailed summary
+                  const SizedBox(height: 24),
+                  // Additional info or items list could go here
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 24),
+          const VerticalDivider(width: 1),
+          const SizedBox(width: 24),
+          // Right: Actions
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Quick info cards
+                _buildInfoCard(
+                  icon: Icons.person, 
+                  title: state._selectedCustomer?.name ?? 'No Customer Selected',
+                  subtitle: state._selectedCustomer?.phone ?? '',
+                  color: Colors.blue
+                ),
+                const SizedBox(height: 12),
+                _buildInfoCard(
+                  icon: Icons.payment, 
+                  title: state._hasPaymentMethod() ? 'Payment Selected' : 'No Payment Selected',
+                  subtitle: state._hasPaymentMethod() ? 'Amount Entered' : 'Select in Payment Tab',
+                  color: state._hasPaymentMethod() ? Colors.green : Colors.orange
+                ),
+                const Spacer(),
+                
+                // Primary Actions
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.print),
+                  label: const Text('Confirm & Print Bill'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  onPressed: () {
+                    state._confirmOrderAndPrintBill();
+                    // Dialog will close if successful inside the method or we handle it
+                  },
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('Confirm & Pay'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    state._confirmOrder();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({required IconData icon, required String title, required String subtitle, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+                if (subtitle.isNotEmpty)
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentTab(_OrderPanelState state) {
+    // Embedding PaymentMethodModal logic
+    return PaymentMethodModal(
+      initialIsCashSelected: state._isCashSelected,
+      initialIsCardSelected: state._isCardSelected,
+      initialIsUpiSelected: state._isUpiSelected,
+      initialIsCodSelected: state._isCodSelected,
+      initialIsDebitSelected: state._isDebitSelected,
+      initialCashAmount: state._cashAmount,
+      initialCardAmount: state._cardAmount,
+      initialUpiAmount: state._upiAmount,
+      initialCodAmount: state._codAmount,
+      initialDebitAmount: state._debitAmount,
+      initialTransactionNumber: state._transactionNumber,
+      cartTotal: widget.cartTotal,
+      customerPrevBalance: state._selectedCustomer?.balance ?? 0.0,
+      customButtonTitle: "Update Payment",
+      closeOnApply: false,
+      onPaymentMethodSelected: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+        state.setState(() {
+          state._isCashSelected = isCash;
+          state._isCardSelected = isCard;
+          state._isUpiSelected = isUpi;
+          state._isCodSelected = isCod;
+          state._isDebitSelected = isDebit;
+          state._cashAmount = cash;
+          state._cardAmount = card;
+          state._upiAmount = upi;
+          state._codAmount = cod;
+          state._debitAmount = debit;
+          state._transactionNumber = trans;
+          state._toCustomerCreditEnabled = toCredit;
+          state._hasOpenedPaymentModalOnce = true;
+          // state._toCustomerCreditAmount = double.tryParse(debit) ?? 0.0; // This logic needs to be verified
+        });
+        
+        // Also update provider
+        final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+        billingProvider.updatePaymentFromModal(
+          isCash: isCash, isCard: isCard, isUpi: isUpi, isCod: isCod, isDebit: isDebit,
+          cashAmount: cash, cardAmount: card, upiAmount: upi, codAmount: cod, debitAmount: debit,
+          transactionNumber: trans, toCustomerCredit: toCredit,
+          cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
+        );
+        
+        // Automatically switch back to Review tab
+        _tabController.animateTo(0);
+      },
+    );
+  }
+
+  Widget _buildCustomerTab(_OrderPanelState state) {
+    // Customer Selection Tab
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (state._selectedCustomer != null)
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.person, size: 48, color: Colors.blue),
+                const SizedBox(height: 8),
+                Text(state._selectedCustomer!.name ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(state._selectedCustomer!.phone ?? '', style: const TextStyle(fontSize: 16)),
+                Text('Balance: ${state._selectedCustomer!.balance?.toStringAsFixed(2) ?? "0.00"}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: (state._selectedCustomer!.balance ?? 0) >= 0 ? Colors.green : Colors.red)),
+              ],
+            ),
+          ),
+          
+        ElevatedButton.icon(
+          icon: const Icon(Icons.search),
+          label: Text(state._selectedCustomer == null ? 'Select Customer' : 'Change Customer'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          ),
+          onPressed: () {
+            // Call existing modal method from state
+            state._showCustomerSelectionModal();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiscountTab(_OrderPanelState state) {
+    return Center(
+      child: _RestaurantCouponModalWrapper(
+        orderSubTotal: widget.cartTotal,
+        initialCouponCode: state._couponCode,
+        initialFlatDiscount: state._flatDiscount,
+        initialPercentageDiscount: state._percentageDiscount,
+        isCouponApplied: state._isCouponApplied,
+        onCouponAction: (couponCode, isApplied, {flatDiscount, percentageDiscount}) {
+          state.setState(() {
+            state._couponCode = couponCode;
+            state._isCouponApplied = isApplied;
+            state._flatDiscount = flatDiscount ?? 0.0;
+            state._percentageDiscount = percentageDiscount ?? 0.0;
+
+            if (!isApplied) {
+              state._couponCode = "";
+              state._flatDiscount = 0.0;
+              state._percentageDiscount = 0.0;
+            }
+          });
+          // Switch to review tab
+          _tabController.animateTo(0);
+        },
+      ),
+    );
   }
 }

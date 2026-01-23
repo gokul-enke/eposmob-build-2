@@ -1366,9 +1366,10 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
   void _printKitchenOrder(KitchenOrder order) {
     // Get current time for KOT (using DateHelper for timezone support)
-    final orderTime = DateHelper.getCurrentFormattedTime();
+    final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
 
     // Build print items
+
     List<Map<String, dynamic>> printItems = [];
     for (var item in order.items) {
       printItems.add({
