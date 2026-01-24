@@ -1429,6 +1429,7 @@ Powered by CloudPOS''',
                     paidAmount: paidAmount > 0 ? paidAmount : null,
                     customerCurrentBalance: customerCurrentBalance,
                     isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                    netExcTax: orderDetails.data?.priceSummary?.netExcTax?.toString(),
                   ),
                 ),
               );

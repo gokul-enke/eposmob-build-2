@@ -776,42 +776,55 @@ class _DayCloseModalState extends State<DayCloseModal> {
     }
   }
 
-  Widget _buildSummaryCard(String label, String value, {Color? labelColor, Color? valueColor}) {
+  Widget _buildSummaryCard(String label, String value, {Color? color, IconData? icon}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Flexible(
-            child: Text(
-              label,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s11,
-                0.18,
-                labelColor ?? Colors.grey.shade700,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.18,
+                  Colors.grey.shade500,
+                ),
               ),
-            ),
+              if (icon != null)
+                Icon(
+                  icon,
+                  size: 16,
+                  color: Colors.grey.shade400,
+                ),
+            ],
           ),
+          const SizedBox(height: 8),
           Text(
             value,
             style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s14,
+              FontWeightManager.bold,
+              FontSize.s16,
               0.18,
-              valueColor ?? Colors.black87,
+              color ?? ColorManager.kTitleTextColor,
             ),
           ),
         ],
@@ -819,79 +832,50 @@ class _DayCloseModalState extends State<DayCloseModal> {
     );
   }
 
-  Widget _buildSmallSummaryRow(String label1, String value1, String label2, String value2, {Color? valueColor}) {
+  Widget _buildSmallSummaryRow(String label1, String value1, String label2, String value2, {Color? color1, Color? color2}) {
     return Row(
       children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  label1,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s10,
-                    0.18,
-                    Colors.grey.shade700,
-                  ),
-                ),
-                Text(
-                  value1,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s11,
-                    0.18,
-                    valueColor ?? ColorManager.kPrimaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        Expanded(child: _buildSmallSummaryItem(label1, value1, color: color1)),
         const SizedBox(width: 12),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  label2,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s10,
-                    0.18,
-                    Colors.grey.shade700,
-                  ),
-                ),
-                Text(
-                  value2,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s11,
-                    0.18,
-                    valueColor ?? ColorManager.kPrimaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        Expanded(child: _buildSmallSummaryItem(label2, value2, color: color2)),
       ],
     );
   }
+
+  Widget _buildSmallSummaryItem(String label, String value, {Color? color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s10,
+              0.18,
+              Colors.grey.shade600,
+            ),
+          ),
+          Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s11,
+              0.18,
+              color ?? ColorManager.kPrimaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -899,12 +883,14 @@ class _DayCloseModalState extends State<DayCloseModal> {
     final isMobile = size.width < 768;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       child: BuildBoxShadowContainer(
-        circleRadius: 12,
+        circleRadius: 20,
         color: Colors.white,
-        width: isMobile ? size.width * 0.95 : 500,
-        padding: const EdgeInsets.all(20),
+        width: isMobile ? size.width * 0.95 : 520,
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -913,22 +899,44 @@ class _DayCloseModalState extends State<DayCloseModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Day Close',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Day Close',
+                      style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s18,
+                        0.21,
+                        ColorManager.kTitleTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Summary of today\'s activities',
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s11,
+                        0.18,
+                        Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                Material(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  child: IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+
 
             // Content
             if (isLoadingSummary)
@@ -968,10 +976,10 @@ class _DayCloseModalState extends State<DayCloseModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Transaction Summary',
+                        'Transaction Overview',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
-                          FontSize.s13,
+                          FontSize.s12,
                           0.21,
                           Colors.grey.shade800,
                         ),
@@ -985,6 +993,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                             child: _buildSummaryCard(
                               'TOTAL ORDERS',
                               summary?.totalOrders?.toString() ?? '0',
+                              icon: Icons.shopping_bag_outlined,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -992,8 +1001,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                             child: _buildSummaryCard(
                               'TOTAL SALES',
                               '$currency ${summary?.totalSales ?? '0.00'}',
-                              labelColor: ColorManager.kPrimaryColor,
-                              valueColor: ColorManager.kPrimaryColor,
+                              color: ColorManager.kPrimaryColor,
+                              icon: Icons.account_balance_wallet_outlined,
                             ),
                           ),
                         ],
@@ -1007,8 +1016,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                             child: _buildSummaryCard(
                               'PAYMENT RECEIVED',
                               '$currency ${summary?.paymentReceived ?? '0.00'}',
-                              labelColor: ColorManager.kSuccessColor,
-                              valueColor: ColorManager.kSuccessColor,
+                              icon: Icons.check_circle_outline,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -1016,6 +1024,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                             child: _buildSummaryCard(
                               'COLLECTED ON SALE',
                               '$currency ${summary?.collectedOnSale ?? '0.00'}',
+                              icon: Icons.monetization_on_outlined,
                             ),
                           ),
                         ],
@@ -1036,6 +1045,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                         'CREDIT COLLECTED',
                         '$currency ${summary?.creditCollected ?? '0.00'}',
                       ),
+
                     ],
                   );
                 },
@@ -1046,61 +1056,76 @@ class _DayCloseModalState extends State<DayCloseModal> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: TextButton(
                     onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey.shade400),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      backgroundColor: Colors.grey.shade100,
                     ),
                     child: Text(
                       'Cancel',
                       style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
+                        FontWeightManager.semiBold,
+                        FontSize.s13,
                         0.18,
                         Colors.grey.shade700,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: isSubmitting || isLoadingSummary || errorMessage != null
-                        ? null
-                        : _submitDayClose,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorManager.kSuccessColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: ColorManager.kSuccessColor.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                    child: ElevatedButton(
+                      onPressed: isSubmitting || isLoadingSummary || errorMessage != null
+                          ? null
+                          : _submitDayClose,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ColorManager.kSuccessColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'Close Day',
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s13,
+                                0.18,
+                                Colors.white,
+                              ),
                             ),
-                          )
-                        : Text(
-                            'Submit',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.18,
-                              Colors.white,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
               ],
             ),
+
           ],
         ),
       ),
@@ -1116,7 +1141,7 @@ class DayCloseViewModal extends StatelessWidget {
 
   Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1126,7 +1151,7 @@ class DayCloseViewModal extends StatelessWidget {
               FontWeightManager.medium,
               FontSize.s12,
               0.18,
-              Colors.grey.shade600,
+              Colors.grey.shade500,
             ),
           ),
           Text(
@@ -1135,7 +1160,7 @@ class DayCloseViewModal extends StatelessWidget {
               FontWeightManager.semiBold,
               FontSize.s12,
               0.18,
-              valueColor ?? Colors.black87,
+              valueColor ?? Colors.blueGrey.shade800,
             ),
           ),
         ],
@@ -1147,13 +1172,34 @@ class DayCloseViewModal extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: buildCustomStyle(
-          FontWeightManager.semiBold,
-          FontSize.s13,
-          0.21,
-          ColorManager.kPrimaryColor,
+          FontWeightManager.bold,
+          FontSize.s11,
+          1.2,
+          Colors.grey.shade400,
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoContainer(List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: children,
       ),
     );
   }
@@ -1164,16 +1210,18 @@ class DayCloseViewModal extends StatelessWidget {
     final isMobile = size.width < 768;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
       child: Consumer<AppSettingsProvider>(
         builder: (context, appSettingsProvider, child) {
           final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
           
           return BuildBoxShadowContainer(
-            circleRadius: 12,
+            circleRadius: 16,
             color: Colors.white,
-            width: isMobile ? size.width * 0.95 : 500,
-            padding: const EdgeInsets.all(20),
+            width: isMobile ? size.width * 0.95 : 850,
+            padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1183,99 +1231,129 @@ class DayCloseViewModal extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Day Close Details',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s16,
-                          0.21,
-                          ColorManager.kPrimaryColor,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Day Close Details',
+                            style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s20,
+                              0.21,
+                              ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Reference: ${data.closingPeriod ?? '-'}',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.18,
+                              Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.close, color: Colors.grey),
                         onPressed: () => Navigator.of(context).pop(),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.grey.shade50,
+                          padding: const EdgeInsets.all(8),
+                        ),
                       ),
                     ],
                   ),
                   
-                  Divider(color: Colors.grey.shade200),
+                  const SizedBox(height: 24),
 
-                  // Sales Executive Info
-                  _buildSectionTitle('Sales Executive'),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
+                  if (isMobile) ...[
+                    // Mobile Layout: Single Column
+                    _buildSectionTitle('Sales Executive'),
+                    _buildInfoContainer([
+                      _buildDetailRow('Name', data.salesExecutive?.name ?? '-'),
+                      _buildDetailRow('Phone', data.salesExecutive?.phone ?? '-'),
+                      _buildDetailRow('Store', data.store?.name ?? '-'),
+                    ]),
+
+                    _buildSectionTitle('Period'),
+                    _buildInfoContainer([
+                      _buildDetailRow('Closing Period', data.closingPeriod ?? '-'),
+                      _buildDetailRow('Opening', '${data.openingDate ?? '-'} ${data.openingTime ?? ''}'),
+                      _buildDetailRow('Closing', '${data.closingDate ?? '-'} ${data.closingTime ?? ''}'),
+                    ]),
+
+                    _buildSectionTitle('Sales Summary'),
+                    _buildInfoContainer([
+                      _buildDetailRow('Total Orders', data.totalOrders?.toString() ?? '0'),
+                      _buildDetailRow('Total Sales', '$currency ${data.totalSales ?? '0.00'}', valueColor: ColorManager.kPrimaryColor),
+                      _buildDetailRow('Payment Received', '$currency ${data.totalPaymentReceived ?? '0.00'}', valueColor: ColorManager.kSuccessColor),
+                      _buildDetailRow('Collected on Sale', '$currency ${data.totalAmountCollectedOnSale ?? '0.00'}'),
+                    ]),
+
+                    _buildSectionTitle('Payment Breakdown'),
+                    _buildInfoContainer([
+                      _buildDetailRow('Cash Sales', '$currency ${data.totalCash ?? '0.00'}'),
+                      _buildDetailRow('Online Sales', '$currency ${data.totalOnline ?? '0.00'}'),
+                      _buildDetailRow('Credit Amount', '$currency ${data.totalCredit ?? '0.00'}', valueColor: Colors.orange.shade700),
+                      _buildDetailRow('Credit Collected', '$currency ${data.totalCreditCollected ?? '0.00'}', valueColor: ColorManager.kSuccessColor),
+                    ]),
+                  ] else ...[
+                    // Tablet/Desktop Layout: Two Columns
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailRow('Name', data.salesExecutive?.name ?? '-'),
-                        _buildDetailRow('Phone', data.salesExecutive?.phone ?? '-'),
-                        _buildDetailRow('Store', data.store?.name ?? '-'),
+                        // Left Column
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionTitle('Sales Executive'),
+                              _buildInfoContainer([
+                                _buildDetailRow('Name', data.salesExecutive?.name ?? '-'),
+                                _buildDetailRow('Phone', data.salesExecutive?.phone ?? '-'),
+                                _buildDetailRow('Store', data.store?.name ?? '-'),
+                              ]),
+                              const SizedBox(height: 8),
+                              _buildSectionTitle('Period Information'),
+                              _buildInfoContainer([
+                                _buildDetailRow('Closing Period', data.closingPeriod ?? '-'),
+                                _buildDetailRow('Opening', '${data.openingDate ?? '-'} ${data.openingTime ?? ''}'),
+                                _buildDetailRow('Closing', '${data.closingDate ?? '-'} ${data.closingTime ?? ''}'),
+                              ]),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        // Right Column
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionTitle('Sales Summary'),
+                              _buildInfoContainer([
+                                _buildDetailRow('Total Orders', data.totalOrders?.toString() ?? '0'),
+                                _buildDetailRow('Total Sales', '$currency ${data.totalSales ?? '0.00'}', valueColor: ColorManager.kPrimaryColor),
+                                _buildDetailRow('Payment Received', '$currency ${data.totalPaymentReceived ?? '0.00'}', valueColor: ColorManager.kSuccessColor),
+                                _buildDetailRow('Collected on Sale', '$currency ${data.totalAmountCollectedOnSale ?? '0.00'}'),
+                              ]),
+                              const SizedBox(height: 8),
+                              _buildSectionTitle('Payment Breakdown'),
+                              _buildInfoContainer([
+                                _buildDetailRow('Cash Sales', '$currency ${data.totalCash ?? '0.00'}'),
+                                _buildDetailRow('Online Sales', '$currency ${data.totalOnline ?? '0.00'}'),
+                                _buildDetailRow('Credit Amount', '$currency ${data.totalCredit ?? '0.00'}', valueColor: Colors.orange.shade700),
+                                _buildDetailRow('Credit Collected', '$currency ${data.totalCreditCollected ?? '0.00'}', valueColor: ColorManager.kSuccessColor),
+                              ]),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  ),
+                  ],
 
-                  // Period Info
-                  _buildSectionTitle('Period'),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildDetailRow('Closing Period', data.closingPeriod ?? '-'),
-                        _buildDetailRow('Opening', '${data.openingDate ?? '-'} ${data.openingTime ?? ''}'),
-                        _buildDetailRow('Closing', '${data.closingDate ?? '-'} ${data.closingTime ?? ''}'),
-                      ],
-                    ),
-                  ),
-
-                  // Sales Summary
-                  _buildSectionTitle('Sales Summary'),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.shade100),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildDetailRow('Total Orders', data.totalOrders?.toString() ?? '0', valueColor: Colors.blue.shade700),
-                        _buildDetailRow('Total Sales', '$currency ${data.totalSales ?? '0.00'}', valueColor: Colors.blue.shade700),
-                        _buildDetailRow('Payment Received', '$currency ${data.totalPaymentReceived ?? '0.00'}', valueColor: ColorManager.kSuccessColor),
-                        _buildDetailRow('Collected on Sale', '$currency ${data.totalAmountCollectedOnSale ?? '0.00'}'),
-                      ],
-                    ),
-                  ),
-
-                  // Payment Breakdown
-                  _buildSectionTitle('Payment Breakdown'),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildDetailRow('Cash Sales', '$currency ${data.totalCash ?? '0.00'}'),
-                        _buildDetailRow('Online Sales', '$currency ${data.totalOnline ?? '0.00'}'),
-                        _buildDetailRow('Credit Amount', '$currency ${data.totalCredit ?? '0.00'}', valueColor: Colors.orange.shade700),
-                        _buildDetailRow('Credit Collected', '$currency ${data.totalCreditCollected ?? '0.00'}', valueColor: ColorManager.kSuccessColor),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 32),
 
                   // Close button
                   SizedBox(
@@ -1283,18 +1361,20 @@ class DayCloseViewModal extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorManager.kPrimaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: Colors.blueGrey.shade900,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: Text(
-                        'Close',
+                        'Dismiss View',
                         style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.18,
+                          FontWeightManager.bold,
+                          FontSize.s14,
+                          0.5,
                           Colors.white,
                         ),
                       ),
@@ -1308,4 +1388,5 @@ class DayCloseViewModal extends StatelessWidget {
       ),
     );
   }
+
 }

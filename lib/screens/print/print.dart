@@ -43,6 +43,7 @@ class PrintPage extends StatefulWidget {
   final String? paymentMethod;
   final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
+  final String? netExcTax;
 
   const PrintPage({
     super.key,
@@ -67,6 +68,7 @@ class PrintPage extends StatefulWidget {
     this.paymentMethod,
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
+    this.netExcTax,
   });
 
   @override
@@ -500,6 +502,7 @@ class _PrintPageState extends State<PrintPage> {
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
+      netExcTax: widget.netExcTax,
     );
     
     // Print using the selected layout

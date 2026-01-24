@@ -498,6 +498,7 @@ class OrderDetailsModelDataPriceSummary {
   final num? discount;
   final num? netPayable;
   final num? totalMrp;
+  final num? netExcTax;
 
   OrderDetailsModelDataPriceSummary({
     this.subTotal,
@@ -507,6 +508,7 @@ class OrderDetailsModelDataPriceSummary {
     this.discount,
     this.netPayable,
     this.totalMrp,
+    this.netExcTax,
   });
 
   factory OrderDetailsModelDataPriceSummary.fromJson(
@@ -520,6 +522,7 @@ class OrderDetailsModelDataPriceSummary {
         discount: _parseNum(json["discount"]),
         netPayable: _parseNum(json["net_payable"]),
         totalMrp: _parseNum(json["total_mrp"]),
+        netExcTax: _parseNum(json["net_exc_tax"]),
       );
 
   // Helper method to parse num from either num or String
@@ -538,6 +541,7 @@ class OrderDetailsModelDataPriceSummary {
         "discount": discount,
         "net_payable": netPayable,
         "total_mrp": totalMrp,
+        "net_exc_tax": netExcTax,
       };
 }
 

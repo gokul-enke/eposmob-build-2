@@ -6656,6 +6656,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                           context,
                           listen: false)
                       .isDefaultCustomer,
+                  netExcTax: orderDetails.data?.priceSummary?.netExcTax?.toString(),
                 ),
               ),
             );

@@ -263,7 +263,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
           '';
       if (description.isNotEmpty) {
         rows.add(SpacingRow(5));
-        rows.add(TextRow(description, scale: 1.0));
+        rows.add(TextRow(description, scale: 1.0, isBold: true));
       }
     }
 
@@ -273,7 +273,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showStoreAddress']?.visible == true) {
       final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
       if (storeAddress != null && storeAddress.isNotEmpty) {
-        rows.add(TextRow(storeAddress, scale: 0.85));
+        rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
       }
     }
 
@@ -293,7 +293,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showFssaiInfo']?.visible == true) {
       final fssaiInfo = displayConfig?['showFssaiInfo']?.value as String?;
       if (fssaiInfo != null && fssaiInfo.isNotEmpty) {
-        rows.add(TextRow(fssaiInfo, scale: 0.85));
+        rows.add(TextRow(fssaiInfo, scale: 0.85, isBold: true));
       }
     }
 
@@ -304,7 +304,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
           '';
       if (telephone.isNotEmpty) {
         rows.add(SpacingRow(5));
-        rows.add(TextRow(telephone, scale: 0.8));
+        rows.add(TextRow(telephone, scale: 0.8, isBold: true));
       }
     }
 
@@ -313,7 +313,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
           appSettings?.customerCareEmail ??
           '';
       if (email.isNotEmpty) {
-        rows.add(TextRow(email, scale: 0.8));
+        rows.add(TextRow(email, scale: 0.8, isBold: true));
       }
     }
 
@@ -330,7 +330,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
               billDocumentConfig.numberPrefix!.isNotEmpty
           ? '${billDocumentConfig.numberPrefix}${params.orderNumber}'
           : '#${params.orderNumber}';
-      rows.add(TextRow(invoiceNumberText, scale: 0.9));
+      rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -798,7 +798,12 @@ class PremiumReceiptLayout implements ReceiptLayout {
     double taxAmount = params.totalTax;
 
     // Calculate subtotal
-    double subtotal = total + discountAmountValue;
+    double subtotal;
+    if (params.netExcTax != null) {
+      subtotal = double.tryParse(params.netExcTax!) ?? (total + discountAmountValue);
+    } else {
+      subtotal = total;
+    }
 
     // Visibility settings
     final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;

@@ -4236,6 +4236,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                           context,
                           listen: false)
                       .isDefaultCustomer,
+                  netExcTax: orderDetails.data!.priceSummary?.netExcTax?.toString(),
                 ),
               ),
             );
@@ -5456,6 +5457,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
       double netTotal = 0.0;
+      double totalTax = 0.0;
 
       // Convert SavedOrder items to the format expected by PrintPage
       for (var item in savedOrder.items) {
@@ -5463,6 +5465,10 @@ class BillingPageState extends State<BillingPageRestaurant>
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
         double itemTotalPrice = itemPrice * item.quantity;
+        
+        // Calculate tax
+        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+        totalTax += itemTax;
 
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;
@@ -5474,17 +5480,24 @@ class BillingPageState extends State<BillingPageRestaurant>
           'quantity': item.quantity.toString(),
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
+          'tax_amount': itemTax.toString(),
         });
       }
 
       // 🔧 FIX: Calculate "You Saved" using Option 3 approach
       double youSaved = totalMRP - netTotal;
       youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
+      
+      // Calculate netExcTax (Net Total - Total Tax)
+      // Assuming netTotal is tax-inclusive as per LocalProductProvider logic
+      double netExcTax = netTotal - totalTax;
 
       // Debug - check what's being sent
       debugPrint("🖨️ BILLING SAVE AND PRINT CALCULATION:");
       debugPrint("  - Total MRP: $totalMRP");
       debugPrint("  - Net Total: $netTotal");
+      debugPrint("  - Total Tax: $totalTax");
+      debugPrint("  - Net Exc Tax: $netExcTax");
       debugPrint("  - You Saved: $youSaved");
       debugPrint("Sending ${cartItems.length} items to PrintPage");
       debugPrint(
@@ -5529,6 +5542,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             // Balance info not available for offline saved orders
             isDefaultCustomer:
                 _isDefaultCustomerPhone(savedOrder.customerPhone),
+            netExcTax: netExcTax.toString(),
           ),
         ),
       );

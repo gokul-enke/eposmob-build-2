@@ -433,6 +433,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                     paidAmount: paidAmount > 0 ? paidAmount : null,
                     customerCurrentBalance: customerCurrentBalance,
                     isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                    netExcTax: orderDetailsModelData?.priceSummary?.netExcTax?.toString(),
                   ),
                 ),
               );

@@ -852,7 +852,14 @@ class ClassicReceiptLayout implements ReceiptLayout {
     } else {
       // Arabic/Bilingual totals
       double totalDiscountAmount = discountAmountValue;
-      double subtotal = total + totalDiscountAmount;
+      
+      // Calculate subtotal
+      double subtotal;
+      if (params.netExcTax != null) {
+        subtotal = double.tryParse(params.netExcTax!) ?? (total + totalDiscountAmount);
+      } else {
+        subtotal = total + totalDiscountAmount;
+      }
 
       final subtotalLabel = _getLabel(
           displayConfig, 'showMRPTotal', null, "SUBTOTAL المجموع");

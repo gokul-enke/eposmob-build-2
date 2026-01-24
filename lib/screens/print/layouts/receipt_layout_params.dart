@@ -36,6 +36,7 @@ class ReceiptLayoutParams {
   final String? zatcaCompanyName;
   // Flag to indicate if the customer is the default/walk-in customer
   final bool isDefaultCustomer;
+  final String? netExcTax;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -66,6 +67,7 @@ class ReceiptLayoutParams {
     this.zatcaVatNumber,
     this.zatcaCompanyName,
     this.isDefaultCustomer = false,
+    this.netExcTax,
   });
 
   /// Get the display configuration options from the document config

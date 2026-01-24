@@ -4335,6 +4335,7 @@ class BillingPageState extends State<BillingPage>
                   paymentMethod: paymentMethod,
                   orderComment: orderComment,
                   isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
+                  netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax?.toString(),
                 ),
               ),
             );
