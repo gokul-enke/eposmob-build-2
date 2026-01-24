@@ -11,9 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/screens/print/daily_close_thermal_printer.dart';
+import 'package:pos_machine/screens/print/daily_close_standard_printer.dart';
 
 /// Daily Close Print Page
-/// Supports thermal (58mm/80mm) printing for Daily Sales Close Report
+/// Supports thermal (58mm/80mm) and standard (A4/A5) printing for Daily Sales Close Report
 class DailyClosePrintPage extends StatefulWidget {
   final DailySalesCloseData data;
 
@@ -41,7 +42,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
   static const Color textSecondaryColor = Color(0xFF7F8C8D);
   static const Color backgroundColor = Color(0xFFF5F6FA);
 
-  final List<String> paperSizes = ['80mm', '58mm'];
+  final List<String> paperSizes = ['80mm', '58mm', 'A4', 'A5'];
 
   @override
   void initState() {
@@ -275,7 +276,11 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       return;
     }
 
-    await _printThermalDailyClose();
+    if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
+      await _printThermalDailyClose();
+    } else {
+      await _generateAndPrintPDF();
+    }
   }
 
   Future<void> _printThermalDailyClose() async {
@@ -305,6 +310,32 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     }
   }
 
+  Future<void> _generateAndPrintPDF() async {
+    try {
+      final printer = DailyCloseStandardPrinter(context);
+
+      await printer.generateAndPrintDailyClosePDF(
+        data: widget.data,
+        selectedPaperSize: selectedPaperSize,
+      );
+
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: "Daily Close PDF generated successfully!",
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Failed to generate PDF: ${e.toString()}",
+        );
+      }
+    }
+  }
+
   Future<void> _loadDefaultPaperSize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -316,8 +347,12 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
           if (paperSize == 'Thermal') {
             selectedPaperSize = '80mm';
             _saveDefaultPaperSize('80mm');
-          } else {
+          } else if (paperSizes.contains(paperSize)) {
             selectedPaperSize = paperSize!;
+          } else {
+            // Fallback if loaded size is not in our supported list
+            selectedPaperSize = '80mm';
+            _saveDefaultPaperSize('80mm');
           }
         });
       } else {
