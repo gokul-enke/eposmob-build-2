@@ -839,34 +839,24 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Labels
     final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
         isEnglish ? "NET TOTAL" : "المجموع");
-    final subtotalLabel = is58mm
-        ? subtotalLabelBase
-        : "$subtotalLabelBase ${isEnglish ? '' : 'المجموع'}".trim();
+    final subtotalLabel = subtotalLabelBase;
 
     final discountLabelBase = _getLabel(
         displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "الخصم");
-    final discountLabel = is58mm
-        ? discountLabelBase
-        : "$discountLabelBase ${isEnglish ? '' : 'الخصم'}".trim();
+    final discountLabel = discountLabelBase;
 
     final taxLabelBase =
         _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "VAT");
-    final vatLabel = is58mm
-        ? taxLabelBase
-        : "$taxLabelBase ${isEnglish ? '' : 'الضريبة'}".trim();
+    final vatLabel = taxLabelBase;
 
     final grandTotalLabelBase = isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي";
-    final grandTotalLabel = is58mm
-        ? grandTotalLabelBase
-        : "$grandTotalLabelBase ${isEnglish ? '' : 'المبلغ الاجمالي'}".trim();
+    final grandTotalLabel = grandTotalLabelBase;
 
     final cashLabel =
         _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
     final changeLabel = _getLabel(
         displayConfig, 'showChange', null, isEnglish ? "CHANGE" : "متبقي");
-    final changeLabelFull = is58mm
-        ? changeLabel
-        : "$changeLabel ${isEnglish ? '' : 'متبقي'}".trim();
+    final changeLabelFull = changeLabel;
 
     // Prepare boxed items
     List<BoxedLineItem> boxedItems = [];

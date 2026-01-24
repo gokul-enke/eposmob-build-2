@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_dialog_box.dart';
 import '../../models/daily_sales_close.dart';
+import 'package:pos_machine/screens/print/print_daily_close.dart';
 
 class DailySalesCloseListScreen extends StatefulWidget {
   const DailySalesCloseListScreen({super.key});
@@ -1355,30 +1356,70 @@ class DayCloseViewModal extends StatelessWidget {
 
                   const SizedBox(height: 32),
 
-                  // Close button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueGrey.shade900,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  // Footer buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Close modal first
+                            Navigator.of(context).pop();
+                            // Navigate to print page
+                            Get.to(() => DailyClosePrintPage(data: data));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.blueGrey.shade900,
+                            side: BorderSide(color: Colors.blueGrey.shade200),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.print_outlined, size: 20, color: Colors.blueGrey.shade900),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Print',
+                                style: buildCustomStyle(
+                                  FontWeightManager.bold,
+                                  FontSize.s14,
+                                  0.5,
+                                  Colors.blueGrey.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'Dismiss View',
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s14,
-                          0.5,
-                          Colors.white,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueGrey.shade900,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Dismiss',
+                            style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s14,
+                              0.5,
+                              Colors.white,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
