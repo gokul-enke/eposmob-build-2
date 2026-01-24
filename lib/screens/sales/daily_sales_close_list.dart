@@ -41,9 +41,9 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
   @override
   void initState() {
     super.initState();
-    // Set default date to today
-    selectedDate = DateTime.now();
-    dateController.text = DateFormat('yyyy-MM-dd').format(selectedDate!);
+    // Set default date to null (no filter)
+    selectedDate = null;
+    dateController.text = '';
     // Ensure filters are shown by default on desktop
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final isMobile = _isMobile(context);
@@ -76,7 +76,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
 
       final userId = authModel.userId ?? 0;
       final storeId = storeSession.activeStore?.storeId ?? 0;
-      final date = dateController.text;
+      final date = dateController.text.isEmpty ? null : dateController.text;
 
       // DEBUG: Print parameters
       debugPrint('=== DEBUG: fetchData Parameters ===');
@@ -110,8 +110,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
 
   void resetSearch() {
     setState(() {
-      selectedDate = DateTime.now();
-      dateController.text = DateFormat('yyyy-MM-dd').format(selectedDate!);
+      selectedDate = null;
+      dateController.text = '';
       calendarPickerKey = UniqueKey();
     });
     fetchData(page: 1);
@@ -568,9 +568,13 @@ Widget _buildActionButtons(DailySalesCloseData data, BuildContext context) {
                                     child: Center(
                                       child: CalendarPickerTableCell(
                                         key: calendarPickerKey,
+                                        hintText: 'Select Date',
                                         onDateSelected: (DateTime date) {
                                           setState(() {
                                             selectedDate = date;
+                                            dateController.text =
+                                                DateFormat('yyyy-MM-dd')
+                                                    .format(date);
                                           });
                                           fetchData();
                                         },

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
@@ -256,6 +258,19 @@ class DailyCloseThermalPrinter {
 
       // Render and print
       final image = await _renderReportToImage(rows, printWidth, is58mm);
+      // ========== DEBUG: SAVE IMAGE TO DESKTOP ==========
+      if (kDebugMode) {
+        try {
+          final String desktopPath = 'C:/Users/gokul/Desktop';
+          final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+          final File file = File('$desktopPath/daily_close_${timestamp}.png');
+          await file.writeAsBytes(img.encodePng(image));
+          debugPrint("Saved debug image to: ${file.path}");
+        } catch (e) {
+          debugPrint("Error saving debug image: $e");
+        }
+      }
+      // ==================================================
       await _printImage(image, selectedPaperSize, selectedPrinter.typePrinter);
 
       debugPrint("Daily Close Report printed successfully!");

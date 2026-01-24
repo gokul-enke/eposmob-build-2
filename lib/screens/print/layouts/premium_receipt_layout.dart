@@ -325,7 +325,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
           '';
       if (telephone.isNotEmpty) {
         rows.add(SpacingRow(5));
-        rows.add(TextRow(telephone, scale: 0.8, isBold: true));
+        rows.add(TextRow(telephone, scale: 0.9, isBold: true));
       }
     }
 
@@ -334,7 +334,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
           appSettings?.customerCareEmail ??
           '';
       if (email.isNotEmpty) {
-        rows.add(TextRow(email, scale: 0.8, isBold: true));
+        rows.add(TextRow(email, scale: 0.9, isBold: true));
       }
     }
 
