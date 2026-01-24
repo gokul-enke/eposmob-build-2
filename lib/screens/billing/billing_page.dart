@@ -4931,28 +4931,6 @@ class BillingPageState extends State<BillingPage>
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 const SizedBox(width: 5),
-                // Payment Method Icon
-                _buildQuickAccessIcon(
-                  icon: _getPaymentIcon(),
-                  label: _getPaymentLabel(),
-                  color: ColorManager.kPrimaryColor,
-                  onTap: () => _showPaymentMethodModal(),
-                ),
-                const SizedBox(width: 12),
-                // Delivery Method Icon
-                _buildQuickAccessIcon(
-                  icon: deliveryMethod == "Store Takeaway"
-                      ? Icons.store
-                      : deliveryMethod == "Car Delivery"
-                          ? Icons.car_rental
-                          : deliveryMethod == "Door Delivery"
-                              ? Icons.doorbell_outlined
-                              : Icons.local_shipping,
-                  label: _getDeliveryMethodLabel(),
-                  color: ColorManager.kButtonBlue,
-                  onTap: () => _showDeliveryMethodModal(),
-                ),
-                const SizedBox(width: 12),
                 // Coupon Icon
                 Consumer<AppSettingsProvider>(
                     builder: (context, appSettingsProvider, child) {
@@ -5008,6 +4986,28 @@ class BillingPageState extends State<BillingPage>
                     onTap: () => _showCouponModal(),
                   );
                 }),
+                const SizedBox(width: 12),
+                // Delivery Method Icon
+                _buildQuickAccessIcon(
+                  icon: deliveryMethod == "Store Takeaway"
+                      ? Icons.store
+                      : deliveryMethod == "Car Delivery"
+                          ? Icons.car_rental
+                          : deliveryMethod == "Door Delivery"
+                              ? Icons.doorbell_outlined
+                              : Icons.local_shipping,
+                  label: _getDeliveryMethodLabel(),
+                  color: ColorManager.kButtonBlue,
+                  onTap: () => _showDeliveryMethodModal(),
+                ),
+                const SizedBox(width: 12),
+                // Payment Method Icon
+                _buildQuickAccessIcon(
+                  icon: _getPaymentIcon(),
+                  label: _getPaymentLabel(),
+                  color: ColorManager.kPrimaryColor,
+                  onTap: () => _showPaymentMethodModal(),
+                ),
               ],
             ),
             const SizedBox(height: 8),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
@@ -9,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -155,6 +157,25 @@ class PremiumReceiptLayout implements ReceiptLayout {
         fontSize: baseFontSize,
         textDirection: textDirection,
       );
+
+      // ========== DEBUG: SAVE IMAGES TO DESKTOP ==========
+      if (kDebugMode) {
+        try {
+          final String desktopPath = 'C:/Users/gokul/Desktop';
+          final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+
+          final File file1 = File('$desktopPath/receipt_${timestamp}_part1.png');
+          await file1.writeAsBytes(img.encodePng(imagePart1));
+          debugPrint("Saved debug image to: ${file1.path}");
+
+          final File file2 = File('$desktopPath/receipt_${timestamp}_part2.png');
+          await file2.writeAsBytes(img.encodePng(imagePart2));
+          debugPrint("Saved debug image to: ${file2.path}");
+        } catch (e) {
+          debugPrint("Error saving debug images: $e");
+        }
+      }
+      // ===================================================
 
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
@@ -838,7 +859,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Labels
     final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
-        isEnglish ? "NET TOTAL" : "المجموع");
+        isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
     final subtotalLabel = subtotalLabelBase;
 
     final discountLabelBase = _getLabel(

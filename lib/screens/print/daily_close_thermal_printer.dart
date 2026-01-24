@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
 import 'package:intl/intl.dart';
+import 'dart:math' as math;
 
 /// Daily Close Thermal Printer
 /// Prints: Daily Sales Close Report
@@ -128,31 +129,32 @@ class DailyCloseThermalPrinter {
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
 
       // ========== INFO SECTION ==========
-      if (data.closingPeriod != null) {
-        rows.add(_ReportTextRow(
-          'Period: ${data.closingPeriod}',
+      
+      // Opening Date & Time
+      if (data.openingDate != null) {
+        String openingStr = _formatDateTime(data.openingDate, data.openingTime);
+        rows.add(_ReportKeyValueRow(
+          'Opening:',
+          openingStr,
           scale: getNormalScale(is58mm),
-          center: true,
+        ));
+      }
+
+      // Closing Date & Time
+      if (data.closingDate != null) {
+        String closingStr = _formatDateTime(data.closingDate, data.closingTime);
+        rows.add(_ReportKeyValueRow(
+          'Closing:',
+          closingStr,
+          scale: getNormalScale(is58mm),
         ));
       }
       
       if (data.salesExecutive?.name != null) {
-        rows.add(_ReportTextRow(
-          'Executive: ${data.salesExecutive!.name}',
+        rows.add(_ReportKeyValueRow(
+          'Executive:',
+          data.salesExecutive!.name!,
           scale: getNormalScale(is58mm),
-          center: true,
-        ));
-      }
-
-      String dateStr = '';
-      if (data.closingDate != null) dateStr += data.closingDate!;
-      if (data.closingTime != null) dateStr += ' ${data.closingTime!}';
-      
-      if (dateStr.isNotEmpty) {
-        rows.add(_ReportTextRow(
-          'Date: $dateStr',
-          scale: getNormalScale(is58mm),
-          center: true,
         ));
       }
 
@@ -264,6 +266,36 @@ class DailyCloseThermalPrinter {
     }
   }
 
+  String _formatDateTime(String? dateStr, String? timeStr) {
+    if (dateStr == null) return '';
+    
+    try {
+      // Parse date (yyyy-MM-dd)
+      DateTime date = DateTime.parse(dateStr);
+      
+      // If time is provided, combine
+      if (timeStr != null) {
+        // timeStr is usually HH:mm:ss
+        List<String> parts = timeStr.split(':');
+        if (parts.length >= 2) {
+          date = DateTime(
+            date.year, 
+            date.month, 
+            date.day, 
+            int.parse(parts[0]), 
+            int.parse(parts[1]), 
+            parts.length > 2 ? int.parse(parts[2]) : 0
+          );
+        }
+      }
+      
+      return DateFormat('dd-MM-yyyy hh:mm a').format(date);
+    } catch (e) {
+      // Fallback
+      return '$dateStr ${timeStr ?? ''}'.trim();
+    }
+  }
+
   Future<img.Image> _renderReportToImage(
       List<_ReportRow> rows, double width, bool is58mm) async {
     final double baseFontSize = getBaseFontSize(is58mm);
@@ -311,7 +343,31 @@ class DailyCloseThermalPrinter {
       return fontSize * lineHeight;
     } else if (row is _ReportKeyValueRow) {
       final fontSize = baseFontSize * row.scale;
-      return fontSize * lineHeight;
+      final availableWidth = width - (padding * 2);
+      
+      // Calculate height for key (max 50% width)
+      final keyPainter = TextPainter(
+        text: TextSpan(
+          text: row.key,
+          style: TextStyle(fontSize: fontSize),
+        ),
+        textDirection: ui.TextDirection.ltr,
+      );
+      keyPainter.layout(maxWidth: availableWidth / 2);
+      
+      // Calculate height for value (max 50% width)
+      final valuePainter = TextPainter(
+        text: TextSpan(
+          text: row.value,
+          style: TextStyle(fontSize: fontSize, fontWeight: row.isBold ? FontWeight.bold : FontWeight.normal),
+        ),
+        textDirection: ui.TextDirection.ltr,
+      );
+      valuePainter.layout(maxWidth: availableWidth / 2);
+      
+      // Return the maximum height of either key or value
+      return math.max(keyPainter.height, valuePainter.height) + (fontSize * 0.2); // Add a little padding
+      
     } else if (row is _ReportSpacingRow) {
       return row.height;
     } else if (row is _ReportDividerRow) {
@@ -384,7 +440,8 @@ class DailyCloseThermalPrinter {
       keyPainter.paint(canvas, Offset(padding, yOffset));
       valuePainter.paint(canvas, Offset(width - padding - valuePainter.width, yOffset));
       
-      return yOffset + fontSize * lineHeight;
+      // Return the actual height used
+      return yOffset + math.max(keyPainter.height, valuePainter.height) + (fontSize * 0.2);
 
     } else if (row is _ReportSpacingRow) {
       return yOffset + row.height;

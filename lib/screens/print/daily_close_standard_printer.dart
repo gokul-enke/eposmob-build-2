@@ -164,8 +164,8 @@ class DailyCloseStandardPrinter {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          _buildInfoRow('Closing Period', data.closingPeriod ?? '-', labelStyle, valueStyle),
-                          _buildInfoRow('Sales Executive', data.salesExecutive?.name ?? '-', labelStyle, valueStyle),
+                          _buildInfoRow('Opening', _formatDateTime(data.openingDate, data.openingTime), labelStyle, valueStyle),
+                          _buildInfoRow('Closing', _formatDateTime(data.closingDate, data.closingTime), labelStyle, valueStyle),
                         ],
                       ),
                     ),
@@ -174,8 +174,7 @@ class DailyCloseStandardPrinter {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          _buildInfoRow('Opening', '${data.openingDate ?? '-'} ${data.openingTime ?? ''}', labelStyle, valueStyle),
-                          _buildInfoRow('Closing', '${data.closingDate ?? '-'} ${data.closingTime ?? ''}', labelStyle, valueStyle),
+                          _buildInfoRow('Sales Executive', data.salesExecutive?.name ?? '-', labelStyle, valueStyle),
                         ],
                       ),
                     ),
@@ -304,6 +303,36 @@ class DailyCloseStandardPrinter {
           message: "Error generating PDF: $e",
         );
       }
+    }
+  }
+
+  String _formatDateTime(String? dateStr, String? timeStr) {
+    if (dateStr == null) return '-';
+    
+    try {
+      // Parse date (yyyy-MM-dd)
+      DateTime date = DateTime.parse(dateStr);
+      
+      // If time is provided, combine
+      if (timeStr != null) {
+        // timeStr is usually HH:mm:ss
+        List<String> parts = timeStr.split(':');
+        if (parts.length >= 2) {
+          date = DateTime(
+            date.year, 
+            date.month, 
+            date.day, 
+            int.parse(parts[0]), 
+            int.parse(parts[1]), 
+            parts.length > 2 ? int.parse(parts[2]) : 0
+          );
+        }
+      }
+      
+      return DateFormat('dd-MM-yyyy hh:mm a').format(date);
+    } catch (e) {
+      // Fallback
+      return '$dateStr ${timeStr ?? ''}'.trim();
     }
   }
 

@@ -4236,7 +4236,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                           context,
                           listen: false)
                       .isDefaultCustomer,
-                  netExcTax: orderDetails.data!.priceSummary?.netExcTax?.toString(),
+                  netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax?.toString(),
                 ),
               ),
             );
@@ -4849,30 +4849,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   const SizedBox(width: 5),
-                  // Payment Method Icon
-                  _buildQuickAccessIcon(
-                    icon: _getPaymentIcon(),
-                    label: _getPaymentLabel(),
-                    color: ColorManager.kPrimaryColor,
-                    onTap: () => _showPaymentMethodModal(),
-                    isSmallScreen: isSmallScreen,
-                  ),
-                  const SizedBox(width: 12),
-                  // Delivery Method Icon
-                  _buildQuickAccessIcon(
-                    icon: deliveryMethod == "Store Takeaway"
-                        ? Icons.store
-                        : deliveryMethod == "Car Delivery"
-                            ? Icons.car_rental
-                            : deliveryMethod == "Door Delivery"
-                                ? Icons.doorbell_outlined
-                                : Icons.local_shipping,
-                    label: _getDeliveryMethodLabel(),
-                    color: ColorManager.kButtonBlue,
-                    onTap: () => _showDeliveryMethodModal(),
-                    isSmallScreen: isSmallScreen,
-                  ),
-                  const SizedBox(width: 12),
                   // Coupon Icon
                   Consumer<AppSettingsProvider>(
                       builder: (context, appSettingsProvider, child) {
@@ -4929,6 +4905,30 @@ class BillingPageState extends State<BillingPageRestaurant>
                       isSmallScreen: isSmallScreen,
                     );
                   }),
+                  const SizedBox(width: 12),
+                  // Delivery Method Icon
+                  _buildQuickAccessIcon(
+                    icon: deliveryMethod == "Store Takeaway"
+                        ? Icons.store
+                        : deliveryMethod == "Car Delivery"
+                            ? Icons.car_rental
+                            : deliveryMethod == "Door Delivery"
+                                ? Icons.doorbell_outlined
+                                : Icons.local_shipping,
+                    label: _getDeliveryMethodLabel(),
+                    color: ColorManager.kButtonBlue,
+                    onTap: () => _showDeliveryMethodModal(),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  const SizedBox(width: 12),
+                  // Payment Method Icon
+                  _buildQuickAccessIcon(
+                    icon: _getPaymentIcon(),
+                    label: _getPaymentLabel(),
+                    color: ColorManager.kPrimaryColor,
+                    onTap: () => _showPaymentMethodModal(),
+                    isSmallScreen: isSmallScreen,
+                  ),
                 ],
               ),
             ),
