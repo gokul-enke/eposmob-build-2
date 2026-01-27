@@ -31,7 +31,7 @@ import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
 import '../thermal/printer_utils.dart';
 
-/// Premium receipt layout - Modern & Clean design.
+/// Standard receipt layout - Modern & Clean design.
 ///
 /// This layout features:
 /// - Generous whitespace between sections
@@ -40,23 +40,23 @@ import '../thermal/printer_utils.dart';
 /// - Bilingual support (English/Arabic) like the reference
 /// - Streamlined totals section with clear hierarchy
 /// - Minimal, elegant footer
-class PremiumReceiptLayout implements ReceiptLayout {
+class StandardReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
-  // Premium theme spacing constants
+  // Standard theme spacing constants
   static const double _sectionGap = 20.0;
   static const double _itemGap = 8.0;
   static const double _headerGap = 15.0;
 
   @override
-  String get layoutId => 'premium';
+  String get layoutId => 'standard';
 
   @override
-  String get displayName => 'Premium';
+  String get displayName => 'Standard';
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
-    debugPrint("===== PREMIUM LAYOUT: THERMAL PRINTING ====");
+    debugPrint("===== STANDARD LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
     final selectedPrinter = params.selectedPrinter;
@@ -97,10 +97,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
             await _loadAssetImage('assets/images/saudi_riyal_symbol.png');
         if (sarSymbol != null) {
           debugPrint(
-              "[PREMIUM] SAR symbol loaded: ${sarSymbol.width}x${sarSymbol.height}");
+              "[STANDARD] SAR symbol loaded: ${sarSymbol.width}x${sarSymbol.height}");
         }
       } catch (e) {
-        debugPrint("[PREMIUM] Error loading SAR symbol: $e");
+        debugPrint("[STANDARD] Error loading SAR symbol: $e");
       }
 
       // ========== LOGO SECTION ==========
@@ -114,12 +114,12 @@ class PremiumReceiptLayout implements ReceiptLayout {
           }
 
           if (logo != null) {
-            debugPrint("[PREMIUM] Logo loaded: ${logo.width}x${logo.height}");
+            debugPrint("[STANDARD] Logo loaded: ${logo.width}x${logo.height}");
             part1Rows.add(ImageRow(logo, width: printWidth * 0.6));
             part1Rows.add(SpacingRow(_headerGap));
           }
         } catch (e) {
-          debugPrint("[PREMIUM] Error loading logo: $e");
+          debugPrint("[STANDARD] Error loading logo: $e");
         }
       }
 
@@ -140,7 +140,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
       _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);
 
       // ========== RENDER IMAGES ==========
-      debugPrint("Rendering premium receipt images...");
+      debugPrint("Rendering standard receipt images...");
 
       final img.Image imagePart1 =
           await ArabicPrinterHelper.renderReceiptToImage(
@@ -227,7 +227,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
         sideBarController.index.value = 46;
       }
     } catch (e, stacktrace) {
-      debugPrint("ERROR in Premium Layout Print: $e");
+      debugPrint("ERROR in Standard Layout Print: $e");
       debugPrint("Stacktrace: $stacktrace");
       if (context.mounted) {
         showScaffoldError(
@@ -236,14 +236,14 @@ class PremiumReceiptLayout implements ReceiptLayout {
     } finally {
       debugPrint("Disconnecting from printer...");
       await _printerUtils.disconnectPrinter(selectedPrinter);
-      debugPrint("===== END PREMIUM LAYOUT PRINTING =====");
+      debugPrint("===== END STANDARD LAYOUT PRINTING =====");
     }
   }
 
   @override
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
     debugPrint(
-        "[PremiumReceiptLayout] buildPdf - delegating to StandardPrinter");
+        "[StandardReceiptLayout] buildPdf - delegating to StandardPrinter");
     return pw.Document();
   }
 
@@ -344,7 +344,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_sectionGap));
 
     // Thin divider line
-    rows.add(ThinDividerRow());
+    rows.add(StandardThinDividerRow());
 
     rows.add(SpacingRow(_itemGap));
 
@@ -358,7 +358,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     rows.add(SpacingRow(_itemGap));
-    rows.add(ThinDividerRow());
+    rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
   }
 
@@ -507,7 +507,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     rows.add(SpacingRow(_itemGap));
-    rows.add(ThinDividerRow());
+    rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
   }
 
@@ -546,7 +546,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
       _buildCartItemRow(rows, params.cartItems[i], i, params.isFromLocalStorage,
           displayConfig, isEnglish);
       if (i < params.cartItems.length - 1) {
-        rows.add(ThinDividerRow());
+        rows.add(StandardThinDividerRow());
       }
     }
 
@@ -636,7 +636,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     if (headerCols.isNotEmpty) {
       rows.add(ReceiptTableRow(headerCols));
-      rows.add(ThinDividerRow());
+      rows.add(StandardThinDividerRow());
     }
   }
 
@@ -838,7 +838,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
     // DEBUG LOGS
-    debugPrint("===== PREMIUM LAYOUT TOTALS DEBUG =====");
+    debugPrint("===== STANDARD LAYOUT TOTALS DEBUG =====");
     debugPrint("Raw Params:");
     debugPrint("  formattedTotal: ${params.formattedTotal}");
     debugPrint("  discountAmount: ${params.discountAmount}");
@@ -885,11 +885,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final changeLabelFull = changeLabel;
 
     // Prepare boxed items
-    List<BoxedLineItem> boxedItems = [];
+    List<StandardBoxedLineItem> boxedItems = [];
 
     // 1. Subtotal
     if (showMRPTotal) {
-      boxedItems.add(BoxedLineItem(
+      boxedItems.add(StandardBoxedLineItem(
         label: subtotalLabel,
         value: subtotal.toStringAsFixed(2),
         isBold: true,
@@ -900,7 +900,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // 2. Discounts
     if (showDiscount) {
-      boxedItems.add(BoxedLineItem(
+      boxedItems.add(StandardBoxedLineItem(
         label: discountLabel,
         value: discountAmountValue.toStringAsFixed(2),
         isBold: true,
@@ -911,7 +911,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // 3. VAT
     if (showTax) {
-      boxedItems.add(BoxedLineItem(
+      boxedItems.add(StandardBoxedLineItem(
         label: vatLabel,
         value: taxAmount.toStringAsFixed(2),
         isBold: true,
@@ -922,7 +922,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // 4. Grand Total (Bold)
     if (showNetAmount) {
-      boxedItems.add(BoxedLineItem(
+      boxedItems.add(StandardBoxedLineItem(
         label: grandTotalLabel,
         value: total.toStringAsFixed(2),
         isBold: true,
@@ -934,7 +934,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // 5. Payment details (Separator + Payment Methods)
     // Only show if paidAmount is provided (not null)
     if (params.paidAmount != null) {
-      boxedItems.add(BoxedLineItem(isSeparator: true));
+      boxedItems.add(StandardBoxedLineItem(isSeparator: true));
 
       bool isMultiPayment = false;
 
@@ -953,7 +953,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
               label = isEnglish ? "Card" : "بطاقة";
             else if (method == 'UPI') label = "UPI";
 
-            boxedItems.add(BoxedLineItem(
+            boxedItems.add(StandardBoxedLineItem(
               label: label,
               value: amt.toStringAsFixed(2),
               isBold: true,
@@ -982,7 +982,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
                   label = isEnglish ? "Card" : "بطاقة";
                 else if (method == 'UPI') label = "UPI";
 
-                boxedItems.add(BoxedLineItem(
+                boxedItems.add(StandardBoxedLineItem(
                   label: label,
                   value: amt.toStringAsFixed(2),
                   isBold: true,
@@ -1008,7 +1008,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
           }
         }
 
-        boxedItems.add(BoxedLineItem(
+        boxedItems.add(StandardBoxedLineItem(
           label: label,
           value: params.paidAmount!.toStringAsFixed(2),
           isBold: true,
@@ -1019,7 +1019,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     // Add the boxed row
-    rows.add(BoxedTotalsRow(items: boxedItems));
+    rows.add(StandardBoxedTotalsRow(items: boxedItems));
 
     // Amount in Words
     if (displayConfig?['showAmountInWords']?.visible == true) {
@@ -1076,7 +1076,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final double scale = is58mm ? 0.85 : 1.0;
 
     rows.add(SpacingRow(_itemGap));
-    rows.add(ThinDividerRow());
+    rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
 
     // Get labels from displayConfig - shorter for 58mm
@@ -1159,7 +1159,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
       // Check if ZATCA credentials are available for Saudi Arabia e-invoicing
       if (params.hasZatcaCredentials) {
         debugPrint(
-            '[PremiumLayout] ZATCA credentials found, generating ZATCA QR');
+            '[StandardLayout] ZATCA credentials found, generating ZATCA QR');
 
         // Generate ZATCA Phase 1 compliant QR code
         final zatcaHelper = ZatcaQrHelper();
@@ -1173,9 +1173,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
         qrMessage = isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية';
 
-        debugPrint('[PremiumLayout] ZATCA QR generated: ${qrData.isNotEmpty}');
+        debugPrint('[StandardLayout] ZATCA QR generated: ${qrData.isNotEmpty}');
       } else {
-        debugPrint('[PremiumLayout] No ZATCA credentials, using payment QR');
+        debugPrint('[StandardLayout] No ZATCA credentials, using payment QR');
 
         // Fallback to payment gateway QR
         final paymentGatewaysProvider =
@@ -1352,7 +1352,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
         return fi.image;
       }
     } catch (e) {
-      debugPrint("[PremiumReceiptLayout] Error fetching image: $e");
+      debugPrint("[StandardReceiptLayout] Error fetching image: $e");
     }
     return null;
   }
@@ -1365,14 +1365,14 @@ class PremiumReceiptLayout implements ReceiptLayout {
       final fi = await codec.getNextFrame();
       return fi.image;
     } catch (e) {
-      debugPrint("[PremiumReceiptLayout] Error loading asset image: $e");
+      debugPrint("[StandardReceiptLayout] Error loading asset image: $e");
     }
     return null;
   }
 }
 
-/// Thin solid line divider for Premium theme
-class ThinDividerRow extends ReceiptRow {
+/// Thin solid line divider for Standard theme
+class StandardThinDividerRow extends ReceiptRow {
   @override
   double calculateHeight(
           double width, double fontSize, TextDirection textDirection) =>
@@ -1384,12 +1384,17 @@ class ThinDividerRow extends ReceiptRow {
     final paint = Paint()
       ..color = Colors.black87
       ..strokeWidth = 2;
-    canvas.drawLine(Offset(0, y + 3), Offset(width, y + 3), paint);
-  }
+
+    canvas.drawLine(
+      Offset(0, y + 3),
+      Offset(width, y + 3),
+      paint,
+    );
+}
 }
 
 /// Dotted divider for emphasis sections
-class DottedDividerRow extends ReceiptRow {
+class StandardDottedDividerRow extends ReceiptRow {
   @override
   double calculateHeight(
           double width, double fontSize, TextDirection textDirection) =>
@@ -1418,12 +1423,12 @@ class DottedDividerRow extends ReceiptRow {
 }
 
 /// Row that displays totals in a rounded box
-class BoxedTotalsRow extends ReceiptRow {
-  final List<BoxedLineItem> items;
+class StandardBoxedTotalsRow extends ReceiptRow {
+  final List<StandardBoxedLineItem> items;
   final double cornerRadius;
   final double padding;
 
-  BoxedTotalsRow({
+  StandardBoxedTotalsRow({
     required this.items,
     this.cornerRadius = 12.0,
     this.padding = 15.0,
@@ -1594,7 +1599,7 @@ class BoxedTotalsRow extends ReceiptRow {
   }
 }
 
-class BoxedLineItem {
+class StandardBoxedLineItem {
   final String label;
   final String value;
   final bool isBold;
@@ -1602,7 +1607,7 @@ class BoxedLineItem {
   final bool isSeparator;
   final ui.Image? icon;
 
-  BoxedLineItem({
+  StandardBoxedLineItem({
     this.label = '',
     this.value = '',
     this.isBold = false,

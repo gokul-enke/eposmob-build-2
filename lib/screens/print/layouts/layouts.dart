@@ -14,3 +14,4 @@ export 'receipt_layout_params.dart';
 export 'receipt_layout_factory.dart';
 export 'classic_receipt_layout.dart';
 export 'premium_receipt_layout.dart';
+export 'standard_receipt_layout.dart';

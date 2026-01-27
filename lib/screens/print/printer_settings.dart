@@ -56,6 +56,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   final List<Map<String, String>> receiptThemes = [
     {'id': 'classic', 'name': 'Classic'},
     {'id': 'premium', 'name': 'Premium'},
+    {'id': 'standard', 'name': 'Standard'},
   ];
 
   @override
@@ -1442,7 +1443,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.03),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.03),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
