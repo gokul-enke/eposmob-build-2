@@ -3543,16 +3543,16 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       // Validate that all items have valid pricing
-      bool hasInvalidPricing = localProductProvider.cartItems
-          .any((item) => item.price == null || item.price! < 0);
+      // bool hasInvalidPricing = localProductProvider.cartItems
+      //     .any((item) => item.price == null || item.price! < 0);
 
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message: "billing.valid_prices".tr,
-        );
-        return;
-      }
+      // if (hasInvalidPricing) {
+      //   showScaffoldError(
+      //     context: context,
+      //     message: "billing.valid_prices".tr,
+      //   );
+      //   return;
+      // }
 
       // Check if we're editing an existing order
       SavedOrder? currentOrder = localProductProvider.currentOrder;
@@ -3728,16 +3728,16 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       // Validate that all items have valid pricing
-      bool hasInvalidPricing = localProductProvider.cartItems
-          .any((item) => item.price == null || item.price! < 0);
+      // bool hasInvalidPricing = localProductProvider.cartItems
+      //     .any((item) => item.price == null || item.price! < 0);
 
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message: "billing.valid_prices".tr,
-        );
-        return;
-      }
+      // if (hasInvalidPricing) {
+      //   showScaffoldError(
+      //     context: context,
+      //     message: "billing.valid_prices".tr,
+      //   );
+      //   return;
+      // }
 
       // Check if we're editing an existing order
       SavedOrder? currentOrder = localProductProvider.currentOrder;
@@ -4047,20 +4047,20 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       // Validate that all items have valid pricing before API call
-      bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-          item.price == null ||
-          item.price! < 0 ||
-          item.mrp == null ||
-          item.mrp! < 0);
+      // bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+      //     item.price == null ||
+      //     item.price! < 0 ||
+      //     item.mrp == null ||
+      //     item.mrp! < 0);
 
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message:
-              "Please ensure all items have valid prices and MRP before confirming order",
-        );
-        return;
-      }
+      // if (hasInvalidPricing) {
+      //   showScaffoldError(
+      //     context: context,
+      //     message:
+      //         "Please ensure all items have valid prices and MRP before confirming order",
+      //   );
+      //   return;
+      // }
 
       List<Map<String, dynamic>> items = [];
 
@@ -4396,20 +4396,20 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       // Validate that all items have valid pricing before API call
-      bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-          item.price == null ||
-          item.price! < 0 ||
-          item.mrp == null ||
-          item.mrp! < 0);
+      // bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+      //     item.price == null ||
+      //     item.price! < 0 ||
+      //     item.mrp == null ||
+      //     item.mrp! < 0);
 
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message:
-              "Please ensure all items have valid prices and MRP before confirming order",
-        );
-        return;
-      }
+      // if (hasInvalidPricing) {
+      //   showScaffoldError(
+      //     context: context,
+      //     message:
+      //         "Please ensure all items have valid prices and MRP before confirming order",
+      //   );
+      //   return;
+      // }
 
       List<Map<String, dynamic>> items = [];
 

@@ -1,0 +1,62 @@
+{
+    "status": "success",
+    "document_configurations": {
+        "Bill": {
+            "id": 17,
+            "type": "Bill",
+            "template": "bill",
+            "language": "bilingual",
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "متجر فنزكارت",
+                    "value_default": "FUNZCART"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "ميني سوبر ماركت",
+                    "value_default": "MINI SUPER MARKET"
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "٩٩٩٩٩٠٠٠٠٠",
+                    "value_default": "9999900000"
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "تلاسيري، كانور",
+                    "value_default": "THALASSERY, KANNUR"
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "رخصة : ٠٠٠٠٠٠",
+                    "value_default": "FSSAI : 000000"
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "قيمة الضريبة",
+                    "value_default": "VAT AMOUNT"
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": "فاتورة ضريبية",
+                    "value_default": "TAX INVOICE"
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "رقم",
+                "sl_number_default": "SL#",
+                "particulars": "الصنف",
+                "particulars_default": "Item",
+                "qty": "الكمية",
+                "qty_default": "QTY",
+                "rate": "السعر",
+                "rate_default": "RATE",
+                "total": "الإجمالي",
+                "total_default": "Total",
+                "tax": "الضريبة",
+                "tax_default": "TAX"
+            }
+        }
+    }
+}
