@@ -133,8 +133,8 @@ class StandardReceiptLayout implements ReceiptLayout {
       _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
-      _buildTotalsSection(
-          part1Rows, params, displayConfig, isEnglish, sarSymbol);
+      _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
+          sarSymbol, appSettings?.currency ?? 'INR');
 
       // ========== FOOTER SECTION (Part 2) ==========
       _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);
@@ -261,33 +261,78 @@ class StandardReceiptLayout implements ReceiptLayout {
     dynamic appSettings,
   ) {
     final billDocumentConfig = params.billDocumentConfig;
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeName = displayConfig?['showStoreName']?.value as String? ??
-          billDocumentConfig.header ??
-          'STORE NAME';
+      String storeNameText;
+
+      if (isDualLanguage) {
+        // Dual Language mode (ar): Arabic on top, English on bottom
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicName =
+            displayConfig?['showStoreName']?.value as String? ?? '';
+        String englishName =
+            displayConfig?['showStoreName']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        if (arabicName.isEmpty && englishName.isEmpty) {
+          englishName = billDocumentConfig.header ?? 'STORE NAME';
+        }
+
+        storeNameText =
+            _getBilingualText(arabic: arabicName, english: englishName);
+      } else {
+        // Single language mode
+        storeNameText = displayConfig?['showStoreName']?.value as String? ??
+            billDocumentConfig.header ??
+            'STORE NAME';
+      }
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.8;
-      if (storeName.length > 20) {
+      // For bilingual, consider the longer of the two languages
+      int maxLength = storeNameText
+          .split('\n')
+          .map((s) => s.length)
+          .reduce((a, b) => a > b ? a : b);
+      if (maxLength > 20) {
         storeNameScale = 1.3;
-      } else if (storeName.length > 14) {
+      } else if (maxLength > 14) {
         storeNameScale = 1.5;
       }
 
-      rows.add(TextRow(storeName.toUpperCase(),
+      rows.add(TextRow(storeNameText.toUpperCase(),
           isBold: true, scale: storeNameScale));
     }
 
     // Description/Subheader - Arabic subtitle style
     if (displayConfig?['showDescription']?.visible == true) {
-      final description = displayConfig?['showDescription']?.value as String? ??
-          billDocumentConfig.subheader ??
-          '';
-      if (description.isNotEmpty) {
+      String descriptionText;
+
+      if (isDualLanguage) {
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicDesc =
+            displayConfig?['showDescription']?.value as String? ?? '';
+        String englishDesc =
+            displayConfig?['showDescription']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        if (arabicDesc.isEmpty && englishDesc.isEmpty) {
+          englishDesc = billDocumentConfig.subheader ?? '';
+        }
+
+        descriptionText =
+            _getBilingualText(arabic: arabicDesc, english: englishDesc);
+      } else {
+        descriptionText = displayConfig?['showDescription']?.value as String? ??
+            billDocumentConfig.subheader ??
+            '';
+      }
+
+      if (descriptionText.isNotEmpty) {
         rows.add(SpacingRow(5));
-        rows.add(TextRow(description, scale: 1.0, isBold: true));
+        rows.add(TextRow(descriptionText, scale: 1.0, isBold: true));
       }
     }
 
@@ -295,49 +340,189 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
-      if (storeAddress != null && storeAddress.isNotEmpty) {
-        rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
+      String addressText;
+
+      if (isDualLanguage) {
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicAddress =
+            displayConfig?['showStoreAddress']?.value as String? ?? '';
+        String englishAddress =
+            displayConfig?['showStoreAddress']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        // No fallback available for address - just use empty string
+        if (arabicAddress.isEmpty && englishAddress.isEmpty) {
+          // No fallback - keep both empty
+        }
+
+        addressText =
+            _getBilingualText(arabic: arabicAddress, english: englishAddress);
+      } else {
+        addressText =
+            displayConfig?['showStoreAddress']?.value as String? ?? '';
+      }
+
+      if (addressText.isNotEmpty) {
+        rows.add(TextRow(addressText, scale: 0.85, isBold: true));
       }
     }
 
     // Invoice Title (Moved above Tax/Fssai Info)
     if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final invoiceTitle = _getDisplayValue(
-        displayConfig?['showInvoiceTitle']?.value,
-        appSettings?.printTitle,
-        'INVOICE',
-      );
-      rows.add(SpacingRow(5));
-      rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
-      rows.add(SpacingRow(2));
+      final invoiceTitleText = isDualLanguage
+          ? _getBilingualLabel(
+              displayConfig, 'showInvoiceTitle', null, null, '', 'INVOICE')
+          : _getDisplayValue(
+              displayConfig?['showInvoiceTitle']?.value,
+              appSettings?.printTitle,
+              'INVOICE',
+            );
+
+      if (invoiceTitleText.isNotEmpty) {
+        rows.add(SpacingRow(5));
+        rows.add(
+            TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.1));
+        rows.add(SpacingRow(2));
+      }
+    }
+
+    // Extra Heading 1
+    if (displayConfig?['showExtraHeading1']?.visible == true) {
+      String extraHeading1Text;
+
+      if (isDualLanguage) {
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicExtra1 =
+            displayConfig?['showExtraHeading1']?.value as String? ?? '';
+        String englishExtra1 =
+            displayConfig?['showExtraHeading1']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        if (arabicExtra1.isEmpty && englishExtra1.isEmpty) {
+          // No fallback available for extra headings - keep both empty
+        }
+
+        extraHeading1Text =
+            _getBilingualText(arabic: arabicExtra1, english: englishExtra1);
+      } else {
+        extraHeading1Text =
+            displayConfig?['showExtraHeading1']?.value as String? ?? '';
+      }
+
+      if (extraHeading1Text.isNotEmpty) {
+        rows.add(SpacingRow(2));
+        rows.add(TextRow(extraHeading1Text, scale: 0.95, isBold: true));
+      }
+    }
+
+    // Extra Heading 2
+    if (displayConfig?['showExtraHeading2']?.visible == true) {
+      String extraHeading2Text;
+
+      if (isDualLanguage) {
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicExtra2 =
+            displayConfig?['showExtraHeading2']?.value as String? ?? '';
+        String englishExtra2 =
+            displayConfig?['showExtraHeading2']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        if (arabicExtra2.isEmpty && englishExtra2.isEmpty) {
+          // No fallback available for extra headings - keep both empty
+        }
+
+        extraHeading2Text =
+            _getBilingualText(arabic: arabicExtra2, english: englishExtra2);
+      } else {
+        extraHeading2Text =
+            displayConfig?['showExtraHeading2']?.value as String? ?? '';
+      }
+
+      if (extraHeading2Text.isNotEmpty) {
+        rows.add(SpacingRow(2));
+        rows.add(TextRow(extraHeading2Text, scale: 0.95, isBold: true));
+      }
     }
 
     // Location info (like "Al Qasim, Saudi Arabia" in reference)
     if (displayConfig?['showFssaiInfo']?.visible == true) {
-      final fssaiInfo = displayConfig?['showFssaiInfo']?.value as String?;
-      if (fssaiInfo != null && fssaiInfo.isNotEmpty) {
-        rows.add(TextRow(fssaiInfo, scale: 0.85, isBold: true));
+      String fssaiInfoText;
+
+      if (isDualLanguage) {
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicFssai =
+            displayConfig?['showFssaiInfo']?.value as String? ?? '';
+        String englishFssai =
+            displayConfig?['showFssaiInfo']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        // No fallback available for FSSAI info - keep both empty
+        if (arabicFssai.isEmpty && englishFssai.isEmpty) {
+          // No fallback - keep both empty
+        }
+
+        fssaiInfoText =
+            _getBilingualText(arabic: arabicFssai, english: englishFssai);
+      } else {
+        fssaiInfoText = displayConfig?['showFssaiInfo']?.value as String? ?? '';
+      }
+
+      if (fssaiInfoText.isNotEmpty) {
+        rows.add(TextRow(fssaiInfoText, scale: 0.85, isBold: true));
       }
     }
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephone = displayConfig?['showTel']?.value as String? ??
-          appSettings?.customerCarePhone ??
-          '';
-      if (telephone.isNotEmpty) {
+      String telephoneText;
+
+      if (isDualLanguage) {
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicTel = displayConfig?['showTel']?.value as String? ?? '';
+        String englishTel = displayConfig?['showTel']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        if (arabicTel.isEmpty && englishTel.isEmpty) {
+          englishTel = appSettings?.customerCarePhone ?? '';
+        }
+
+        telephoneText =
+            _getBilingualText(arabic: arabicTel, english: englishTel);
+      } else {
+        telephoneText = displayConfig?['showTel']?.value as String? ??
+            appSettings?.customerCarePhone ??
+            '';
+      }
+
+      if (telephoneText.isNotEmpty) {
         rows.add(SpacingRow(5));
-        rows.add(TextRow(telephone, scale: 0.9, isBold: true));
+        rows.add(TextRow(telephoneText, scale: 0.9, isBold: true));
       }
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final email = displayConfig?['showEmail']?.value as String? ??
-          appSettings?.customerCareEmail ??
-          '';
-      if (email.isNotEmpty) {
-        rows.add(TextRow(email, scale: 0.9, isBold: true));
+      String emailText;
+
+      if (isDualLanguage) {
+        // Refined fallback: Only use fallback if BOTH config values are empty
+        final arabicEmail = displayConfig?['showEmail']?.value as String? ?? '';
+        String englishEmail = displayConfig?['showEmail']?.defaultValue ?? '';
+
+        // Only use fallback if both config values are empty
+        if (arabicEmail.isEmpty && englishEmail.isEmpty) {
+          englishEmail = appSettings?.customerCareEmail ?? '';
+        }
+
+        emailText =
+            _getBilingualText(arabic: arabicEmail, english: englishEmail);
+      } else {
+        emailText = displayConfig?['showEmail']?.value as String? ??
+            appSettings?.customerCareEmail ??
+            '';
+      }
+
+      if (emailText.isNotEmpty) {
+        rows.add(TextRow(emailText, scale: 0.9, isBold: true));
       }
     }
 
@@ -348,12 +533,15 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice Number - Clean format
+    // Invoice Number - Clean format with # always on left and stripped zeros/prefixes
     if (displayConfig?['showInvoiceNumber']?.visible == true) {
-      final invoiceNumberText = billDocumentConfig.numberPrefix != null &&
-              billDocumentConfig.numberPrefix!.isNotEmpty
-          ? '${billDocumentConfig.numberPrefix}${params.orderNumber}'
-          : '#${params.orderNumber}';
+      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
+      // For "ORD-000430", this extracts "430"
+      final regex = RegExp(r'[1-9]\d*');
+      final match = regex.firstMatch(params.orderNumber);
+      final strippedNumber =
+          match != null ? match.group(0)! : params.orderNumber;
+      final invoiceNumberText = '#$strippedNumber';
       rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
     }
 
@@ -385,17 +573,34 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
 
-    final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
-        isEnglish ? "Customer:" : "العميل:");
-    final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
-        isEnglish ? "Phone:" : "الهاتف:");
-    final paymentLabel = _getLabel(displayConfig, 'showPaymentMethod', null,
-        isEnglish ? "Payment:" : "الدفع:");
-    final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
-        isEnglish ? "Address:" : "العنوان:");
-    final commentLabel = _getLabel(displayConfig, 'showOrderComment', null,
-        isEnglish ? "Comment:" : "تعليق:");
+    // Use horizontal bilingual format for labels in dual language mode
+    final customerLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerName', null,
+            null, "العميل:", "Customer:")
+        : _getLabel(displayConfig, 'showCustomerName', null,
+            isEnglish ? "Customer:" : "العميل:");
+    final phoneLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(
+            displayConfig, 'showCustomerPhone', null, null, "الهاتف:", "Phone:")
+        : _getLabel(displayConfig, 'showCustomerPhone', null,
+            isEnglish ? "Phone:" : "الهاتف:");
+    final paymentLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showPaymentMethod', null,
+            null, "الدفع:", "Payment:")
+        : _getLabel(displayConfig, 'showPaymentMethod', null,
+            isEnglish ? "Payment:" : "الدفع:");
+    final addressLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerAddress',
+            null, null, "العنوان:", "Address:")
+        : _getLabel(displayConfig, 'showCustomerAddress', null,
+            isEnglish ? "Address:" : "العنوان:");
+    final commentLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(
+            displayConfig, 'showOrderComment', null, null, "تعليق:", "Comment:")
+        : _getLabel(displayConfig, 'showOrderComment', null,
+            isEnglish ? "Comment:" : "تعليق:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -520,31 +725,71 @@ class StandardReceiptLayout implements ReceiptLayout {
     bool isEnglish,
   ) {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
 
     // Extract labels with fallbacks
-    final String particularsLabel = _getLabel(displayConfig, 'showParticulars',
-        resolvedLabels?.particulars, isEnglish ? "Item" : "الصنف");
+    // For dual language mode, we use stacked headers (Arabic on top, English below)
+    final String particularsLabel = isDualLanguage
+        ? _getBilingualLabel(
+            displayConfig,
+            'showParticulars',
+            resolvedLabels?.particulars,
+            resolvedLabels?.particularsDefault,
+            "الصنف",
+            "Item")
+        : _getLabel(displayConfig, 'showParticulars',
+            resolvedLabels?.particulars, isEnglish ? "Item" : "الصنف");
     final String mrpLabel =
         _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, "MRP");
-    final String qtyLabel = _getLabel(displayConfig, 'showQty',
-        resolvedLabels?.qty, isEnglish ? "Qty" : "الكمية");
-    final String rateLabel = _getLabel(displayConfig, 'showRate',
-        resolvedLabels?.rate, isEnglish ? "Rate" : "السعر");
-    final String totalLabel = _getLabel(displayConfig, 'showTotal',
-        resolvedLabels?.total, isEnglish ? "Total" : "الإجمالي");
-    final String taxHeaderLabel = _getLabel(displayConfig, 'showTaxHeader',
-        resolvedLabels?.tax, isEnglish ? "Tax" : "الضريبة");
-    final String slLabel = _getLabel(displayConfig, 'showSLNumber',
-        resolvedLabels?.slNumber, isEnglish ? "SL#" : "#");
+    final String qtyLabel = isDualLanguage
+        ? _getBilingualLabel(displayConfig, 'showQty', resolvedLabels?.qty,
+            resolvedLabels?.qtyDefault, "الكمية", "Qty")
+        : _getLabel(displayConfig, 'showQty', resolvedLabels?.qty,
+            isEnglish ? "Qty" : "الكمية");
+    final String rateLabel = isDualLanguage
+        ? _getBilingualLabel(displayConfig, 'showRate', resolvedLabels?.rate,
+            resolvedLabels?.rateDefault, "السعر", "Rate")
+        : _getLabel(displayConfig, 'showRate', resolvedLabels?.rate,
+            isEnglish ? "Rate" : "السعر");
+    final String totalLabel = isDualLanguage
+        ? _getBilingualLabel(displayConfig, 'showTotal', resolvedLabels?.total,
+            resolvedLabels?.totalDefault, "الإجمالي", "Total")
+        : _getLabel(displayConfig, 'showTotal', resolvedLabels?.total,
+            isEnglish ? "Total" : "الإجمالي");
+    final String taxHeaderLabel = isDualLanguage
+        ? _getBilingualLabel(displayConfig, 'showTaxHeader',
+            resolvedLabels?.tax, resolvedLabels?.taxDefault, "الضريبة", "Tax")
+        : _getLabel(displayConfig, 'showTaxHeader', resolvedLabels?.tax,
+            isEnglish ? "Tax" : "الضريبة");
+    final String slLabel = isDualLanguage
+        ? _getBilingualLabel(
+            displayConfig,
+            'showSLNumber',
+            resolvedLabels?.slNumber,
+            resolvedLabels?.slNumberDefault,
+            "#",
+            "SL#")
+        : _getLabel(displayConfig, 'showSLNumber', resolvedLabels?.slNumber,
+            isEnglish ? "SL#" : "#");
 
     // Build table header
-    _buildTableHeader(rows, displayConfig, isEnglish, particularsLabel,
-        mrpLabel, qtyLabel, rateLabel, totalLabel, taxHeaderLabel, slLabel);
+    _buildTableHeader(
+        rows,
+        displayConfig,
+        isEnglish,
+        isDualLanguage,
+        particularsLabel,
+        mrpLabel,
+        qtyLabel,
+        rateLabel,
+        totalLabel,
+        taxHeaderLabel,
+        slLabel);
 
     // Build cart items
     for (var i = 0; i < params.cartItems.length; i++) {
       _buildCartItemRow(rows, params.cartItems[i], i, params.isFromLocalStorage,
-          displayConfig, isEnglish);
+          displayConfig, isEnglish, isDualLanguage);
       if (i < params.cartItems.length - 1) {
         rows.add(StandardThinDividerRow());
       }
@@ -557,6 +802,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     List<ReceiptRow> rows,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
+    bool isDualLanguage,
     String particularsLabel,
     String mrpLabel,
     String qtyLabel,
@@ -647,6 +893,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     bool isFromLocalStorage,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
+    bool isDualLanguage,
   ) {
     String productName = '';
     String productNameArabic = ''; // Add Arabic name field
@@ -753,12 +1000,9 @@ class StandardReceiptLayout implements ReceiptLayout {
           ]));
 
           // Add English name on second line
-          String englishText = displayConfig?['showSLNumber']?.visible == true
-              ? '     $productName'
-              : '  $productName';
+          // Left aligned, no padding needed
           rows.add(ReceiptTableRow([
-            ReceiptTableColumn(englishText,
-                weight: 1.0, align: TextAlign.right),
+            ReceiptTableColumn(productName, weight: 1.0, align: TextAlign.left),
           ]));
         } else {
           // Fallback to single name (English or Arabic)
@@ -807,10 +1051,12 @@ class StandardReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
     ui.Image? sarSymbol,
+    String currency,
   ) {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -862,27 +1108,39 @@ class StandardReceiptLayout implements ReceiptLayout {
         "  showNetAmount: $showNetAmount (API: ${displayConfig?['showNetAmount']?.visible})");
     debugPrint("=======================================");
 
-    // Labels
-    final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
-        isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
-    final subtotalLabel = subtotalLabelBase;
+    // Labels - Use horizontal bilingual format for dual language mode
+    final subtotalLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showMRPTotal', null,
+            null, "المجموع", "NET TOTAL (Exc Tax)")
+        : _getLabel(displayConfig, 'showMRPTotal', null,
+            isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
 
-    final discountLabelBase = _getLabel(
-        displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "الخصم");
-    final discountLabel = discountLabelBase;
+    final discountLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(
+            displayConfig, 'showDiscount', null, null, "الخصم", "DISCOUNTS")
+        : _getLabel(displayConfig, 'showDiscount', null,
+            isEnglish ? "DISCOUNTS" : "الخصم");
 
-    final taxLabelBase =
-        _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "VAT");
-    final vatLabel = taxLabelBase;
+    final vatLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showTax',
+            resolvedLabels?.tax, resolvedLabels?.taxDefault, "الضريبة", "VAT")
+        : _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "VAT");
 
-    final grandTotalLabelBase = isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي";
-    final grandTotalLabel = grandTotalLabelBase;
+    final grandTotalLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showNetAmount', null,
+            null, "المبلغ الاجمالي", "GRAND TOTAL")
+        : (isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
-    final cashLabel =
-        _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
-    final changeLabel = _getLabel(
-        displayConfig, 'showChange', null, isEnglish ? "CHANGE" : "متبقي");
-    final changeLabelFull = changeLabel;
+    final cashLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(
+            displayConfig, 'showCash', null, null, "نقدي", "Cash")
+        : _getLabel(
+            displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
+    final changeLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(
+            displayConfig, 'showChange', null, null, "متبقي", "CHANGE")
+        : _getLabel(
+            displayConfig, 'showChange', null, isEnglish ? "CHANGE" : "متبقي");
 
     // Prepare boxed items
     List<StandardBoxedLineItem> boxedItems = [];
@@ -893,7 +1151,7 @@ class StandardReceiptLayout implements ReceiptLayout {
         label: subtotalLabel,
         value: subtotal.toStringAsFixed(2),
         isBold: true,
-        scale: 1.1,
+        scale: 1,
         icon: sarSymbol,
       ));
     }
@@ -904,7 +1162,7 @@ class StandardReceiptLayout implements ReceiptLayout {
         label: discountLabel,
         value: discountAmountValue.toStringAsFixed(2),
         isBold: true,
-        scale: 1.1,
+        scale: 1,
         icon: sarSymbol,
       ));
     }
@@ -915,7 +1173,7 @@ class StandardReceiptLayout implements ReceiptLayout {
         label: vatLabel,
         value: taxAmount.toStringAsFixed(2),
         isBold: true,
-        scale: 1.1,
+        scale: 1,
         icon: sarSymbol,
       ));
     }
@@ -926,7 +1184,7 @@ class StandardReceiptLayout implements ReceiptLayout {
         label: grandTotalLabel,
         value: total.toStringAsFixed(2),
         isBold: true,
-        scale: 1.1,
+        scale: 1,
         icon: sarSymbol,
       ));
     }
@@ -947,17 +1205,23 @@ class StandardReceiptLayout implements ReceiptLayout {
           if (amt > 0) {
             // Map method code to label if possible
             String label = method;
-            if (method == 'CASH')
-              label = isEnglish ? "Cash" : "نقدي";
-            else if (method == 'CARD')
-              label = isEnglish ? "Card" : "بطاقة";
-            else if (method == 'UPI') label = "UPI";
+            if (method == 'CASH') {
+              label = isDualLanguage
+                  ? "نقدي   Cash"
+                  : (isEnglish ? "Cash" : "نقدي");
+            } else if (method == 'CARD') {
+              label = isDualLanguage
+                  ? "بطاقة   Card"
+                  : (isEnglish ? "Card" : "بطاقة");
+            } else if (method == 'UPI') {
+              label = "UPI";
+            }
 
             boxedItems.add(StandardBoxedLineItem(
               label: label,
               value: amt.toStringAsFixed(2),
               isBold: true,
-              scale: 1.1,
+              scale: 1,
               icon: sarSymbol,
             ));
           }
@@ -976,17 +1240,23 @@ class StandardReceiptLayout implements ReceiptLayout {
               double amt = double.tryParse(amount.toString()) ?? 0.0;
               if (amt > 0) {
                 String label = method;
-                if (method == 'CASH')
-                  label = isEnglish ? "Cash" : "نقدي";
-                else if (method == 'CARD')
-                  label = isEnglish ? "Card" : "بطاقة";
-                else if (method == 'UPI') label = "UPI";
+                if (method == 'CASH') {
+                  label = isDualLanguage
+                      ? "نقدي   Cash"
+                      : (isEnglish ? "Cash" : "نقدي");
+                } else if (method == 'CARD') {
+                  label = isDualLanguage
+                      ? "بطاقة   Card"
+                      : (isEnglish ? "Card" : "بطاقة");
+                } else if (method == 'UPI') {
+                  label = "UPI";
+                }
 
                 boxedItems.add(StandardBoxedLineItem(
                   label: label,
                   value: amt.toStringAsFixed(2),
                   isBold: true,
-                  scale: 1.1,
+                  scale: 1,
                   icon: sarSymbol,
                 ));
               }
@@ -1024,16 +1294,52 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Amount in Words
     if (displayConfig?['showAmountInWords']?.visible == true) {
       rows.add(SpacingRow(_itemGap));
-      final amountInWords =
-          '${AmountHelper().convertNumberToWords(total)} Only.';
+
+      String amountInWords;
+
+      if (isDualLanguage) {
+        final arabicText = AmountHelper()
+            .convertNumberToWords(total, currency: currency, language: 'ar');
+        final englishText = AmountHelper()
+            .convertNumberToWords(total, currency: currency, language: 'en');
+
+        amountInWords = '$arabicText فقط.\n$englishText Only.';
+      } else {
+        final language = params.billDocumentConfig.language ?? 'en';
+        final amountText = AmountHelper().convertNumberToWords(total,
+            currency: currency, language: language);
+        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
+        amountInWords = '$amountText$suffix';
+      }
+
       rows.add(
           TextRow(amountInWords, scale: is58mm ? 0.7 : 0.85, isBold: true));
     }
 
+    // Items Count
+    if (displayConfig?['showItemsCount']?.visible == true) {
+      final itemsCountText = isDualLanguage
+          ? _getBilingualText(
+              arabic:
+                  displayConfig?['showItemsCount']?.value as String? ?? 'العدد',
+              english:
+                  displayConfig?['showItemsCount']?.defaultValue ?? 'Items')
+          : (displayConfig?['showItemsCount']?.value as String? ?? 'Items');
+
+      if (itemsCountText.isNotEmpty) {
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow('$itemsCountText: ${params.cartItems.length}',
+            scale: is58mm ? 0.75 : 0.85, isBold: true));
+      }
+    }
+
     // You Saved
     if (displayConfig?['showSaved']?.visible == true && saved > 0) {
-      final savedLabel = _getLabel(displayConfig, 'showSaved', null,
-          isEnglish ? "You Saved:" : "لقد وفرت:");
+      final savedLabel = isDualLanguage
+          ? _getBilingualLabelHorizontal(
+              displayConfig, 'showSaved', null, null, "لقد وفرت:", "You Saved:")
+          : _getLabel(displayConfig, 'showSaved', null,
+              isEnglish ? "You Saved:" : "لقد وفرت:");
       rows.add(SpacingRow(5));
       rows.add(TextRow(
         "$savedLabel ${saved.toStringAsFixed(2)}",
@@ -1074,37 +1380,42 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
 
     rows.add(SpacingRow(_itemGap));
     rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
 
     // Get labels from displayConfig - shorter for 58mm
-    final prevBalanceLabelBase = _getLabel(
-        displayConfig,
-        'showCustomerPrevBalance',
-        null,
-        isEnglish ? "Previous Balance" : "الرصيد السابق");
-    final prevBalanceLabel = is58mm
-        ? (isEnglish ? "Previous Balance" : "السابق")
-        : prevBalanceLabelBase;
+    // Use horizontal bilingual format for dual language mode
+    final prevBalanceLabelBase = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerPrevBalance',
+            null, null, "الرصيد السابق", "Previous Balance")
+        : _getLabel(displayConfig, 'showCustomerPrevBalance', null,
+            isEnglish ? "Previous Balance" : "الرصيد السابق");
+    final prevBalanceLabel =
+        is58mm && isDualLanguage ? "السابق   Previous" : prevBalanceLabelBase;
 
-    final paidAmountLabelBase = _getLabel(
-        displayConfig,
-        'showCustomerPaidAmount',
-        null,
-        isEnglish ? "Paid Amount" : "المبلغ المدفوع");
+    final paidAmountLabelBase = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerPaidAmount',
+            null, null, "المبلغ المدفوع", "Paid Amount")
+        : _getLabel(displayConfig, 'showCustomerPaidAmount', null,
+            isEnglish ? "Paid Amount" : "المبلغ المدفوع");
     final paidAmountLabel =
-        is58mm ? (isEnglish ? "Paid Amount" : "المدفوع") : paidAmountLabelBase;
+        is58mm && isDualLanguage ? "المدفوع   Paid" : paidAmountLabelBase;
 
-    final currentBalanceLabelBase = _getLabel(
-        displayConfig,
-        'showCustomerCurrentBalance',
-        null,
-        isEnglish ? "Current Balance" : "الرصيد الحالي");
-    final currentBalanceLabel = is58mm
-        ? (isEnglish ? "Current Balance" : "الحالي")
-        : currentBalanceLabelBase;
+    final currentBalanceLabelBase = isDualLanguage
+        ? _getBilingualLabelHorizontal(
+            displayConfig,
+            'showCustomerCurrentBalance',
+            null,
+            null,
+            "الرصيد الحالي",
+            "Current Balance")
+        : _getLabel(displayConfig, 'showCustomerCurrentBalance', null,
+            isEnglish ? "Current Balance" : "الرصيد الحالي");
+    final currentBalanceLabel =
+        is58mm && isDualLanguage ? "الحالي   Current" : currentBalanceLabelBase;
 
     // Previous Balance
     if (displayConfig?['showCustomerPrevBalance']?.visible != false &&
@@ -1151,6 +1462,8 @@ class StandardReceiptLayout implements ReceiptLayout {
   ) {
     rows.add(SpacingRow(_sectionGap));
 
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+
     // QR Code - Use ZATCA QR if credentials available, otherwise fallback to payment QR
     if (displayConfig?['showQRCode']?.visible == true) {
       String qrData = '';
@@ -1171,7 +1484,9 @@ class StandardReceiptLayout implements ReceiptLayout {
           vatAmount: params.totalTax,
         );
 
-        qrMessage = isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية';
+        qrMessage = isDualLanguage
+            ? 'فاتورة الكترونية\nZATCA E-Invoice QR'
+            : (isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية');
 
         debugPrint('[StandardLayout] ZATCA QR generated: ${qrData.isNotEmpty}');
       } else {
@@ -1225,7 +1540,9 @@ class StandardReceiptLayout implements ReceiptLayout {
         // Show VAT number below QR for ZATCA receipts
         if (params.hasZatcaCredentials && params.zatcaVatNumber != null) {
           rows.add(SpacingRow(5));
-          final vatLabel = isEnglish ? 'VAT No:' : 'الرقم الضريبي:';
+          final vatLabel = isDualLanguage
+              ? 'الرقم الضريبي:   VAT No:'
+              : (isEnglish ? 'VAT No:' : 'الرقم الضريبي:');
           rows.add(TextRow('$vatLabel ${params.zatcaVatNumber}', scale: 0.8));
         }
       }
@@ -1264,12 +1581,34 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     // Terms & Conditions
     if (displayConfig?['showTermsConditions']?.visible == true) {
-      String? terms = displayConfig?['showTermsConditions']?.value as String?;
-      if (terms == null || terms.trim().isEmpty) {
-        terms = params.billDocumentConfig.terms;
+      String termsText;
+      if (isDualLanguage) {
+        final arabicTerms =
+            displayConfig?['showTermsConditions']?.value as String? ?? '';
+        final englishTerms =
+            displayConfig?['showTermsConditions']?.defaultValue ?? '';
+
+        // Fallback to billDocumentConfig.terms if both config values are empty
+        if (arabicTerms.isEmpty && englishTerms.isEmpty) {
+          final docTerms = params.billDocumentConfig.terms ?? '';
+          if (docTerms.isNotEmpty) {
+            termsText = docTerms;
+          } else {
+            termsText =
+                _getBilingualText(arabic: arabicTerms, english: englishTerms);
+          }
+        } else {
+          termsText =
+              _getBilingualText(arabic: arabicTerms, english: englishTerms);
+        }
+      } else {
+        termsText = displayConfig?['showTermsConditions']?.value as String? ??
+            params.billDocumentConfig.terms ??
+            '';
       }
-      if (terms != null && terms.trim().isNotEmpty) {
-        rows.add(TextRow(terms.trim(), scale: 0.75));
+
+      if (termsText.isNotEmpty) {
+        rows.add(TextRow(termsText.trim(), scale: 0.75));
       }
     }
 
@@ -1277,22 +1616,65 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     // Thank You Message - Elegant
     if (displayConfig?['showThankYouMessage']?.visible == true) {
-      final String defaultThankYou =
-          isEnglish ? 'Thank You for Your Visit!' : 'شكراً لزيارتكم!';
-      final message = (displayConfig?['showThankYouMessage']?.value as String?)
-                  ?.isNotEmpty ==
-              true
-          ? displayConfig!['showThankYouMessage']!.value as String
-          : (params.billDocumentConfig.footer?.isNotEmpty == true
-              ? params.billDocumentConfig.footer!
-              : defaultThankYou);
-      rows.add(TextRow(message, isBold: true, scale: 0.95));
+      String messageText;
+      if (isDualLanguage) {
+        final arabicMessage =
+            displayConfig?['showThankYouMessage']?.value as String? ?? '';
+        final englishMessage =
+            displayConfig?['showThankYouMessage']?.defaultValue ?? '';
+
+        // Fallback to billDocumentConfig.footer if both config values are empty
+        if (arabicMessage.isEmpty && englishMessage.isEmpty) {
+          final docFooter = params.billDocumentConfig.footer ?? '';
+          if (docFooter.isNotEmpty) {
+            messageText = docFooter;
+          } else {
+            // Use default bilingual thank you message
+            messageText = _getBilingualText(
+                arabic: 'شكراً لزيارتكم!',
+                english: 'Thank You for Your Visit!');
+          }
+        } else {
+          messageText =
+              _getBilingualText(arabic: arabicMessage, english: englishMessage);
+        }
+      } else {
+        final configMessage =
+            displayConfig?['showThankYouMessage']?.value as String?;
+        final docFooter = params.billDocumentConfig.footer ?? '';
+        final defaultThankYou =
+            isEnglish ? 'Thank You for Your Visit!' : 'شكراً لزيارتكم!';
+
+        messageText = _getDisplayValue(
+          configMessage,
+          docFooter,
+          defaultThankYou,
+        );
+      }
+
+      if (messageText.isNotEmpty) {
+        rows.add(TextRow(messageText, isBold: true, scale: 0.95));
+      }
     }
 
     rows.add(SpacingRow(_sectionGap));
   }
 
   // ==================== UTILITY METHODS ====================
+
+  /// Helper method to create bilingual text (Arabic + English)
+  /// Returns Arabic on top, English on bottom separated by newline
+  String _getBilingualText({String? arabic, String? english}) {
+    if (arabic != null && arabic.isNotEmpty) {
+      if (english != null && english.isNotEmpty) {
+        return '$arabic\n$english';
+      }
+      return arabic;
+    } else if (english != null && english.isNotEmpty) {
+      return english;
+    }
+    return '';
+  }
 
   /// Get a display value with priority: displayConfig value > fallback > default
   String _getDisplayValue(
@@ -1328,6 +1710,123 @@ class StandardReceiptLayout implements ReceiptLayout {
       return resolvedLabel;
     }
     return defaultLabel;
+  }
+
+  /// Get bilingual label using DisplayOption defaultValue for English part
+  String _getBilingualLabel(
+    Map<String, DisplayOption>? displayConfig,
+    String key,
+    String? resolvedLabelArabic,
+    String? resolvedLabelEnglish,
+    String defaultArabic,
+    String defaultEnglish,
+  ) {
+    final configValueArabic = displayConfig?[key]?.value as String?;
+    final configValueEnglish = displayConfig?[key]?.defaultValue;
+
+    // Check for presence of custom Arabic text
+    final bool hasCustomArabic =
+        (configValueArabic != null && configValueArabic.isNotEmpty) ||
+            (resolvedLabelArabic != null && resolvedLabelArabic.isNotEmpty);
+
+    // Check for presence of custom English text
+    final bool hasCustomEnglish =
+        (configValueEnglish != null && configValueEnglish.isNotEmpty) ||
+            (resolvedLabelEnglish != null && resolvedLabelEnglish.isNotEmpty);
+
+    // Determine whether to use static fallbacks
+    final bool useStaticFallback = !hasCustomArabic && !hasCustomEnglish;
+
+    // Get Arabic part
+    String arabic = '';
+    if (hasCustomArabic) {
+      if (configValueArabic != null && configValueArabic.isNotEmpty) {
+        arabic = configValueArabic;
+      } else if (resolvedLabelArabic != null &&
+          resolvedLabelArabic.isNotEmpty) {
+        arabic = resolvedLabelArabic;
+      }
+    } else if (useStaticFallback) {
+      arabic = defaultArabic;
+    }
+
+    // Get English part
+    String english = '';
+    if (hasCustomEnglish) {
+      if (configValueEnglish != null && configValueEnglish.isNotEmpty) {
+        english = configValueEnglish;
+      } else if (resolvedLabelEnglish != null &&
+          resolvedLabelEnglish.isNotEmpty) {
+        english = resolvedLabelEnglish;
+      }
+    } else if (useStaticFallback) {
+      english = defaultEnglish;
+    }
+
+    return _getBilingualText(arabic: arabic, english: english);
+  }
+
+  /// Get bilingual label for totals/sections with "English   Arabic" format
+  /// Used for totals and section labels where we want both on the same line
+  String _getBilingualLabelHorizontal(
+    Map<String, DisplayOption>? displayConfig,
+    String key,
+    String? resolvedLabelArabic,
+    String? resolvedLabelEnglish,
+    String defaultArabic,
+    String defaultEnglish,
+  ) {
+    final configValueArabic = displayConfig?[key]?.value as String?;
+    final configValueEnglish = displayConfig?[key]?.defaultValue;
+
+    // Check for presence of custom Arabic text
+    final bool hasCustomArabic =
+        (configValueArabic != null && configValueArabic.isNotEmpty) ||
+            (resolvedLabelArabic != null && resolvedLabelArabic.isNotEmpty);
+
+    // Check for presence of custom English text
+    final bool hasCustomEnglish =
+        (configValueEnglish != null && configValueEnglish.isNotEmpty) ||
+            (resolvedLabelEnglish != null && resolvedLabelEnglish.isNotEmpty);
+
+    // Determine whether to use static fallbacks
+    final bool useStaticFallback = !hasCustomArabic && !hasCustomEnglish;
+
+    // Get Arabic part
+    String arabic = '';
+    if (hasCustomArabic) {
+      if (configValueArabic != null && configValueArabic.isNotEmpty) {
+        arabic = configValueArabic;
+      } else if (resolvedLabelArabic != null &&
+          resolvedLabelArabic.isNotEmpty) {
+        arabic = resolvedLabelArabic;
+      }
+    } else if (useStaticFallback) {
+      arabic = defaultArabic;
+    }
+
+    // Get English part
+    String english = '';
+    if (hasCustomEnglish) {
+      if (configValueEnglish != null && configValueEnglish.isNotEmpty) {
+        english = configValueEnglish;
+      } else if (resolvedLabelEnglish != null &&
+          resolvedLabelEnglish.isNotEmpty) {
+        english = resolvedLabelEnglish;
+      }
+    } else if (useStaticFallback) {
+      english = defaultEnglish;
+    }
+
+    // Return in "English   Arabic" format
+    if (english.isNotEmpty && arabic.isNotEmpty) {
+      return '$english   $arabic';
+    } else if (english.isNotEmpty) {
+      return english;
+    } else if (arabic.isNotEmpty) {
+      return arabic;
+    }
+    return '';
   }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
@@ -1390,7 +1889,7 @@ class StandardThinDividerRow extends ReceiptRow {
       Offset(width, y + 3),
       paint,
     );
-}
+  }
 }
 
 /// Dotted divider for emphasis sections
@@ -1508,7 +2007,7 @@ class StandardBoxedTotalsRow extends ReceiptRow {
           canvas,
           item.value,
           Offset(valueOffsetX, currentY),
-          (width * 0.45) - (valueOffsetX - padding),
+          (width * 0.50) - (valueOffsetX - padding),
           itemFontSize,
           item.isBold,
           TextAlign.left,
@@ -1520,7 +2019,7 @@ class StandardBoxedTotalsRow extends ReceiptRow {
           canvas,
           item.label,
           Offset(width - padding, currentY), // Anchor at right
-          width * 0.50,
+          width * 0.70,
           itemFontSize,
           item.isBold,
           TextAlign.right,

@@ -232,20 +232,24 @@ class DisplayConfiguration {
 class DisplayOption {
   final bool? visible;
   final dynamic value; // Can be String or null
+  final String? defaultValue;
 
   DisplayOption({
     this.visible,
     this.value,
+    this.defaultValue,
   });
 
   factory DisplayOption.fromJson(Map<String, dynamic> json) => DisplayOption(
         visible: json["visible"],
         value: json["value"],
+        defaultValue: json["default"],
       );
 
   Map<String, dynamic> toJson() => {
         "visible": visible,
         "value": value,
+        "default": defaultValue,
       };
 }
 
@@ -280,6 +284,13 @@ class ResolvedLabels {
   final String? returnQty;
   final String? returnRate;
   final String? returnTotal;
+  // Default values for bilingual support (English defaults)
+  final String? slNumberDefault;
+  final String? particularsDefault;
+  final String? qtyDefault;
+  final String? rateDefault;
+  final String? totalDefault;
+  final String? taxDefault;
 
   ResolvedLabels({
     this.itemName,
@@ -308,6 +319,12 @@ class ResolvedLabels {
     this.returnQty,
     this.returnRate,
     this.returnTotal,
+    this.slNumberDefault,
+    this.particularsDefault,
+    this.qtyDefault,
+    this.rateDefault,
+    this.totalDefault,
+    this.taxDefault,
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
@@ -338,6 +355,12 @@ class ResolvedLabels {
         returnQty: json["return_qty"],
         returnRate: json["return_rate"],
         returnTotal: json["return_total"],
+        slNumberDefault: json["sl_number_default"],
+        particularsDefault: json["particulars_default"],
+        qtyDefault: json["qty_default"],
+        rateDefault: json["rate_default"],
+        totalDefault: json["total_default"],
+        taxDefault: json["tax_default"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -367,6 +390,12 @@ class ResolvedLabels {
         "return_qty": returnQty,
         "return_rate": returnRate,
         "return_total": returnTotal,
+        "sl_number_default": slNumberDefault,
+        "particulars_default": particularsDefault,
+        "qty_default": qtyDefault,
+        "rate_default": rateDefault,
+        "total_default": totalDefault,
+        "tax_default": taxDefault,
       };
 }
 

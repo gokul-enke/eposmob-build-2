@@ -36,6 +36,7 @@ import 'package:pos_machine/components/build_stock_confirmation_dialog.dart';
 import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -877,6 +878,45 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Future<void> _loadActiveStore() async {
+    // OPTIMIZATION: Try to get from StoreSessionProvider synchronously first to avoid UI delay
+    try {
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      if (storeSession.activeStore != null) {
+        final activeStore = storeSession.activeStore!;
+
+        // Try to find full store object in PurchaseProvider first
+        final purchaseProvider =
+            Provider.of<PurchaseProvider>(context, listen: false);
+
+        GetStoreModelData? fullStoreData;
+        if (purchaseProvider.getStoreList != null) {
+          try {
+            fullStoreData = purchaseProvider.getStoreList!.firstWhere(
+              (s) => s.id == activeStore.storeId,
+            );
+          } catch (_) {}
+        }
+
+        if (mounted) {
+          setState(() {
+            // Use full data if available, otherwise create minimal object from session
+            selectedStore = fullStoreData ??
+                GetStoreModelData(
+                  id: activeStore.storeId,
+                  name: activeStore.storeName,
+                );
+          });
+        }
+
+        debugPrint(
+            '✅ Active store loaded from session: ${activeStore.storeName} (ID: ${activeStore.storeId})');
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not get active store from session: $e');
+    }
+
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
@@ -5472,24 +5512,26 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             final successfulItems = summary['successfulItems']
                                 as List<Map<String, dynamic>>;
 
-                            // Look for purchase_id in the successful API responses
+                            // Look for purchase_voucher_id in the successful API responses
                             String? purchaseId;
                             for (var item in successfulItems) {
                               if (item['apiResponse'] != null &&
                                   item['apiResponse']['data'] != null &&
-                                  item['apiResponse']['data']['purchase_id'] !=
+                                  item['apiResponse']['data']
+                                          ['purchase_voucher_id'] !=
                                       null) {
                                 purchaseId = item['apiResponse']['data']
-                                        ['purchase_id']
+                                        ['purchase_voucher_id']
                                     .toString();
-                                debugPrint('✅ FOUND PURCHASE ID: $purchaseId');
+                                debugPrint(
+                                    '✅ FOUND PURCHASE VOUCHER ID: $purchaseId');
                                 break;
                               }
                             }
 
                             if (purchaseId != null) {
                               debugPrint(
-                                  '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE ID: $purchaseId');
+                                  '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE VOUCHER ID: $purchaseId');
 
                               try {
                                 final result =
@@ -5497,7 +5539,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                             listen: false)
                                         .finishPurchaseOrder(
                                   accessToken: accessToken,
-                                  purchaseId: purchaseId,
+                                  purchaseVoucherId: purchaseId,
                                   paymentMethods: paymentMethods,
                                   paidMethods: paidMethods,
                                 );
