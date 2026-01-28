@@ -40,6 +40,9 @@ class DailySalesCloseData {
   String? totalPaymentReceived;
   String? totalAmountCollectedOnSale;
   String? totalCreditCollected;
+  String? totalReturns;
+  String? totalRefunds;
+  List<DailySalesTransaction>? transactions;
   String? createdAt;
   String? updatedAt;
 
@@ -62,6 +65,9 @@ class DailySalesCloseData {
       this.totalPaymentReceived,
       this.totalAmountCollectedOnSale,
       this.totalCreditCollected,
+      this.totalReturns,
+      this.totalRefunds,
+      this.transactions,
       this.createdAt,
       this.updatedAt});
 
@@ -86,8 +92,48 @@ class DailySalesCloseData {
     totalPaymentReceived = json['total_payment_received'];
     totalAmountCollectedOnSale = json['total_amount_collected_on_sale'];
     totalCreditCollected = json['total_credit_collected'];
+    totalReturns = json['total_returns'];
+    totalRefunds = json['total_refunds'];
+    if (json['transactions'] != null) {
+      transactions = <DailySalesTransaction>[];
+      json['transactions'].forEach((v) {
+        transactions!.add(DailySalesTransaction.fromJson(v));
+      });
+    }
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
+  }
+}
+
+class DailySalesTransaction {
+  int? id;
+  String? customerName;
+  String? orderNumber;
+  num? orderAmount;
+  num? paidAmount;
+  String? paymentType;
+  String? date;
+  String? time;
+
+  DailySalesTransaction(
+      {this.id,
+      this.customerName,
+      this.orderNumber,
+      this.orderAmount,
+      this.paidAmount,
+      this.paymentType,
+      this.date,
+      this.time});
+
+  DailySalesTransaction.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    customerName = json['customer_name'];
+    orderNumber = json['order_number'];
+    orderAmount = json['order_amount'];
+    paidAmount = json['paid_amount'];
+    paymentType = json['payment_type'];
+    date = json['date'];
+    time = json['time'];
   }
 }
 

@@ -259,6 +259,56 @@ class DailyCloseStandardPrinter {
                     ],
                   ),
                 ),
+                pw.SizedBox(height: 20),
+
+                // Transactions Section
+                if (data.transactions != null && data.transactions!.isNotEmpty) ...[
+                  pw.Text('TRANSACTIONS', style: sectionTitleStyle),
+                  pw.SizedBox(height: 10),
+                  pw.Table(
+                    border: pw.TableBorder.all(color: PdfColors.grey300),
+                    columnWidths: {
+                      0: const pw.FixedColumnWidth(30), // SL
+                      1: const pw.FlexColumnWidth(2),   // Order No
+                      2: const pw.FlexColumnWidth(2),   // Customer
+                      3: const pw.FlexColumnWidth(1),   // Amount
+                      4: const pw.FlexColumnWidth(1),   // Paid
+                      5: const pw.FlexColumnWidth(1),   // Type
+                      6: const pw.FlexColumnWidth(1),   // Time
+                    },
+                    children: [
+                      // Header Row
+                      pw.TableRow(
+                        decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                        children: [
+                          _buildTableHeaderCell('#', labelStyle),
+                          _buildTableHeaderCell('Order No', labelStyle),
+                          _buildTableHeaderCell('Customer', labelStyle),
+                          _buildTableHeaderCell('Amount', labelStyle),
+                          _buildTableHeaderCell('Paid', labelStyle),
+                          _buildTableHeaderCell('Type', labelStyle),
+                          _buildTableHeaderCell('Time', labelStyle),
+                        ],
+                      ),
+                      // Data Rows
+                      ...data.transactions!.asMap().entries.map((entry) {
+                        final index = entry.key + 1;
+                        final tx = entry.value;
+                        return pw.TableRow(
+                          children: [
+                            _buildTableCell(index.toString(), bodyStyle),
+                            _buildTableCell(tx.orderNumber ?? '-', bodyStyle),
+                            _buildTableCell(tx.customerName ?? '-', bodyStyle),
+                            _buildTableCell(tx.orderAmount?.toString() ?? '0', bodyStyle),
+                            _buildTableCell(tx.paidAmount?.toString() ?? '0', bodyStyle),
+                            _buildTableCell(tx.paymentType ?? '-', bodyStyle),
+                            _buildTableCell(tx.time ?? '-', bodyStyle),
+                          ],
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ],
               ],
             );
           },
@@ -359,6 +409,34 @@ class DailyCloseStandardPrinter {
           style: isHighlight ? valueStyle.copyWith(fontSize: valueStyle.fontSize! + 4, color: PdfColors.blue800) : valueStyle,
         ),
       ],
+    );
+  }
+
+  pw.Widget _buildTableHeaderCell(String text, pw.TextStyle style) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(text, style: style.copyWith(fontWeight: pw.FontWeight.bold)),
+    );
+  }
+
+  pw.Widget _buildTableCell(String text, pw.TextStyle style) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(text, style: style),
+    );
+  }
+
+  pw.Widget _buildTableHeaderCell(String text, pw.TextStyle style) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(text, style: style.copyWith(fontWeight: pw.FontWeight.bold)),
+    );
+  }
+
+  pw.Widget _buildTableCell(String text, pw.TextStyle style) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(text, style: style),
     );
   }
 

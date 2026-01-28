@@ -241,6 +241,61 @@ class DailyCloseThermalPrinter {
         scale: getNormalScale(is58mm),
       ));
 
+      // ========== TRANSACTIONS ==========
+      if (data.transactions != null && data.transactions!.isNotEmpty) {
+        rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
+        rows.add(_ReportDividerRow(char: '─'));
+        rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
+        
+        rows.add(_ReportTextRow(
+          'TRANSACTIONS',
+          isBold: true,
+          scale: getTitleScale(is58mm),
+          center: true,
+        ));
+        rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
+
+        // Table Header
+        // We'll use a simplified layout for thermal:
+        // # OrderNo (Type)
+        // Amount | Paid
+        
+        for (int i = 0; i < data.transactions!.length; i++) {
+          final tx = data.transactions![i];
+          final index = i + 1;
+          
+          // Row 1: # OrderNo (Type)
+          rows.add(_ReportTextRow(
+            '$index. ${tx.orderNumber ?? '-'} (${tx.paymentType ?? '-'})',
+            isBold: true,
+            scale: getNormalScale(is58mm),
+          ));
+          
+          // Row 2: Customer Name (if present)
+          if (tx.customerName != null && tx.customerName!.isNotEmpty) {
+             rows.add(_ReportTextRow(
+              '   ${tx.customerName}',
+              scale: getSmallScale(is58mm),
+            ));
+          }
+
+          // Row 3: Amount | Paid
+          // We can use KeyValue row for this alignment
+          rows.add(_ReportKeyValueRow(
+            '   Amt: ${tx.orderAmount ?? 0}',
+            'Paid: ${tx.paidAmount ?? 0}',
+            scale: getSmallScale(is58mm),
+          ));
+          
+          // Divider between items (light)
+          if (i < data.transactions!.length - 1) {
+            rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.3));
+            rows.add(_ReportDividerRow(char: '-')); // lighter divider
+            rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.3));
+          }
+        }
+      }
+
       // ========== FOOTER ==========
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
       rows.add(_ReportDividerRow(char: '═'));

@@ -148,6 +148,14 @@ class SalesProvider with ChangeNotifier {
         _filterDate != null;
   }
 
+  DailySalesCloseData? _selectedDailySalesCloseData;
+  DailySalesCloseData? get selectedDailySalesCloseData => _selectedDailySalesCloseData;
+
+  void setSelectedDailySalesCloseData(DailySalesCloseData? data) {
+    _selectedDailySalesCloseData = data;
+    notifyListeners();
+  }
+
   Future<void> fetchOrders({
     required String accessToken,
     int? storeId,
@@ -619,17 +627,19 @@ class SalesProvider with ChangeNotifier {
 
   Future<void> fetchDailySalesClose({
     required String accessToken,
-    String? date,
+    String? startDate,
+    String? endDate,
     int page = 1,
     required int userId,
     required int storeId,
   }) async {
     final queryParameters = <String, String>{
-      'user_id': userId.toString(),
-      'store_id': storeId.toString(),
+      'user_id[]': userId.toString(),
+      'store_id[]': storeId.toString(),
       'page': page.toString(),
     };
-    if (date != null) queryParameters['date'] = date;
+    if (startDate != null) queryParameters['start_date'] = startDate;
+    if (endDate != null) queryParameters['end_date'] = endDate;
 
     final uri = Uri.parse(APPUrl.listDailySalesClose)
         .replace(queryParameters: queryParameters);
@@ -640,7 +650,8 @@ class SalesProvider with ChangeNotifier {
     debugPrint('Query Parameters: $queryParameters');
     debugPrint('User ID: $userId');
     debugPrint('Store ID: $storeId');
-    debugPrint('Date: $date');
+    debugPrint('Start Date: $startDate');
+    debugPrint('End Date: $endDate');
     debugPrint('Page: $page');
 
     try {

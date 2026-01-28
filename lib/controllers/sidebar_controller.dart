@@ -80,6 +80,7 @@ import '../widgets/category_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_details.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
+import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 
 class SideBarController extends GetxController {
@@ -173,5 +174,6 @@ class SideBarController extends GetxController {
     CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
     NonStockReportScreen(), // 77 Non-Stock Report
     DailySalesCloseListScreen(), // 78 Daily Sales Close List
+    DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
   ];
 }
