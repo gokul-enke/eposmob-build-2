@@ -308,6 +308,10 @@ class DailyCloseStandardPrinter {
                       }).toList(),
                     ],
                   ),
+                ] else if ((data.totalOrders ?? 0) > 0) ...[
+                  pw.Text('TRANSACTIONS', style: sectionTitleStyle),
+                  pw.SizedBox(height: 10),
+                  pw.Text('(No transaction details available)', style: bodyStyle),
                 ],
               ],
             );
@@ -409,20 +413,6 @@ class DailyCloseStandardPrinter {
           style: isHighlight ? valueStyle.copyWith(fontSize: valueStyle.fontSize! + 4, color: PdfColors.blue800) : valueStyle,
         ),
       ],
-    );
-  }
-
-  pw.Widget _buildTableHeaderCell(String text, pw.TextStyle style) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(5),
-      child: pw.Text(text, style: style.copyWith(fontWeight: pw.FontWeight.bold)),
-    );
-  }
-
-  pw.Widget _buildTableCell(String text, pw.TextStyle style) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(5),
-      child: pw.Text(text, style: style),
     );
   }
 

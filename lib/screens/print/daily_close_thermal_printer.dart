@@ -255,45 +255,64 @@ class DailyCloseThermalPrinter {
         ));
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
 
-        // Table Header
-        // We'll use a simplified layout for thermal:
-        // # OrderNo (Type)
-        // Amount | Paid
-        
         for (int i = 0; i < data.transactions!.length; i++) {
           final tx = data.transactions![i];
           final index = i + 1;
           
-          // Row 1: # OrderNo (Type)
-          rows.add(_ReportTextRow(
-            '$index. ${tx.orderNumber ?? '-'} (${tx.paymentType ?? '-'})',
-            isBold: true,
+          // Minimal Layout:
+          // 1. ORD-xxx ................. 100.00
+          //    CASH | Customer Name
+          
+          // Row 1: # OrderNo (Left) ... Amount (Right)
+          rows.add(_ReportKeyValueRow(
+            '$index. ${tx.orderNumber ?? '-'}',
+            tx.orderAmount?.toString() ?? '0.00',
+            isBold: false,
             scale: getNormalScale(is58mm),
           ));
           
-          // Row 2: Customer Name (if present)
-          if (tx.customerName != null && tx.customerName!.isNotEmpty) {
-             rows.add(_ReportTextRow(
-              '   ${tx.customerName}',
-              scale: getSmallScale(is58mm),
-            ));
+          // Row 2: Details (Payment Type | Customer | Paid if diff)
+          List<String> detailParts = [];
+          if (tx.paymentType != null) detailParts.add(tx.paymentType!);
+          if (tx.customerName != null && tx.customerName!.isNotEmpty && tx.customerName != 'Default CUSTOMER') {
+             detailParts.add(tx.customerName!);
           }
-
-          // Row 3: Amount | Paid
-          // We can use KeyValue row for this alignment
-          rows.add(_ReportKeyValueRow(
-            '   Amt: ${tx.orderAmount ?? 0}',
-            'Paid: ${tx.paidAmount ?? 0}',
+          // Show Paid if different from Order Amount
+          if (tx.paidAmount != null && tx.orderAmount != null && tx.paidAmount != tx.orderAmount) {
+             detailParts.add('Paid: ${tx.paidAmount}');
+          }
+          
+          String details = detailParts.join(' | ');
+          
+          rows.add(_ReportTextRow(
+            '   $details',
             scale: getSmallScale(is58mm),
           ));
-          
-          // Divider between items (light)
+
+          // Minimal spacing between items (no divider)
           if (i < data.transactions!.length - 1) {
-            rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.3));
-            rows.add(_ReportDividerRow(char: '-')); // lighter divider
-            rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.3));
+            rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.2));
           }
         }
+      } else if ((data.totalOrders ?? 0) > 0) {
+        // Show message if orders exist but no details
+        rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
+        rows.add(_ReportDividerRow(char: '─'));
+        rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
+        
+        rows.add(_ReportTextRow(
+          'TRANSACTIONS',
+          isBold: true,
+          scale: getTitleScale(is58mm),
+          center: true,
+        ));
+        rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
+        
+        rows.add(_ReportTextRow(
+          '(No transaction details available)',
+          scale: getSmallScale(is58mm),
+          center: true,
+        ));
       }
 
       // ========== FOOTER ==========
