@@ -1061,7 +1061,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       barrierDismissible: false,
       builder: (dialogContext) {
         return CheckoutModal(
-          cartTotal: localProductProvider.priceSummary?.subTotal ?? localProductProvider.cartTotal,
+          cartTotal: localProductProvider.priceSummary?.subTotal ??
+              localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
           selectedCustomer: selectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
@@ -1111,8 +1112,11 @@ class BillingPageState extends State<BillingPageRestaurant>
 
           // Discount State
           couponCode: coupenCodeTextController.text,
-          flatDiscount: localProductProvider.getCurrentDiscount()['flatDiscount'] ?? 0.0,
-          percentageDiscount: localProductProvider.getCurrentDiscount()['percentageDiscount'] ?? 0.0,
+          flatDiscount:
+              localProductProvider.getCurrentDiscount()['flatDiscount'] ?? 0.0,
+          percentageDiscount:
+              localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
+                  0.0,
           isCouponApplied: isCouponApplied,
 
           onCustomerSelected: (customer) {
@@ -1231,20 +1235,32 @@ class BillingPageState extends State<BillingPageRestaurant>
             });
           },
           onConfirmOrder: () async {
+            // Set loading state
             setState(() {
+              isLoadingConfirmOrder = true;
               _hasOpenedPaymentModalOnce =
                   true; // Mark as opened when confirmed via checkout modal
             });
+
+            // Call confirm first (let modal show loading)
             await _confirmOrder();
+
+            // Close modal after completion
             if (mounted) Navigator.of(dialogContext).pop();
           },
           onConfirmAndPrint: () async {
+            // Set loading state
             setState(() {
+              isLoadingCreateOrder = true;
               _hasOpenedPaymentModalOnce =
                   true; // Mark as opened when confirmed via checkout modal
             });
-            if (mounted) Navigator.of(dialogContext).pop();
+
+            // Call print first (let modal show loading)
             await _createOrderAndPrint();
+
+            // Close modal after completion
+            if (mounted) Navigator.of(dialogContext).pop();
           },
         );
       },
@@ -2853,27 +2869,27 @@ class BillingPageState extends State<BillingPageRestaurant>
             ColorManager.textColor,
           ),
         ),
-          GestureDetector(
-            child: BuildPaymentRow(
-              amount:
-                  "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
-              title: "billing.tax_amount".tr,
-              color: ColorManager.kPrimaryColor,
-            ),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return Center(
-                    child: TaxDetailsDialog(
-                      taxAmounts: taxNames,
-                    ),
-                  );
-                },
-              );
-            },
+        GestureDetector(
+          child: BuildPaymentRow(
+            amount:
+                "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
+            title: "billing.tax_amount".tr,
+            color: ColorManager.kPrimaryColor,
           ),
-          const Divider(thickness: 2),
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) {
+                return Center(
+                  child: TaxDetailsDialog(
+                    taxAmounts: taxNames,
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        const Divider(thickness: 2),
         BuildPaymentRow(
           amount: "$currency ${_getFormattedTotal()}", // Use helper method
           title: "billing.total_payable".tr,
@@ -3733,7 +3749,7 @@ class BillingPageState extends State<BillingPageRestaurant>
               color: ColorManager.kButtonBlue,
               // onPressed: _createOrderAndPrint,
               onPressed: _showCheckoutModal,
-              isLoading: false,
+              isLoading: isLoadingConfirmOrder,
             ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
                     .appSettings
@@ -3744,7 +3760,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 color: ColorManager.kButtonGreen,
                 // onPressed: _confirmOrder,.
                 onPressed: _showCheckoutModal,
-                isLoading: false,
+                isLoading: isLoadingCreateOrder,
               ),
           ],
           if (!_hasInternet) ...[
