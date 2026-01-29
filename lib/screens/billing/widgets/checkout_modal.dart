@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // Re-enabled for .tr translations
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 // import 'package:pos_machine/resources/color_manager.dart'; // Unused
 import 'package:pos_machine/resources/font_manager.dart';
@@ -18,6 +19,7 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart'; // Re-added for delivery modal components
 import 'package:pos_machine/resources/style_manager.dart'; // Re-added for delivery modal components
+import 'package:pos_machine/components/build_dialog_box.dart'; // For showScaffoldError
 
 class CheckoutModal extends StatefulWidget {
   final double cartTotal;
@@ -1223,6 +1225,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
                     customButtonTitle: "Confirm Payment Selection",
                     closeOnApply: false,
+                    showConfirmButton: false,
                     onPaymentMethodSelected: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
                       _handlePaymentUpdate(
                         isCash, isCard, isUpi, isCod, isDebit,
@@ -1320,15 +1323,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left side: Back button
-          if (onBack != null)
+          // Left side: Back button - Hidden as per user request
+          /* if (onBack != null)
             TextButton.icon(
               icon: const Icon(Icons.arrow_back),
               label: const Text('Back'),
               onPressed: onBack,
               style: TextButton.styleFrom(foregroundColor: Colors.grey.shade700),
             )
-          else
+          else */
             const SizedBox.shrink(),
 
           // Right side: Action buttons
@@ -1342,12 +1345,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     title: 'Confirm',
                     isLoading: _isConfirming,
                     fct: _canConfirmOrPrint ? onConfirm : () {
-                      // Show feedback when disabled
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please select a customer and visit the payment tab before confirming'),
-                          duration: Duration(seconds: 2),
-                        ),
+                      // Auto-navigate to payment tab and show feedback
+                      _goToStep(3);
+                      showScaffoldError(
+                        context: context,
+                        message: 'Please visit the payment tab before confirm',
                       );
                     },
                     size: MediaQuery.of(context).size,
@@ -1370,12 +1372,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     title: 'Confirm & Print',
                     isLoading: _isPrinting,
                     fct: _canConfirmOrPrint ? onPrint : () {
-                      // Show feedback when disabled
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please select a customer and visit the payment tab before printing'),
-                          duration: Duration(seconds: 2),
-                        ),
+                      // Auto-navigate to payment tab and show feedback
+                      _goToStep(3);
+                      showScaffoldError(
+                        context: context,
+                        message: 'Please visit the payment tab before confirm',
                       );
                     },
                     size: MediaQuery.of(context).size,
@@ -1414,121 +1415,153 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Compact summary widget shown on right side of all steps
   Widget _buildCompactSummary() {
-    final discountAmount = _localFlatDiscount + (widget.cartTotal * _localPercentageDiscount / 100);
-    final effectiveTotal = widget.cartTotal - discountAmount;
-    final totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
-                      (double.tryParse(_lCardAmount) ?? 0) +
-                      (double.tryParse(_lUpiAmount) ?? 0) +
-                      (double.tryParse(_lCodAmount) ?? 0);
+    return Consumer2<LocalProductProvider, AppSettingsProvider>(
+      builder: (context, localProductProvider, appSettingsProvider, child) {
+        final priceSummary = localProductProvider.priceSummary;
+        if (priceSummary == null) return const SizedBox.shrink();
 
-    final bool hasCustomer = _localSelectedCustomer != null;
-    final bool hasPayment = _hasPaymentMethod();
-    final bool hasDiscount = _localIsCouponApplied || _localFlatDiscount > 0 || _localPercentageDiscount > 0;
-    final bool hasDelivery = _lDeliveryMethod.isNotEmpty;
+        // Use the provider's totals directly for accuracy and consistency
+        final subTotal = priceSummary.originalSubTotal;
+        final discountAmount = priceSummary.discount;
+        final taxAmount = priceSummary.totalTax;
+        
+        // Final effective total (rounded if enabled)
+        final effectiveTotal = appSettingsProvider.appSettings?.priceRoundOff == true 
+            ? AmountHelper.roundOffAmount(priceSummary.netTotal)
+            : priceSummary.netTotal;
 
-    final taxAmount = Provider.of<LocalProductProvider>(context, listen: false).priceSummary?.totalTax ?? 0.0;
+        final totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
+                          (double.tryParse(_lCardAmount) ?? 0) +
+                          (double.tryParse(_lUpiAmount) ?? 0) +
+                          (double.tryParse(_lCodAmount) ?? 0);
+        
+        final prevBalance = _localSelectedCustomer?.balance ?? 0.0;
+        final creditAmount = double.tryParse(_lDebitAmount) ?? 0.0;
+        
+        // Match PaymentMethodModal logic for change calculation
+        double rawBalance = 0.0;
+        if (prevBalance < 0) {
+          // Customer owes money
+          final transactionExcess = totalPaid - effectiveTotal;
+          rawBalance = transactionExcess - creditAmount;
+        } else {
+          // Customer has credit or zero balance
+          final netDue = effectiveTotal - prevBalance;
+          rawBalance = totalPaid - netDue - creditAmount;
+        }
+        
+        final displayBalance = rawBalance < 0 ? 0.0 : rawBalance;
 
-    return Column(
-      children: [
-        // Status Checklist (clickable to navigate) - More compact
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Checkout Progress',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+        final bool hasCustomer = _localSelectedCustomer != null;
+        final bool hasPayment = _hasPaymentMethod();
+        final bool hasDiscount = _localIsCouponApplied || _localFlatDiscount > 0 || _localPercentageDiscount > 0;
+        final bool hasDelivery = _lDeliveryMethod.isNotEmpty;
+
+        return Column(
+          children: [
+            // Status Checklist (clickable to navigate) - More compact
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
               ),
-              const SizedBox(height: 10),
-              // Show Customer item in all tabs
-              _buildClickableCheckItem(
-                'Customer',
-                _localSelectedCustomer?.name ?? 'Not Selected',
-                hasCustomer,
-                Icons.person_outline,
-                0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Checkout Progress',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Show Customer item in all tabs
+                  _buildClickableCheckItem(
+                    'Customer',
+                    _localSelectedCustomer?.name ?? 'Not Selected',
+                    hasCustomer,
+                    Icons.person_outline,
+                    0,
+                  ),
+                  if (widget.enableDelivery)
+                    _buildClickableCheckItem(
+                      'Delivery',
+                      _lDeliveryMethod,
+                      hasDelivery,
+                      Icons.local_shipping_outlined,
+                      1,
+                    ),
+                  _buildClickableCheckItem(
+                    'Discount',
+                    hasDiscount
+                      ? (_localPercentageDiscount > 0
+                          ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
+                          : _localFlatDiscount.toStringAsFixed(2))
+                      : 'Not Applied',
+                    hasDiscount,
+                    Icons.discount_outlined,
+                    2,
+                  ),
+                  _buildClickableCheckItem(
+                    'Payment',
+                    _hasPaymentMethod() ? 'Configured' : 'Not Configured',
+                    hasPayment,
+                    Icons.payment_outlined,
+                    3,
+                  ),
+                ],
               ),
-              if (widget.enableDelivery)
-                _buildClickableCheckItem(
-                  'Delivery',
-                  _lDeliveryMethod,
-                  hasDelivery,
-                  Icons.local_shipping_outlined,
-                  1,
-                ),
-              _buildClickableCheckItem(
-                'Discount',
-                hasDiscount
-                  ? (_localPercentageDiscount > 0
-                      ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
-                      : _localFlatDiscount.toStringAsFixed(2))
-                  : 'Not Applied',
-                hasDiscount,
-                Icons.discount_outlined,
-                2,
-              ),
-              _buildClickableCheckItem(
-                'Payment',
-                _hasPaymentMethod() ? 'Configured' : 'Not Configured',
-                hasPayment,
-                Icons.payment_outlined,
-                3,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Order Summary - More compact
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Order Summary',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+            const SizedBox(height: 8),
+            // Order Summary - More compact
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Order Summary',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildSummaryRow('Net Amount', subTotal, Colors.black),
+                      const SizedBox(height: 4),
+                      _buildSummaryRow('Discount', -discountAmount, const Color(0xFFEF4444), labelColor: const Color(0xFFEF4444)),
+                      const SizedBox(height: 4),
+                      _buildSummaryRow('Tax', taxAmount, Colors.blueGrey.shade400, labelColor: Colors.blueGrey.shade400),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6),
+                        child: Divider(height: 1),
+                      ),
+                      _buildSummaryRow('Total Payable', effectiveTotal, const Color(0xFF2563EB), isBold: true, large: true, labelColor: const Color(0xFF2563EB)),
+                      const SizedBox(height: 8),
+                      _buildSummaryRow('Total Paid', totalPaid, Colors.black),
+                      const SizedBox(height: 4),
+                      _buildSummaryRow('Balance', displayBalance, const Color(0xFF059669), labelColor: const Color(0xFF059669)),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                _buildSummaryRow('Net Amount', widget.cartTotal, Colors.black),
-                const SizedBox(height: 6),
-                _buildSummaryRow('Discount', -discountAmount, const Color(0xFFEF4444), labelColor: const Color(0xFFEF4444)),
-                const SizedBox(height: 6),
-                _buildSummaryRow('Tax', taxAmount, Colors.blueGrey.shade400, labelColor: Colors.blueGrey.shade400),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Divider(height: 1),
-                ),
-                _buildSummaryRow('Total Payable', effectiveTotal, const Color(0xFF2563EB), isBold: true, large: true, labelColor: const Color(0xFF2563EB)),
-                const SizedBox(height: 10),
-                _buildSummaryRow('Total Paid', totalPaid, Colors.black),
-                const SizedBox(height: 6),
-                _buildSummaryRow('Balance', totalPaid - effectiveTotal, const Color(0xFF059669), labelColor: const Color(0xFF059669)),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 

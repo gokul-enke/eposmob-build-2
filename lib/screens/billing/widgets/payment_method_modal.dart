@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
@@ -53,6 +54,7 @@ class PaymentMethodModal extends StatefulWidget {
   final String? customButtonTitle; // Optional custom button title
   final bool closeOnApply; // Optional flag to control modal closing behavior
   final bool isDefaultCustomer; // Flag to hide previous balance for default customer
+  final bool showConfirmButton; // Flag to show/hide the confirm button
 
   const PaymentMethodModal({
     Key? key,
@@ -74,6 +76,7 @@ class PaymentMethodModal extends StatefulWidget {
     this.customButtonTitle,
     this.closeOnApply = true,
     this.isDefaultCustomer = false,
+    this.showConfirmButton = true,
   }) : super(key: key);
 
 
@@ -97,6 +100,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late FocusNode codAmountFocusNode;
   late FocusNode toCustomerCreditFocusNode;
   double balanceAmount = 0;
+  Timer? _debounceTimer;
+
   // To Customer Credit toggle and controller
   bool toCustomerCreditEnabled = false;
   late TextEditingController toCustomerCreditController;
@@ -210,6 +215,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     toCustomerCreditController.addListener(() => _handleAmountControllerChange(
         'toCustomerCredit', toCustomerCreditController));
 
+    transactionNumberController.addListener(_debounceNotifyChanges);
+
     // If there is an initial debit value (>0), reflect it as To Customer Credit
     final initDebit = double.tryParse(widget.initialDebitAmount) ?? 0.0;
     if (initDebit > 0) {
@@ -238,8 +245,49 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
   }
 
+  void _notifyChanges() {
+    _debounceTimer?.cancel();
+    final double mappedCredit =
+        double.tryParse(toCustomerCreditController.text) ?? 0.0;
+    final bool mappedIsDebitSelected =
+        toCustomerCreditEnabled && mappedCredit > 0;
+    final String mappedDebitAmount = mappedIsDebitSelected
+        ? mappedCredit.toStringAsFixed(2)
+        : '';
+
+    widget.onPaymentMethodSelected(
+      isCashSelected,
+      isCardSelected,
+      isUpiSelected,
+      isCodSelected,
+      mappedIsDebitSelected,
+      isCashSelected ? cashAmountController.text : "",
+      isCardSelected ? cardAmountController.text : "",
+      isUpiSelected ? upiAmountController.text : "",
+      isCodSelected ? codAmountController.text : "",
+      mappedDebitAmount,
+      transactionNumberController.text,
+      toCustomerCreditEnabled,
+      cashMethodId: _cashPaymentMethodId,
+      cardMethodId: _cardPaymentMethodId,
+      upiMethodId: _upiPaymentMethodId,
+      codMethodId: _codPaymentMethodId,
+    );
+  }
+
+  void _debounceNotifyChanges() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _notifyChanges();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    transactionNumberController.removeListener(_debounceNotifyChanges);
     cashAmountController.removeListener(
         () => _handleAmountControllerChange('cash', cashAmountController));
     cardAmountController.removeListener(
@@ -630,6 +678,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       }
 
       _calculateBalance();
+      _notifyChanges();
     });
   }
 
@@ -673,6 +722,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     // Don't recalculate if this is the balance field being updated by calculation
     if (label != 'balance') {
       _calculateBalance();
+      _debounceNotifyChanges();
     }
   }
 
@@ -996,6 +1046,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
                                   debugPrint('');
                                   _calculateBalance();
+                                  _notifyChanges();
                                   debugPrint('=== END TOGGLE OPERATION ===\n');
                                 });
                               },
@@ -1049,50 +1100,26 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         ),
 
                         const SizedBox(height: 20),
-                        CustomRoundButton(
-                          title: widget.customButtonTitle ??
-                              'billing.apply_payment_methods'.tr,
-                          fct: () {
-                            final double mappedCredit =
-                                double.tryParse(toCustomerCreditController.text) ?? 0.0;
-                            final bool mappedIsDebitSelected =
-                                toCustomerCreditEnabled && mappedCredit > 0;
-                            final String mappedDebitAmount = mappedIsDebitSelected
-                                ? mappedCredit.toStringAsFixed(2)
-                                : '';
+                        if (widget.showConfirmButton)
+                          CustomRoundButton(
+                            title: widget.customButtonTitle ??
+                                'billing.apply_payment_methods'.tr,
+                            fct: () {
+                              _notifyChanges();
+                              if (widget.closeOnApply) {
+                                Navigator.of(context).pop();
+                              }
 
-                            widget.onPaymentMethodSelected(
-                              isCashSelected,
-                              isCardSelected,
-                              isUpiSelected,
-                              isCodSelected,
-                              mappedIsDebitSelected,
-                              isCashSelected ? cashAmountController.text : "",
-                              isCardSelected ? cardAmountController.text : "",
-                              isUpiSelected ? upiAmountController.text : "",
-                              isCodSelected ? codAmountController.text : "",
-                              mappedDebitAmount,
-                              transactionNumberController.text,
-                              toCustomerCreditEnabled,
-                              cashMethodId: _cashPaymentMethodId,
-                              cardMethodId: _cardPaymentMethodId,
-                              upiMethodId: _upiPaymentMethodId,
-                              codMethodId: _codPaymentMethodId,
-                            );
-                            if (widget.closeOnApply) {
-                              Navigator.of(context).pop();
-                            }
-
-                            if (widget.onAfterApply != null) {
-                              Future.delayed(const Duration(milliseconds: 100), () {
-                                widget.onAfterApply!();
-                              });
-                            }
-                          },
-                          fontSize: FontSize.s14,
-                          height: 45,
-                          width: double.infinity,
-                        ),
+                              if (widget.onAfterApply != null) {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  widget.onAfterApply!();
+                                });
+                              }
+                            },
+                            fontSize: FontSize.s14,
+                            height: 45,
+                            width: double.infinity,
+                          ),
                       ],
                     ),
                   ),
@@ -1181,6 +1208,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       else if (type == 'upi')
                         isUpiSelected = true;
                       else if (type == 'cod') isCodSelected = true;
+                      _notifyChanges();
                     });
 
                     // Ensure full selection when tapping inside the field
@@ -1391,6 +1419,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         debugPrint(
                             '📱 Quick fill: All available balance ${maxPossibleCredit.toStringAsFixed(2)}');
                         _calculateBalance();
+                        _notifyChanges();
                       });
                     },
                     child: Container(

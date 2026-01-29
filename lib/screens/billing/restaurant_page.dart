@@ -6070,7 +6070,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   void _showCheckoutModal() {
     // Mark that payment modal opportunity has been given (via checkout dialog)
     setState(() {
-      _hasOpenedPaymentModalOnce = true;
+      _hasOpenedPaymentModalOnce = false;
     });
     
     showDialog(

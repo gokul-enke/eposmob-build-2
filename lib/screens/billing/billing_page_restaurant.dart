@@ -1043,7 +1043,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   void _showCheckoutModal() {
     // Mark that payment modal opportunity has been given
     setState(() {
-      _hasOpenedPaymentModalOnce = true;
+      _hasOpenedPaymentModalOnce = false;
     });
 
     final localProductProvider =
@@ -1061,7 +1061,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       barrierDismissible: false,
       builder: (dialogContext) {
         return CheckoutModal(
-          cartTotal: localProductProvider.getRoundedTotal(context),
+          cartTotal: localProductProvider.priceSummary?.subTotal ?? localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
           selectedCustomer: selectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
@@ -1111,11 +1111,8 @@ class BillingPageState extends State<BillingPageRestaurant>
 
           // Discount State
           couponCode: coupenCodeTextController.text,
-          flatDiscount: localProductProvider.priceSummary?.flatDiscount ??
-              0.0, // Use provider values
-          percentageDiscount:
-              localProductProvider.priceSummary?.percentageDiscount ??
-                  0.0, // Use provider values
+          flatDiscount: localProductProvider.getCurrentDiscount()['flatDiscount'] ?? 0.0,
+          percentageDiscount: localProductProvider.getCurrentDiscount()['percentageDiscount'] ?? 0.0,
           isCouponApplied: isCouponApplied,
 
           onCustomerSelected: (customer) {
@@ -2856,27 +2853,27 @@ class BillingPageState extends State<BillingPageRestaurant>
             ColorManager.textColor,
           ),
         ),
-        GestureDetector(
-          child: BuildPaymentRow(
-            amount:
-                "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
-            title: "billing.tax_amount".tr,
-            color: ColorManager.kPrimaryColor,
+          GestureDetector(
+            child: BuildPaymentRow(
+              amount:
+                  "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
+              title: "billing.tax_amount".tr,
+              color: ColorManager.kPrimaryColor,
+            ),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return Center(
+                    child: TaxDetailsDialog(
+                      taxAmounts: taxNames,
+                    ),
+                  );
+                },
+              );
+            },
           ),
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return Center(
-                  child: TaxDetailsDialog(
-                    taxAmounts: taxNames,
-                  ),
-                );
-              },
-            );
-          },
-        ),
-        const Divider(thickness: 2),
+          const Divider(thickness: 2),
         BuildPaymentRow(
           amount: "$currency ${_getFormattedTotal()}", // Use helper method
           title: "billing.total_payable".tr,
