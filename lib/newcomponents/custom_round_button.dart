@@ -69,19 +69,17 @@ class CustomRoundButtonWithIcon extends StatelessWidget {
       alignment: Alignment.center,
       width: width ?? 200,
       height: size.height * .055,
-      margin: ResponsiveWidget.isTablet(context)
-          ? EdgeInsets.only(left: paddingLeft ?? 10)
-          : EdgeInsets.only(left: paddingLeft ?? 20),
-      padding: EdgeInsets.only(left: paddingLeft ?? 20),
       decoration: BoxDecoration(
         color: ColorManager.kPrimaryColor,
         borderRadius: BorderRadius.circular(8),
       ),
       child: MaterialButton(
+        padding: EdgeInsets.zero,
         onPressed: () {
           fct();
         },
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             WebsafeSvg.asset(
@@ -118,6 +116,7 @@ class CustomRoundButtonWithIconAdvanced extends StatelessWidget {
   final Color? boxColor;
   final Color? borderColor;
   final Color? textColor;
+  final bool isLoading;
   const CustomRoundButtonWithIconAdvanced(
       {Key? key,
       required this.title,
@@ -130,7 +129,8 @@ class CustomRoundButtonWithIconAdvanced extends StatelessWidget {
       required this.width,
       this.boxColor,
       this.borderColor,
-      this.textColor})
+      this.textColor,
+      this.isLoading = false})
       : super(key: key);
 
   @override
@@ -139,36 +139,46 @@ class CustomRoundButtonWithIconAdvanced extends StatelessWidget {
       alignment: Alignment.center,
       width: width, // 200,
       height: height, //size.height * .055,
-      margin: ResponsiveWidget.isTablet(context)
-          ? const EdgeInsets.only(left: 10)
-          : const EdgeInsets.only(left: 10),
-      padding: const EdgeInsets.all(0),
       decoration: BoxDecoration(
         border: Border.all(color: borderColor ?? ColorManager.kPrimaryColor),
         color: boxColor ?? ColorManager.kPrimaryColor,
         borderRadius: BorderRadius.circular(radius ?? 8),
       ),
       child: MaterialButton(
-        onPressed: () {
-          fct();
-        },
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            icon,
-            const SizedBox(
-              width: 8,
-            ),
-            Text(
-              title,
-              style: TextStyle(
-                  fontFamily: FontConstants.fontFamily,
-                  fontSize: fontSize,
-                  fontWeight: FontWeightManager.medium,
-                  color: textColor ?? Colors.white),
-            ),
-          ],
-        ),
+        padding: EdgeInsets.zero,
+        onPressed: isLoading
+            ? null
+            : () {
+                fct();
+              },
+        child: isLoading
+            ? SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      textColor ?? Colors.white),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  icon,
+                  const SizedBox(
+                    width: 8,
+                  ),
+                  Text(
+                    title,
+                    style: TextStyle(
+                        fontFamily: FontConstants.fontFamily,
+                        fontSize: fontSize,
+                        fontWeight: FontWeightManager.medium,
+                        color: textColor ?? Colors.white),
+                  ),
+                ],
+              ),
       ),
     );
   }

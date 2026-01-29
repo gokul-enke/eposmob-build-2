@@ -138,6 +138,8 @@ class CheckoutModal extends StatefulWidget {
 
 class _CheckoutModalState extends State<CheckoutModal> {
   int _currentStep = 0; // 0: Customer, 1: Discount/Delivery, ... logic updated below
+  bool _isConfirming = false;
+  bool _isPrinting = false;
   
   // Local state for Customer Search
   String _customerSearchQuery = '';
@@ -379,12 +381,21 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
+      elevation: 8,
       child: Container(
         width: 900,
         height: 700,
+        clipBehavior: Clip.antiAlias, // Ensure children respect the rounded corners
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -1017,10 +1028,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                  );
                }
                
-               // Auto-advance to next step if applied
-               if (applied) {
-                 _nextStep();
-               }
+               // Auto-advance to next step
+               _nextStep();
             },
           ),
         ),
@@ -1096,90 +1105,135 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // --- STEP 4: REVIEW ---
   Widget _buildReviewStep() {
+    final bool hasCustomer = _localSelectedCustomer != null;
+    final bool hasPayment = _hasPaymentMethod();
+    final bool hasDiscount = _localIsCouponApplied || _localFlatDiscount > 0 || _localPercentageDiscount > 0;
+    final bool hasDelivery = _lDeliveryMethod.isNotEmpty;
+
     return Column(
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(32.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Summary
-                Expanded(
-                  flex: 3,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Order Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        _buildReviewSummary(),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                const VerticalDivider(width: 1),
-                const SizedBox(width: 24),
-                // Actions
+                // Left Side: Status Checklist
                 Expanded(
                   flex: 2,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInfoCard(
-                        Icons.person,
-                        _localSelectedCustomer?.name ?? 'No Customer',
-                        _localSelectedCustomer?.phone ?? '',
-                        Colors.blue,
+                      const Text(
+                        'Ready to Confirm',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
                       ),
-                      const SizedBox(height: 12),
-                      _buildInfoCard(
-                        Icons.payment,
-                        _hasPaymentMethod() ? 'Payment Entered' : 'No Payment',
-                        _hasPaymentMethod() ? 'Ready to process' : 'Please check payment',
-                        _hasPaymentMethod() ? Colors.green : Colors.orange,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Please verify the details below before completing the order.',
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                       ),
+                      const SizedBox(height: 32),
+                      
+                      _buildReviewCheckItem(
+                        'Customer Information', 
+                        _localSelectedCustomer?.name ?? 'Guest Customer',
+                        hasCustomer,
+                        Icons.person_outline,
+                      ),
+                      if (widget.enableDelivery)
+                        _buildReviewCheckItem(
+                          'Delivery Method', 
+                          _lDeliveryMethod,
+                          hasDelivery,
+                          Icons.local_shipping_outlined,
+                        ),
+                      _buildReviewCheckItem(
+                        'Discounts Applied', 
+                        hasDiscount 
+                          ? (_localPercentageDiscount > 0 
+                              ? '${_localPercentageDiscount.toStringAsFixed(0)}%' 
+                              : _localFlatDiscount.toStringAsFixed(2))
+                          : 'No Discounts Applied',
+                        hasDiscount,
+                        Icons.discount_outlined,
+                      ),
+                      _buildReviewCheckItem(
+                        'Payment Selection', 
+                        _hasPaymentMethod() ? 'Payment Methods Configured' : 'No Payment Configured',
+                        hasPayment,
+                        Icons.payment_outlined,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(width: 48),
+                
+                // Right Side: Summary Card & Actions
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    children: [
+                      _buildReviewSummary(),
                       const Spacer(),
-                      // Confirm Buttons using CustomRoundButtonWithIconAdvanced
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: CustomRoundButtonWithIconAdvanced(
-                              title: 'Print Bill',
-                              fct: () async {
-                                 await widget.onConfirmAndPrint();
-                              },
-                              size: MediaQuery.of(context).size,
-                              icon: const Icon(Icons.print, color: Color(0xFFD97706), size: 20),
-                              height: 50,
-                              width: double.infinity,
-                              fontSize: FontSize.s16,
-                              boxColor: Colors.white,
-                              borderColor: const Color(0xFFD97706),
-                              textColor: const Color(0xFFD97706),
-                              radius: 12,
+                      
+                      // Action Buttons
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: CustomRoundButtonWithIconAdvanced(
+                                title: 'Print Bill',
+                                isLoading: _isPrinting,
+                                fct: () async {
+                                   setState(() => _isPrinting = true);
+                                   try {
+                                     await widget.onConfirmAndPrint();
+                                   } finally {
+                                     if (mounted) setState(() => _isPrinting = false);
+                                   }
+                                },
+                                size: MediaQuery.of(context).size,
+                                icon: const Icon(Icons.print, color: Color(0xFFD97706), size: 20),
+                                height: 54,
+                                width: double.infinity,
+                                fontSize: FontSize.s16,
+                                boxColor: Colors.white,
+                                borderColor: const Color(0xFFD97706),
+                                textColor: const Color(0xFFD97706),
+                                radius: 12,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: CustomRoundButtonWithIconAdvanced(
-                              title: 'Confirm',
-                              fct: () async {
-                                 await widget.onConfirmOrder();
-                              },
-                              size: MediaQuery.of(context).size,
-                              icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                              height: 50,
-                              width: double.infinity,
-                              fontSize: FontSize.s16,
-                              boxColor: const Color(0xFF2563EB),
-                              borderColor: const Color(0xFF2563EB),
-                              radius: 12,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: CustomRoundButtonWithIconAdvanced(
+                                title: 'Confirm',
+                                isLoading: _isConfirming,
+                                fct: () async {
+                                   setState(() => _isConfirming = true);
+                                   try {
+                                     await widget.onConfirmOrder();
+                                   } finally {
+                                     if (mounted) setState(() => _isConfirming = false);
+                                   }
+                                },
+                                size: MediaQuery.of(context).size,
+                                icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                height: 54,
+                                width: double.infinity,
+                                fontSize: FontSize.s16,
+                                boxColor: const Color(0xFF2563EB),
+                                borderColor: const Color(0xFF2563EB),
+                                radius: 12,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -1190,9 +1244,54 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ),
         _buildFooter(
           onBack: _previousStep,
-          isNextEnabled: false, // End of flow
+          isNextEnabled: false,
         ),
       ],
+    );
+  }
+
+  Widget _buildReviewCheckItem(String title, String subtitle, bool isCompleted, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isCompleted ? const Color(0xFF059669).withOpacity(0.1) : Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCompleted ? Icons.check_circle : icon, 
+              color: isCompleted ? const Color(0xFF059669) : Colors.grey.shade400,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title, 
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 15,
+                    color: isCompleted ? Colors.black87 : Colors.grey.shade500,
+                  )
+                ),
+                Text(
+                  subtitle, 
+                  style: TextStyle(
+                    fontSize: 13, 
+                    color: isCompleted ? Colors.grey.shade600 : Colors.grey.shade400,
+                  )
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1205,58 +1304,62 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       (double.tryParse(_lUpiAmount) ?? 0) +
                       (double.tryParse(_lCodAmount) ?? 0);
     
-    // Simple summary rows
-    return Column(
+    // Minimal summary rows
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          _buildSummaryRow('Order Total', widget.cartTotal, Colors.black87),
+          const SizedBox(height: 8),
+          // Always show Discount even if 0.0
+          _buildSummaryRow('Discount', -discountAmount, discountAmount > 0 ? Colors.red.shade700 : Colors.grey.shade600),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1),
+          ),
+          _buildSummaryRow('Net Payable', effectiveTotal, Colors.black, isBold: true, large: true),
+          const SizedBox(height: 20),
+          _buildSummaryRow('Total Paid', totalPaid, const Color(0xFF059669)),
+          const SizedBox(height: 8),
+          _buildSummaryRow('Balance', totalPaid - effectiveTotal, 
+             (totalPaid - effectiveTotal) >= 0 ? const Color(0xFF059669) : Colors.red.shade700, isBold: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, double amount, Color color, {bool isBold = false, bool large = false}) {
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildSummaryRow('Order Total', widget.cartTotal, Colors.black),
-        if (discountAmount > 0)
-          _buildSummaryRow('Discount', -discountAmount, Colors.red),
-        const Divider(),
-        _buildSummaryRow('Net Payable', effectiveTotal, Colors.black, isBold: true),
-        const SizedBox(height: 16),
-        _buildSummaryRow('Total Paid', totalPaid, const Color(0xFF059669)),
-        _buildSummaryRow('Balance', totalPaid - effectiveTotal, 
-           (totalPaid - effectiveTotal) >= 0 ? const Color(0xFF059669) : Colors.red, isBold: true),
+        Text(
+          label, 
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+            fontSize: large ? 18 : 14,
+            color: isBold ? Colors.black : Colors.grey.shade700,
+          )
+        ),
+        Text(
+          '$currency ${amount.toStringAsFixed(2)}', 
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600, 
+            fontSize: large ? 20 : 15,
+            color: color
+          )
+        ),
       ],
     );
   }
 
-  Widget _buildSummaryRow(String label, double amount, Color color, {bool isBold = false}) {
-    final currency = Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
-          Text('$currency ${amount.toStringAsFixed(2)}', style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w500, color: color)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(IconData icon, String title, String subtitle, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-              if (subtitle.isNotEmpty) Text(subtitle, style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
-            ],
-          ),
-        ],
-      ),
-    );
+  bool _hasPaymentMethod() {
+    return _lIsCashSelected || _lIsCardSelected || _lIsUpiSelected || _lIsCodSelected || _lIsDebitSelected;
   }
 
   Widget _buildFooter({VoidCallback? onBack, VoidCallback? onNext, String nextLabel = 'Next', bool isNextEnabled = true}) {
@@ -1296,16 +1399,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       ),
     );
   }
-
-  bool _hasPaymentMethod() {
-    return (double.tryParse(_lCashAmount) ?? 0) > 0 ||
-           (double.tryParse(_lCardAmount) ?? 0) > 0 ||
-           (double.tryParse(_lUpiAmount) ?? 0) > 0 ||
-           (double.tryParse(_lCodAmount) ?? 0) > 0 ||
-           (double.tryParse(_lDebitAmount) ?? 0) > 0;
-  }
 }
-
 
 // Wrapper for Coupon Modal reuse
 class RestaurantCouponModalWrapper extends StatefulWidget {

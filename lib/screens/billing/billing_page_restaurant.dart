@@ -1186,27 +1186,22 @@ class BillingPageState extends State<BillingPageRestaurant>
             double newBalance = _calculateBalanceAmount();
             setState(() {
               _balanceAmount = newBalance;
+              _hasOpenedPaymentModalOnce = true; // Mark as opened when payment is updated in modal
             });
           },
           onConfirmOrder: () async {
-            Navigator.of(dialogContext).pop();
-            // Force rebuild after modal closes
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {});
-              }
+            setState(() {
+              _hasOpenedPaymentModalOnce = true; // Mark as opened when confirmed via checkout modal
             });
             await _confirmOrder();
+            if (mounted) Navigator.of(dialogContext).pop();
           },
           onConfirmAndPrint: () async {
-            Navigator.of(dialogContext).pop();
-            // Force rebuild after modal closes
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {});
-              }
+            setState(() {
+              _hasOpenedPaymentModalOnce = true; // Mark as opened when confirmed via checkout modal
             });
             await _createOrderAndPrint();
+            if (mounted) Navigator.of(dialogContext).pop();
           },
         );
       },
@@ -2239,12 +2234,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                                     context: context,
                                     message: "billing.failed_add_item".tr,
                                   );
-                                } finally {
-                                  debugPrint('Finally adding item');
-                                  setState(() {
-                                    isLoadingAddItem = false; // End loading
-                                  });
-                                }
+    } finally {
+      hideLoadingOverlay();
+      if (mounted) {
+        setState(() {
+          isLoadingConfirmOrder = false;
+        });
+      }
+    }
                               },
                               fontSize: FontSize.s14,
                               height: size.height * .07,
@@ -4306,6 +4303,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     setState(() {
       isLoadingCreateOrder = true;
     });
+    showLoadingOverlay(context, message: 'billing.printing_bill'.tr);
     try {
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
@@ -4626,11 +4624,12 @@ class BillingPageState extends State<BillingPageRestaurant>
     } catch (error) {
       debugPrint("❌ EXCEPTION in _createOrderAndPrint: $error");
     } finally {
-      // Set loading to false at the end of the function
-      setState(() {
-        isLoadingCreateOrder = false; // Indicate that loading has finished
-      });
-      debugPrint("🏁 Create Order and Print process completed");
+      hideLoadingOverlay();
+      if (mounted) {
+        setState(() {
+          isLoadingCreateOrder = false;
+        });
+      }
     }
   }
 
@@ -4656,6 +4655,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     setState(() {
       isLoadingConfirmOrder = true;
     });
+    showLoadingOverlay(context, message: 'billing.confirming_order'.tr);
     try {
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(

@@ -69,19 +69,17 @@ class RoundButtonWithIcon extends StatelessWidget {
       alignment: Alignment.center,
       width: width ?? 200,
       height: size.height * .055,
-      margin: ResponsiveWidget.isTablet(context)
-          ? EdgeInsets.only(left: paddingLeft ?? 10)
-          : EdgeInsets.only(left: paddingLeft ?? 20),
-      padding: EdgeInsets.only(left: paddingLeft ?? 20),
       decoration: BoxDecoration(
         color: ColorManager.kPrimaryColor,
         borderRadius: BorderRadius.circular(8),
       ),
       child: MaterialButton(
+        padding: EdgeInsets.zero,
         onPressed: () {
           fct();
         },
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             WebsafeSvg.asset(
@@ -139,20 +137,18 @@ class CustomRoundButtonWithIcon extends StatelessWidget {
       alignment: Alignment.center,
       width: width, // 200,
       height: height, //size.height * .055,
-      margin: ResponsiveWidget.isTablet(context)
-          ? const EdgeInsets.only(left: 10)
-          : const EdgeInsets.only(left: 10),
-      padding: const EdgeInsets.all(0),
       decoration: BoxDecoration(
         border: Border.all(color: borderColor ?? ColorManager.kPrimaryColor),
         color: boxColor ?? ColorManager.kPrimaryColor,
         borderRadius: BorderRadius.circular(radius ?? 8),
       ),
       child: MaterialButton(
+        padding: EdgeInsets.zero,
         onPressed: () {
           fct();
         },
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             icon,
