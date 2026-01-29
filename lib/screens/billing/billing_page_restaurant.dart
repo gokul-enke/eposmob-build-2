@@ -17,6 +17,7 @@ import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
+import 'package:pos_machine/models/add_to_cart.dart' as cart_model;
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -42,6 +43,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
+import 'package:pos_machine/widgets/billing_sidebar_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
@@ -54,6 +56,7 @@ import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
+import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart'; // Import CheckoutModal
 import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
@@ -1030,6 +1033,193 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
+  void _showCheckoutModal() {
+    // Mark that payment modal opportunity has been given
+    setState(() {
+      _hasOpenedPaymentModalOnce = true;
+    });
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    
+    // Check if delivery should be enabled (if methods exist)
+    bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return CheckoutModal(
+          cartTotal: localProductProvider.getRoundedTotal(context),
+          availableCustomers: customerList ?? [],
+          selectedCustomer: selectedCustomer,
+          
+          // Delivery State
+          enableDelivery: deliveryEnabled,
+          deliveryMethod: deliveryMethod.isNotEmpty ? deliveryMethod : "Store Takeaway",
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          deliveryComment: _commentController.text,
+          deliveryAddress: deliveryAddress,
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
+          onDeliveryUpdated: (method, methodId, carNo, comment, date, time, address) {
+            setState(() {
+              deliveryMethod = method;
+              deliveryMethodId = methodId;
+              _carNumberController.text = carNo;
+              _commentController.text = comment;
+              deliveryDate = date;
+              deliveryTime = time;
+              deliveryAddress = address;
+            });
+          },
+
+          // Payment State
+          isCashSelected: _isCashSelected,
+          isCardSelected: _isCardSelected,
+          isUpiSelected: _isUpiSelected,
+          isCodSelected: _isCodSelected,
+          isDebitSelected: _isDebitSelected,
+          cashAmount: _cashAmountController.text,
+          cardAmount: _cardAmountController.text,
+          upiAmount: _upiAmountController.text,
+          codAmount: _codAmountController.text,
+          debitAmount: _debitAmountController.text,
+          transactionNumber: _transactionNumberController.text,
+          toCustomerCreditEnabled: _toCustomerCreditEnabled,
+          toCustomerCreditAmount: double.tryParse(_debitAmountController.text) ?? 0.0,
+          
+          // Discount State
+          couponCode: coupenCodeTextController.text,
+          flatDiscount: localProductProvider.priceSummary?.flatDiscount ?? 0.0, // Use provider values
+          percentageDiscount: localProductProvider.priceSummary?.percentageDiscount ?? 0.0, // Use provider values
+          isCouponApplied: isCouponApplied,
+          
+          onCustomerSelected: (customer) {
+            // Update global customer selection provider
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .setSelectedCustomer(customer);
+
+            setState(() {
+              selectedCustomerID = customer.id;
+              selectedCustomerPhone = customer.phone;
+              selectedCustomer = customer;
+              mobileNumberText = "${customer.name} ${customer.phone}";
+              mobileNumberTextController.text = "${customer.name} ${customer.phone}";
+              isCustomerFound = true;
+              _isCustomerManuallySelected = true;
+            });
+          },
+          onAddNewCustomer: (String searchQuery) async {
+            // Check if search query is a 10-digit number
+            String phoneToPreFill = '';
+            if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+              phoneToPreFill = searchQuery;
+            }
+            // Navigate to AddCustomerModal but don't close CheckoutModal (handled by logic inside CheckoutModal if needed, 
+            // but here we are using showDialog on top of it or temporarily replacing it. 
+            // Actually CheckoutModal expects to call this function and wait for result.
+            
+            final result = await showAddCustomerModal(
+              context, 
+              MediaQuery.of(context).size,
+              mobileNumber: phoneToPreFill
+            );
+            
+            if (result != null && result['status'] == 'success') {
+              await _fetchCustomers(); // Refresh list
+              // Find and return the newly added customer
+              final addedPhone = result['phone'];
+              final matchingCustomer = customerList?.firstWhere(
+                (customer) => customer.phone == addedPhone,
+                orElse: () => CustomerListModelData(),
+              );
+              
+              if (matchingCustomer != null && matchingCustomer.phone == addedPhone) {
+                 return matchingCustomer;
+              }
+            }
+            return null;
+          },
+          onDiscountApplied: (code, isApplied, flat, percent) {
+            setState(() {
+              isCouponApplied = isApplied;
+              coupenCodeTextController.text = code;
+              
+              // Apply to provider
+              if (isApplied) {
+                 localProductProvider.applyDiscount(
+                   flatDiscount: flat,
+                   percentageDiscount: percent,
+                 );
+              } else {
+                 localProductProvider.clearDiscount();
+              }
+            });
+          },
+          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+            // Update payment state
+            _isCashSelected = isCash;
+            _isCardSelected = isCard;
+            _isUpiSelected = isUpi;
+            _isCodSelected = isCod;
+            _isDebitSelected = isDebit;
+            _cashAmountController.text = cash;
+            _cardAmountController.text = card;
+            _upiAmountController.text = upi;
+            _codAmountController.text = cod;
+            _debitAmountController.text = debit;
+            _transactionNumberController.text = trans;
+            _toCustomerCreditEnabled = toCredit;
+
+            // Calculate total paid (excluding debit - it's store credit, not actual payment)
+            double total = (double.tryParse(cash) ?? 0) +
+                (double.tryParse(card) ?? 0) +
+                (double.tryParse(upi) ?? 0) +
+                (double.tryParse(cod) ?? 0);
+            _paidAmountController.text = total.toStringAsFixed(2);
+
+            // Update balance and trigger rebuild
+            double newBalance = _calculateBalanceAmount();
+            setState(() {
+              _balanceAmount = newBalance;
+            });
+          },
+          onConfirmOrder: () async {
+            Navigator.of(dialogContext).pop();
+            // Force rebuild after modal closes
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {});
+              }
+            });
+            await _confirmOrder();
+          },
+          onConfirmAndPrint: () async {
+            Navigator.of(dialogContext).pop();
+            // Force rebuild after modal closes
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {});
+              }
+            });
+            await _createOrderAndPrint();
+          },
+        );
+      },
+    ).then((_) {
+      // Force rebuild when modal closes (regardless of how it was closed)
+      if (mounted) {
+        setState(() {
+          // Trigger rebuild to update payment summary with latest values
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
@@ -1099,69 +1289,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                 //   productProvider: productProvider,
                                 // ),
                                 Expanded(
-                                  child: Column(
-                                    children: [
-                                      Expanded(
-                                        child: _buildMainProductGrid(),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      // Always show minimized view with quick access icons
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // Customer selection
-                                          Expanded(
-                                            flex: 4,
-                                            child: Container(
-                                              color: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16.0,
-                                                      vertical: 10),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
-                                                children: [
-                                                  _buildMobileNumberInput(
-                                                      size: size,
-                                                      mobileNumberTextController:
-                                                          mobileNumberTextController),
-                                                  const SizedBox(height: 10),
-                                                  _buildQuickAccessIcons(),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                          // Payment summary
-                                          Expanded(
-                                            flex: 4,
-                                            child: Container(
-                                              color: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16.0,
-                                                      vertical: 10),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
-                                                children: [
-                                                  _buildPaymentSummary(
-                                                      compact: false),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      _buildActionButtons(),
-                                    ],
-                                  ),
+                                  child: _buildMainProductGrid(),
                                 ),
                               ],
                             ),
@@ -1187,6 +1315,11 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Widget _buildSidebar() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+
     return BuildBoxShadowContainer(
       circleRadius: 10,
       margin: const EdgeInsets.only(top: 10, bottom: 10, right: 10),
@@ -1299,6 +1432,12 @@ class BillingPageState extends State<BillingPageRestaurant>
                       : _buildOrdersTab(),
                 ),
               ),
+
+              // NEW: Footer (fixed height, visible in both tabs)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: _buildCheckoutFooter(),
+              ),
             ],
           ),
 
@@ -1321,6 +1460,189 @@ class BillingPageState extends State<BillingPageRestaurant>
               textColor: Colors.white,
               radius: 8,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutFooter() {
+    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: true);
+    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
+
+    // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
+    // priceSummary is only updated when cartTotal getter is accessed
+    final _ = localProductProvider.cartTotal;
+
+    if (localProductProvider.priceSummary == null) {
+      return const SizedBox.shrink();
+    }
+
+    final priceSummary = localProductProvider.priceSummary!;
+    final discount = priceSummary.discount ?? 0;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: ColorManager.boxShadowColor,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Payment Summary Details
+          BuildPaymentRow(
+            title: 'Net Amount',
+            amount: '$currency ${AmountHelper.formatAmount(priceSummary.netTotal ?? 0)}',
+            color: ColorManager.textColor,
+            padding: EdgeInsets.zero,
+          ),
+          if (discount > 0) ...[
+            const SizedBox(height: 6),
+            BuildPaymentRow(
+              title: 'Discount',
+              amount: '-$currency ${AmountHelper.formatAmount(discount)}',
+              color: ColorManager.kButtonRed,
+              padding: EdgeInsets.zero,
+            ),
+          ],
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () {
+              // Show tax details dialog
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Tax Details'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: taxNames.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(entry.key),
+                              Text('${entry.value}%'),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: BuildPaymentRow(
+              title: 'Tax',
+              amount: '$currency ${AmountHelper.formatAmount(priceSummary.totalTax ?? 0)}',
+              color: ColorManager.kGreyColor,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+
+          // Total Payable - Simple row with larger font
+          BuildPaymentRow(
+            title: 'Total Payable',
+            amount: '$currency ${AmountHelper.formatAmount(priceSummary.netPayable ?? 0)}',
+            color: ColorManager.kPrimaryColor,
+            padding: EdgeInsets.zero,
+            firstRowTextStyle: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s15,
+              0.18,
+              ColorManager.kPrimaryColor,
+            ),
+            secondRowTextStyle: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s16,
+              0.18,
+              ColorManager.kPrimaryColor,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          BuildPaymentRow(
+            title: 'Total Paid',
+            amount: '$currency ${AmountHelper.formatAmount(_getTotalPaidAmount())}',
+            color: ColorManager.textColor,
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: 6),
+          BuildPaymentRow(
+            title: 'Balance',
+            amount: '$currency ${AmountHelper.formatAmount(_balanceAmount)}',
+            color: _balanceAmount > 0 ? ColorManager.kButtonRed : ColorManager.kButtonGreen,
+            padding: EdgeInsets.zero,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Action Buttons Row
+          Row(
+            children: [
+              Expanded(
+                child: CustomRoundButton(
+                  title: 'Clear',
+                  fct: _clearCart,
+                  height: 38,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
+                  boxColor: ColorManager.kButtonRed,
+                  isLoading: isLoadingClearCart,
+                  radius: 6,
+                  borderColor: Colors.transparent,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CustomRoundButton(
+                  title: 'Save',
+                  fct: _saveOrder,
+                  height: 38,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
+                  boxColor: ColorManager.kButtonYellow,
+                  isLoading: isLoadingSaveOrder,
+                  radius: 6,
+                  textColor: Colors.white,
+                  borderColor: Colors.transparent,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CustomRoundButton(
+                  title: 'Confirm',
+                  fct: () {
+                    _showCheckoutModal();
+                  },
+                  height: 38,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
+                  boxColor: ColorManager.kPrimaryColor,
+                  radius: 6,
+                  borderColor: Colors.transparent,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -3451,9 +3773,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         _isCodSelected = false;
         _isDebitSelected = false;
 
-        // Apply default payment method
-        _applyDefaultPaymentMethod();
-
         _hasOpenedPaymentModalOnce = false;
         _cashAmountController.clear();
         _cardAmountController.clear();
@@ -3468,6 +3787,12 @@ class BillingPageState extends State<BillingPageRestaurant>
         isCouponApplied = false;
         _isCustomerManuallySelected = false;
         _toCustomerCreditEnabled = false;
+
+        // Apply default payment method AFTER clearing controllers
+        _applyDefaultPaymentMethod();
+
+        // Update balance after default payment is applied
+        _updateBalanceAmount();
         // Clear delivery date and time
         deliveryDate = null;
         deliveryTime = null;
@@ -3959,7 +4284,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _createOrderAndPrint() async {
+  Future<void> _createOrderAndPrint() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4236,7 +4561,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                           context,
                           listen: false)
                       .isDefaultCustomer,
-                  netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax?.toString(),
+                  netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
+                      ?.toString(),
                 ),
               ),
             );
@@ -4308,7 +4634,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _confirmOrder() async {
+  Future<void> _confirmOrder() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4768,6 +5094,16 @@ class BillingPageState extends State<BillingPageRestaurant>
     //   methods.add("DEBIT");
     // }
     return methods;
+  }
+
+  // Helper method to get the selected payment method name for display
+  String? _getSelectedPaymentMethod() {
+    if (_isCashSelected) return 'CASH';
+    if (_isCardSelected) return 'CARD';
+    if (_isUpiSelected) return 'UPI';
+    if (_isDebitSelected) return 'DEBIT';
+    if (_isCodSelected) return 'COD';
+    return null;
   }
 
   List<Map<String, dynamic>> _getPaidMethods() {
@@ -5465,7 +5801,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
         double itemTotalPrice = itemPrice * item.quantity;
-        
+
         // Calculate tax
         double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
         totalTax += itemTax;
@@ -5487,7 +5823,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       // 🔧 FIX: Calculate "You Saved" using Option 3 approach
       double youSaved = totalMRP - netTotal;
       youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
-      
+
       // Calculate netExcTax (Net Total - Total Tax)
       // Assuming netTotal is tax-inclusive as per LocalProductProvider logic
       double netExcTax = netTotal - totalTax;
@@ -5820,6 +6156,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       void updatePaymentMethod() {
         setState(() {
           _applyDefaultPaymentMethod();
+          _updateBalanceAmount();
         });
       }
 
@@ -5845,10 +6182,38 @@ class BillingPageState extends State<BillingPageRestaurant>
         appSettingsProvider.appSettings?.defaultPaymentMethod;
     if (defaultPayment != null && defaultPayment.isNotEmpty) {
       debugPrint("💰 Applying default payment method: $defaultPayment");
-      _isCashSelected = defaultPayment.toUpperCase() == 'CASH';
-      _isCardSelected = defaultPayment.toUpperCase() == 'CARD';
-      _isUpiSelected = defaultPayment.toUpperCase() == 'UPI';
-      _isCodSelected = defaultPayment.toUpperCase() == 'COD';
+
+      // Get cart total for auto-fill
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final cartTotal = localProductProvider.getRoundedTotal(context);
+      final discountAmount = (localProductProvider.priceSummary?.flatDiscount ?? 0) +
+          (localProductProvider.priceSummary?.percentageDiscount ?? 0);
+      final effectiveTotal = cartTotal - discountAmount;
+
+      // Apply default payment method and auto-fill amount
+      if (defaultPayment.toUpperCase() == 'CASH') {
+        _isCashSelected = true;
+        // Only auto-fill if amount is empty
+        if (_cashAmountController.text.isEmpty) {
+          _cashAmountController.text = effectiveTotal.toStringAsFixed(2);
+        }
+      } else if (defaultPayment.toUpperCase() == 'CARD') {
+        _isCardSelected = true;
+        if (_cardAmountController.text.isEmpty) {
+          _cardAmountController.text = effectiveTotal.toStringAsFixed(2);
+        }
+      } else if (defaultPayment.toUpperCase() == 'UPI') {
+        _isUpiSelected = true;
+        if (_upiAmountController.text.isEmpty) {
+          _upiAmountController.text = effectiveTotal.toStringAsFixed(2);
+        }
+      } else if (defaultPayment.toUpperCase() == 'COD') {
+        _isCodSelected = true;
+        if (_codAmountController.text.isEmpty) {
+          _codAmountController.text = effectiveTotal.toStringAsFixed(2);
+        }
+      }
     }
   }
 
@@ -6675,46 +7040,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                         },
                       ),
               ),
-
-              // Cart total
-              if (cartItems.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      top: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 3,
-                        offset: const Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'billing.total'.tr,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        '$currency ${localProductProvider.priceSummary?.netPayable.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         );

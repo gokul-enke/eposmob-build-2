@@ -30,6 +30,7 @@ import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
+import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
@@ -3817,7 +3818,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Create a wrapper that provides the LocalProductProvider interface for CouponModal
     showDialog(
       context: context,
-      builder: (context) => _RestaurantCouponModalWrapper(
+      builder: (context) => RestaurantCouponModalWrapper(
         orderSubTotal: orderSubTotal,
         initialCouponCode: _couponCode,
         initialFlatDiscount: _flatDiscount,
@@ -6076,13 +6077,32 @@ class _OrderPanelState extends State<_OrderPanel> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return _CheckoutDialog(
-          orderPanelState: this,
+        return CheckoutModal(
           cartTotal: _calculateOrderTotal(),
-          onCloseDialog: () {
-            Navigator.of(dialogContext).pop();
-          },
-          customers: _customers,
+          availableCustomers: _customers,
+          selectedCustomer: _selectedCustomer,
+          
+          // Payment State
+          isCashSelected: _isCashSelected,
+          isCardSelected: _isCardSelected,
+          isUpiSelected: _isUpiSelected,
+          isCodSelected: _isCodSelected,
+          isDebitSelected: _isDebitSelected,
+          cashAmount: _cashAmount,
+          cardAmount: _cardAmount,
+          upiAmount: _upiAmount,
+          codAmount: _codAmount,
+          debitAmount: _debitAmount,
+          transactionNumber: _transactionNumber,
+          toCustomerCreditEnabled: _toCustomerCreditEnabled,
+          toCustomerCreditAmount: _toCustomerCreditAmount,
+          
+          // Discount State
+          couponCode: _couponCode,
+          flatDiscount: _flatDiscount,
+          percentageDiscount: _percentageDiscount,
+          isCouponApplied: _isCouponApplied,
+          
           onCustomerSelected: (customer) {
             setState(() {
               _selectedCustomer = customer;
@@ -6095,8 +6115,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                 .setSelectedCustomer(customer);
           },
           onAddNewCustomer: (String searchQuery) async {
-            // Close the checkout dialog temporarily
-            Navigator.of(dialogContext).pop();
+            // NOTE: Do not close the checkout dialog here. We will return the result.
+            
             // Check if search query is a 10-digit number
             String phoneToPreFill = '';
             if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
@@ -6107,24 +6127,75 @@ class _OrderPanelState extends State<_OrderPanel> {
               MediaQuery.of(context).size,
               mobileNumber: phoneToPreFill
             );
+            
             if (result != null && result['status'] == 'success') {
               await _fetchCustomers();
-              // Find and auto-select the newly added customer by phone
+              // Find and return the newly added customer
               final addedPhone = result['phone'];
               final matchingCustomer = _customers.firstWhere(
                 (customer) => customer.phone == addedPhone,
                 orElse: () => CustomerListModelData(),
               );
+              
               if (matchingCustomer.phone == addedPhone) {
+                // Also update parent state
                 setState(() {
                   _selectedCustomer = matchingCustomer;
                   _selectedCustomerID = matchingCustomer.id;
                   _selectedCustomerPhone = matchingCustomer.phone;
                 });
+                return matchingCustomer;
               }
             }
-            // Reopen the checkout modal
-            _showCheckoutModal();
+            return null;
+          },
+          onDiscountApplied: (code, isApplied, flat, percent) {
+            setState(() {
+              _couponCode = code;
+              _isCouponApplied = isApplied;
+              _flatDiscount = flat;
+              _percentageDiscount = percent;
+              
+              if (!isApplied) {
+                _couponCode = "";
+                _flatDiscount = 0.0;
+                _percentageDiscount = 0.0;
+              }
+            });
+          },
+          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+            setState(() {
+              _isCashSelected = isCash;
+              _isCardSelected = isCard;
+              _isUpiSelected = isUpi;
+              _isCodSelected = isCod;
+              _isDebitSelected = isDebit;
+              _cashAmount = cash;
+              _cardAmount = card;
+              _upiAmount = upi;
+              _codAmount = cod;
+              _debitAmount = debit;
+              _transactionNumber = trans;
+              _toCustomerCreditEnabled = toCredit;
+              _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0; // Correctly update credit amount
+            });
+            
+            // Update provider
+            final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+            billingProvider.updatePaymentFromModal(
+              isCash: isCash, isCard: isCard, isUpi: isUpi, isCod: isCod, isDebit: isDebit,
+              cashAmount: cash, cardAmount: card, upiAmount: upi, codAmount: cod, debitAmount: debit,
+              transactionNumber: trans, toCustomerCredit: toCredit,
+              cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
+            );
+          },
+          onConfirmOrder: () async {
+            Navigator.of(dialogContext).pop();
+            await _confirmOrder();
+          },
+          onConfirmAndPrint: () async {
+            Navigator.of(dialogContext).pop();
+            await _confirmOrderAndPrintBill();
           },
         );
       },
@@ -8360,812 +8431,3 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 }
 
-// Wrapper class to make CouponModal work with restaurant page's discount system
-class _RestaurantCouponModalWrapper extends StatefulWidget {
-  final double orderSubTotal;
-  final String initialCouponCode;
-  final double initialFlatDiscount;
-  final double initialPercentageDiscount;
-  final bool isCouponApplied;
-  final Function(String, bool,
-      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
-
-  const _RestaurantCouponModalWrapper({
-    required this.orderSubTotal,
-    required this.initialCouponCode,
-    required this.initialFlatDiscount,
-    required this.initialPercentageDiscount,
-    required this.isCouponApplied,
-    required this.onCouponAction,
-  });
-
-  @override
-  State<_RestaurantCouponModalWrapper> createState() =>
-      _RestaurantCouponModalWrapperState();
-}
-
-class _RestaurantCouponModalWrapperState
-    extends State<_RestaurantCouponModalWrapper> {
-  late MockLocalProductProvider _mockProvider;
-
-  @override
-  void initState() {
-    super.initState();
-    _mockProvider = MockLocalProductProvider(
-      orderSubTotal: widget.orderSubTotal,
-      initialFlatDiscount: widget.initialFlatDiscount,
-      initialPercentageDiscount: widget.initialPercentageDiscount,
-      initialCouponCode: widget.initialCouponCode,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider<LocalProductProvider>.value(
-      value: _mockProvider,
-      child: CouponModal(
-        subTotal: widget.orderSubTotal,
-        initialFlatDiscount: widget.initialFlatDiscount,
-        initialPercentageDiscount: widget.initialPercentageDiscount,
-        initialCouponCode: widget.initialCouponCode,
-        isCouponApplied: widget.isCouponApplied,
-        onCouponAction: widget.onCouponAction,
-        closeOnApply: false, // Don't close - we're embedded in checkout dialog
-      ),
-    );
-  }
-}
-
-// Mock LocalProductProvider that provides the interface needed by CouponModal
-class MockLocalProductProvider extends LocalProductProvider {
-  final double _orderSubTotal;
-  double _flatDiscount;
-  double _percentageDiscount;
-  String _couponCode;
-
-  MockLocalProductProvider({
-    required double orderSubTotal,
-    required double initialFlatDiscount,
-    required double initialPercentageDiscount,
-    required String initialCouponCode,
-  })  : _orderSubTotal = orderSubTotal,
-        _flatDiscount = initialFlatDiscount,
-        _percentageDiscount = initialPercentageDiscount,
-        _couponCode = initialCouponCode;
-
-  @override
-  Map<String, double> getCurrentDiscount() {
-    return {
-      'flatDiscount': _flatDiscount,
-      'percentageDiscount': _percentageDiscount,
-    };
-  }
-
-  @override
-  PriceSummary? get priceSummary {
-    final discount =
-        (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
-    return PriceSummary(
-      originalSubTotal: _orderSubTotal,
-      subTotal: _orderSubTotal,
-      discount: discount,
-      totalTax: 0.0,
-      netPayable: _orderSubTotal - discount,
-      netTotal: _orderSubTotal - discount,
-    );
-  }
-
-  @override
-  void applyDiscount({
-    required double flatDiscount,
-    required double percentageDiscount,
-  }) {
-    _flatDiscount = flatDiscount;
-    _percentageDiscount = percentageDiscount;
-    notifyListeners();
-  }
-}
-
-class _CheckoutDialog extends StatefulWidget {
-  final _OrderPanelState orderPanelState;
-  final double cartTotal;
-  final VoidCallback onCloseDialog;
-  final List<CustomerListModelData> customers;
-  final Function(CustomerListModelData) onCustomerSelected;
-  final Function(String searchQuery) onAddNewCustomer;
-
-  const _CheckoutDialog({
-    required this.orderPanelState,
-    required this.cartTotal,
-    required this.onCloseDialog,
-    required this.customers,
-    required this.onCustomerSelected,
-    required this.onAddNewCustomer,
-  });
-
-  @override
-  State<_CheckoutDialog> createState() => _CheckoutDialogState();
-}
-
-class _CheckoutDialogState extends State<_CheckoutDialog> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  
-  // Customer search state
-  String _customerSearchQuery = '';
-  List<CustomerListModelData> _filteredCustomers = [];
-  final TextEditingController _customerSearchController = TextEditingController();
-  
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _filteredCustomers = widget.customers;
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _customerSearchController.dispose();
-    super.dispose();
-  }
-  
-  void _filterCustomers(String query) {
-    setState(() {
-      _customerSearchQuery = query.toLowerCase();
-      if (_customerSearchQuery.isEmpty) {
-        _filteredCustomers = widget.customers;
-      } else {
-        _filteredCustomers = widget.customers.where((customer) {
-          final name = (customer.name ?? '').toLowerCase();
-          final phone = (customer.phone ?? '').toLowerCase();
-          return name.contains(_customerSearchQuery) || phone.contains(_customerSearchQuery);
-        }).toList();
-      }
-    });
-  }
-  
-  // Helper to build tab with completion indicator
-  Widget _buildTabWithIndicator({
-    required IconData icon,
-    required String text,
-    required bool isCompleted,
-  }) {
-    return Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon),
-          const SizedBox(width: 8),
-          Text(text),
-          if (isCompleted) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Color(0xFF059669),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check, size: 12, color: Colors.white),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Access state from parent
-    final state = widget.orderPanelState;
-    final size = MediaQuery.of(context).size;
-    
-    // Determine completion status for each section
-    final hasCustomer = state._selectedCustomer != null;
-    final hasPayment = state._hasPaymentMethod();
-    final hasDiscount = state._isCouponApplied || state._flatDiscount > 0 || state._percentageDiscount > 0;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: Colors.white,
-      child: Container(
-        width: 900,
-        height: 700,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            // Header with Tabs
-            Container(
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      labelColor: const Color(0xFF2563EB),
-                      unselectedLabelColor: const Color(0xFF64748B),
-                      indicatorColor: const Color(0xFF2563EB),
-                      tabs: [
-                        const Tab(icon: Icon(Icons.receipt_long), text: 'Review & Pay'),
-                        _buildTabWithIndicator(
-                          icon: Icons.payment,
-                          text: 'Payment',
-                          isCompleted: hasPayment,
-                        ),
-                        _buildTabWithIndicator(
-                          icon: Icons.person,
-                          text: 'Customer',
-                          isCompleted: hasCustomer,
-                        ),
-                        _buildTabWithIndicator(
-                          icon: Icons.discount,
-                          text: 'Discount',
-                          isCompleted: hasDiscount,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ),
-            ),
-            
-            // Content
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Tab 1: Review & Pay
-                  _buildReviewTab(state, size),
-                  
-                  // Tab 2: Payment Methods (Embedding PaymentMethodModal logic)
-                  _buildPaymentTab(state),
-                  
-                  // Tab 3: Customer (Inline Customer Selection)
-                  _buildCustomerTab(state),
-                  
-                  // Tab 4: Discount (Embedding Coupon/Discount logic)
-                  _buildDiscountTab(state),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReviewTab(_OrderPanelState state, Size size) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: Order Summary (Detailed)
-          Expanded(
-            flex: 3,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Order Summary', style: buildCustomStyle(FontWeightManager.bold, 18, 0.2, Colors.black)),
-                  const SizedBox(height: 16),
-                  state._buildPaymentSummary(), // Reuse existing detailed summary
-                  const SizedBox(height: 24),
-                  // Additional info or items list could go here
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 24),
-          const VerticalDivider(width: 1),
-          const SizedBox(width: 24),
-          // Right: Actions
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Quick info cards
-                _buildInfoCard(
-                  icon: Icons.person, 
-                  title: state._selectedCustomer?.name ?? 'No Customer Selected',
-                  subtitle: state._selectedCustomer?.phone ?? '',
-                  color: Colors.blue
-                ),
-                const SizedBox(height: 12),
-                _buildInfoCard(
-                  icon: Icons.payment, 
-                  title: state._hasPaymentMethod() ? 'Payment Selected' : 'No Payment Selected',
-                  subtitle: state._hasPaymentMethod() ? 'Amount Entered' : 'Select in Payment Tab',
-                  color: state._hasPaymentMethod() ? Colors.green : Colors.orange
-                ),
-                const Spacer(),
-                
-                // Primary Actions
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.print),
-                  label: const Text('Confirm & Print Bill'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    side: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  onPressed: () async {
-                    // Close the dialog first, then confirm and print
-                    widget.onCloseDialog();
-                    await state._confirmOrderAndPrintBill();
-                  },
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.check_circle),
-                  label: const Text('Confirm & Pay'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: const Color(0xFF2563EB),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () async {
-                    final success = await state._confirmOrder();
-                    if (success) {
-                      widget.onCloseDialog();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard({required IconData icon, required String title, required String subtitle, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-                if (subtitle.isNotEmpty)
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentTab(_OrderPanelState state) {
-    // Calculate the effective cart total after discounts
-    final discountAmount = state._flatDiscount + (widget.cartTotal * state._percentageDiscount / 100);
-    final effectiveCartTotal = widget.cartTotal - discountAmount;
-    
-    // If no payment method is selected, default to Cash with discounted total pre-filled
-    final bool shouldAutoFillCash = !state._isCashSelected && 
-                                     !state._isCardSelected && 
-                                     !state._isUpiSelected && 
-                                     !state._isCodSelected &&
-                                     state._cashAmount.isEmpty;
-    
-    // Embedding PaymentMethodModal logic
-    return PaymentMethodModal(
-      initialIsCashSelected: shouldAutoFillCash ? true : state._isCashSelected,
-      initialIsCardSelected: state._isCardSelected,
-      initialIsUpiSelected: state._isUpiSelected,
-      initialIsCodSelected: state._isCodSelected,
-      initialIsDebitSelected: state._isDebitSelected,
-      initialCashAmount: shouldAutoFillCash ? effectiveCartTotal.toStringAsFixed(2) : state._cashAmount,
-      initialCardAmount: state._cardAmount,
-      initialUpiAmount: state._upiAmount,
-      initialCodAmount: state._codAmount,
-      initialDebitAmount: state._debitAmount,
-      initialTransactionNumber: state._transactionNumber,
-      cartTotal: effectiveCartTotal,
-      customerPrevBalance: state._selectedCustomer?.balance ?? 0.0,
-      isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
-      customButtonTitle: "Update Payment",
-      closeOnApply: false,
-      onPaymentMethodSelected: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
-        state.setState(() {
-          state._isCashSelected = isCash;
-          state._isCardSelected = isCard;
-          state._isUpiSelected = isUpi;
-          state._isCodSelected = isCod;
-          state._isDebitSelected = isDebit;
-          state._cashAmount = cash;
-          state._cardAmount = card;
-          state._upiAmount = upi;
-          state._codAmount = cod;
-          state._debitAmount = debit;
-          state._transactionNumber = trans;
-          state._toCustomerCreditEnabled = toCredit;
-          state._hasOpenedPaymentModalOnce = true;
-        });
-        
-        // Also update provider
-        final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-        billingProvider.updatePaymentFromModal(
-          isCash: isCash, isCard: isCard, isUpi: isUpi, isCod: isCod, isDebit: isDebit,
-          cashAmount: cash, cardAmount: card, upiAmount: upi, codAmount: cod, debitAmount: debit,
-          transactionNumber: trans, toCustomerCredit: toCredit,
-          cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
-        );
-        
-        // Refresh checkout dialog to update review tab
-        setState(() {});
-        
-        // Automatically switch back to Review tab
-        _tabController.animateTo(0);
-      },
-    );
-  }
-
-  Widget _buildCustomerTab(_OrderPanelState state) {
-    // Inline Customer Selection Tab
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: Search and Customer List
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Search Bar
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: TextField(
-                    controller: _customerSearchController,
-                    onChanged: _filterCustomers,
-                    decoration: InputDecoration(
-                      hintText: 'Search by name or phone number...',
-                      hintStyle: TextStyle(color: Colors.grey.shade500),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
-                      suffixIcon: _customerSearchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear, color: Colors.grey.shade500),
-                              onPressed: () {
-                                _customerSearchController.clear();
-                                _filterCustomers('');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Customer List
-                Expanded(
-                  child: _filteredCustomers.isEmpty && _customerSearchQuery.isNotEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF59E0B).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(Icons.search_off, size: 48, color: Color(0xFFF59E0B)),
-                              ),
-                              const SizedBox(height: 16),
-                              Text('No customers found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
-                              const SizedBox(height: 8),
-                              Text('Try different keywords or add a new customer', style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
-                            ],
-                          ),
-                        )
-                      : _filteredCustomers.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.person_outline, size: 48, color: Colors.grey.shade400),
-                                  const SizedBox(height: 16),
-                                  Text('No customers available', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
-                                ],
-                              ),
-                            )
-                          : ListView.separated(
-                              itemCount: _filteredCustomers.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
-                              itemBuilder: (context, index) {
-                                final customer = _filteredCustomers[index];
-                                final isSelected = state._selectedCustomer?.id == customer.id;
-                                
-                                return Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () {
-                                      widget.onCustomerSelected(customer);
-                                      setState(() {}); // Refresh to update selection
-                                      // Switch to review tab after selection
-                                      _tabController.animateTo(0);
-                                    },
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? const Color(0xFF2563EB).withOpacity(0.1) : Colors.white,
-                                        border: Border.all(
-                                          color: isSelected ? const Color(0xFF2563EB) : Colors.grey.shade200,
-                                          width: isSelected ? 2 : 1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 44,
-                                            height: 44,
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? const Color(0xFF2563EB) : Colors.grey.shade300,
-                                              borderRadius: BorderRadius.circular(22),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                (customer.name ?? 'U').substring(0, 1).toUpperCase(),
-                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  customer.name ?? 'Unknown',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: isSelected ? const Color(0xFF2563EB) : Colors.black87,
-                                                  ),
-                                                ),
-                                                if (customer.phone != null && customer.phone!.isNotEmpty)
-                                                  Text(customer.phone!, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                              ],
-                                            ),
-                                          ),
-                                          if (customer.balance != null)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: (customer.balance ?? 0) >= 0 
-                                                    ? const Color(0xFF059669).withOpacity(0.1) 
-                                                    : const Color(0xFFDC2626).withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                customer.balance!.toStringAsFixed(2),
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: (customer.balance ?? 0) >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                                                ),
-                                              ),
-                                            ),
-                                          const SizedBox(width: 8),
-                                          if (isSelected)
-                                            Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFF059669),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(Icons.check, color: Colors.white, size: 14),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 24),
-          const VerticalDivider(width: 1),
-          const SizedBox(width: 24),
-          
-          // Right: Selected Customer Info & Add New
-          Expanded(
-            flex: 2,
-            child: Column(
-              children: [
-                // Selected Customer Card
-                if (state._selectedCustomer != null)
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2563EB).withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB),
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                          child: Center(
-                            child: Text(
-                              (state._selectedCustomer!.name ?? 'U').substring(0, 1).toUpperCase(),
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          state._selectedCustomer!.name ?? '',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (state._selectedCustomer!.phone != null && state._selectedCustomer!.phone!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(state._selectedCustomer!.phone!, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                          ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: (state._selectedCustomer!.balance ?? 0) >= 0 
-                                ? const Color(0xFF059669).withOpacity(0.1) 
-                                : const Color(0xFFDC2626).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Balance: ', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
-                              Text(
-                                state._selectedCustomer!.balance?.toStringAsFixed(2) ?? '0.00',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: (state._selectedCustomer!.balance ?? 0) >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(Icons.person_outline, size: 48, color: Colors.grey.shade400),
-                        const SizedBox(height: 12),
-                        Text('No Customer Selected', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
-                        const SizedBox(height: 4),
-                        Text('Select from the list or add new', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                      ],
-                    ),
-                  ),
-                
-                const Spacer(),
-                
-                // Add New Customer Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Add New Customer'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.grey.shade100,
-                      foregroundColor: Colors.grey.shade700,
-                      side: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    onPressed: () {
-                      widget.onAddNewCustomer(_customerSearchQuery);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDiscountTab(_OrderPanelState state) {
-    return Center(
-      child: _RestaurantCouponModalWrapper(
-        orderSubTotal: widget.cartTotal,
-        initialCouponCode: state._couponCode,
-        initialFlatDiscount: state._flatDiscount,
-        initialPercentageDiscount: state._percentageDiscount,
-        isCouponApplied: state._isCouponApplied,
-        onCouponAction: (couponCode, isApplied, {flatDiscount, percentageDiscount}) {
-          // Calculate old and new totals
-          final oldDiscountAmount = state._flatDiscount + (widget.cartTotal * state._percentageDiscount / 100);
-          final oldEffectiveTotal = widget.cartTotal - oldDiscountAmount;
-          
-          final newFlatDiscount = flatDiscount ?? 0.0;
-          final newPercentageDiscount = percentageDiscount ?? 0.0;
-          final newDiscountAmount = newFlatDiscount + (widget.cartTotal * newPercentageDiscount / 100);
-          final newEffectiveTotal = widget.cartTotal - newDiscountAmount;
-          
-          state.setState(() {
-            state._couponCode = couponCode;
-            state._isCouponApplied = isApplied;
-            state._flatDiscount = newFlatDiscount;
-            state._percentageDiscount = newPercentageDiscount;
-
-            if (!isApplied) {
-              state._couponCode = "";
-              state._flatDiscount = 0.0;
-              state._percentageDiscount = 0.0;
-            }
-            
-            // If payment was already selected and cash amount was auto-filled with old total,
-            // update it to the new discounted total
-            if (state._isCashSelected && state._cashAmount.isNotEmpty) {
-              final currentCashAmount = double.tryParse(state._cashAmount) ?? 0.0;
-              // Check if cash amount matches old effective total (was auto-filled)
-              if ((currentCashAmount - oldEffectiveTotal).abs() < 0.01) {
-                state._cashAmount = newEffectiveTotal.toStringAsFixed(2);
-                debugPrint('💰 Updated cash amount from ${oldEffectiveTotal.toStringAsFixed(2)} to ${newEffectiveTotal.toStringAsFixed(2)} after discount change');
-              }
-            }
-          });
-          // Refresh checkout dialog to update review tab and tab indicators
-          setState(() {});
-          // Switch to review tab
-          _tabController.animateTo(0);
-        },
-      ),
-    );
-  }
-}
