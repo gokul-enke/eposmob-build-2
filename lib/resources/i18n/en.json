@@ -124,7 +124,9 @@
     "all_available": "All Available",
     "edit_price": "Edit Price",
     "unit_price": "Unit Price",
-    "empty_cart": "Cart is empty"
+    "empty_cart": "Cart is empty",
+    "confirming_order": "Confirming order...",
+    "printing_bill": "Printing bill..."
   },
   "customers": {
     "title": "Customers"

@@ -104,34 +104,37 @@ void showLoadingOverlay(BuildContext context, {String message = 'Please wait...'
           ),
         ),
         Center(
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 16 : 20,
-              vertical: isMobile ? 14 : 16,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  height: 22,
-                  width: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.6),
-                ),
-                SizedBox(width: isMobile ? 10 : 12),
-                Text(
-                  message,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    isMobile ? FontSize.s12 : FontSize.s13,
-                    0.12,
-                    Colors.black,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 16 : 20,
+                vertical: isMobile ? 14 : 16,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.6),
                   ),
-                ),
-              ],
+                  SizedBox(width: isMobile ? 10 : 12),
+                  Text(
+                    message,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      isMobile ? FontSize.s12 : FontSize.s13,
+                      0.12,
+                      Colors.black,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

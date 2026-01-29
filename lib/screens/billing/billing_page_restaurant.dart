@@ -36,6 +36,7 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -800,7 +801,13 @@ class BillingPageState extends State<BillingPageRestaurant>
         });
       }
     } catch (error) {
-      debugPrint('Error fetching customers: $error');
+      debugPrint("❌ EXCEPTION in _confirmOrder: $error");
+    } finally {
+      // Set loading to false at the end of the function
+      setState(() {
+        isLoadingConfirmOrder = false; // Indicate that loading has finished
+      });
+      debugPrint("🏁 Confirm Order process completed");
     }
   }
 
@@ -1043,7 +1050,9 @@ class BillingPageState extends State<BillingPageRestaurant>
         Provider.of<LocalProductProvider>(context, listen: false);
     final deliveryMethodsProvider =
         Provider.of<DeliveryMethodsProvider>(context, listen: false);
-    
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
     // Check if delivery should be enabled (if methods exist)
     bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
 
@@ -1055,17 +1064,20 @@ class BillingPageState extends State<BillingPageRestaurant>
           cartTotal: localProductProvider.getRoundedTotal(context),
           availableCustomers: customerList ?? [],
           selectedCustomer: selectedCustomer,
-          
+          hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
+
           // Delivery State
           enableDelivery: deliveryEnabled,
-          deliveryMethod: deliveryMethod.isNotEmpty ? deliveryMethod : "Store Takeaway",
+          deliveryMethod:
+              deliveryMethod.isNotEmpty ? deliveryMethod : "Store Takeaway",
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
           deliveryComment: _commentController.text,
           deliveryAddress: deliveryAddress,
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
-          onDeliveryUpdated: (method, methodId, carNo, comment, date, time, address) {
+          onDeliveryUpdated:
+              (method, methodId, carNo, comment, date, time, address) {
             setState(() {
               deliveryMethod = method;
               deliveryMethodId = methodId;
@@ -1090,14 +1102,22 @@ class BillingPageState extends State<BillingPageRestaurant>
           debitAmount: _debitAmountController.text,
           transactionNumber: _transactionNumberController.text,
           toCustomerCreditEnabled: _toCustomerCreditEnabled,
-          toCustomerCreditAmount: double.tryParse(_debitAmountController.text) ?? 0.0,
-          
+          toCustomerCreditAmount:
+              double.tryParse(_debitAmountController.text) ?? 0.0,
+          cashMethodId: billingProvider.cashPaymentMethodId,
+          cardMethodId: billingProvider.cardPaymentMethodId,
+          upiMethodId: billingProvider.upiPaymentMethodId,
+          codMethodId: billingProvider.codPaymentMethodId,
+
           // Discount State
           couponCode: coupenCodeTextController.text,
-          flatDiscount: localProductProvider.priceSummary?.flatDiscount ?? 0.0, // Use provider values
-          percentageDiscount: localProductProvider.priceSummary?.percentageDiscount ?? 0.0, // Use provider values
+          flatDiscount: localProductProvider.priceSummary?.flatDiscount ??
+              0.0, // Use provider values
+          percentageDiscount:
+              localProductProvider.priceSummary?.percentageDiscount ??
+                  0.0, // Use provider values
           isCouponApplied: isCouponApplied,
-          
+
           onCustomerSelected: (customer) {
             // Update global customer selection provider
             Provider.of<CustomerSelectionProvider>(context, listen: false)
@@ -1108,7 +1128,8 @@ class BillingPageState extends State<BillingPageRestaurant>
               selectedCustomerPhone = customer.phone;
               selectedCustomer = customer;
               mobileNumberText = "${customer.name} ${customer.phone}";
-              mobileNumberTextController.text = "${customer.name} ${customer.phone}";
+              mobileNumberTextController.text =
+                  "${customer.name} ${customer.phone}";
               isCustomerFound = true;
               _isCustomerManuallySelected = true;
             });
@@ -1116,19 +1137,18 @@ class BillingPageState extends State<BillingPageRestaurant>
           onAddNewCustomer: (String searchQuery) async {
             // Check if search query is a 10-digit number
             String phoneToPreFill = '';
-            if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+            if (searchQuery.length == 10 &&
+                RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
               phoneToPreFill = searchQuery;
             }
-            // Navigate to AddCustomerModal but don't close CheckoutModal (handled by logic inside CheckoutModal if needed, 
-            // but here we are using showDialog on top of it or temporarily replacing it. 
+            // Navigate to AddCustomerModal but don't close CheckoutModal (handled by logic inside CheckoutModal if needed,
+            // but here we are using showDialog on top of it or temporarily replacing it.
             // Actually CheckoutModal expects to call this function and wait for result.
-            
+
             final result = await showAddCustomerModal(
-              context, 
-              MediaQuery.of(context).size,
-              mobileNumber: phoneToPreFill
-            );
-            
+                context, MediaQuery.of(context).size,
+                mobileNumber: phoneToPreFill);
+
             if (result != null && result['status'] == 'success') {
               await _fetchCustomers(); // Refresh list
               // Find and return the newly added customer
@@ -1137,9 +1157,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                 (customer) => customer.phone == addedPhone,
                 orElse: () => CustomerListModelData(),
               );
-              
-              if (matchingCustomer != null && matchingCustomer.phone == addedPhone) {
-                 return matchingCustomer;
+
+              if (matchingCustomer != null &&
+                  matchingCustomer.phone == addedPhone) {
+                return matchingCustomer;
               }
             }
             return null;
@@ -1148,19 +1169,21 @@ class BillingPageState extends State<BillingPageRestaurant>
             setState(() {
               isCouponApplied = isApplied;
               coupenCodeTextController.text = code;
-              
+
               // Apply to provider
               if (isApplied) {
-                 localProductProvider.applyDiscount(
-                   flatDiscount: flat,
-                   percentageDiscount: percent,
-                 );
+                localProductProvider.applyDiscount(
+                  flatDiscount: flat,
+                  percentageDiscount: percent,
+                );
               } else {
-                 localProductProvider.clearDiscount();
+                localProductProvider.clearDiscount();
               }
             });
           },
-          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
+              upi, cod, debit, trans, toCredit,
+              {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
             // Update payment state
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -1175,6 +1198,26 @@ class BillingPageState extends State<BillingPageRestaurant>
             _transactionNumberController.text = trans;
             _toCustomerCreditEnabled = toCredit;
 
+            // Store payment method IDs in BillingProvider for later use
+            billingProvider.updatePaymentFromModal(
+              isCash: isCash,
+              isCard: isCard,
+              isUpi: isUpi,
+              isCod: isCod,
+              isDebit: isDebit,
+              cashAmount: cash,
+              cardAmount: card,
+              upiAmount: upi,
+              codAmount: cod,
+              debitAmount: debit,
+              transactionNumber: trans,
+              toCustomerCredit: toCredit,
+              cashMethodId: cashMethodId,
+              cardMethodId: cardMethodId,
+              upiMethodId: upiMethodId,
+              codMethodId: codMethodId,
+            );
+
             // Calculate total paid (excluding debit - it's store credit, not actual payment)
             double total = (double.tryParse(cash) ?? 0) +
                 (double.tryParse(card) ?? 0) +
@@ -1186,22 +1229,25 @@ class BillingPageState extends State<BillingPageRestaurant>
             double newBalance = _calculateBalanceAmount();
             setState(() {
               _balanceAmount = newBalance;
-              _hasOpenedPaymentModalOnce = true; // Mark as opened when payment is updated in modal
+              _hasOpenedPaymentModalOnce =
+                  true; // Mark as opened when payment is updated in modal
             });
           },
           onConfirmOrder: () async {
             setState(() {
-              _hasOpenedPaymentModalOnce = true; // Mark as opened when confirmed via checkout modal
+              _hasOpenedPaymentModalOnce =
+                  true; // Mark as opened when confirmed via checkout modal
             });
             await _confirmOrder();
             if (mounted) Navigator.of(dialogContext).pop();
           },
           onConfirmAndPrint: () async {
             setState(() {
-              _hasOpenedPaymentModalOnce = true; // Mark as opened when confirmed via checkout modal
+              _hasOpenedPaymentModalOnce =
+                  true; // Mark as opened when confirmed via checkout modal
             });
-            await _createOrderAndPrint();
             if (mounted) Navigator.of(dialogContext).pop();
+            await _createOrderAndPrint();
           },
         );
       },
@@ -1286,6 +1332,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                                 Expanded(
                                   child: _buildMainProductGrid(),
                                 ),
+                                const SizedBox(height: 10),
+                                // Big Action Buttons (same as billing_page.dart)
+                                _buildActionButtons(),
                               ],
                             ),
                           ),
@@ -1462,8 +1511,10 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Widget _buildCheckoutFooter() {
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: true);
-    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: true);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? '';
 
     // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
@@ -1476,7 +1527,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     final priceSummary = localProductProvider.priceSummary!;
     final discount = priceSummary.discount ?? 0;
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1495,7 +1546,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           // Payment Summary Details
           BuildPaymentRow(
             title: 'Net Amount',
-            amount: '$currency ${AmountHelper.formatAmount(priceSummary.netTotal ?? 0)}',
+            amount:
+                '$currency ${AmountHelper.formatAmount(priceSummary.netTotal ?? 0)}',
             color: ColorManager.textColor,
             padding: EdgeInsets.zero,
           ),
@@ -1545,7 +1597,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             },
             child: BuildPaymentRow(
               title: 'Tax',
-              amount: '$currency ${AmountHelper.formatAmount(priceSummary.totalTax ?? 0)}',
+              amount:
+                  '$currency ${AmountHelper.formatAmount(priceSummary.totalTax ?? 0)}',
               color: ColorManager.kGreyColor,
               padding: EdgeInsets.zero,
             ),
@@ -1557,7 +1610,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           // Total Payable - Simple row with larger font
           BuildPaymentRow(
             title: 'Total Payable',
-            amount: '$currency ${AmountHelper.formatAmount(priceSummary.netPayable ?? 0)}',
+            amount:
+                '$currency ${AmountHelper.formatAmount(priceSummary.netPayable ?? 0)}',
             color: ColorManager.kPrimaryColor,
             padding: EdgeInsets.zero,
             firstRowTextStyle: buildCustomStyle(
@@ -1577,7 +1631,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           const SizedBox(height: 8),
           BuildPaymentRow(
             title: 'Total Paid',
-            amount: '$currency ${AmountHelper.formatAmount(_getTotalPaidAmount())}',
+            amount:
+                '$currency ${AmountHelper.formatAmount(_getTotalPaidAmount())}',
             color: ColorManager.textColor,
             padding: EdgeInsets.zero,
           ),
@@ -1585,60 +1640,62 @@ class BillingPageState extends State<BillingPageRestaurant>
           BuildPaymentRow(
             title: 'Balance',
             amount: '$currency ${AmountHelper.formatAmount(_balanceAmount)}',
-            color: _balanceAmount > 0 ? ColorManager.kButtonRed : ColorManager.kButtonGreen,
+            color: _balanceAmount > 0
+                ? ColorManager.kButtonRed
+                : ColorManager.kButtonGreen,
             padding: EdgeInsets.zero,
           ),
 
-          const SizedBox(height: 12),
+          // const SizedBox(height: 12),
 
           // Action Buttons Row
-          Row(
-            children: [
-              Expanded(
-                child: CustomRoundButton(
-                  title: 'Clear',
-                  fct: _clearCart,
-                  height: 38,
-                  width: double.infinity,
-                  fontSize: FontSize.s12,
-                  boxColor: ColorManager.kButtonRed,
-                  isLoading: isLoadingClearCart,
-                  radius: 6,
-                  borderColor: Colors.transparent,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CustomRoundButton(
-                  title: 'Save',
-                  fct: _saveOrder,
-                  height: 38,
-                  width: double.infinity,
-                  fontSize: FontSize.s12,
-                  boxColor: ColorManager.kButtonYellow,
-                  isLoading: isLoadingSaveOrder,
-                  radius: 6,
-                  textColor: Colors.white,
-                  borderColor: Colors.transparent,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CustomRoundButton(
-                  title: 'Confirm',
-                  fct: () {
-                    _showCheckoutModal();
-                  },
-                  height: 38,
-                  width: double.infinity,
-                  fontSize: FontSize.s12,
-                  boxColor: ColorManager.kPrimaryColor,
-                  radius: 6,
-                  borderColor: Colors.transparent,
-                ),
-              ),
-            ],
-          ),
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: CustomRoundButton(
+          //         title: 'Clear',
+          //         fct: _clearCart,
+          //         height: 38,
+          //         width: double.infinity,
+          //         fontSize: FontSize.s12,
+          //         boxColor: ColorManager.kButtonRed,
+          //         isLoading: isLoadingClearCart,
+          //         radius: 6,
+          //         borderColor: Colors.transparent,
+          //       ),
+          //     ),
+          //     const SizedBox(width: 8),
+          //     Expanded(
+          //       child: CustomRoundButton(
+          //         title: 'Save',
+          //         fct: _saveOrder,
+          //         height: 38,
+          //         width: double.infinity,
+          //         fontSize: FontSize.s12,
+          //         boxColor: ColorManager.kButtonYellow,
+          //         isLoading: isLoadingSaveOrder,
+          //         radius: 6,
+          //         textColor: Colors.white,
+          //         borderColor: Colors.transparent,
+          //       ),
+          //     ),
+          //     const SizedBox(width: 8),
+          //     Expanded(
+          //       child: CustomRoundButton(
+          //         title: 'Confirm',
+          //         fct: () {
+          //           _showCheckoutModal();
+          //         },
+          //         height: 38,
+          //         width: double.infinity,
+          //         fontSize: FontSize.s12,
+          //         boxColor: ColorManager.kPrimaryColor,
+          //         radius: 6,
+          //         borderColor: Colors.transparent,
+          //       ),
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );
@@ -2234,14 +2291,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                                     context: context,
                                     message: "billing.failed_add_item".tr,
                                   );
-    } finally {
-      hideLoadingOverlay();
-      if (mounted) {
-        setState(() {
-          isLoadingConfirmOrder = false;
-        });
-      }
-    }
+                                } finally {
+                                  hideLoadingOverlay();
+                                  if (mounted) {
+                                    setState(() {
+                                      isLoadingConfirmOrder = false;
+                                    });
+                                  }
+                                }
                               },
                               fontSize: FontSize.s14,
                               height: size.height * .07,
@@ -3677,8 +3734,9 @@ class BillingPageState extends State<BillingPageRestaurant>
             _buildActionButton(
               text: 'billing.confirm_and_print'.tr,
               color: ColorManager.kButtonBlue,
-              onPressed: _createOrderAndPrint,
-              isLoading: isLoadingCreateOrder,
+              // onPressed: _createOrderAndPrint,
+              onPressed: _showCheckoutModal,
+              isLoading: false,
             ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
                     .appSettings
@@ -3687,8 +3745,9 @@ class BillingPageState extends State<BillingPageRestaurant>
               _buildActionButton(
                 text: 'billing.confirm_order'.tr,
                 color: ColorManager.kButtonGreen,
-                onPressed: _confirmOrder,
-                isLoading: isLoadingConfirmOrder,
+                // onPressed: _confirmOrder,.
+                onPressed: _showCheckoutModal,
+                isLoading: false,
               ),
           ],
           if (!_hasInternet) ...[
@@ -4303,7 +4362,6 @@ class BillingPageState extends State<BillingPageRestaurant>
     setState(() {
       isLoadingCreateOrder = true;
     });
-    showLoadingOverlay(context, message: 'billing.printing_bill'.tr);
     try {
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
@@ -4624,7 +4682,6 @@ class BillingPageState extends State<BillingPageRestaurant>
     } catch (error) {
       debugPrint("❌ EXCEPTION in _createOrderAndPrint: $error");
     } finally {
-      hideLoadingOverlay();
       if (mounted) {
         setState(() {
           isLoadingCreateOrder = false;
@@ -4655,7 +4712,6 @@ class BillingPageState extends State<BillingPageRestaurant>
     setState(() {
       isLoadingConfirmOrder = true;
     });
-    showLoadingOverlay(context, message: 'billing.confirming_order'.tr);
     try {
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
@@ -5071,23 +5127,33 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Get payment method IDs from BillingProvider
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
-      // Use payment method ID if available, otherwise fallback to string
-      methods.add(billingProvider.cashPaymentMethodId ?? "CASH");
+      // Use payment method ID if available, otherwise try to lookup from MasterDataProvider, fallback to string
+      String? id = billingProvider.cashPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('CASH')?.toString();
+      methods.add(id ?? "CASH");
     }
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
-      methods.add(billingProvider.cardPaymentMethodId ?? "CARD");
+      String? id = billingProvider.cardPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('CARD')?.toString();
+      methods.add(id ?? "CARD");
     }
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
-      methods.add(billingProvider.upiPaymentMethodId ?? "UPI");
+      String? id = billingProvider.upiPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('UPI')?.toString();
+      methods.add(id ?? "UPI");
     }
     if (_isCodSelected &&
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
-      methods.add(billingProvider.codPaymentMethodId ?? "COD");
+      String? id = billingProvider.codPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('COD')?.toString();
+      methods.add(id ?? "COD");
     }
     // if (_isDebitSelected &&
     //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
@@ -5112,36 +5178,46 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Get payment method IDs from BillingProvider
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+      String? id = billingProvider.cashPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('CASH')?.toString();
       paidMethods.add({
         // Use payment method ID if available, otherwise fallback to string
-        "method": billingProvider.cashPaymentMethodId ?? "CASH",
+        "method": id ?? "CASH",
         "amount": double.tryParse(_cashAmountController.text) ?? 0,
       });
     }
 
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
+      String? id = billingProvider.cardPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('CARD')?.toString();
       paidMethods.add({
-        "method": billingProvider.cardPaymentMethodId ?? "CARD",
+        "method": id ?? "CARD",
         "amount": double.tryParse(_cardAmountController.text) ?? 0,
       });
     }
 
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
+      String? id = billingProvider.upiPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('UPI')?.toString();
       paidMethods.add({
-        "method": billingProvider.upiPaymentMethodId ?? "UPI",
+        "method": id ?? "UPI",
         "amount": double.tryParse(_upiAmountController.text) ?? 0,
       });
     }
 
     if (_isCodSelected &&
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
+      String? id = billingProvider.codPaymentMethodId ??
+          masterDataProvider.getPaymentMethodId('COD')?.toString();
       paidMethods.add({
-        "method": billingProvider.codPaymentMethodId ?? "COD",
+        "method": id ?? "COD",
         "amount": double.tryParse(_codAmountController.text) ?? 0,
       });
     }
@@ -6152,6 +6228,11 @@ class BillingPageState extends State<BillingPageRestaurant>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+
+      // Pre-fetch payment method IDs so they are available for fallback
+      masterDataProvider.fetchPaymentMethods();
 
       void updatePaymentMethod() {
         setState(() {
@@ -6187,8 +6268,9 @@ class BillingPageState extends State<BillingPageRestaurant>
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       final cartTotal = localProductProvider.getRoundedTotal(context);
-      final discountAmount = (localProductProvider.priceSummary?.flatDiscount ?? 0) +
-          (localProductProvider.priceSummary?.percentageDiscount ?? 0);
+      final discountAmount =
+          (localProductProvider.priceSummary?.flatDiscount ?? 0) +
+              (localProductProvider.priceSummary?.percentageDiscount ?? 0);
       final effectiveTotal = cartTotal - discountAmount;
 
       // Apply default payment method and auto-fill amount

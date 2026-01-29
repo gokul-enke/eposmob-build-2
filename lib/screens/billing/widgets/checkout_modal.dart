@@ -23,7 +23,10 @@ class CheckoutModal extends StatefulWidget {
   final double cartTotal;
   final List<CustomerListModelData> availableCustomers;
   final CustomerListModelData? selectedCustomer;
-  
+
+  // Payment Modal State
+  final bool hasOpenedPaymentModalOnce;
+
   // Delivery State (Optional)
   final bool enableDelivery;
   final String deliveryMethod;
@@ -94,6 +97,7 @@ class CheckoutModal extends StatefulWidget {
     required this.cartTotal,
     required this.availableCustomers,
     this.selectedCustomer,
+    this.hasOpenedPaymentModalOnce = false,
     required this.isCashSelected,
     required this.isCardSelected,
     required this.isUpiSelected,
@@ -140,7 +144,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   int _currentStep = 0; // 0: Customer, 1: Discount/Delivery, ... logic updated below
   bool _isConfirming = false;
   bool _isPrinting = false;
-  
+  bool _hasOpenedPaymentModalOnce = false; // Track if payment step has been visited
+
   // Local state for Customer Search
   String _customerSearchQuery = '';
   List<CustomerListModelData> _filteredCustomers = [];
@@ -180,13 +185,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
   void initState() {
     super.initState();
     _filteredCustomers = widget.availableCustomers;
-    
+
     // Initialize Local State from Widget Props
     _localSelectedCustomer = widget.selectedCustomer;
     _localFlatDiscount = widget.flatDiscount;
     _localPercentageDiscount = widget.percentageDiscount;
     _localCouponCode = widget.couponCode;
     _localIsCouponApplied = widget.isCouponApplied;
+    _hasOpenedPaymentModalOnce = widget.hasOpenedPaymentModalOnce; // Initialize from parent
     
     // Initialize Local Delivery State
     _lDeliveryMethod = widget.deliveryMethod;
@@ -234,17 +240,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
       next = 2; // Skip delivery
     }
     
-    // Max steps logic: 0(Cust) -> 1(Del) -> 2(Disc) -> 3(Pay) -> 4(Rev)
-    // If delivery disabled: 0(Cust) -> 2(Disc) -> 3(Pay) -> 4(Rev)
-    // Adjusting step indices map:
-    // 0: Customer
-    // 1: Delivery (Only if widget.enableDelivery)
-    // 2: Discount
-    // 3: Payment
-    // 4: Review
+    // Max steps logic: 0(Cust) -> 1(Del) -> 2(Disc) -> 3(Pay)
+    // If delivery disabled: 0(Cust) -> 2(Disc) -> 3(Pay)
     
     // Original was 0,1,2,3. Now expanding.
-    if (next <= 4) {
+    if (next <= 3) {
       setState(() {
         _currentStep = next;
       });
@@ -265,9 +265,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
   
   void _goToStep(int step) {
     if (!widget.enableDelivery && step == 1) return;
-    if (step >= 0 && step <= 4) {
+    if (step >= 0 && step <= 3) {
       setState(() {
         _currentStep = step;
+        // Mark payment modal as opened if we're visiting the payment step (3)
+        if (step == 3) {
+          _hasOpenedPaymentModalOnce = true;
+        }
       });
     }
   }
@@ -383,9 +387,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
       backgroundColor: Colors.white,
       elevation: 8,
       child: Container(
-        width: 900,
-        height: 700,
-        clipBehavior: Clip.antiAlias, // Ensure children respect the rounded corners
+        width: 1200,
+        height: 750, // Increased from 700 to 750 for more vertical space
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -401,7 +405,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
           children: [
             // Header with Steps
             _buildHeader(hasCustomer, hasDiscount, hasPayment, hasDelivery),
-            
+
             // Content Area
             Expanded(
               child: AnimatedSwitcher(
@@ -438,8 +442,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   _buildStepIndicator(2, 'Discount', Icons.discount, isActive: _currentStep == 2, isCompleted: hasDiscount),
                   _buildStepConnector(isActive: _currentStep > 2),
                   _buildStepIndicator(3, 'Payment', Icons.payment, isActive: _currentStep == 3, isCompleted: hasPayment),
-                  _buildStepConnector(isActive: _currentStep > 3),
-                  _buildStepIndicator(4, 'Review', Icons.receipt_long, isActive: _currentStep == 4, isCompleted: false),
                 ],
               ),
             ),
@@ -519,8 +521,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
         return _buildDiscountStep();
       case 3:
         return _buildPaymentStep();
-      case 4:
-        return _buildReviewStep();
       default:
         return const SizedBox.shrink();
     }
@@ -536,7 +536,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left: Search and List
+                // Left: Search, Selected Customer, and List
                 Expanded(
                   flex: 3,
                   child: Column(
@@ -570,21 +570,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      // Selected Customer Card (moved here from right panel)
+                      _buildSelectedCustomerCard(),
+                      const SizedBox(height: 16),
                       // List
                       Expanded(child: _buildCustomerList()),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 24),
-                const VerticalDivider(width: 1),
-                const SizedBox(width: 24),
-                // Right: Selected Customer & Actions
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    children: [
-                      _buildSelectedCustomerCard(),
-                      const Spacer(),
+                      const SizedBox(height: 16),
+                      // Add Customer Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -602,14 +594,35 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 24),
+                const VerticalDivider(width: 1),
+                const SizedBox(width: 24),
+                // Right: Summary only (no customer card)
+                Expanded(
+                  flex: 1,
+                  child: _buildCompactSummary(),
+                ),
               ],
             ),
           ),
         ),
         _buildFooter(
-          onNext: _nextStep,
-          nextLabel: widget.enableDelivery ? 'Proceed to Delivery' : 'Proceed to Discount',
-          isNextEnabled: true, // Allow proceeding even without customer (guest) or enforcing it
+          onPrint: () async {
+            setState(() => _isPrinting = true);
+            try {
+              await widget.onConfirmAndPrint();
+            } finally {
+              if (mounted) setState(() => _isPrinting = false);
+            }
+          },
+          onConfirm: () async {
+            setState(() => _isConfirming = true);
+            try {
+              await widget.onConfirmOrder();
+            } finally {
+              if (mounted) setState(() => _isConfirming = false);
+            }
+          },
         ),
       ],
     );
@@ -623,225 +636,254 @@ class _CheckoutModalState extends State<CheckoutModal> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              child: Consumer<DeliveryMethodsProvider>(
-                builder: (context, provider, child) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'delivery.delivery_methods'.tr,
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s16,
-                          0.21,
-                          ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: provider.deliveryMethods.map((method) {
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _lDeliveryMethod = method.name;
-                                _lDeliveryMethodId = method.id;
-                              });
-                              _handleDeliveryUpdate();
-                            },
-                            child: BuildBoxShadowContainer(
-                              border: _lDeliveryMethod == method.name
-                                  ? Border.all(color: ColorManager.kPrimaryColor)
-                                  : null,
-                              padding: const EdgeInsets.all(12),
-                              blurRadius: 4,
-                              circleRadius: 5,
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    method.name == "Store Takeaway"
-                                        ? Icons.store
-                                        : method.name == "Car Delivery"
-                                            ? Icons.car_rental
-                                            : method.name == "Door Delivery"
-                                                ? Icons.doorbell_outlined
-                                                : Icons.local_shipping,
-                                    size: 20,
-                                    color: Colors.black,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    method.name.tr, // Using .tr assuming translations work or just name
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.12,
-                                      Colors.black,
-                                    ),
-                                  ),
-                                ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left: Delivery Options
+                Expanded(
+                  flex: 3,
+                  child: SingleChildScrollView(
+                    child: Consumer<DeliveryMethodsProvider>(
+                      builder: (context, provider, child) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'delivery.delivery_methods'.tr,
+                              style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s16,
+                                0.21,
+                                ColorManager.kPrimaryColor,
                               ),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                      if (Provider.of<AppSettingsProvider>(context, listen: false)
-                          .appSettings!
-                          .askDeliveryDate) ...[
-                        const SizedBox(height: 20),
-                        // Delivery Date
-                        Text('billing.enter_car_number'.tr, // Reusing key for Date? Assuming original code intent
-                            style: buildCustomStyle(FontWeightManager.medium,
-                                FontSize.s12, 0.12, Colors.black)),
-                        CalendarPickerTableCell(
-                          initialDate: _lSelectedDeliveryDate,
-                          onDateSelected: (date) {
-                            setState(() {
-                              _lSelectedDeliveryDate = date;
-                            });
-                            _handleDeliveryUpdate();
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        // Delivery Time
-                        Text('common.select'.tr,
-                            style: buildCustomStyle(FontWeightManager.medium,
-                                FontSize.s12, 0.12, Colors.black)),
-                        TimePickerTableCell(
-                          initialTime: _lSelectedDeliveryTime,
-                          onTimeSelected: (time) {
-                            setState(() {
-                              _lSelectedDeliveryTime = time;
-                            });
-                            _handleDeliveryUpdate();
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      if (_lDeliveryMethod == "Car Delivery") ...[
-                        buildColumnWidgetForTextFields(
-                          controller: _lCarNumberController,
-                          size: size,
-                          height: 50,
-                          hintText: 'Car Number:',
-                          width: double.infinity,
-                          onTap: () {
-                            Provider.of<KeyboardProvider>(context, listen: false)
-                                .show('text', _lCarNumberController,
-                                    replaceOnFirstInput: true);
-                          },
-                          onchanged: (_) => _handleDeliveryUpdate(),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                      buildColumnWidgetForTextFields(
-                        controller: _lCommentController,
-                        size: size,
-                        height: 50,
-                        hintText: 'Comment:',
-                        width: double.infinity,
-                        onTap: () {
-                          Provider.of<KeyboardProvider>(context, listen: false).show(
-                              'text', _lCommentController,
-                              replaceOnFirstInput: true);
-                        },
-                        onchanged: (_) => _handleDeliveryUpdate(),
-                      ),
-                      if (_lDeliveryMethod == "Door Delivery") ...[
-                        const SizedBox(height: 10),
-                        Consumer<CustomerSelectionProvider>(
-                          builder: (context, customerProvider, child) {
-                            if (!customerProvider.hasSelectedCustomer ||
-                                customerProvider.selectedCustomer!.addresses ==
-                                    null ||
-                                customerProvider
-                                    .selectedCustomer!.addresses!.isEmpty) {
-                              return const SizedBox.shrink();
-                            }
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Choose an address:',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.12,
-                                    Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: customerProvider
-                                      .selectedCustomer!.addresses!
-                                      .map((Address address) {
-                                    return GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          String fullAddress =
-                                              "${address.address}, ${address.city}";
-                                          _lAddressController.text = fullAddress;
-                                        });
-                                        _handleDeliveryUpdate();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          border:
-                                              Border.all(color: Colors.grey.shade300),
-                                          borderRadius: BorderRadius.circular(8),
-                                          color: Colors.grey.shade50,
+                            const SizedBox(height: 20),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: provider.deliveryMethods.map((method) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _lDeliveryMethod = method.name;
+                                      _lDeliveryMethodId = method.id;
+                                    });
+                                    _handleDeliveryUpdate();
+                                  },
+                                  child: BuildBoxShadowContainer(
+                                    border: _lDeliveryMethod == method.name
+                                        ? Border.all(color: ColorManager.kPrimaryColor)
+                                        : null,
+                                    padding: const EdgeInsets.all(12),
+                                    blurRadius: 4,
+                                    circleRadius: 5,
+                                    child: Column(
+                                      children: [
+                                        Icon(
+                                          method.name == "Store Takeaway"
+                                              ? Icons.store
+                                              : method.name == "Car Delivery"
+                                                  ? Icons.car_rental
+                                                  : method.name == "Door Delivery"
+                                                      ? Icons.doorbell_outlined
+                                                      : Icons.local_shipping,
+                                          size: 20,
+                                          color: Colors.black,
                                         ),
-                                        child: Text(
-                                          "${address.address}, ${address.city}",
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          method.name.tr,
                                           style: buildCustomStyle(
-                                            FontWeightManager.regular,
+                                            FontWeightManager.medium,
                                             FontSize.s12,
                                             0.12,
-                                            Colors.black87,
+                                            Colors.black,
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        buildColumnWidgetForTextFields(
-                          controller: _lAddressController,
-                          size: size,
-                          height: 50,
-                          hintText: 'Address:',
-                          width: double.infinity,
-                          onTap: () {
-                            Provider.of<KeyboardProvider>(context, listen: false)
-                                .show('text', _lAddressController,
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            if (Provider.of<AppSettingsProvider>(context, listen: false)
+                                .appSettings!
+                                .askDeliveryDate) ...[
+                              const SizedBox(height: 20),
+                              Text('billing.enter_car_number'.tr,
+                                  style: buildCustomStyle(FontWeightManager.medium,
+                                      FontSize.s12, 0.12, Colors.black)),
+                              CalendarPickerTableCell(
+                                initialDate: _lSelectedDeliveryDate,
+                                onDateSelected: (date) {
+                                  setState(() {
+                                    _lSelectedDeliveryDate = date;
+                                  });
+                                  _handleDeliveryUpdate();
+                                },
+                              ),
+                              const SizedBox(height: 10),
+                              Text('common.select'.tr,
+                                  style: buildCustomStyle(FontWeightManager.medium,
+                                      FontSize.s12, 0.12, Colors.black)),
+                              TimePickerTableCell(
+                                initialTime: _lSelectedDeliveryTime,
+                                onTimeSelected: (time) {
+                                  setState(() {
+                                    _lSelectedDeliveryTime = time;
+                                  });
+                                  _handleDeliveryUpdate();
+                                },
+                              ),
+                            ],
+                            const SizedBox(height: 20),
+                            if (_lDeliveryMethod == "Car Delivery") ...[
+                              buildColumnWidgetForTextFields(
+                                controller: _lCarNumberController,
+                                size: size,
+                                height: 50,
+                                hintText: 'Car Number:',
+                                width: double.infinity,
+                                onTap: () {
+                                  Provider.of<KeyboardProvider>(context, listen: false)
+                                      .show('text', _lCarNumberController,
+                                          replaceOnFirstInput: true);
+                                },
+                                onchanged: (_) => _handleDeliveryUpdate(),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                            buildColumnWidgetForTextFields(
+                              controller: _lCommentController,
+                              size: size,
+                              height: 50,
+                              hintText: 'Comment:',
+                              width: double.infinity,
+                              onTap: () {
+                                Provider.of<KeyboardProvider>(context, listen: false).show(
+                                    'text', _lCommentController,
                                     replaceOnFirstInput: true);
-                          },
-                          onchanged: (_) => _handleDeliveryUpdate(),
-                        ),
-                      ],
-                    ],
-                  );
-                },
-              ),
+                              },
+                              onchanged: (_) => _handleDeliveryUpdate(),
+                            ),
+                            if (_lDeliveryMethod == "Door Delivery") ...[
+                              const SizedBox(height: 10),
+                              Consumer<CustomerSelectionProvider>(
+                                builder: (context, customerProvider, child) {
+                                  if (!customerProvider.hasSelectedCustomer ||
+                                      customerProvider.selectedCustomer!.addresses ==
+                                          null ||
+                                      customerProvider
+                                          .selectedCustomer!.addresses!.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Choose an address:',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.12,
+                                          Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: customerProvider
+                                            .selectedCustomer!.addresses!
+                                            .map((Address address) {
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                String fullAddress =
+                                                    "${address.address}, ${address.city}";
+                                                _lAddressController.text = fullAddress;
+                                              });
+                                              _handleDeliveryUpdate();
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                border:
+                                                    Border.all(color: Colors.grey.shade300),
+                                                borderRadius: BorderRadius.circular(8),
+                                                color: Colors.grey.shade50,
+                                              ),
+                                              child: Text(
+                                                "${address.address}, ${address.city}",
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s12,
+                                                  0.12,
+                                                  Colors.black87,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 10),
+                              buildColumnWidgetForTextFields(
+                                controller: _lAddressController,
+                                size: size,
+                                height: 50,
+                                hintText: 'Address:',
+                                width: double.infinity,
+                                onTap: () {
+                                  Provider.of<KeyboardProvider>(context, listen: false)
+                                      .show('text', _lAddressController,
+                                          replaceOnFirstInput: true);
+                                },
+                                onchanged: (_) => _handleDeliveryUpdate(),
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                const VerticalDivider(width: 1),
+                const SizedBox(width: 24),
+                // Right: Summary
+                Expanded(
+                  flex: 1,
+                  child: _buildCompactSummary(),
+                ),
+              ],
             ),
           ),
         ),
         _buildFooter(
           onBack: _previousStep,
-          onNext: _nextStep,
-          nextLabel: 'Proceed to Discount',
+          onPrint: () async {
+            setState(() => _isPrinting = true);
+            try {
+              await widget.onConfirmAndPrint();
+            } finally {
+              if (mounted) setState(() => _isPrinting = false);
+            }
+          },
+          onConfirm: () async {
+            setState(() => _isConfirming = true);
+            try {
+              await widget.onConfirmOrder();
+            } finally {
+              if (mounted) setState(() => _isConfirming = false);
+            }
+          },
         ),
       ],
     );
@@ -923,61 +965,126 @@ class _CheckoutModalState extends State<CheckoutModal> {
   Widget _buildSelectedCustomerCard() {
     if (_localSelectedCustomer == null) {
       return Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.grey.shade200),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Icon(Icons.person_outline, size: 48, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            Text('No Customer Selected', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person_outline, size: 28, color: Colors.grey),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'No Customer Selected',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  Text(
+                    'Select a customer to continue',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       );
     }
-    
+
+    final balance = _localSelectedCustomer!.balance ?? 0.0;
+    final balanceColor = balance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626);
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFF2563EB).withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
       ),
-      child: Column(
+      child: Row(
         children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: const Color(0xFF2563EB),
-            child: Text(
-              (_localSelectedCustomer!.name ?? 'U').substring(0, 1).toUpperCase(),
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          // Avatar on left
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563EB),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                (_localSelectedCustomer!.name ?? 'U').substring(0, 1).toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            _localSelectedCustomer!.name ?? '',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          const SizedBox(width: 14),
+          // Info in middle
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _localSelectedCustomer!.name ?? 'Unknown',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (_localSelectedCustomer!.phone != null)
+                  Text(
+                    _localSelectedCustomer!.phone!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
           ),
-          Text(_localSelectedCustomer!.phone ?? '', style: TextStyle(color: Colors.grey.shade600)),
-          const SizedBox(height: 12),
+          const SizedBox(width: 12),
+          // Balance on right
           Container(
-             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-             decoration: BoxDecoration(
-               color: (_localSelectedCustomer!.balance ?? 0) >= 0 ? const Color(0xFF059669).withOpacity(0.1) : const Color(0xFFDC2626).withOpacity(0.1),
-               borderRadius: BorderRadius.circular(20),
-             ),
-             child: Text(
-               'Balance: ${_localSelectedCustomer!.balance?.toStringAsFixed(2) ?? '0.00'}',
-               style: TextStyle(
-                 fontWeight: FontWeight.bold,
-                 color: (_localSelectedCustomer!.balance ?? 0) >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
-               ),
-             ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: balanceColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Balance: ${balance.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: balanceColor,
+              ),
+            ),
           ),
         ],
       ),
@@ -989,54 +1096,82 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return Column(
       children: [
         Expanded(
-          child: RestaurantCouponModalWrapper(
-            orderSubTotal: widget.cartTotal,
-            initialCouponCode: _localCouponCode,
-            initialFlatDiscount: _localFlatDiscount,
-            initialPercentageDiscount: _localPercentageDiscount,
-            isCouponApplied: _localIsCouponApplied,
-            onCouponAction: (code, applied, {flatDiscount, percentageDiscount}) {
-              // Calculate discount logic similar to original file
-               final newFlatDiscount = flatDiscount ?? 0.0;
-               final newPercentageDiscount = percentageDiscount ?? 0.0;
-               final oldDiscountAmount = _localFlatDiscount + (widget.cartTotal * _localPercentageDiscount / 100);
-               final oldEffectiveTotal = widget.cartTotal - oldDiscountAmount;
-               final newDiscountAmount = newFlatDiscount + (widget.cartTotal * newPercentageDiscount / 100);
-               final newEffectiveTotal = widget.cartTotal - newDiscountAmount;
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left: Discount Options
+                Expanded(
+                  flex: 3,
+                  child: RestaurantCouponModalWrapper(
+                    orderSubTotal: widget.cartTotal,
+                    initialCouponCode: _localCouponCode,
+                    initialFlatDiscount: _localFlatDiscount,
+                    initialPercentageDiscount: _localPercentageDiscount,
+                    isCouponApplied: _localIsCouponApplied,
+                    onCouponAction: (code, applied, {flatDiscount, percentageDiscount}) {
+                      final newFlatDiscount = flatDiscount ?? 0.0;
+                      final newPercentageDiscount = percentageDiscount ?? 0.0;
+                      final oldDiscountAmount = _localFlatDiscount + (widget.cartTotal * _localPercentageDiscount / 100);
+                      final oldEffectiveTotal = widget.cartTotal - oldDiscountAmount;
+                      final newDiscountAmount = newFlatDiscount + (widget.cartTotal * newPercentageDiscount / 100);
+                      final newEffectiveTotal = widget.cartTotal - newDiscountAmount;
 
-               // Auto-update cash if needed
-               String currentCash = _lCashAmount;
-               if (_lIsCashSelected && currentCash.isNotEmpty) {
-                  final cashVal = double.tryParse(currentCash) ?? 0.0;
-                  // If cash was auto-filled (matched old total), update it
-                  if ((cashVal - oldEffectiveTotal).abs() < 0.01) {
-                    currentCash = newEffectiveTotal.toStringAsFixed(2);
-                  }
-               }
-               
-               // Apply discount locally + parent
-               _handleDiscountUpdate(code, applied, newFlatDiscount, newPercentageDiscount);
-               
-               // Update payment amount if auto-adjustment happened
-               if (currentCash != _lCashAmount) {
-                 _handlePaymentUpdate(
-                   _lIsCashSelected, _lIsCardSelected, _lIsUpiSelected, _lIsCodSelected, _lIsDebitSelected,
-                   currentCash, _lCardAmount, _lUpiAmount, _lCodAmount, _lDebitAmount, 
-                   _lTransactionNumber, _lToCustomerCreditEnabled,
-                   cashMethodId: widget.cashMethodId, cardMethodId: widget.cardMethodId, 
-                   upiMethodId: widget.upiMethodId, codMethodId: widget.codMethodId
-                 );
-               }
-               
-               // Auto-advance to next step
-               _nextStep();
-            },
+                      String currentCash = _lCashAmount;
+                      if (_lIsCashSelected && currentCash.isNotEmpty) {
+                        final cashVal = double.tryParse(currentCash) ?? 0.0;
+                        if ((cashVal - oldEffectiveTotal).abs() < 0.01) {
+                          currentCash = newEffectiveTotal.toStringAsFixed(2);
+                        }
+                      }
+
+                      _handleDiscountUpdate(code, applied, newFlatDiscount, newPercentageDiscount);
+
+                      if (currentCash != _lCashAmount) {
+                        _handlePaymentUpdate(
+                          _lIsCashSelected, _lIsCardSelected, _lIsUpiSelected, _lIsCodSelected, _lIsDebitSelected,
+                          currentCash, _lCardAmount, _lUpiAmount, _lCodAmount, _lDebitAmount,
+                          _lTransactionNumber, _lToCustomerCreditEnabled,
+                          cashMethodId: widget.cashMethodId, cardMethodId: widget.cardMethodId,
+                          upiMethodId: widget.upiMethodId, codMethodId: widget.codMethodId
+                        );
+                      }
+
+                      _nextStep();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 24),
+                const VerticalDivider(width: 1),
+                const SizedBox(width: 24),
+                // Right: Summary
+                Expanded(
+                  flex: 1,
+                  child: _buildCompactSummary(),
+                ),
+              ],
+            ),
           ),
         ),
         _buildFooter(
           onBack: _previousStep,
-          onNext: _nextStep,
-          nextLabel: 'Proceed to Payment',
+          onPrint: () async {
+            setState(() => _isPrinting = true);
+            try {
+              await widget.onConfirmAndPrint();
+            } finally {
+              if (mounted) setState(() => _isPrinting = false);
+            }
+          },
+          onConfirm: () async {
+            setState(() => _isConfirming = true);
+            try {
+              await widget.onConfirmOrder();
+            } finally {
+              if (mounted) setState(() => _isConfirming = false);
+            }
+          },
         ),
       ],
     );
@@ -1044,22 +1179,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // --- STEP 3: PAYMENT ---
   Widget _buildPaymentStep() {
-    // Calculate effective total
     final discountAmount = _localFlatDiscount + (widget.cartTotal * _localPercentageDiscount / 100);
     final effectiveTotal = widget.cartTotal - discountAmount;
-    
-    // Auto-fill logic: If no payment method is selected OR if the selected method(s) have zero amount,
-    // we should auto-fill with the effective total.
+
     final bool anyMethodSelected = _lIsCashSelected || _lIsCardSelected || _lIsUpiSelected || _lIsCodSelected;
-    final double totalPaid = (double.tryParse(_lCashAmount) ?? 0) + 
-                            (double.tryParse(_lCardAmount) ?? 0) + 
-                            (double.tryParse(_lUpiAmount) ?? 0) + 
+    final double totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
+                            (double.tryParse(_lCardAmount) ?? 0) +
+                            (double.tryParse(_lUpiAmount) ?? 0) +
                             (double.tryParse(_lCodAmount) ?? 0);
-    
+
     final bool needsAutoFill = !anyMethodSelected || totalPaid == 0;
-    
-    // If nothing is selected, we default to Cash. 
-    // If something IS selected but the total is 0, we auto-fill the selected one.
+
     final bool shouldAutoFillCash = (!anyMethodSelected && _lCashAmount.isEmpty) || (_lIsCashSelected && totalPaid == 0);
     final bool shouldAutoFillCard = _lIsCardSelected && totalPaid == 0 && !shouldAutoFillCash;
     final bool shouldAutoFillUpi = _lIsUpiSelected && totalPaid == 0 && !shouldAutoFillCash && !shouldAutoFillCard;
@@ -1068,175 +1198,49 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return Column(
       children: [
         Expanded(
-          child: PaymentMethodModal(
-            initialIsCashSelected: shouldAutoFillCash ? true : _lIsCashSelected,
-            initialIsCardSelected: shouldAutoFillCard ? true : _lIsCardSelected,
-            initialIsUpiSelected: shouldAutoFillUpi ? true : _lIsUpiSelected,
-            initialIsCodSelected: shouldAutoFillCod ? true : _lIsCodSelected,
-            initialIsDebitSelected: _lIsDebitSelected,
-            initialCashAmount: shouldAutoFillCash ? effectiveTotal.toStringAsFixed(2) : _lCashAmount,
-            initialCardAmount: shouldAutoFillCard ? effectiveTotal.toStringAsFixed(2) : _lCardAmount,
-            initialUpiAmount: shouldAutoFillUpi ? effectiveTotal.toStringAsFixed(2) : _lUpiAmount,
-            initialCodAmount: shouldAutoFillCod ? effectiveTotal.toStringAsFixed(2) : _lCodAmount,
-            initialDebitAmount: _lDebitAmount,
-            initialTransactionNumber: _lTransactionNumber,
-            cartTotal: effectiveTotal,
-            customerPrevBalance: _localSelectedCustomer?.balance ?? 0.0,
-            isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
-            customButtonTitle: "Confirm Payment Selection",
-            closeOnApply: false, // Don't close, just update state
-            onPaymentMethodSelected: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
-              _handlePaymentUpdate(
-                isCash, isCard, isUpi, isCod, isDebit,
-                cash, card, upi, cod, debit,
-                trans, toCredit,
-                cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
-              );
-              _nextStep(); // Auto-advance on confirm
-            },
-          ),
-        ),
-        _buildFooter(
-           onBack: _previousStep,
-        ),
-      ],
-    );
-  }
-
-  // --- STEP 4: REVIEW ---
-  Widget _buildReviewStep() {
-    final bool hasCustomer = _localSelectedCustomer != null;
-    final bool hasPayment = _hasPaymentMethod();
-    final bool hasDiscount = _localIsCouponApplied || _localFlatDiscount > 0 || _localPercentageDiscount > 0;
-    final bool hasDelivery = _lDeliveryMethod.isNotEmpty;
-
-    return Column(
-      children: [
-        Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(32.0),
+            padding: const EdgeInsets.all(24),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left Side: Status Checklist
+                // Left: Payment Options
                 Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Ready to Confirm',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Please verify the details below before completing the order.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      _buildReviewCheckItem(
-                        'Customer Information', 
-                        _localSelectedCustomer?.name ?? 'Guest Customer',
-                        hasCustomer,
-                        Icons.person_outline,
-                      ),
-                      if (widget.enableDelivery)
-                        _buildReviewCheckItem(
-                          'Delivery Method', 
-                          _lDeliveryMethod,
-                          hasDelivery,
-                          Icons.local_shipping_outlined,
-                        ),
-                      _buildReviewCheckItem(
-                        'Discounts Applied', 
-                        hasDiscount 
-                          ? (_localPercentageDiscount > 0 
-                              ? '${_localPercentageDiscount.toStringAsFixed(0)}%' 
-                              : _localFlatDiscount.toStringAsFixed(2))
-                          : 'No Discounts Applied',
-                        hasDiscount,
-                        Icons.discount_outlined,
-                      ),
-                      _buildReviewCheckItem(
-                        'Payment Selection', 
-                        _hasPaymentMethod() ? 'Payment Methods Configured' : 'No Payment Configured',
-                        hasPayment,
-                        Icons.payment_outlined,
-                      ),
-                    ],
+                  flex: 3,
+                  child: PaymentMethodModal(
+                    initialIsCashSelected: shouldAutoFillCash ? true : _lIsCashSelected,
+                    initialIsCardSelected: shouldAutoFillCard ? true : _lIsCardSelected,
+                    initialIsUpiSelected: shouldAutoFillUpi ? true : _lIsUpiSelected,
+                    initialIsCodSelected: shouldAutoFillCod ? true : _lIsCodSelected,
+                    initialIsDebitSelected: _lIsDebitSelected,
+                    initialCashAmount: shouldAutoFillCash ? effectiveTotal.toStringAsFixed(2) : _lCashAmount,
+                    initialCardAmount: shouldAutoFillCard ? effectiveTotal.toStringAsFixed(2) : _lCardAmount,
+                    initialUpiAmount: shouldAutoFillUpi ? effectiveTotal.toStringAsFixed(2) : _lUpiAmount,
+                    initialCodAmount: shouldAutoFillCod ? effectiveTotal.toStringAsFixed(2) : _lCodAmount,
+                    initialDebitAmount: _lDebitAmount,
+                    initialTransactionNumber: _lTransactionNumber,
+                    cartTotal: effectiveTotal,
+                    customerPrevBalance: _localSelectedCustomer?.balance ?? 0.0,
+                    isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
+                    customButtonTitle: "Confirm Payment Selection",
+                    closeOnApply: false,
+                    onPaymentMethodSelected: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+                      _handlePaymentUpdate(
+                        isCash, isCard, isUpi, isCod, isDebit,
+                        cash, card, upi, cod, debit,
+                        trans, toCredit,
+                        cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
+                      );
+                      _nextStep();
+                    },
                   ),
                 ),
-                
-                const SizedBox(width: 48),
-                
-                // Right Side: Summary Card & Actions
+                const SizedBox(width: 24),
+                const VerticalDivider(width: 1),
+                const SizedBox(width: 24),
+                // Right: Summary
                 Expanded(
-                  flex: 2,
-                  child: Column(
-                    children: [
-                      _buildReviewSummary(),
-                      const Spacer(),
-                      
-                      // Action Buttons
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: CustomRoundButtonWithIconAdvanced(
-                                title: 'Print Bill',
-                                isLoading: _isPrinting,
-                                fct: () async {
-                                   setState(() => _isPrinting = true);
-                                   try {
-                                     await widget.onConfirmAndPrint();
-                                   } finally {
-                                     if (mounted) setState(() => _isPrinting = false);
-                                   }
-                                },
-                                size: MediaQuery.of(context).size,
-                                icon: const Icon(Icons.print, color: Color(0xFFD97706), size: 20),
-                                height: 54,
-                                width: double.infinity,
-                                fontSize: FontSize.s16,
-                                boxColor: Colors.white,
-                                borderColor: const Color(0xFFD97706),
-                                textColor: const Color(0xFFD97706),
-                                radius: 12,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: CustomRoundButtonWithIconAdvanced(
-                                title: 'Confirm',
-                                isLoading: _isConfirming,
-                                fct: () async {
-                                   setState(() => _isConfirming = true);
-                                   try {
-                                     await widget.onConfirmOrder();
-                                   } finally {
-                                     if (mounted) setState(() => _isConfirming = false);
-                                   }
-                                },
-                                size: MediaQuery.of(context).size,
-                                icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                                height: 54,
-                                width: double.infinity,
-                                fontSize: FontSize.s16,
-                                boxColor: const Color(0xFF2563EB),
-                                borderColor: const Color(0xFF2563EB),
-                                radius: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  flex: 1,
+                  child: _buildCompactSummary(),
                 ),
               ],
             ),
@@ -1244,113 +1248,45 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ),
         _buildFooter(
           onBack: _previousStep,
-          isNextEnabled: false,
+          onPrint: () async {
+            setState(() => _isPrinting = true);
+            try {
+              await widget.onConfirmAndPrint();
+            } finally {
+              if (mounted) setState(() => _isPrinting = false);
+            }
+          },
+          onConfirm: () async {
+            setState(() => _isConfirming = true);
+            try {
+              await widget.onConfirmOrder();
+            } finally {
+              if (mounted) setState(() => _isConfirming = false);
+            }
+          },
         ),
       ],
     );
   }
 
-  Widget _buildReviewCheckItem(String title, String subtitle, bool isCompleted, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isCompleted ? const Color(0xFF059669).withOpacity(0.1) : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isCompleted ? Icons.check_circle : icon, 
-              color: isCompleted ? const Color(0xFF059669) : Colors.grey.shade400,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title, 
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold, 
-                    fontSize: 15,
-                    color: isCompleted ? Colors.black87 : Colors.grey.shade500,
-                  )
-                ),
-                Text(
-                  subtitle, 
-                  style: TextStyle(
-                    fontSize: 13, 
-                    color: isCompleted ? Colors.grey.shade600 : Colors.grey.shade400,
-                  )
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewSummary() {
-    // Reconstruct summary logic locally for display
-    final discountAmount = _localFlatDiscount + (widget.cartTotal * _localPercentageDiscount / 100);
-    final effectiveTotal = widget.cartTotal - discountAmount;
-    final totalPaid = (double.tryParse(_lCashAmount) ?? 0) + 
-                      (double.tryParse(_lCardAmount) ?? 0) +
-                      (double.tryParse(_lUpiAmount) ?? 0) +
-                      (double.tryParse(_lCodAmount) ?? 0);
-    
-    // Minimal summary rows
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          _buildSummaryRow('Order Total', widget.cartTotal, Colors.black87),
-          const SizedBox(height: 8),
-          // Always show Discount even if 0.0
-          _buildSummaryRow('Discount', -discountAmount, discountAmount > 0 ? Colors.red.shade700 : Colors.grey.shade600),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(height: 1),
-          ),
-          _buildSummaryRow('Net Payable', effectiveTotal, Colors.black, isBold: true, large: true),
-          const SizedBox(height: 20),
-          _buildSummaryRow('Total Paid', totalPaid, const Color(0xFF059669)),
-          const SizedBox(height: 8),
-          _buildSummaryRow('Balance', totalPaid - effectiveTotal, 
-             (totalPaid - effectiveTotal) >= 0 ? const Color(0xFF059669) : Colors.red.shade700, isBold: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(String label, double amount, Color color, {bool isBold = false, bool large = false}) {
-    final currency = Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR';
+  Widget _buildSummaryRow(String label, double amount, Color color, {bool isBold = false, bool large = false, Color? labelColor}) {
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'SAR';
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          label, 
+          label,
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-            fontSize: large ? 18 : 14,
-            color: isBold ? Colors.black : Colors.grey.shade700,
+            fontSize: large ? 16 : 14,
+            color: labelColor ?? (isBold ? Colors.black : Colors.black87),
           )
         ),
         Text(
-          '$currency ${amount.toStringAsFixed(2)}', 
+          '${amount < 0 ? "-" : ""}$currency ${amount.abs().toStringAsFixed(2)}',
           style: TextStyle(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w600, 
-            fontSize: large ? 20 : 15,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            fontSize: large ? 18 : 14,
             color: color
           )
         ),
@@ -1362,7 +1298,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return _lIsCashSelected || _lIsCardSelected || _lIsUpiSelected || _lIsCodSelected || _lIsDebitSelected;
   }
 
-  Widget _buildFooter({VoidCallback? onBack, VoidCallback? onNext, String nextLabel = 'Next', bool isNextEnabled = true}) {
+  // Check if Confirm and Print buttons should be enabled
+  bool get _canConfirmOrPrint {
+    return _localSelectedCustomer != null && _hasOpenedPaymentModalOnce;
+  }
+
+  Widget _buildFooter({
+    VoidCallback? onBack,
+    VoidCallback? onNext,
+    String nextLabel = 'Next',
+    bool isNextEnabled = true,
+    VoidCallback? onPrint,
+    VoidCallback? onConfirm,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1372,6 +1320,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Left side: Back button
           if (onBack != null)
             TextButton.icon(
               icon: const Icon(Icons.arrow_back),
@@ -1381,21 +1330,269 @@ class _CheckoutModalState extends State<CheckoutModal> {
             )
           else
             const SizedBox.shrink(),
-            
-          if (onNext != null)
-            CustomRoundButtonWithIconAdvanced(
-              title: nextLabel,
-              fct: isNextEnabled ? onNext : () {},
-              size: MediaQuery.of(context).size,
-              icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-              height: 45,
-              width: 250,
-              fontSize: FontSize.s16,
-              boxColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
-              borderColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
-              radius: 30,
-            )
+
+          // Right side: Action buttons
+          Row(
+            children: [
+              // Confirm button (optional)
+              if (onConfirm != null) ...[
+                Opacity(
+                  opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                  child: CustomRoundButtonWithIconAdvanced(
+                    title: 'Confirm',
+                    isLoading: _isConfirming,
+                    fct: _canConfirmOrPrint ? onConfirm : () {
+                      // Show feedback when disabled
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please select a customer and visit the payment tab before confirming'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    size: MediaQuery.of(context).size,
+                    icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                    height: 45,
+                    width: 150,
+                    fontSize: FontSize.s16,
+                    boxColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                    borderColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                    radius: 30,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              // Print Bill button (optional)
+              if (onPrint != null) ...[
+                Opacity(
+                  opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                  child: CustomRoundButtonWithIconAdvanced(
+                    title: 'Confirm & Print',
+                    isLoading: _isPrinting,
+                    fct: _canConfirmOrPrint ? onPrint : () {
+                      // Show feedback when disabled
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please select a customer and visit the payment tab before printing'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    size: MediaQuery.of(context).size,
+                    icon: const Icon(Icons.print, color: Colors.white, size: 20),
+                    height: 45,
+                    width: 200,
+                    fontSize: FontSize.s16,
+                    boxColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
+                    borderColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
+                    textColor: Colors.white,
+                    radius: 30,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              // Next button (optional)
+              if (onNext != null)
+                CustomRoundButtonWithIconAdvanced(
+                  title: nextLabel,
+                  fct: isNextEnabled ? onNext : () {},
+                  size: MediaQuery.of(context).size,
+                  icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                  height: 45,
+                  width: 200,
+                  fontSize: FontSize.s16,
+                  boxColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                  borderColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                  radius: 30,
+                ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  // Compact summary widget shown on right side of all steps
+  Widget _buildCompactSummary() {
+    final discountAmount = _localFlatDiscount + (widget.cartTotal * _localPercentageDiscount / 100);
+    final effectiveTotal = widget.cartTotal - discountAmount;
+    final totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
+                      (double.tryParse(_lCardAmount) ?? 0) +
+                      (double.tryParse(_lUpiAmount) ?? 0) +
+                      (double.tryParse(_lCodAmount) ?? 0);
+
+    final bool hasCustomer = _localSelectedCustomer != null;
+    final bool hasPayment = _hasPaymentMethod();
+    final bool hasDiscount = _localIsCouponApplied || _localFlatDiscount > 0 || _localPercentageDiscount > 0;
+    final bool hasDelivery = _lDeliveryMethod.isNotEmpty;
+
+    final taxAmount = Provider.of<LocalProductProvider>(context, listen: false).priceSummary?.totalTax ?? 0.0;
+
+    return Column(
+      children: [
+        // Status Checklist (clickable to navigate) - More compact
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Checkout Progress',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Show Customer item in all tabs
+              _buildClickableCheckItem(
+                'Customer',
+                _localSelectedCustomer?.name ?? 'Not Selected',
+                hasCustomer,
+                Icons.person_outline,
+                0,
+              ),
+              if (widget.enableDelivery)
+                _buildClickableCheckItem(
+                  'Delivery',
+                  _lDeliveryMethod,
+                  hasDelivery,
+                  Icons.local_shipping_outlined,
+                  1,
+                ),
+              _buildClickableCheckItem(
+                'Discount',
+                hasDiscount
+                  ? (_localPercentageDiscount > 0
+                      ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
+                      : _localFlatDiscount.toStringAsFixed(2))
+                  : 'Not Applied',
+                hasDiscount,
+                Icons.discount_outlined,
+                2,
+              ),
+              _buildClickableCheckItem(
+                'Payment',
+                _hasPaymentMethod() ? 'Configured' : 'Not Configured',
+                hasPayment,
+                Icons.payment_outlined,
+                3,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Order Summary - More compact
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Order Summary',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildSummaryRow('Net Amount', widget.cartTotal, Colors.black),
+                const SizedBox(height: 6),
+                _buildSummaryRow('Discount', -discountAmount, const Color(0xFFEF4444), labelColor: const Color(0xFFEF4444)),
+                const SizedBox(height: 6),
+                _buildSummaryRow('Tax', taxAmount, Colors.blueGrey.shade400, labelColor: Colors.blueGrey.shade400),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(height: 1),
+                ),
+                _buildSummaryRow('Total Payable', effectiveTotal, const Color(0xFF2563EB), isBold: true, large: true, labelColor: const Color(0xFF2563EB)),
+                const SizedBox(height: 10),
+                _buildSummaryRow('Total Paid', totalPaid, Colors.black),
+                const SizedBox(height: 6),
+                _buildSummaryRow('Balance', totalPaid - effectiveTotal, const Color(0xFF059669), labelColor: const Color(0xFF059669)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Clickable checklist item that navigates to the corresponding step
+  Widget _buildClickableCheckItem(String title, String subtitle, bool isCompleted, IconData icon, int stepIndex) {
+    final isCurrentStep = _currentStep == stepIndex;
+
+    return InkWell(
+      onTap: () => _goToStep(stepIndex),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isCurrentStep ? const Color(0xFF2563EB).withOpacity(0.05) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: isCurrentStep ? Border.all(color: const Color(0xFF2563EB).withOpacity(0.3)) : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isCompleted ? const Color(0xFF059669).withOpacity(0.1) : Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isCompleted ? Icons.check_circle : icon,
+                color: isCompleted ? const Color(0xFF059669) : Colors.grey.shade400,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: isCurrentStep ? FontWeight.bold : FontWeight.w600,
+                      fontSize: 13,
+                      color: isCurrentStep ? const Color(0xFF2563EB) : Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isCompleted ? Colors.grey.shade600 : Colors.grey.shade400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (isCurrentStep)
+              Icon(
+                Icons.chevron_right,
+                color: const Color(0xFF2563EB),
+                size: 18,
+              ),
+          ],
+        ),
       ),
     );
   }

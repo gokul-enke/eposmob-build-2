@@ -1462,7 +1462,6 @@ class BillingPageState extends State<BillingPage>
             const SizedBox(width: 12),
             // Keyboard toggle button
             IconButton(
-
               icon: Icon(
                 Provider.of<KeyboardProvider>(context).showKeyboardFeature
                     ? Icons.keyboard_hide
@@ -4334,8 +4333,12 @@ class BillingPageState extends State<BillingPage>
                   customerAlternatePhone: customerAlternatePhone,
                   paymentMethod: paymentMethod,
                   orderComment: orderComment,
-                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
-                  netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax?.toString(),
+                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                          context,
+                          listen: false)
+                      .isDefaultCustomer,
+                  netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
+                      ?.toString(),
                 ),
               ),
             );
@@ -5273,7 +5276,8 @@ class BillingPageState extends State<BillingPage>
           String? codMethodId,
         }) {
           setState(() {
-            _hasOpenedPaymentModalOnce = true; // Set flag here to indicate user manually made a selection (even if None)
+            _hasOpenedPaymentModalOnce =
+                true; // Set flag here to indicate user manually made a selection (even if None)
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
@@ -5414,7 +5418,8 @@ class BillingPageState extends State<BillingPage>
 
   Future<void> _applyCoupon() async {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
 
     if (localProductProvider.priceSummary == null) {
       showScaffoldError(
@@ -5596,12 +5601,14 @@ class BillingPageState extends State<BillingPage>
             paymentMethod: savedOrder.paymentMethod,
             customerAlternatePhone: savedOrder.alternatePhone,
             orderComment: savedOrder.comment,
-            paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                : null,
+            paidAmount:
+                (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+                    ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+                    : null,
             // Balance info not available for offline saved orders
             // Check if this is a default customer based on the app settings
-            isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
+            isDefaultCustomer:
+                _isDefaultCustomerPhone(savedOrder.customerPhone),
           ),
         ),
       );
@@ -5933,9 +5940,10 @@ class BillingPageState extends State<BillingPage>
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
       if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
         try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere((m) =>
-              m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-              m.id == appSettingsDefault);
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
+              (m) =>
+                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+                  m.id == appSettingsDefault);
           return match.id;
         } catch (e) {
           // Not found
