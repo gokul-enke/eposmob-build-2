@@ -1235,32 +1235,29 @@ class BillingPageState extends State<BillingPageRestaurant>
             });
           },
           onConfirmOrder: () async {
-            // Set loading state
+            // Set loading state BEFORE closing modal so button shows loading immediately
             setState(() {
               isLoadingConfirmOrder = true;
               _hasOpenedPaymentModalOnce =
                   true; // Mark as opened when confirmed via checkout modal
             });
 
-            // Call confirm first (let modal show loading)
-            await _confirmOrder();
-
-            // Close modal after completion
+            // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
+
+            // Then call confirm (loading state is already set)
+            await _confirmOrder();
           },
           onConfirmAndPrint: () async {
-            // Set loading state
+            // Set loading state BEFORE closing modal so button shows loading immediately
             setState(() {
               isLoadingCreateOrder = true;
               _hasOpenedPaymentModalOnce =
                   true; // Mark as opened when confirmed via checkout modal
             });
-
-            // Call print first (let modal show loading)
-            await _createOrderAndPrint();
-
-            // Close modal after completion
+            // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
+            await _createOrderAndPrint();
           },
         );
       },
@@ -3749,7 +3746,7 @@ class BillingPageState extends State<BillingPageRestaurant>
               color: ColorManager.kButtonBlue,
               // onPressed: _createOrderAndPrint,
               onPressed: _showCheckoutModal,
-              isLoading: isLoadingConfirmOrder,
+              isLoading: isLoadingCreateOrder,
             ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
                     .appSettings
@@ -3760,7 +3757,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 color: ColorManager.kButtonGreen,
                 // onPressed: _confirmOrder,.
                 onPressed: _showCheckoutModal,
-                isLoading: isLoadingCreateOrder,
+                isLoading: isLoadingConfirmOrder,
               ),
           ],
           if (!_hasInternet) ...[
