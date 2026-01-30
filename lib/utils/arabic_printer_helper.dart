@@ -185,6 +185,8 @@ class ReceiptTableColumn {
       ),
       textDirection: textDirection,
       textAlign: align,
+      maxLines: 1,
+      ellipsis: '...',
     )..layout(maxWidth: totalWidth * weight);
   }
 }

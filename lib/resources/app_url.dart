@@ -1,6 +1,6 @@
 class APPUrl {
   static const String baseURL = String.fromEnvironment('BASE_URL',
-  defaultValue: "https://eposdemo.yougoit.in");
+      defaultValue: "https://eposdemo.yougoit.in");
   // static String baseURL = "https://eposdemo.yougoit.in";
 
   // static String baseURL = "https://linetolinepos.yougoit.in";
@@ -228,7 +228,9 @@ class APPUrl {
   static String supplierCreditBalance =
       '$baseURL/api/v1/dashboard/supplier-credit-balance';
   static String nonStockReportUrl = '$baseURL/api/v1/non-stock-report';
-static String listDailySalesClose = '$baseURL/api/v1/daily-sales-close/list';
-  static String dailySalesCloseSummary = '$baseURL/api/v1/daily-sales-close/summary';
-  static String dailySalesCloseCreate = '$baseURL/api/v1/daily-sales-close/create';
+  static String listDailySalesClose = '$baseURL/api/v1/daily-sales-close/list';
+  static String dailySalesCloseSummary =
+      '$baseURL/api/v1/daily-sales-close/summary';
+  static String dailySalesCloseCreate =
+      '$baseURL/api/v1/daily-sales-close/create';
 }

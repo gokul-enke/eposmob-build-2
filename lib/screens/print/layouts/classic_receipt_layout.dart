@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
@@ -6,6 +7,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
+import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -133,6 +136,28 @@ class ClassicReceiptLayout implements ReceiptLayout {
         textDirection: textDirection,
       );
 
+      // ========== DEBUG: SAVE IMAGES TO DESKTOP ==========
+      if (kDebugMode) {
+        try {
+          final String desktopPath = 'C:/Users/gokul/Desktop';
+          final String timestamp =
+              DateTime.now().millisecondsSinceEpoch.toString();
+
+          final File file1 =
+              File('$desktopPath/receipt_${timestamp}_part1.png');
+          await file1.writeAsBytes(img.encodePng(imagePart1));
+          debugPrint("Saved debug image to: ${file1.path}");
+
+          final File file2 =
+              File('$desktopPath/receipt_${timestamp}_part2.png');
+          await file2.writeAsBytes(img.encodePng(imagePart2));
+          debugPrint("Saved debug image to: ${file2.path}");
+        } catch (e) {
+          debugPrint("Error saving debug images: $e");
+        }
+      }
+      // ===================================================
+
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
@@ -249,7 +274,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       final storeAddress =
           displayConfig?['showStoreAddress']?.value as String?;
       if (storeAddress != null && storeAddress.isNotEmpty) {
-        rows.add(TextRow(storeAddress, scale: 0.9));
+        rows.add(TextRow(storeAddress, scale: 0.9, isBold: true));
       }
     }
 
@@ -257,7 +282,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showFssaiInfo']?.visible == true) {
       final fssaiInfo = displayConfig?['showFssaiInfo']?.value as String?;
       if (fssaiInfo != null && fssaiInfo.isNotEmpty) {
-        rows.add(TextRow(fssaiInfo, scale: 0.9));
+        rows.add(TextRow(fssaiInfo, scale: 0.9, isBold: true));
       }
     }
 
@@ -269,7 +294,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         '',
       );
       if (telephone.isNotEmpty) {
-        rows.add(TextRow(telephone, scale: 0.8));
+        rows.add(TextRow(telephone, scale: 0.8, isBold: true));
       }
     }
 
@@ -281,7 +306,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         '',
       );
       if (email.isNotEmpty) {
-        rows.add(TextRow(email, scale: 0.8));
+        rows.add(TextRow(email, scale: 0.8, isBold: true));
       }
     }
 
@@ -299,12 +324,23 @@ class ClassicReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 1.2));
     }
 
-    // Invoice Number
+    // Invoice Number - Use API prefix with stripped zeros/prefixes
     if (displayConfig?['showInvoiceNumber']?.visible == true) {
-      final invoiceNumberText = billDocumentConfig.numberPrefix != null &&
-              billDocumentConfig.numberPrefix!.isNotEmpty
-          ? '${billDocumentConfig.numberPrefix}${params.orderNumber}'
-          : '#${params.orderNumber}';
+      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
+      // For "ORD-000430", this extracts "430"
+      final regex = RegExp(r'[1-9]\d*');
+      final match = regex.firstMatch(params.orderNumber);
+      final strippedNumber = match != null ? match.group(0)! : params.orderNumber;
+
+      // Get prefix from display configuration - use language-specific fallback
+      final String lang = params.billDocumentConfig.language ?? 'en';
+      final String invoicePrefix = _getDisplayValue(
+        displayConfig?['showInvoicePrefix']?.value,
+        displayConfig?['showInvoicePrefix']?.defaultValue,
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+      );
+
+      final invoiceNumberText = '$invoicePrefix $strippedNumber';
       rows.add(TextRow(invoiceNumberText, isBold: true));
     }
 
@@ -1180,7 +1216,20 @@ class ClassicReceiptLayout implements ReceiptLayout {
     // Invoice number - check visibility
     final showOrderNumber = displayConfig?['showOrderNumber']?.visible ?? true;
     if (showOrderNumber) {
-      rows.add(TextRow('#${params.orderNumber}', scale: 0.8));
+      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
+      final regex = RegExp(r'[1-9]\d*');
+      final match = regex.firstMatch(params.orderNumber);
+      final strippedNumber = match != null ? match.group(0)! : params.orderNumber;
+
+      // Get prefix from display configuration - use language-specific fallback
+      final String lang = params.billDocumentConfig.language ?? 'en';
+      final String invoicePrefix = _getDisplayValue(
+        displayConfig?['showInvoicePrefix']?.value,
+        displayConfig?['showInvoicePrefix']?.defaultValue,
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+      );
+
+      rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
       rows.add(SpacingRow(5));
     }
 

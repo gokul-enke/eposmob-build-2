@@ -250,7 +250,7 @@ class _AddProductWithBarcodeModalState
                         _productMRPController,
                         TextInputType.number,
                         size,
-                        isRequired: true,
+                        isRequired: false,
                         inputFormatter: FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d{0,2}$')),
                       ),

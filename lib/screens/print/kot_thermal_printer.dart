@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
@@ -6,6 +8,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import 'dart:ui' as ui;
 
 /// Kitchen Order Ticket (KOT) Printer using Document Configuration
@@ -25,23 +28,23 @@ class KotThermalPrinter {
   /// Print width in pixels for each paper size
   static double getPrintWidth(bool is58mm) => is58mm ? 384.0 : 576.0;
 
-  /// Get base font size based on paper size
-  static double getBaseFontSize(bool is58mm) => is58mm ? 22.0 : 22.0;
+  /// Get base font size based on paper size - reduced for smaller text
+  static double getBaseFontSize(bool is58mm) => is58mm ? 18.0 : 18.0;
 
   /// Get header font scale (for Kitchen Order title)
-  static double getHeaderScale(bool is58mm) => is58mm ? 1.5 : 2.2;
+  static double getHeaderScale(bool is58mm) => is58mm ? 1.5 : 2.0;
 
   /// Get table/order info scale (prominent info like table number)
-  static double getTableScale(bool is58mm) => is58mm ? 1.3 : 1.8;
+  static double getTableScale(bool is58mm) => is58mm ? 1.3 : 1.6;
 
-  /// Get order number scale
-  static double getOrderScale(bool is58mm) => is58mm ? 1.0 : 1.3;
+  /// Get order number scale - BIG and prominent for kitchen staff
+  static double getOrderScale(bool is58mm) => is58mm ? 1.5 : 1.8;
 
   /// Get item font scale (item names - needs to be readable)
-  static double getItemScale(bool is58mm) => is58mm ? 1.40 : 2.0;
+  static double getItemScale(bool is58mm) => is58mm ? 1.3 : 1.6;
 
   /// Get quantity font scale (bold large numbers)
-  static double getQtyScale(bool is58mm) => is58mm ? 1.40 : 2.0;
+  static double getQtyScale(bool is58mm) => is58mm ? 1.3 : 1.6;
 
   /// Get secondary text scale (labels, time, notes)
   static double getSecondaryScale(bool is58mm) => is58mm ? 0.9 : 1.0;
@@ -52,11 +55,11 @@ class KotThermalPrinter {
   /// Get line height multiplier
   static double getLineHeight(bool is58mm) => is58mm ? 1.15 : 1.25;
 
-  /// Get horizontal padding
-  static double getPadding(bool is58mm) => is58mm ? 4.0 : 8.0;
+  /// Get horizontal padding - reduced for more space
+  static double getPadding(bool is58mm) => is58mm ? 8.0 : 12.0;
 
-  /// Get spacing between sections
-  static double getSectionSpacing(bool is58mm) => is58mm ? 6.0 : 10.0;
+  /// Get spacing between sections - more breathing room
+  static double getSectionSpacing(bool is58mm) => is58mm ? 10.0 : 16.0;
 
   /// Get item spacing (between each item)
   static double getItemSpacing(bool is58mm) => is58mm ? 8.0 : 12.0;
@@ -68,6 +71,27 @@ class KotThermalPrinter {
   static double getQtyColumnWidth(bool is58mm) => is58mm ? 82.0 : 110.0;
 
   KotThermalPrinter(this.context);
+
+  /// Clean order number by removing prefix and leading zeros
+  /// Example: "ORD-00001203" -> "1203"
+  String _cleanOrderNumber(String orderNumber) {
+    // Remove common prefixes
+    String cleaned = orderNumber;
+    final prefixes = ['ORD-', 'ORDER-', 'KOT-', 'TICKET-'];
+
+    for (var prefix in prefixes) {
+      if (cleaned.toUpperCase().startsWith(prefix)) {
+        cleaned = cleaned.substring(prefix.length);
+        break;
+      }
+    }
+
+    // Remove leading zeros but keep at least one digit
+    cleaned = cleaned.replaceFirst(RegExp(r'^0+(?=0)'), '');
+    cleaned = cleaned.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+
+    return cleaned;
+  }
 
   /// Connect to thermal printer (supports both Bluetooth and USB)
   Future<void> _connectToPrinter(BluetoothPrinter printer) async {
@@ -145,13 +169,15 @@ class KotThermalPrinter {
                 : (kotDocumentConfig?.header?.isNotEmpty == true
                     ? kotDocumentConfig!.header!
                     : 'KITCHEN ORDER');
+
+        // Header without box
         rows.add(_KotTextRow(
           headerText.toUpperCase(),
           isBold: true,
           scale: getHeaderScale(is58mm),
           center: true,
         ));
-        rows.add(_KotSpacingRow(getSectionSpacing(is58mm)));
+        rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 0.5));
       }
       rows.add(_KotDividerRow(char: '═'));
 
@@ -169,7 +195,7 @@ class KotThermalPrinter {
               ? displayConfig!['showOrderNumber']!.value as String
               : (resolvedLabels?.orderNumber?.isNotEmpty == true
                   ? resolvedLabels!.orderNumber!
-                  : 'Order #');
+                  : 'Order NO');
 
       final tableLabel =
           (displayConfig?['showTableNumber']?.value as String?)?.isNotEmpty ==
@@ -184,6 +210,7 @@ class KotThermalPrinter {
 
       rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 0.5));
 
+      // Order info section without box
       // Table number - MOST PROMINENT (for kitchen staff to quickly identify)
       if (showTableNumber) {
         rows.add(_KotTextRow(
@@ -194,10 +221,10 @@ class KotThermalPrinter {
         ));
       }
 
-      // Order number - secondary prominence
+      // Order number - BIG and bold
       if (showOrderNumber) {
         rows.add(_KotTextRow(
-          '$orderLabel$orderNumber',
+          '$orderLabel: ${_cleanOrderNumber(orderNumber)}',
           isBold: true,
           scale: getOrderScale(is58mm),
           center: true,
@@ -340,10 +367,11 @@ class KotThermalPrinter {
           ));
         }
 
+        // Add underline after each item
+        rows.add(_KotDividerRow(char: '─'));
+
         rows.add(_KotSpacingRow(getItemSpacing(is58mm)));
       }
-
-      rows.add(_KotDividerRow(char: '─'));
 
       // ========== TOTAL SECTION ==========
       final showTotal = displayConfig?['showTotal']?.visible ?? false;
@@ -392,8 +420,15 @@ class KotThermalPrinter {
       }
 
       // ========== FOOTER ==========
-      rows.add(_KotSpacingRow(getSectionSpacing(is58mm)));
-      rows.add(_KotDividerRow(char: '═'));
+      rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 0.8));
+
+      // Footer without box
+      rows.add(_KotTextRow(
+        '*** END OF KOT ***',
+        scale: getSecondaryScale(is58mm),
+        center: true,
+      ));
+
       rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 3)); // Feed space
 
       // Render and print
@@ -464,6 +499,13 @@ class KotThermalPrinter {
       return row.height;
     } else if (row is _KotDividerRow) {
       return baseFontSize * getDividerScale(is58mm) * lineHeight;
+    } else if (row is _KotBoxRow) {
+      double height = row.topPadding + row.bottomPadding;
+      for (var child in row.childRows) {
+        height += _calculateRowHeight(
+            child, baseFontSize, lineHeight, width, padding * 0.5, is58mm);
+      }
+      return height;
     } else if (row is _KotTableRow) {
       final fontSize = baseFontSize * row.scale;
       double maxColHeight = fontSize * lineHeight;
@@ -540,26 +582,91 @@ class KotThermalPrinter {
     } else if (row is _KotSpacingRow) {
       return yOffset + row.height;
     } else if (row is _KotDividerRow) {
-      final dividerFontSize = baseFontSize * getDividerScale(is58mm);
-      final charsNeeded =
-          ((width - padding * 2) / (dividerFontSize * 0.5)).floor();
-      final dividerText = row.char * charsNeeded;
+      // Draw border line using paint for full-width border
+      final borderWidth = width - padding;
+      final borderY =
+          yOffset + (baseFontSize * getDividerScale(is58mm) * lineHeight * 0.4);
 
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: dividerText,
-          style: TextStyle(
-            color: Colors.black87,
-            fontSize: dividerFontSize,
-            letterSpacing: -1,
+      final borderPaint = Paint()
+        ..color = Colors.black87
+        ..strokeWidth = is58mm ? 1.0 : 1.5
+        ..style = PaintingStyle.stroke;
+
+      if (row.char == '═') {
+        // Double line for header/footer
+        canvas.drawLine(
+          Offset(padding / 2, borderY),
+          Offset(width - padding / 2, borderY),
+          borderPaint,
+        );
+        canvas.drawLine(
+          Offset(padding / 2, borderY + (is58mm ? 2.0 : 3.0)),
+          Offset(width - padding / 2, borderY + (is58mm ? 2.0 : 3.0)),
+          borderPaint,
+        );
+      } else if (row.char == '─') {
+        // Single line
+        canvas.drawLine(
+          Offset(padding / 2, borderY),
+          Offset(width - padding / 2, borderY),
+          borderPaint,
+        );
+      } else {
+        // Fallback to text characters for custom dividers
+        final dividerFontSize = baseFontSize * getDividerScale(is58mm);
+        final charsNeeded = (borderWidth / (dividerFontSize * 0.5)).floor();
+        final dividerText = row.char * charsNeeded;
+
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: dividerText,
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: dividerFontSize,
+              letterSpacing: -0.5,
+            ),
           ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout(maxWidth: width);
-      textPainter.paint(canvas, Offset(padding / 2, yOffset));
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout(maxWidth: width);
+        textPainter.paint(canvas, Offset(padding / 2, yOffset));
+      }
 
-      return yOffset + dividerFontSize * lineHeight;
+      return yOffset + baseFontSize * getDividerScale(is58mm) * lineHeight;
+    } else if (row is _KotBoxRow) {
+      // Draw box with border around child rows
+      final boxWidth = width - padding * 0.8;
+      final boxLeft = padding * 0.4;
+      double currentY = yOffset + row.topPadding;
+
+      // Calculate total content height
+      double contentHeight = 0;
+      for (var child in row.childRows) {
+        contentHeight += _calculateRowHeight(
+            child, baseFontSize, lineHeight, width, padding * 0.5, is58mm);
+      }
+
+      final boxTop = yOffset;
+      final boxBottom =
+          yOffset + row.topPadding + contentHeight + row.bottomPadding;
+
+      // Draw border rectangle
+      final borderPaint = Paint()
+        ..color = Colors.black87
+        ..strokeWidth = row.borderWidth
+        ..style = PaintingStyle.stroke;
+
+      final rect = Rect.fromLTWH(boxLeft, boxTop, boxWidth, boxBottom - boxTop);
+      canvas.drawRect(rect, borderPaint);
+
+      // Render child rows inside the box
+      currentY = yOffset + row.topPadding;
+      for (var child in row.childRows) {
+        currentY = _renderRow(child, canvas, currentY, width, baseFontSize,
+            lineHeight, padding * 0.8, is58mm);
+      }
+
+      return boxBottom;
     } else if (row is _KotTableRow) {
       final fontSize = baseFontSize * row.scale;
       double xOffset = padding;
@@ -633,6 +740,9 @@ class KotThermalPrinter {
 
   Future<void> _printImage(
       img.Image image, String paperSize, PrinterType printerType) async {
+    // DEBUG: Save bitmap image before printing
+    await _saveDebugImage(image, paperSize);
+
     final profile = await CapabilityProfile.load();
     final generator = Generator(
       paperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80,
@@ -645,6 +755,56 @@ class KotThermalPrinter {
     bytes += generator.cut();
 
     await printerManager.send(type: printerType, bytes: bytes);
+  }
+
+  /// Save debug image to device storage for previewing receipts
+  Future<void> _saveDebugImage(img.Image image, String paperSize) async {
+    try {
+      // Get temporary directory
+      final tempDir = await getTemporaryDirectory();
+      final debugDir = Directory('${tempDir.path}/kot_debug');
+
+      // Create debug directory if it doesn't exist
+      if (!await debugDir.exists()) {
+        await debugDir.create(recursive: true);
+      }
+
+      // Generate filename with timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filename = 'kot_${paperSize}_$timestamp.png';
+      final filepath = '${debugDir.path}/$filename';
+
+      // Encode and save image
+      final pngBytes = img.encodePng(image);
+      final file = File(filepath);
+      await file.writeAsBytes(pngBytes);
+
+      debugPrint('🖼️ DEBUG: KOT image saved to: $filepath');
+      debugPrint('📐 Image size: ${image.width}x${image.height}px');
+
+      // Also save base64 for easy sharing
+      final base64File =
+          File('${debugDir.path}/kot_${paperSize}_$timestamp.txt');
+      await base64File.writeAsString(base64Encode(pngBytes));
+      debugPrint('📝 Base64 saved to: ${base64File.path}');
+
+      // List all debug images
+      final images =
+          debugDir.listSync().where((f) => f.path.endsWith('.png')).toList();
+      debugPrint('📁 Total debug images: ${images.length}');
+
+      // Clean up old images (keep only last 10)
+      if (images.length > 10) {
+        images.sort(
+            (a, b) => a.statSync().modified.compareTo(b.statSync().modified));
+        for (var i = 0; i < images.length - 10; i++) {
+          await images[i].delete();
+          debugPrint('🗑️ Deleted old debug image: ${images[i].path}');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error saving debug image: $e');
+    }
   }
 
   /// Load default printer from SharedPreferences
@@ -704,6 +864,21 @@ class _KotSpacingRow extends _KotRow {
 class _KotDividerRow extends _KotRow {
   final String char;
   _KotDividerRow({this.char = '─'});
+}
+
+/// Box row for drawing borders around content
+class _KotBoxRow extends _KotRow {
+  final List<_KotRow> childRows;
+  final double topPadding;
+  final double bottomPadding;
+  final double borderWidth;
+
+  _KotBoxRow({
+    required this.childRows,
+    this.topPadding = 8.0,
+    this.bottomPadding = 8.0,
+    this.borderWidth = 2.0,
+  });
 }
 
 /// Table column definition for proportional layouts

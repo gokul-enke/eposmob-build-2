@@ -3,60 +3,244 @@
     "document_configurations": {
         "Bill": {
             "id": 17,
+            "company_id": 2,
             "type": "Bill",
+            "logo": "https://eposdemo.yougoit.in/storage/logos/document/chillis.png",
+            "show_logo": 1,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
             "template": "bill",
-            "language": "bilingual",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-01-28T06:27:51.000000Z",
+            "language": "ar",
+            "header": null,
+            "subheader": null,
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
             "display_configuration": {
                 "showStoreName": {
                     "visible": true,
-                    "value": "متجر فنزكارت",
-                    "value_default": "FUNZCART"
+                    "value": "حي الرحاب - بريدة - القصيم st na"
                 },
                 "showDescription": {
                     "visible": true,
-                    "value": "ميني سوبر ماركت",
-                    "value_default": "MINI SUPER MARKET"
+                    "value": "حي الرحاب - بريدة - القصيم des"
                 },
                 "showTel": {
                     "visible": true,
-                    "value": "٩٩٩٩٩٠٠٠٠٠",
-                    "value_default": "9999900000"
+                    "value": "9999900000"
                 },
-                "showStoreAddress": {
+                "showEmail": {
                     "visible": true,
-                    "value": "تلاسيري، كانور",
-                    "value_default": "THALASSERY, KANNUR"
+                    "value": "حي الرحاب - بريدة - ا em"
                 },
-                "showFssaiInfo": {
+                "showInvoiceNumber": {
                     "visible": true,
-                    "value": "رخصة : ٠٠٠٠٠٠",
-                    "value_default": "FSSAI : 000000"
+                    "value": null
                 },
-                "showTax": {
+                "showInvoicePrefix": {
                     "visible": true,
-                    "value": "قيمة الضريبة",
-                    "value_default": "VAT AMOUNT"
+                    "value": "رقم الفاتورة:",
+                    "default": "Inv No:"
                 },
                 "showInvoiceTitle": {
                     "visible": true,
-                    "value": "فاتورة ضريبية",
-                    "value_default": "TAX INVOICE"
+                    "value": "حي الرحاب - بريدة - القصيم tit"
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "حي الرحاب - بريدة - القصيم st ad",
+                    "default": "THALASSERY,KANNUR "
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "حيحي : 00000000000000"
+                },
+                "showCustomerNameAndPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showExtraHeading1": {
+                    "visible": true,
+                    "value": "CR NO: 12211221212121"
+                },
+                "showExtraHeading2": {
+                    "visible": true,
+                    "value": "VAT NO: 12323132121332"
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "SL",
+                    "default": "SL"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "Item",
+                    "default": "PRT"
+                },
+                "showMRP": {
+                    "visible": false,
+                    "value": "MRP",
+                    "default": "MRP"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "Qty",
+                    "default": "QTY"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "Rate",
+                    "default": "RATE"
+                },
+                "showTaxHeader": {
+                    "visible": true,
+                    "value": "Tax",
+                    "default": "TAX"
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "Total",
+                    "default": "AMT"
+                },
+                "showDiscount": {
+                    "visible": true,
+                    "value": "تخفيض",
+                    "default": "DISCOUNT"
+                },
+                "showNetAmount": {
+                    "visible": true,
+                    "value": "المبلغ الصافي",
+                    "default": "NET AMOUNT"
+                },
+                "showMRPTotal": {
+                    "visible": true,
+                    "value": "إجمالي ",
+                    "default": "TOTAL MRP"
+                },
+                "showSaved": {
+                    "visible": true,
+                    "value": "لقد قمت بالحفظ",
+                    "default": "YOU SAVED"
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": true,
+                    "value": "أغراض",
+                    "default": "ITEMS"
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "القصيم",
+                    "default": "VAT AMOUNT"
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "حي الرحاب - بريدة - القصيم",
+                    "default": "*** THANK YOU FOR SHOPPING wITH US***"
+                },
+                "showQRCode": {
+                    "visible": true,
+                    "value": "حي الرحاب - بريدة - القصيم",
+                    "default": "Scan this QR and Pay"
+                },
+                "showTermsConditions": {
+                    "visible": false,
+                    "value": "حي الرحاب - بريدة - القصيم حي الرحاب - بريدة - القصيم حي الرحاب - بريدة - القصيم",
+                    "default": "* No product will be Replaced/Return after 7 Days from The Date of Purchase\n* No product will be Replaced without bills \n* please Check Your Bill Before Leaving The Shop        \n                               "
+                },
+                "showCustomerBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPrevBalance": {
+                    "visible": true,
+                    "value": "السابق بال.",
+                    "default": "Prev Bal"
+                },
+                "showCustomerPaidAmount": {
+                    "visible": true,
+                    "value": "المبلغ المدفوع",
+                    "default": "Paid Amt"
+                },
+                "showCustomerCurrentBalance": {
+                    "visible": true,
+                    "value": "كور بال.",
+                    "default": "Cur Bal"
                 }
             },
             "resolved_labels": {
-                "sl_number": "رقم",
-                "sl_number_default": "SL#",
-                "particulars": "الصنف",
-                "particulars_default": "Item",
-                "qty": "الكمية",
+                "sl_number": "SL",
+                "sl_number_default": "Sl#",
+                "particulars": "Item",
+                "particulars_default": "PARTICULARS",
+                "qty": "Qty",
                 "qty_default": "QTY",
-                "rate": "السعر",
+                "rate": "Rate",
                 "rate_default": "RATE",
-                "total": "الإجمالي",
+                "total": "Total",
                 "total_default": "Total",
-                "tax": "الضريبة",
-                "tax_default": "TAX"
+                "tax": "Tax",
+                "tax_default": "Tax"
             }
+        }
+    },
+    "options": {
+        "item_name_options": {
+            "items": "Items",
+            "products": "Products",
+            "services": "Services",
+            "other": "Other"
+        },
+        "unit_name_options": {
+            "quantity": "Quantity",
+            "hours": "Hours",
+            "other": "Other"
+        },
+        "price_name_options": {
+            "price": "Price",
+            "rate": "Rate",
+            "other": "Other"
+        },
+        "tax_name_options": {
+            "tax": "Tax",
+            "GST": "GST",
+            "VAT": "VAT",
+            "tax (%)": "Tax (%)",
+            "other": "Other"
+        },
+        "amount_name_options": {
+            "amount": "Amount",
+            "total": "Total",
+            "other": "Other"
+        },
+        "template_options": {
+            "default": "Default",
+            "bill": "Bill",
+            "sales_and_return_bill": "Sales Return Bill",
+            "return_bill": "Return Bill",
+            "receipt": "Receipt",
+            "voucher": "Voucher",
+            "payslip": "Payslip",
+            "email": "Email",
+            "supplier_invoice": "Supplier Invoice",
+            "delivery_note": "Delivery Note",
+            "customer_statement": "Customer Statement",
+            "supplier_statement": "Supplier Statement",
+            "kitchen_order": "Kitchen Order"
         }
     }
 }

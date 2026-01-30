@@ -348,12 +348,23 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice Number - Clean format
+    // Invoice Number - Use API prefix with stripped zeros/prefixes
     if (displayConfig?['showInvoiceNumber']?.visible == true) {
-      final invoiceNumberText = billDocumentConfig.numberPrefix != null &&
-              billDocumentConfig.numberPrefix!.isNotEmpty
-          ? '${billDocumentConfig.numberPrefix}${params.orderNumber}'
-          : '#${params.orderNumber}';
+      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
+      // For "ORD-000430", this extracts "430"
+      final regex = RegExp(r'[1-9]\d*');
+      final match = regex.firstMatch(params.orderNumber);
+      final strippedNumber = match != null ? match.group(0)! : params.orderNumber;
+
+      // Get prefix from display configuration - use language-specific fallback
+      final String lang = params.billDocumentConfig.language ?? 'en';
+      final String invoicePrefix = _getDisplayValue(
+        displayConfig?['showInvoicePrefix']?.value,
+        displayConfig?['showInvoicePrefix']?.defaultValue,
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+      );
+
+      final invoiceNumberText = '$invoicePrefix $strippedNumber';
       rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
     }
 
@@ -1256,8 +1267,21 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Order Number (with visibility check)
     if (displayConfig?['showOrderNumber']?.visible != false) {
+      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
+      final regex = RegExp(r'[1-9]\d*');
+      final match = regex.firstMatch(params.orderNumber);
+      final strippedNumber = match != null ? match.group(0)! : params.orderNumber;
+
+      // Get prefix from display configuration - use language-specific fallback
+      final String lang = params.billDocumentConfig.language ?? 'en';
+      final String invoicePrefix = _getDisplayValue(
+        displayConfig?['showInvoicePrefix']?.value,
+        displayConfig?['showInvoicePrefix']?.defaultValue,
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+      );
+
       rows.add(SpacingRow(3));
-      rows.add(TextRow('#${params.orderNumber}', scale: 0.8));
+      rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
     }
 
     rows.add(SpacingRow(_itemGap));
