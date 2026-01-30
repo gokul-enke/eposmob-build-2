@@ -26,6 +26,11 @@ class CouponModal extends StatefulWidget {
   final Function(String, bool,
       {double? flatDiscount, double? percentageDiscount}) onCouponAction;
   final bool closeOnApply; // Optional flag to control modal closing behavior
+  final bool showAsDialog;
+  final bool showSkipButton;
+  final VoidCallback? onSkip;
+  final bool showShadow;
+  final bool fullWidth;
 
   const CouponModal({
     super.key,
@@ -36,6 +41,11 @@ class CouponModal extends StatefulWidget {
     required this.isCouponApplied,
     required this.onCouponAction,
     this.closeOnApply = true,
+    this.showAsDialog = true,
+    this.showSkipButton = false,
+    this.onSkip,
+    this.showShadow = true,
+    this.fullWidth = false,
   });
 
   @override
@@ -112,13 +122,13 @@ class _CouponModalState extends State<CouponModal> {
   }
 
   void _findDiscountByCode(String? couponCode) {
-    if (couponCode == null || couponCode!.isEmpty) {
+    if (couponCode == null || couponCode.isEmpty) {
       _selectedDiscount = null;
       return;
     }
     try {
       for (final discount in _discountProvider.discounts) {
-        if (discount.couponCode.toLowerCase() == couponCode!.toLowerCase()) {
+        if (discount.couponCode.toLowerCase() == couponCode.toLowerCase()) {
           _selectedDiscount = discount;
           return;
         }
@@ -232,530 +242,531 @@ class _CouponModalState extends State<CouponModal> {
         final newTotal = originalSubTotal - totalDiscount;
         final isCartEmpty = originalSubTotal == 0;
 
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: BuildBoxShadowContainer(
-            circleRadius: 12,
-            color: Colors.white,
-            width: (size.width * 0.85).clamp(450.0, 900.0),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Discount & Coupon',
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s16,
-                        0.21,
-                        ColorManager.kPrimaryColor,
-                      ),
+        Widget content = BuildBoxShadowContainer(
+          circleRadius: 12,
+          color: Colors.white,
+          width: widget.fullWidth ? double.infinity : (size.width * 0.85).clamp(450.0, 900.0),
+          showShadow: widget.showShadow,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Discount & Coupon',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s16,
+                      0.21,
+                      ColorManager.kPrimaryColor,
                     ),
+                  ),
+                  if (widget.showAsDialog)
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Flexible(
-                  child: Container(
-                    constraints: BoxConstraints(
-                      maxHeight: size.height * 0.7,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Flat Discount',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.21,
-                                              ColorManager.textColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          BuildBoxShadowContainer(
-                                            circleRadius: 7,
-                                            alignment: Alignment.centerLeft,
-                                            padding:
-                                                const EdgeInsets.only(left: 15),
-                                            height: 50,
-                                            child: TextField(
-                                              controller:
-                                                  flatDiscountController,
-                                              keyboardType:
-                                                  const TextInputType
-                                                          .numberWithOptions(
-                                                      decimal: true,
-                                                      signed: false),
-                                              inputFormatters: [
-                                                FilteringTextInputFormatter
-                                                    .allow(RegExp(r'[\d\.]')),
-                                              ],
-                                              decoration: InputDecoration(
-                                                hintText: '0.00',
-                                                hintStyle: buildCustomStyle(
-                                                  FontWeight.w500,
-                                                  12,
-                                                  0.27,
-                                                  Colors.grey.withOpacity(.5),
-                                                ),
-                                                border: InputBorder.none,
-                                              ),
-                                              style: buildCustomStyle(
-                                                FontWeight.w500,
-                                                12,
-                                                0.27,
-                                                Colors.black.withOpacity(.5),
-                                              ),
-                                              onTap: () {
-                                                WidgetsBinding.instance
-                                                    .addPostFrameCallback((_) {
-                                                  if (flatDiscountController
-                                                      .text.isNotEmpty) {
-                                                    flatDiscountController
-                                                            .selection =
-                                                        TextSelection(
-                                                      baseOffset: 0,
-                                                      extentOffset:
-                                                          flatDiscountController
-                                                              .text.length,
-                                                    );
-                                                  }
-                                                });
-                                                Provider.of<KeyboardProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .show(
-                                                  'number',
-                                                  flatDiscountController,
-                                                  replaceOnFirstInput: true,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 15),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Percentage Discount (%)',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.21,
-                                              ColorManager.textColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          BuildBoxShadowContainer(
-                                            circleRadius: 7,
-                                            alignment: Alignment.centerLeft,
-                                            padding:
-                                                const EdgeInsets.only(left: 15),
-                                            height: 50,
-                                            child: TextField(
-                                              controller:
-                                                  percentageDiscountController,
-                                              keyboardType:
-                                                  const TextInputType
-                                                          .numberWithOptions(
-                                                      decimal: false,
-                                                      signed: false),
-                                              inputFormatters: [
-                                                FilteringTextInputFormatter
-                                                    .allow(RegExp(r'[\d]')),
-                                              ],
-                                              decoration: InputDecoration(
-                                                hintText: '0',
-                                                hintStyle: buildCustomStyle(
-                                                  FontWeight.w500,
-                                                  12,
-                                                  0.27,
-                                                  Colors.grey.withOpacity(.5),
-                                                ),
-                                                border: InputBorder.none,
-                                              ),
-                                              style: buildCustomStyle(
-                                                FontWeight.w500,
-                                                12,
-                                                0.27,
-                                                Colors.black.withOpacity(.5),
-                                              ),
-                                              onTap: () {
-                                                WidgetsBinding.instance
-                                                    .addPostFrameCallback((_) {
-                                                  if (percentageDiscountController
-                                                      .text.isNotEmpty) {
-                                                    percentageDiscountController
-                                                            .selection =
-                                                        TextSelection(
-                                                      baseOffset: 0,
-                                                      extentOffset:
-                                                          percentageDiscountController
-                                                              .text.length,
-                                                    );
-                                                  }
-                                                });
-                                                Provider.of<KeyboardProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .show(
-                                                  'number',
-                                                  percentageDiscountController,
-                                                  replaceOnFirstInput: true,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Select Coupon',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.21,
-                                    ColorManager.textColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                CustomDropDownWithSearch<DiscountData>(
-                                  hintText: 'Search or select a discount',
-                                  value: _selectedDiscount,
-                                  items: discountProvider.discounts,
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      _onDiscountSelected(val!);
-                                    }
-                                  },
-                                  displayText: (discount) =>
-                                      '${discount.couponCode} - ${discount.couponName}',
-                                  searchHintText: 'Search by code or name...',
-                                  showName: false,
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 0, vertical: 0),
-                                  height: 50,
-                                  autofocus: false,
-                                ),
-                                const SizedBox(height: 20),
-                                if (_selectedDiscount != null)
-                                  _buildDiscountDetailsCard(_selectedDiscount!,
-                                      currency, discountProvider),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                        color: Colors.grey.shade200, width: 1),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Net Total:',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.semiBold,
-                                              FontSize.s14,
-                                              0.21,
-                                              Colors.grey.shade800,
-                                            ),
-                                          ),
-                                          Text(
-                                            '$currency ${AmountHelper.formatAmount(originalSubTotal)}',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.bold,
-                                              FontSize.s15,
-                                              0.21,
-                                              Colors.grey.shade900,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Discount Amount:',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.semiBold,
-                                              FontSize.s14,
-                                              0.21,
-                                              Colors.red.shade700,
-                                            ),
-                                          ),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                '-$currency ${AmountHelper.formatAmount(totalDiscount)}',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.bold,
-                                                  FontSize.s15,
-                                                  0.21,
-                                                  Colors.red.shade700,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 2,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.red.shade100,
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  '${(originalSubTotal > 0 ? ((totalDiscount / originalSubTotal) * 100) : 0.0).toStringAsFixed(1)}%',
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.semiBold,
-                                                    FontSize.s11,
-                                                    0.21,
-                                                    Colors.red.shade700,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      Divider(
-                                        height: 16,
-                                        color: Colors.grey.shade300,
-                                        thickness: 1,
-                                      ),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Total after Discount:',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.semiBold,
-                                              FontSize.s14,
-                                              0.21,
-                                              Colors.grey.shade800,
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: ColorManager.kPrimaryColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              '$currency ${AmountHelper.formatAmount(newTotal)}',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.bold,
-                                                FontSize.s16,
-                                                0.21,
-                                                Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                if (isCartEmpty)
-                                  Container(
-                                    margin: const EdgeInsets.only(bottom: 16),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                          color: Colors.orange.shade300,
-                                          width: 1),
-                                    ),
-                                    child: Row(
+                ],
+              ),
+              const SizedBox(height: 20),
+              Flexible(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: size.height * 0.7,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Icon(
-                                          Icons.warning_amber_rounded,
-                                          color: Colors.orange.shade700,
-                                          size: 20,
+                                        Text(
+                                          'Flat Discount',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.21,
+                                            ColorManager.textColor,
+                                          ),
                                         ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            'Cart is empty. Add products before applying discounts.',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s11,
-                                              0.21,
-                                              Colors.orange.shade800,
+                                        const SizedBox(height: 8),
+                                        BuildBoxShadowContainer(
+                                          circleRadius: 7,
+                                          alignment: Alignment.centerLeft,
+                                          padding:
+                                              const EdgeInsets.only(left: 15),
+                                          height: 50,
+                                          child: TextField(
+                                            controller:
+                                                flatDiscountController,
+                                            keyboardType:
+                                                const TextInputType
+                                                        .numberWithOptions(
+                                                    decimal: true,
+                                                    signed: false),
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .allow(RegExp(r'[\d\.]')),
+                                            ],
+                                            decoration: InputDecoration(
+                                              hintText: '0.00',
+                                              hintStyle: buildCustomStyle(
+                                                FontWeight.w500,
+                                                12,
+                                                0.27,
+                                                Colors.grey.withOpacity(.5),
+                                              ),
+                                              border: InputBorder.none,
                                             ),
+                                            style: buildCustomStyle(
+                                              FontWeight.w500,
+                                              12,
+                                              0.27,
+                                              Colors.black.withOpacity(.5),
+                                            ),
+                                            onTap: () {
+                                              WidgetsBinding.instance
+                                                  .addPostFrameCallback((_) {
+                                                if (flatDiscountController
+                                                    .text.isNotEmpty) {
+                                                  flatDiscountController
+                                                          .selection =
+                                                      TextSelection(
+                                                    baseOffset: 0,
+                                                    extentOffset:
+                                                        flatDiscountController
+                                                            .text.length,
+                                                  );
+                                                }
+                                              });
+                                              Provider.of<KeyboardProvider>(
+                                                      context,
+                                                      listen: false)
+                                                  .show(
+                                                'number',
+                                                flatDiscountController,
+                                                replaceOnFirstInput: true,
+                                              );
+                                            },
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: CustomRoundButton(
-                                        title: "Clear All",
-                                        fct: () {
-                                          setState(() {
-                                            flatDiscountController.clear();
-                                            percentageDiscountController
-                                                .clear();
-                                            _selectedDiscount = null;
-                                          });
-                                        },
-                                        fontSize: FontSize.s14,
-                                        height: 45,
-                                        width: double.infinity,
-                                        boxColor: Colors.grey.shade600,
-                                        borderColor: Colors.grey.shade600,
-                                      ),
+                                  const SizedBox(width: 15),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Percentage Discount (%)',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.21,
+                                            ColorManager.textColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        BuildBoxShadowContainer(
+                                          circleRadius: 7,
+                                          alignment: Alignment.centerLeft,
+                                          padding:
+                                              const EdgeInsets.only(left: 15),
+                                          height: 50,
+                                          child: TextField(
+                                            controller:
+                                                percentageDiscountController,
+                                            keyboardType:
+                                                const TextInputType
+                                                        .numberWithOptions(
+                                                    decimal: false,
+                                                    signed: false),
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .allow(RegExp(r'[\d]')),
+                                            ],
+                                            decoration: InputDecoration(
+                                              hintText: '0',
+                                              hintStyle: buildCustomStyle(
+                                                FontWeight.w500,
+                                                12,
+                                                0.27,
+                                                Colors.grey.withOpacity(.5),
+                                              ),
+                                              border: InputBorder.none,
+                                            ),
+                                            style: buildCustomStyle(
+                                              FontWeight.w500,
+                                              12,
+                                              0.27,
+                                              Colors.black.withOpacity(.5),
+                                            ),
+                                            onTap: () {
+                                              WidgetsBinding.instance
+                                                  .addPostFrameCallback((_) {
+                                                if (percentageDiscountController
+                                                    .text.isNotEmpty) {
+                                                  percentageDiscountController
+                                                          .selection =
+                                                      TextSelection(
+                                                    baseOffset: 0,
+                                                    extentOffset:
+                                                        percentageDiscountController
+                                                            .text.length,
+                                                  );
+                                                }
+                                              });
+                                              Provider.of<KeyboardProvider>(
+                                                      context,
+                                                      listen: false)
+                                                  .show(
+                                                'number',
+                                                percentageDiscountController,
+                                                replaceOnFirstInput: true,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      flex: 2,
-                                      child: CustomRoundButton(
-                                        title: _isLoading
-                                            ? "Applying..."
-                                            : "Apply Discount",
-                                        fct: _isLoading
-                                            ? () {}
-                                            : () {
-                                                if (originalSubTotal == 0) {
-                                                  showScaffoldError(
-                                                    context: context,
-                                                    message:
-                                                        'Cannot apply discount to empty cart',
-                                                  );
-                                                  return;
-                                                }
-
-                                                if (!_validateDiscountInputs(
-                                                    originalSubTotal)) {
-                                                  return;
-                                                }
-
-                                                if (_selectedDiscount != null) {
-                                                  final localProductProvider =
-                                                      Provider.of<LocalProductProvider>(
-                                                          context,
-                                                          listen: false);
-                                                  final priceSummary =
-                                                      localProductProvider
-                                                          .priceSummary;
-                                                  final cartTotal = widget
-                                                          .subTotal ??
-                                                      priceSummary
-                                                          ?.originalSubTotal ??
-                                                      0.0;
-                                                  final validity =
-                                                      discountProvider
-                                                          .getValidityForDiscount(
-                                                    _selectedDiscount!,
-                                                    cartTotal,
-                                                  );
-                                                  if (validity !=
-                                                      DiscountValidity.valid) {
-                                                    showScaffoldError(
-                                                      context: context,
-                                                      message:
-                                                          'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
-                                                    );
-                                                    return;
-                                                  }
-                                                }
-                                                double flatDiscount =
-                                                    double.tryParse(
-                                                            flatDiscountController
-                                                                .text) ??
-                                                        0.0;
-                                                double percentageDiscount =
-                                                    double.tryParse(
-                                                            percentageDiscountController
-                                                                .text) ??
-                                                        0.0;
-
-                                                widget.onCouponAction(
-                                                  '', // Send empty code to treat as simple discount
-                                                  flatDiscount > 0 ||
-                                                      percentageDiscount > 0,
-                                                  flatDiscount: flatDiscount,
-                                                  percentageDiscount:
-                                                      percentageDiscount,
-                                                );
-                                                if (widget.closeOnApply) {
-                                                  Navigator.of(context).pop();
-                                                }
-                                              },
-                                        fontSize: FontSize.s14,
-                                        height: 45,
-                                        width: double.infinity,
-                                      ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Select Coupon',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              CustomDropDownWithSearch<DiscountData>(
+                                hintText: 'Search or select a discount',
+                                value: _selectedDiscount,
+                                items: discountProvider.discounts,
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    _onDiscountSelected(val);
+                                  }
+                                },
+                                displayText: (discount) =>
+                                    '${discount.couponCode} - ${discount.couponName}',
+                                searchHintText: 'Search by code or name...',
+                                showName: false,
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 0, vertical: 0),
+                                height: 50,
+                                autofocus: false,
+                              ),
+                              const SizedBox(height: 20),
+                              if (_selectedDiscount != null)
+                                _buildDiscountDetailsCard(_selectedDiscount!,
+                                    currency, discountProvider),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: Colors.grey.shade200, width: 1),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Net Total:',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            FontSize.s14,
+                                            0.21,
+                                            Colors.grey.shade800,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$currency ${AmountHelper.formatAmount(originalSubTotal)}',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.bold,
+                                            FontSize.s15,
+                                            0.21,
+                                            Colors.grey.shade900,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Discount Amount:',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            FontSize.s14,
+                                            0.21,
+                                            Colors.red.shade700,
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '-$currency ${AmountHelper.formatAmount(totalDiscount)}',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.bold,
+                                                FontSize.s15,
+                                                0.21,
+                                                Colors.red.shade700,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade100,
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                '${(originalSubTotal > 0 ? ((totalDiscount / originalSubTotal) * 100) : 0.0).toStringAsFixed(1)}%',
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.semiBold,
+                                                  FontSize.s11,
+                                                  0.21,
+                                                  Colors.red.shade700,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const Divider(
+                                      height: 16,
+                                      color: Color(0xFFE2E8F0),
+                                      thickness: 1,
+                                    ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Total after Discount:',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            FontSize.s14,
+                                            0.21,
+                                            Colors.grey.shade800,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: ColorManager.kPrimaryColor,
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '$currency ${AmountHelper.formatAmount(newTotal)}',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.bold,
+                                              FontSize.s16,
+                                              0.21,
+                                              Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 20),
+                              if (isCartEmpty)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.orange.shade300,
+                                        width: 1),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Colors.orange.shade700,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          'Cart is empty. Add products before applying discounts.',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s11,
+                                            0.21,
+                                            Colors.orange.shade800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  if (widget.showSkipButton) ...[
+                    Expanded(
+                      child: CustomRoundButton(
+                        title: "Skip",
+                        fct: widget.onSkip ?? () {},
+                        fontSize: FontSize.s16,
+                        height: 50,
+                        width: double.infinity,
+                        boxColor: const Color(0xFF94A3B8),
+                        borderColor: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: CustomRoundButton(
+                      title: "Clear",
+                      fct: () {
+                        setState(() {
+                          flatDiscountController.clear();
+                          percentageDiscountController.clear();
+                          _selectedDiscount = null;
+                        });
+                      },
+                      fontSize: FontSize.s16,
+                      height: 50,
+                      width: double.infinity,
+                      boxColor: const Color(0xFF64748B),
+                      borderColor: const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CustomRoundButton(
+                      title: _isLoading ? "Applying..." : "Apply Discount",
+                      fct: _isLoading
+                          ? () {}
+                          : () {
+                              if (originalSubTotal == 0) {
+                                showScaffoldError(
+                                  context: context,
+                                  message: 'Cannot apply discount to empty cart',
+                                );
+                                return;
+                              }
+
+                              if (!_validateDiscountInputs(originalSubTotal)) {
+                                return;
+                              }
+
+                              if (_selectedDiscount != null) {
+                                final localProductProvider =
+                                    Provider.of<LocalProductProvider>(context, listen: false);
+                                final priceSummary = localProductProvider.priceSummary;
+                                final cartTotal = widget.subTotal ??
+                                    priceSummary?.originalSubTotal ??
+                                    0.0;
+                                final validity = discountProvider.getValidityForDiscount(
+                                  _selectedDiscount!,
+                                  cartTotal,
+                                );
+                                if (validity != DiscountValidity.valid) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message:
+                                        'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
+                                  );
+                                  return;
+                                }
+                              }
+                              double flatDiscount =
+                                  double.tryParse(flatDiscountController.text) ?? 0.0;
+                              double percentageDiscount =
+                                  double.tryParse(percentageDiscountController.text) ?? 0.0;
+
+                              widget.onCouponAction(
+                                '', // Send empty code to treat as simple discount
+                                flatDiscount > 0 || percentageDiscount > 0,
+                                flatDiscount: flatDiscount,
+                                percentageDiscount: percentageDiscount,
+                              );
+                              if (widget.closeOnApply) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                      fontSize: FontSize.s16,
+                      height: 50,
+                      width: double.infinity,
+                      boxColor: ColorManager.kPrimaryColor,
+                      borderColor: ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
+
+        if (widget.showAsDialog) {
+          return Dialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: content,
+          );
+        }
+        return content;
       },
     );
   }
@@ -781,6 +792,7 @@ class _CouponModalState extends State<CouponModal> {
         : '$currency${AmountHelper.formatAmount(discount.discountValue.toDouble())}';
 
     Color badgeColor;
+    // ignore: unused_local_variable
     String badgeText;
     IconData badgeIcon;
 

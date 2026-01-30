@@ -314,6 +314,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _localSelectedCustomer = customer;
     });
     widget.onCustomerSelected(customer);
+    // Auto-move to payment tab after customer selection
+    _goToStep(3);
   }
   
   void _handleAddNewCustomer() async {
@@ -389,8 +391,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
       backgroundColor: Colors.white,
       elevation: 8,
       child: Container(
-        width: 1200,
-        height: 750, // Increased from 700 to 750 for more vertical space
+        width: 1300,
+        height: 850, 
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
@@ -423,35 +425,56 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   Widget _buildHeader(bool hasCustomer, bool hasDiscount, bool hasPayment, bool hasDelivery) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: const Color(0xFFE2E8F0), width: 1.5)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisSize: MainAxisSize.min, // Ensure Row takes minimum necessary width
-                children: [
-                  _buildStepIndicator(0, 'Customer', Icons.person, isActive: _currentStep == 0, isCompleted: hasCustomer),
-                  if (widget.enableDelivery) ...[
-                    _buildStepConnector(isActive: _currentStep > 0),
-                    _buildStepIndicator(1, 'Delivery', Icons.local_shipping, isActive: _currentStep == 1, isCompleted: hasDelivery),
-                  ],
-                  _buildStepConnector(isActive: _currentStep > (widget.enableDelivery ? 1 : 0)),
-                  _buildStepIndicator(2, 'Discount', Icons.discount, isActive: _currentStep == 2, isCompleted: hasDiscount),
-                  _buildStepConnector(isActive: _currentStep > 2),
-                  _buildStepIndicator(3, 'Payment', Icons.payment, isActive: _currentStep == 3, isCompleted: hasPayment),
-                ],
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.center,
+                child: Text(
+                  "Finalize Order",
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s20,
+                    0.25,
+                    Colors.black87,
+                  ),
+                ),
               ),
-            ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Close',
+                ),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-            tooltip: 'Close',
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStepIndicator(0, 'Customer', Icons.person, isActive: _currentStep == 0, isCompleted: hasCustomer),
+                if (widget.enableDelivery) ...[
+                  _buildStepConnector(isActive: _currentStep > 0),
+                  _buildStepIndicator(1, 'Delivery', Icons.local_shipping, isActive: _currentStep == 1, isCompleted: hasDelivery),
+                ],
+                _buildStepConnector(isActive: _currentStep > (widget.enableDelivery ? 1 : 0)),
+                _buildStepIndicator(2, 'Discount', Icons.discount, isActive: _currentStep == 2, isCompleted: hasDiscount),
+                _buildStepConnector(isActive: _currentStep > 2),
+                _buildStepIndicator(3, 'Payment', Icons.payment, isActive: _currentStep == 3, isCompleted: hasPayment),
+              ],
+            ),
           ),
         ],
       ),
@@ -505,10 +528,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   Widget _buildStepConnector({required bool isActive}) {
     return Container(
-        height: 2,
-        width: 20, // Give a fixed width for the connector instead of Expanded
-        color: isActive ? const Color(0xFF2563EB) : Colors.grey.shade200,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        height: 3,
+        width: 30, // Increased width
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: 12),
       );
   }
 
@@ -601,7 +627,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 const SizedBox(width: 24),
                 // Right: Summary only (no customer card)
                 Expanded(
-                  flex: 1,
+                  flex: 2,
                   child: _buildCompactSummary(),
                 ),
               ],
@@ -861,7 +887,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 const SizedBox(width: 24),
                 // Right: Summary
                 Expanded(
-                  flex: 1,
+                  flex: 2,
                   child: _buildCompactSummary(),
                 ),
               ],
@@ -1112,6 +1138,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     initialFlatDiscount: _localFlatDiscount,
                     initialPercentageDiscount: _localPercentageDiscount,
                     isCouponApplied: _localIsCouponApplied,
+                    showAsDialog: false,
+                    showSkipButton: true,
+                    onSkip: () => _goToStep(3),
+                    showShadow: false,
+                    fullWidth: true,
                     onCouponAction: (code, applied, {flatDiscount, percentageDiscount}) {
                       final newFlatDiscount = flatDiscount ?? 0.0;
                       final newPercentageDiscount = percentageDiscount ?? 0.0;
@@ -1149,7 +1180,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 const SizedBox(width: 24),
                 // Right: Summary
                 Expanded(
-                  flex: 1,
+                  flex: 2,
                   child: _buildCompactSummary(),
                 ),
               ],
@@ -1242,7 +1273,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 const SizedBox(width: 24),
                 // Right: Summary
                 Expanded(
-                  flex: 1,
+                  flex: 2,
                   child: _buildCompactSummary(),
                 ),
               ],
@@ -1355,11 +1386,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
                     height: 45,
-                    width: 150,
-                    fontSize: FontSize.s16,
+                    width: 140,
+                    fontSize: FontSize.s14,
                     boxColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
                     borderColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
-                    radius: 30,
+                    radius: 12,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1382,12 +1413,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.print, color: Colors.white, size: 20),
                     height: 45,
-                    width: 200,
-                    fontSize: FontSize.s16,
+                    width: 180,
+                    fontSize: FontSize.s14,
                     boxColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
                     borderColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
                     textColor: Colors.white,
-                    radius: 30,
+                    radius: 12,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1400,11 +1431,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   size: MediaQuery.of(context).size,
                   icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
                   height: 45,
-                  width: 200,
-                  fontSize: FontSize.s16,
+                  width: 150,
+                  fontSize: FontSize.s14,
                   boxColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
                   borderColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
-                  radius: 30,
+                  radius: 12,
                 ),
             ],
           ),
@@ -1459,100 +1490,113 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
         return Column(
           children: [
-            // Status Checklist (clickable to navigate) - More compact
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Checkout Progress',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+            // Status Checklist (clickable to navigate)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    // Show Customer item in all tabs
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildClickableCheckItem(
+                        'Customer',
+                        _localSelectedCustomer?.name ?? 'Not Selected',
+                        hasCustomer,
+                        Icons.person_outline,
+                        0,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Show Customer item in all tabs
-                  _buildClickableCheckItem(
-                    'Customer',
-                    _localSelectedCustomer?.name ?? 'Not Selected',
-                    hasCustomer,
-                    Icons.person_outline,
-                    0,
-                  ),
-                  if (widget.enableDelivery)
-                    _buildClickableCheckItem(
-                      'Delivery',
-                      _lDeliveryMethod,
-                      hasDelivery,
-                      Icons.local_shipping_outlined,
-                      1,
+                    if (widget.enableDelivery)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _buildClickableCheckItem(
+                          'Delivery',
+                          _lDeliveryMethod,
+                          hasDelivery,
+                          Icons.local_shipping_outlined,
+                          1,
+                        ),
+                      ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildClickableCheckItem(
+                        'Discount',
+                        hasDiscount
+                          ? (_localPercentageDiscount > 0
+                              ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
+                              : _localFlatDiscount.toStringAsFixed(2))
+                          : 'Not Applied',
+                        hasDiscount,
+                        Icons.discount_outlined,
+                        2,
+                      ),
                     ),
-                  _buildClickableCheckItem(
-                    'Discount',
-                    hasDiscount
-                      ? (_localPercentageDiscount > 0
-                          ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
-                          : _localFlatDiscount.toStringAsFixed(2))
-                      : 'Not Applied',
-                    hasDiscount,
-                    Icons.discount_outlined,
-                    2,
-                  ),
-                  _buildClickableCheckItem(
-                    'Payment',
-                    _hasPaymentMethod() ? 'Configured' : 'Not Configured',
-                    hasPayment,
-                    Icons.payment_outlined,
-                    3,
-                  ),
-                ],
-              ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildClickableCheckItem(
+                        'Payment',
+                        _hasPaymentMethod() ? 'Configured' : 'Not Configured',
+                        hasPayment,
+                        Icons.payment_outlined,
+                        3,
+                      ),
+                    ),
+                  ],
+                );
+              }
             ),
-            const SizedBox(height: 8),
-            // Order Summary - More compact
+            const SizedBox(height: 12),
+            // Order Summary
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      const Text(
                         'Order Summary',
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 20),
                       _buildSummaryRow('Net Amount', subTotal, Colors.black),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 10),
                       _buildSummaryRow('Discount', -discountAmount, const Color(0xFFEF4444), labelColor: const Color(0xFFEF4444)),
-                      const SizedBox(height: 4),
-                      _buildSummaryRow('Tax', taxAmount, Colors.blueGrey.shade400, labelColor: Colors.blueGrey.shade400),
+                      const SizedBox(height: 10),
+                      _buildSummaryRow('Tax', taxAmount, const Color(0xFF64748B), labelColor: const Color(0xFF64748B)),
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        child: Divider(height: 1),
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Divider(height: 1, thickness: 1.5, color: Color(0xFFF1F5F9)),
                       ),
                       _buildSummaryRow('Total Payable', effectiveTotal, const Color(0xFF2563EB), isBold: true, large: true, labelColor: const Color(0xFF2563EB)),
-                      const SizedBox(height: 8),
+                      if (_localSelectedCustomer != null) ...[
+                        const SizedBox(height: 16),
+                        _buildSummaryRow('Cust. Prev. Balance', prevBalance, prevBalance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626), labelColor: prevBalance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626)),
+                      ],
+                      const SizedBox(height: 10),
                       _buildSummaryRow('Total Paid', totalPaid, Colors.black),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 10),
                       _buildSummaryRow('Balance', displayBalance, const Color(0xFF059669), labelColor: const Color(0xFF059669)),
                     ],
                   ),
@@ -1569,62 +1613,108 @@ class _CheckoutModalState extends State<CheckoutModal> {
   Widget _buildClickableCheckItem(String title, String subtitle, bool isCompleted, IconData icon, int stepIndex) {
     final isCurrentStep = _currentStep == stepIndex;
 
-    return InkWell(
-      onTap: () => _goToStep(stepIndex),
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isCurrentStep ? const Color(0xFF2563EB).withOpacity(0.05) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: isCurrentStep ? Border.all(color: const Color(0xFF2563EB).withOpacity(0.3)) : null,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: isCurrentStep
+            ? const Color(0xFF2563EB)
+            : isCompleted
+                ? const Color(0xFFF0FDF4)
+                : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isCurrentStep
+              ? const Color(0xFF1D4ED8)
+              : isCompleted
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFFE2E8F0),
+          width: 1.5,
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: isCompleted ? const Color(0xFF059669).withOpacity(0.1) : Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isCompleted ? Icons.check_circle : icon,
-                color: isCompleted ? const Color(0xFF059669) : Colors.grey.shade400,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: isCurrentStep ? FontWeight.bold : FontWeight.w600,
-                      fontSize: 13,
-                      color: isCurrentStep ? const Color(0xFF2563EB) : Colors.black87,
-                    ),
+        boxShadow: [
+          BoxShadow(
+            color: isCurrentStep 
+                ? const Color(0xFF2563EB).withOpacity(0.2)
+                : isCompleted 
+                    ? const Color(0xFF22C55E).withOpacity(0.05)
+                    : Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _goToStep(stepIndex),
+          borderRadius: BorderRadius.circular(11),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isCurrentStep
+                        ? Colors.white.withOpacity(0.15)
+                        : isCompleted
+                            ? const Color(0xFFDCFCE7)
+                            : const Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
                   ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isCompleted ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Icon(
+                    isCompleted ? Icons.check_circle : icon,
+                    color: isCurrentStep
+                        ? Colors.white
+                        : isCompleted
+                            ? const Color(0xFF166534)
+                            : const Color(0xFF64748B),
+                    size: 20,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          letterSpacing: 0.2,
+                          color: isCurrentStep
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isCurrentStep
+                              ? Colors.white.withOpacity(0.85)
+                              : isCompleted
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFF64748B),
+                          fontWeight: isCurrentStep ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  isCurrentStep ? Icons.arrow_forward_ios : Icons.chevron_right,
+                  color: isCurrentStep ? Colors.white : const Color(0xFFCBD5E1),
+                  size: isCurrentStep ? 14 : 20,
+                ),
+              ],
             ),
-            if (isCurrentStep)
-              Icon(
-                Icons.chevron_right,
-                color: const Color(0xFF2563EB),
-                size: 18,
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -1639,6 +1729,11 @@ class RestaurantCouponModalWrapper extends StatefulWidget {
   final double initialPercentageDiscount;
   final bool isCouponApplied;
   final Function(String, bool, {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+  final bool showAsDialog;
+  final bool showSkipButton;
+  final VoidCallback? onSkip;
+  final bool showShadow;
+  final bool fullWidth;
 
   const RestaurantCouponModalWrapper({
     super.key,
@@ -1648,6 +1743,11 @@ class RestaurantCouponModalWrapper extends StatefulWidget {
     required this.initialPercentageDiscount,
     required this.isCouponApplied,
     required this.onCouponAction,
+    this.showAsDialog = true,
+    this.showSkipButton = false,
+    this.onSkip,
+    this.showShadow = true,
+    this.fullWidth = false,
   });
 
   @override
@@ -1697,6 +1797,11 @@ class _RestaurantCouponModalWrapperState extends State<RestaurantCouponModalWrap
         isCouponApplied: widget.isCouponApplied,
         onCouponAction: widget.onCouponAction,
         closeOnApply: false,
+        showAsDialog: widget.showAsDialog,
+        showSkipButton: widget.showSkipButton,
+        onSkip: widget.onSkip,
+        showShadow: widget.showShadow,
+        fullWidth: widget.fullWidth,
       ),
     );
   }
