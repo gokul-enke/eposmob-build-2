@@ -131,9 +131,10 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                 ),
                 const SizedBox(height: 20),
                 Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: provider.deliveryMethods.map((method) {
+                    final isSelected = deliveryMethod == method.name;
                     return GestureDetector(
                       onTap: () {
                         setState(() {
@@ -141,14 +142,25 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                           deliveryMethodId = method.id;
                         });
                       },
-                      child: BuildBoxShadowContainer(
-                        border: deliveryMethod == method.name
-                            ? Border.all(color: ColorManager.kPrimaryColor)
-                            : null,
-                        padding: const EdgeInsets.all(12),
-                        blurRadius: 4,
-                        circleRadius: 5,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 105,
+                        height: 90,
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? ColorManager.kPrimaryColor.withOpacity(0.05)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? ColorManager.kPrimaryColor
+                                : Colors.grey.shade200,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               method.name == "Store Takeaway"
@@ -158,17 +170,20 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                                       : method.name == "Door Delivery"
                                           ? Icons.doorbell_outlined
                                           : Icons.local_shipping,
-                              size: 20,
-                              color: Colors.black,
+                              size: 22,
+                              color: isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade700,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               _getDeliveryMethodTranslation(method.name),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.12,
-                                Colors.black,
+                                isSelected ? FontWeightManager.semiBold : FontWeightManager.medium,
+                                FontSize.s11,
+                                0.0,
+                                isSelected ? ColorManager.kPrimaryColor : Colors.black87,
                               ),
                             ),
                           ],
@@ -207,14 +222,15 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     },
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
                 if (deliveryMethod == "Car Delivery") ...[
                   buildColumnWidgetForTextFields(
                     controller: carNumberController,
                     size: size,
                     height: size.height * .06,
                     hintText: 'Car Number:',
-                    width: 600,
+                    width: double.infinity,
+                    margin: EdgeInsets.zero,
                     onTap: () {
                       Provider.of<KeyboardProvider>(context, listen: false)
                           .show('text', carNumberController,
@@ -228,7 +244,8 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   size: size,
                   height: size.height * .06,
                   hintText: 'Comment:',
-                  width: 600,
+                  width: double.infinity,
+                  margin: EdgeInsets.zero,
                   onTap: () {
                     Provider.of<KeyboardProvider>(context, listen: false).show(
                         'text', commentController,
@@ -306,7 +323,8 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     size: size,
                     height: size.height * .06,
                     hintText: 'Address:',
-                    width: 600,
+                    width: double.infinity,
+                    margin: EdgeInsets.zero,
                     onTap: () {
                       Provider.of<KeyboardProvider>(context, listen: false)
                           .show('text', addressController,

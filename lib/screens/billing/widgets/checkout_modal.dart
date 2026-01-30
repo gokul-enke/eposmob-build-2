@@ -482,42 +482,61 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   Widget _buildStepIndicator(int stepIndex, String label, IconData icon, {required bool isActive, required bool isCompleted}) {
+    final primaryColor = const Color(0xFF2563EB);
+    final successColor = const Color(0xFF059669);
+    final neutralColor = Colors.grey.shade400;
+
     final color = isActive 
-        ? const Color(0xFF2563EB) 
+        ? primaryColor 
         : isCompleted 
-            ? const Color(0xFF059669) 
-            : Colors.grey.shade400;
+            ? successColor 
+            : neutralColor;
             
     final bgColor = isActive 
-        ? const Color(0xFF2563EB).withValues(alpha: 0.1) 
+        ? primaryColor 
         : isCompleted 
-            ? const Color(0xFF059669).withValues(alpha: 0.1) 
+            ? successColor.withValues(alpha: 0.1) 
             : Colors.grey.shade100;
 
     return InkWell(
       onTap: () => _goToStep(stepIndex),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
-          mainAxisSize: MainAxisSize.min, // Ensure inner Row takes minimum necessary width
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(isActive ? 10 : 8),
               decoration: BoxDecoration(
                 color: bgColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: isActive ? color : Colors.transparent, width: 2),
+                boxShadow: isActive ? [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ] : null,
+                border: Border.all(
+                  color: isActive ? primaryColor : (isCompleted ? successColor.withValues(alpha: 0.5) : Colors.transparent), 
+                  width: 2
+                ),
               ),
-              child: Icon(isCompleted && !isActive ? Icons.check : icon, size: 16, color: color),
+              child: Icon(
+                isCompleted && !isActive ? Icons.check : icon, 
+                size: isActive ? 20 : 16, 
+                color: isActive ? Colors.white : color
+              ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Text(
               label,
               style: TextStyle(
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-                color: isActive ? Colors.black87 : Colors.grey.shade600,
-                fontSize: 14,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                color: isActive ? Colors.black : (isCompleted ? Colors.black87 : Colors.grey.shade500),
+                fontSize: isActive ? 16 : 14,
+                letterSpacing: isActive ? 0.5 : 0,
               ),
             ),
           ],
@@ -528,13 +547,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   Widget _buildStepConnector({required bool isActive}) {
     return Container(
-        height: 3,
-        width: 30, // Increased width
+        height: 4,
+        width: 40,
         decoration: BoxDecoration(
           color: isActive ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
           borderRadius: BorderRadius.circular(2),
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 8),
       );
   }
 
@@ -688,9 +707,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ),
                             const SizedBox(height: 20),
                             Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
+                              spacing: 12,
+                              runSpacing: 12,
                               children: provider.deliveryMethods.map((method) {
+                                final isSelected = _lDeliveryMethod == method.name;
                                 return GestureDetector(
                                   onTap: () {
                                     setState(() {
@@ -699,14 +719,25 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     });
                                     _handleDeliveryUpdate();
                                   },
-                                  child: BuildBoxShadowContainer(
-                                    border: _lDeliveryMethod == method.name
-                                        ? Border.all(color: ColorManager.kPrimaryColor)
-                                        : null,
-                                    padding: const EdgeInsets.all(12),
-                                    blurRadius: 4,
-                                    circleRadius: 5,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: 105,
+                                    height: 90,
+                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? ColorManager.kPrimaryColor.withOpacity(0.05)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? ColorManager.kPrimaryColor
+                                            : Colors.grey.shade200,
+                                        width: isSelected ? 2 : 1,
+                                      ),
+                                    ),
                                     child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           method.name == "Store Takeaway"
@@ -716,17 +747,20 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                                   : method.name == "Door Delivery"
                                                       ? Icons.doorbell_outlined
                                                       : Icons.local_shipping,
-                                          size: 20,
-                                          color: Colors.black,
+                                          size: 22,
+                                          color: isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade700,
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 6),
                                         Text(
                                           method.name.tr,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                           style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.12,
-                                            Colors.black,
+                                            isSelected ? FontWeightManager.semiBold : FontWeightManager.medium,
+                                            FontSize.s11,
+                                            0.0,
+                                            isSelected ? ColorManager.kPrimaryColor : Colors.black87,
                                           ),
                                         ),
                                       ],
@@ -765,7 +799,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 },
                               ),
                             ],
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 30),
                             if (_lDeliveryMethod == "Car Delivery") ...[
                               buildColumnWidgetForTextFields(
                                 controller: _lCarNumberController,
@@ -773,6 +807,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 height: 50,
                                 hintText: 'Car Number:',
                                 width: double.infinity,
+                                margin: EdgeInsets.zero,
                                 onTap: () {
                                   Provider.of<KeyboardProvider>(context, listen: false)
                                       .show('text', _lCarNumberController,
@@ -788,6 +823,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               height: 50,
                               hintText: 'Comment:',
                               width: double.infinity,
+                              margin: EdgeInsets.zero,
                               onTap: () {
                                 Provider.of<KeyboardProvider>(context, listen: false).show(
                                     'text', _lCommentController,
@@ -868,6 +904,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 height: 50,
                                 hintText: 'Address:',
                                 width: double.infinity,
+                                margin: EdgeInsets.zero,
                                 onTap: () {
                                   Provider.of<KeyboardProvider>(context, listen: false)
                                       .show('text', _lAddressController,
@@ -1039,82 +1076,95 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final balance = _localSelectedCustomer!.balance ?? 0.0;
     final balanceColor = balance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF2563EB).withOpacity(0.05),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _goToStep(3),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          // Avatar on left
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF2563EB),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                (_localSelectedCustomer!.name ?? 'U').substring(0, 1).toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2563EB).withOpacity(0.05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
           ),
-          const SizedBox(width: 14),
-          // Info in middle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _localSelectedCustomer!.name ?? 'Unknown',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              // Avatar on left
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB),
+                  shape: BoxShape.circle,
                 ),
-                if (_localSelectedCustomer!.phone != null)
-                  Text(
-                    _localSelectedCustomer!.phone!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
+                child: Center(
+                  child: Text(
+                    (_localSelectedCustomer!.name ?? 'U').substring(0, 1).toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Balance on right
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: balanceColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Balance: ${balance.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: balanceColor,
+                ),
               ),
-            ),
+              const SizedBox(width: 14),
+              // Info in middle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _localSelectedCustomer!.name ?? 'Unknown',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (_localSelectedCustomer!.phone != null)
+                      Text(
+                        _localSelectedCustomer!.phone!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Balance on right
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: balanceColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Balance: ${balance.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: balanceColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: const Color(0xFF2563EB).withOpacity(0.6),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1257,6 +1307,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     customButtonTitle: "Confirm Payment Selection",
                     closeOnApply: false,
                     showConfirmButton: false,
+                    showAsDialog: false,
+                    showShadow: false,
+                    fullWidth: true,
                     onPaymentMethodSelected: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
                       _handlePaymentUpdate(
                         isCash, isCard, isUpi, isCod, isDebit,
@@ -1346,98 +1399,97 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onConfirm,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left side: Back button - Hidden as per user request
-          /* if (onBack != null)
-            TextButton.icon(
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Back'),
-              onPressed: onBack,
-              style: TextButton.styleFrom(foregroundColor: Colors.grey.shade700),
-            )
-          else */
-            const SizedBox.shrink(),
+          // Left side: Spacing to align buttons with right panel (flex 3)
+          const Expanded(flex: 3, child: SizedBox.shrink()),
+          
+          const SizedBox(width: 24), // Match content gap
 
-          // Right side: Action buttons
-          Row(
-            children: [
-              // Confirm button (optional)
-              if (onConfirm != null) ...[
-                Opacity(
-                  opacity: _canConfirmOrPrint ? 1.0 : 0.5,
-                  child: CustomRoundButtonWithIconAdvanced(
-                    title: 'Confirm',
-                    isLoading: _isConfirming,
-                    fct: _canConfirmOrPrint ? onConfirm : () {
-                      // Auto-navigate to payment tab and show feedback
-                      _goToStep(3);
-                      showScaffoldError(
-                        context: context,
-                        message: 'Please visit the payment tab before confirm',
-                      );
-                    },
-                    size: MediaQuery.of(context).size,
-                    icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                    height: 45,
-                    width: 140,
-                    fontSize: FontSize.s14,
-                    boxColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
-                    borderColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
-                    radius: 12,
+          // Right side: Action buttons aligned with the right panel (flex 2)
+          Expanded(
+            flex: 2,
+            child: Row(
+              children: [
+                // Confirm button (optional)
+                if (onConfirm != null)
+                  Expanded(
+                    child: Opacity(
+                      opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                      child: CustomRoundButtonWithIconAdvanced(
+                        title: 'Confirm',
+                        isLoading: _isConfirming,
+                        fct: _canConfirmOrPrint ? onConfirm : () {
+                          // Auto-navigate to payment tab and show feedback
+                          _goToStep(3);
+                          showScaffoldError(
+                            context: context,
+                            message: 'Please visit the payment tab before confirm',
+                          );
+                        },
+                        size: MediaQuery.of(context).size,
+                        icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                        height: 48,
+                        width: double.infinity,
+                        fontSize: FontSize.s14,
+                        boxColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                        borderColor: _canConfirmOrPrint ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                        radius: 12,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              // Print Bill button (optional)
-              if (onPrint != null) ...[
-                Opacity(
-                  opacity: _canConfirmOrPrint ? 1.0 : 0.5,
-                  child: CustomRoundButtonWithIconAdvanced(
-                    title: 'Confirm & Print',
-                    isLoading: _isPrinting,
-                    fct: _canConfirmOrPrint ? onPrint : () {
-                      // Auto-navigate to payment tab and show feedback
-                      _goToStep(3);
-                      showScaffoldError(
-                        context: context,
-                        message: 'Please visit the payment tab before confirm',
-                      );
-                    },
-                    size: MediaQuery.of(context).size,
-                    icon: const Icon(Icons.print, color: Colors.white, size: 20),
-                    height: 45,
-                    width: 180,
-                    fontSize: FontSize.s14,
-                    boxColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
-                    borderColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
-                    textColor: Colors.white,
-                    radius: 12,
+                if (onConfirm != null && onPrint != null) const SizedBox(width: 12),
+                // Print Bill button (optional)
+                if (onPrint != null)
+                  Expanded(
+                    child: Opacity(
+                      opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                      child: CustomRoundButtonWithIconAdvanced(
+                        title: 'Confirm & Print',
+                        isLoading: _isPrinting,
+                        fct: _canConfirmOrPrint ? onPrint : () {
+                          // Auto-navigate to payment tab and show feedback
+                          _goToStep(3);
+                          showScaffoldError(
+                            context: context,
+                            message: 'Please visit the payment tab before confirm',
+                          );
+                        },
+                        size: MediaQuery.of(context).size,
+                        icon: const Icon(Icons.print, color: Colors.white, size: 20),
+                        height: 48,
+                        width: double.infinity,
+                        fontSize: FontSize.s14,
+                        boxColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
+                        borderColor: _canConfirmOrPrint ? const Color(0xFF059669) : Colors.grey.shade400,
+                        textColor: Colors.white,
+                        radius: 12,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                // Next button (optional)
+                if (onNext != null)
+                  Expanded(
+                    child: CustomRoundButtonWithIconAdvanced(
+                      title: nextLabel,
+                      fct: isNextEnabled ? onNext : () {},
+                      size: MediaQuery.of(context).size,
+                      icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                      height: 48,
+                      width: double.infinity,
+                      fontSize: FontSize.s14,
+                      boxColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                      borderColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                      radius: 12,
+                    ),
+                  ),
               ],
-              // Next button (optional)
-              if (onNext != null)
-                CustomRoundButtonWithIconAdvanced(
-                  title: nextLabel,
-                  fct: isNextEnabled ? onNext : () {},
-                  size: MediaQuery.of(context).size,
-                  icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-                  height: 45,
-                  width: 150,
-                  fontSize: FontSize.s14,
-                  boxColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
-                  borderColor: isNextEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
-                  radius: 12,
-                ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1548,59 +1600,55 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 );
               }
             ),
-            const SizedBox(height: 12),
+            const Spacer(),
             // Order Summary
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Order Summary',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildSummaryRow('Net Amount', subTotal, Colors.black),
-                      const SizedBox(height: 10),
-                      _buildSummaryRow('Discount', -discountAmount, const Color(0xFFEF4444), labelColor: const Color(0xFFEF4444)),
-                      const SizedBox(height: 10),
-                      _buildSummaryRow('Tax', taxAmount, const Color(0xFF64748B), labelColor: const Color(0xFF64748B)),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Divider(height: 1, thickness: 1.5, color: Color(0xFFF1F5F9)),
-                      ),
-                      _buildSummaryRow('Total Payable', effectiveTotal, const Color(0xFF2563EB), isBold: true, large: true, labelColor: const Color(0xFF2563EB)),
-                      if (_localSelectedCustomer != null) ...[
-                        const SizedBox(height: 16),
-                        _buildSummaryRow('Cust. Prev. Balance', prevBalance, prevBalance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626), labelColor: prevBalance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626)),
-                      ],
-                      const SizedBox(height: 10),
-                      _buildSummaryRow('Total Paid', totalPaid, Colors.black),
-                      const SizedBox(height: 10),
-                      _buildSummaryRow('Balance', displayBalance, const Color(0xFF059669), labelColor: const Color(0xFF059669)),
-                    ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Order Summary',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSummaryRow('Net Amount', subTotal, Colors.black),
+                  const SizedBox(height: 12),
+                  _buildSummaryRow('Discount', -discountAmount, const Color(0xFFEF4444), labelColor: const Color(0xFFEF4444)),
+                  const SizedBox(height: 12),
+                  _buildSummaryRow('Tax', taxAmount, const Color(0xFF64748B), labelColor: const Color(0xFF64748B)),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(height: 1, thickness: 1.5, color: Color(0xFFF1F5F9)),
+                  ),
+                  _buildSummaryRow('Total Payable', effectiveTotal, const Color(0xFF2563EB), isBold: true, large: true, labelColor: const Color(0xFF2563EB)),
+                  if (_localSelectedCustomer != null) ...[
+                    const SizedBox(height: 12),
+                    _buildSummaryRow('Cust. Prev. Balance', prevBalance, prevBalance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626), labelColor: prevBalance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626)),
+                  ],
+                  const SizedBox(height: 12),
+                  _buildSummaryRow('Total Paid', totalPaid, Colors.black),
+                  const SizedBox(height: 12),
+                  _buildSummaryRow('Balance', displayBalance, const Color(0xFF059669), labelColor: const Color(0xFF059669)),
+                ],
               ),
             ),
           ],

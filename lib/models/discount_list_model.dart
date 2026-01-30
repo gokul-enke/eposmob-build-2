@@ -160,8 +160,13 @@ class DiscountData {
       return DiscountValidity.valid;
     }
 
+    // Check if before start date
     if (now.isBefore(validFrom)) return DiscountValidity.notStarted;
-    if (now.isAfter(validTo)) return DiscountValidity.expired;
+
+    // Check if after valid to date (inclusive - treat valid_to as end of day)
+    // Convert validTo to end of day (23:59:59) for inclusive comparison
+    final validToEndOfDay = DateTime(validTo.year, validTo.month, validTo.day, 23, 59, 59);
+    if (now.isAfter(validToEndOfDay)) return DiscountValidity.expired;
 
     if (discountCouponMinAmount != null &&
         discountCouponMinAmount! > 0 &&
