@@ -6190,10 +6190,16 @@ class _OrderPanelState extends State<_OrderPanel> {
             );
           },
           onConfirmOrder: () async {
+            setState(() {
+              _hasOpenedPaymentModalOnce = true;
+            });
             Navigator.of(dialogContext).pop();
             await _confirmOrder();
           },
           onConfirmAndPrint: () async {
+            setState(() {
+              _hasOpenedPaymentModalOnce = true;
+            });
             Navigator.of(dialogContext).pop();
             await _confirmOrderAndPrintBill();
           },
