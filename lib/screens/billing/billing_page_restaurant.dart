@@ -45,6 +45,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/billing_sidebar_footer.dart';
+import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
@@ -1531,183 +1532,45 @@ class BillingPageState extends State<BillingPageRestaurant>
     // priceSummary is only updated when cartTotal getter is accessed
     final _ = localProductProvider.cartTotal;
 
-    if (localProductProvider.priceSummary == null) {
-      return const SizedBox.shrink();
-    }
-
-    final priceSummary = localProductProvider.priceSummary!;
-    final discount = priceSummary.discount ?? 0;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: ColorManager.boxShadowColor,
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Payment Summary Details
-          BuildPaymentRow(
-            title: 'Net Amount',
-            amount:
-                '$currency ${AmountHelper.formatAmount(priceSummary.netTotal ?? 0)}',
-            color: ColorManager.textColor,
-            padding: EdgeInsets.zero,
-          ),
-          if (discount > 0) ...[
-            const SizedBox(height: 6),
-            BuildPaymentRow(
-              title: 'Discount',
-              amount: '-$currency ${AmountHelper.formatAmount(discount)}',
-              color: ColorManager.kButtonRed,
-              padding: EdgeInsets.zero,
-            ),
-          ],
-          const SizedBox(height: 6),
-          GestureDetector(
-            onTap: () {
-              // Show tax details dialog
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Tax Details'),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: taxNames.entries.map((entry) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(entry.key),
-                              Text('${entry.value}%'),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+    return CheckoutFooter(
+      priceSummary: localProductProvider.priceSummary,
+      currency: currency,
+      taxNames: taxNames,
+      totalPaid: _getTotalPaidAmount(),
+      balance: _balanceAmount,
+      onTaxTap: () {
+        // Show tax details dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Tax Details'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: taxNames.entries.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.key),
+                        Text('${entry.value}%'),
+                      ],
                     ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            child: BuildPaymentRow(
-              title: 'Tax',
-              amount:
-                  '$currency ${AmountHelper.formatAmount(priceSummary.totalTax ?? 0)}',
-              color: ColorManager.kGreyColor,
-              padding: EdgeInsets.zero,
+                  );
+                }).toList(),
+              ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Divider(height: 1),
-          const SizedBox(height: 8),
-
-          // Total Payable - Simple row with larger font
-          BuildPaymentRow(
-            title: 'Total Payable',
-            amount:
-                '$currency ${AmountHelper.formatAmount(priceSummary.netPayable ?? 0)}',
-            color: ColorManager.kPrimaryColor,
-            padding: EdgeInsets.zero,
-            firstRowTextStyle: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s15,
-              0.18,
-              ColorManager.kPrimaryColor,
-            ),
-            secondRowTextStyle: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s16,
-              0.18,
-              ColorManager.kPrimaryColor,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-          BuildPaymentRow(
-            title: 'Total Paid',
-            amount:
-                '$currency ${AmountHelper.formatAmount(_getTotalPaidAmount())}',
-            color: ColorManager.textColor,
-            padding: EdgeInsets.zero,
-          ),
-          const SizedBox(height: 6),
-          BuildPaymentRow(
-            title: 'Balance',
-            amount: '$currency ${AmountHelper.formatAmount(_balanceAmount)}',
-            color: _balanceAmount > 0
-                ? ColorManager.kButtonRed
-                : ColorManager.kButtonGreen,
-            padding: EdgeInsets.zero,
-          ),
-
-          // const SizedBox(height: 12),
-
-          // Action Buttons Row
-          // Row(
-          //   children: [
-          //     Expanded(
-          //       child: CustomRoundButton(
-          //         title: 'Clear',
-          //         fct: _clearCart,
-          //         height: 38,
-          //         width: double.infinity,
-          //         fontSize: FontSize.s12,
-          //         boxColor: ColorManager.kButtonRed,
-          //         isLoading: isLoadingClearCart,
-          //         radius: 6,
-          //         borderColor: Colors.transparent,
-          //       ),
-          //     ),
-          //     const SizedBox(width: 8),
-          //     Expanded(
-          //       child: CustomRoundButton(
-          //         title: 'Save',
-          //         fct: _saveOrder,
-          //         height: 38,
-          //         width: double.infinity,
-          //         fontSize: FontSize.s12,
-          //         boxColor: ColorManager.kButtonYellow,
-          //         isLoading: isLoadingSaveOrder,
-          //         radius: 6,
-          //         textColor: Colors.white,
-          //         borderColor: Colors.transparent,
-          //       ),
-          //     ),
-          //     const SizedBox(width: 8),
-          //     Expanded(
-          //       child: CustomRoundButton(
-          //         title: 'Confirm',
-          //         fct: () {
-          //           _showCheckoutModal();
-          //         },
-          //         height: 38,
-          //         width: double.infinity,
-          //         fontSize: FontSize.s12,
-          //         boxColor: ColorManager.kPrimaryColor,
-          //         radius: 6,
-          //         borderColor: Colors.transparent,
-          //       ),
-          //     ),
-          //   ],
-          // ),
-        ],
-      ),
+        );
+      },
     );
   }
 

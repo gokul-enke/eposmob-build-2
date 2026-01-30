@@ -39,6 +39,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
+import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
@@ -52,6 +53,7 @@ import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
+import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
@@ -1094,60 +1096,6 @@ class BillingPageState extends State<BillingPage>
                                       Expanded(
                                         child: _buildCartItemsTable(size),
                                       ),
-                                      const SizedBox(height: 5),
-                                      // Always show minimized view with quick access icons
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // Customer selection
-                                          Expanded(
-                                            flex: 4,
-                                            child: Container(
-                                              color: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16.0,
-                                                      vertical: 10),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
-                                                children: [
-                                                  _buildMobileNumberInput(
-                                                      size: size,
-                                                      mobileNumberTextController:
-                                                          mobileNumberTextController),
-                                                  const SizedBox(height: 10),
-                                                  _buildQuickAccessIcons(),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                          // Payment summary
-                                          Expanded(
-                                            flex: 4,
-                                            child: Container(
-                                              color: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16.0,
-                                                      vertical: 10),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
-                                                children: [
-                                                  _buildPaymentSummary(
-                                                      compact: true),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
                                       const SizedBox(height: 10),
                                       _buildActionButtons(),
                                     ],
@@ -1288,6 +1236,12 @@ class BillingPageState extends State<BillingPage>
                       ? const SideBarProductList()
                       : _buildOrdersTab(),
                 ),
+              ),
+
+              // NEW: Footer (fixed height, visible in both tabs)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: _buildCheckoutFooter(),
               ),
             ],
           ),
@@ -2680,6 +2634,138 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
+  /// Builds the checkout footer for the sidebar (similar to Restaurant Page)
+  Widget _buildCheckoutFooter() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: true);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
+
+    // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
+    final _ = localProductProvider.cartTotal;
+
+    return CheckoutFooter(
+      priceSummary: localProductProvider.priceSummary,
+      currency: currency,
+      taxNames: taxNames,
+      totalPaid: _getTotalPaidAmount(),
+      balance: _balanceAmount,
+      onTaxTap: () {
+        // Show tax details dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Tax Details'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: taxNames.entries.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.key),
+                        Text('${entry.value}%'),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Builds payment summary using the reusable CheckoutFooter widget
+  /// This combines the payment summary with Total Paid and Balance information
+  Widget _buildPaymentSummaryWithFooter() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: true);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
+
+    // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
+    final _ = localProductProvider.cartTotal;
+
+    // Calculate total paid and balance
+    double totalPaid = _getTotalPaidAmount();
+    double balance = _calculateBalanceAmount();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Payment Summary Title
+        BuildPaymentRow(
+          amount: "",
+          title: "billing.payment_summary".tr,
+          firstRowTextStyle: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.21,
+            ColorManager.kPrimaryColor,
+          ),
+          color: ColorManager.kPrimaryColor,
+        ),
+        const SizedBox(height: 5),
+        // Use the reusable CheckoutFooter widget
+        CheckoutFooter(
+          priceSummary: localProductProvider.priceSummary,
+          currency: currency,
+          taxNames: taxNames,
+          totalPaid: totalPaid,
+          balance: balance,
+          onTaxTap: () {
+            // Show tax details dialog
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Tax Details'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: taxNames.entries.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(entry.key),
+                            Text('${entry.value}%'),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            );
+          },
+          showTotalPaid: false, // We'll show this separately with quick access icons
+          showBalance: false,   // We'll show this separately with quick access icons
+        ),
+      ],
+    );
+  }
+
   // Helper method to get formatted total
   String _getFormattedTotal() {
     final localProductProvider =
@@ -3473,7 +3559,7 @@ class BillingPageState extends State<BillingPage>
             _buildActionButton(
               text: 'billing.confirm_and_print'.tr,
               color: ColorManager.kButtonBlue,
-              onPressed: _createOrderAndPrint,
+              onPressed: _showCheckoutModal,
               isLoading: isLoadingCreateOrder,
             ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
@@ -3483,7 +3569,7 @@ class BillingPageState extends State<BillingPage>
               _buildActionButton(
                 text: 'billing.confirm_order'.tr,
                 color: ColorManager.kButtonGreen,
-                onPressed: _confirmOrder,
+                onPressed: _showCheckoutModal,
                 isLoading: isLoadingConfirmOrder,
               ),
           ],
@@ -4061,7 +4147,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  void _createOrderAndPrint() async {
+  Future<void> _createOrderAndPrint() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4398,7 +4484,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  void _confirmOrder() async {
+  Future<void> _confirmOrder() async {
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -4624,6 +4710,224 @@ class BillingPageState extends State<BillingPage>
       });
       debugPrint("🏁 Confirm Order process completed");
     }
+  }
+
+  /// Shows the checkout modal for customer selection, delivery, discount, and payment
+  /// This is called when clicking Confirm Order or Confirm & Print buttons
+  void _showCheckoutModal() {
+    // Mark that payment modal opportunity has been given
+    setState(() {
+      _hasOpenedPaymentModalOnce = false;
+    });
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
+    // Check if delivery should be enabled (if methods exist)
+    bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return CheckoutModal(
+          cartTotal: localProductProvider.priceSummary?.subTotal ??
+              localProductProvider.cartTotal,
+          availableCustomers: customerList ?? [],
+          selectedCustomer: selectedCustomer,
+          hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
+
+          // Delivery State
+          enableDelivery: deliveryEnabled,
+          deliveryMethod:
+              deliveryMethod.isNotEmpty ? deliveryMethod : "Store Takeaway",
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          deliveryComment: _commentController.text,
+          deliveryAddress: deliveryAddress ?? "",
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
+          onDeliveryUpdated:
+              (method, methodId, carNo, comment, date, time, address) {
+            setState(() {
+              deliveryMethod = method;
+              deliveryMethodId = methodId;
+              _carNumberController.text = carNo;
+              _commentController.text = comment;
+              deliveryDate = date;
+              deliveryTime = time;
+              deliveryAddress = address;
+            });
+          },
+
+          // Payment State
+          isCashSelected: _isCashSelected,
+          isCardSelected: _isCardSelected,
+          isUpiSelected: _isUpiSelected,
+          isCodSelected: _isCodSelected,
+          isDebitSelected: _isDebitSelected,
+          cashAmount: _cashAmountController.text,
+          cardAmount: _cardAmountController.text,
+          upiAmount: _upiAmountController.text,
+          codAmount: _codAmountController.text,
+          debitAmount: _debitAmountController.text,
+          transactionNumber: _transactionNumberController.text,
+          toCustomerCreditEnabled: _toCustomerCreditEnabled,
+          toCustomerCreditAmount:
+              double.tryParse(_debitAmountController.text) ?? 0.0,
+          cashMethodId: billingProvider.cashPaymentMethodId,
+          cardMethodId: billingProvider.cardPaymentMethodId,
+          upiMethodId: billingProvider.upiPaymentMethodId,
+          codMethodId: billingProvider.codPaymentMethodId,
+
+          // Discount State
+          couponCode: coupenCodeTextController.text,
+          flatDiscount:
+              localProductProvider.getCurrentDiscount()['flatDiscount'] ?? 0.0,
+          percentageDiscount:
+              localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
+                  0.0,
+          isCouponApplied: isCouponApplied,
+
+          onCustomerSelected: (customer) {
+            // Update global customer selection provider
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .setSelectedCustomer(customer);
+
+            setState(() {
+              selectedCustomerID = customer.id;
+              selectedCustomerPhone = customer.phone;
+              selectedCustomer = customer;
+              mobileNumberText = "${customer.name} ${customer.phone}";
+              mobileNumberTextController.text =
+                  "${customer.name} ${customer.phone}";
+              isCustomerFound = true;
+              _isCustomerManuallySelected = true;
+            });
+          },
+          onAddNewCustomer: (String searchQuery) async {
+            // Check if search query is a 10-digit number
+            String phoneToPreFill = '';
+            if (searchQuery.length == 10 &&
+                RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+              phoneToPreFill = searchQuery;
+            }
+
+            final result = await showAddCustomerModal(
+                context, MediaQuery.of(context).size,
+                mobileNumber: phoneToPreFill);
+
+            if (result != null && result['status'] == 'success') {
+              await _fetchCustomers(); // Refresh list
+              // Find and return the newly added customer
+              final addedPhone = result['phone'];
+              final matchingCustomer = customerList?.firstWhere(
+                (customer) => customer.phone == addedPhone,
+                orElse: () => CustomerListModelData(),
+              );
+
+              if (matchingCustomer != null &&
+                  matchingCustomer.phone == addedPhone) {
+                return matchingCustomer;
+              }
+            }
+            return null;
+          },
+          onDiscountApplied: (code, isApplied, flat, percent) {
+            setState(() {
+              isCouponApplied = isApplied;
+              coupenCodeTextController.text = code;
+
+              // Apply to provider
+              if (isApplied) {
+                localProductProvider.applyDiscount(
+                  flatDiscount: flat,
+                  percentageDiscount: percent,
+                );
+              } else {
+                localProductProvider.clearDiscount();
+              }
+            });
+          },
+          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
+              upi, cod, debit, trans, toCredit,
+              {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+            // Update payment state
+            _isCashSelected = isCash;
+            _isCardSelected = isCard;
+            _isUpiSelected = isUpi;
+            _isCodSelected = isCod;
+            _isDebitSelected = isDebit;
+            _cashAmountController.text = cash;
+            _cardAmountController.text = card;
+            _upiAmountController.text = upi;
+            _codAmountController.text = cod;
+            _debitAmountController.text = debit;
+            _transactionNumberController.text = trans;
+            _toCustomerCreditEnabled = toCredit;
+
+            setState(() {
+              _hasOpenedPaymentModalOnce = true; // Mark as opened when payment is updated in modal
+            });
+
+            // Store payment method IDs in BillingProvider for later use
+            billingProvider.updatePaymentFromModal(
+              isCash: isCash,
+              isCard: isCard,
+              isUpi: isUpi,
+              isCod: isCod,
+              isDebit: isDebit,
+              cashAmount: cash,
+              cardAmount: card,
+              upiAmount: upi,
+              codAmount: cod,
+              debitAmount: debit,
+              transactionNumber: trans,
+              toCustomerCredit: toCredit,
+              cashMethodId: cashMethodId,
+              cardMethodId: cardMethodId,
+              upiMethodId: upiMethodId,
+              codMethodId: codMethodId,
+            );
+
+            // Calculate total paid (excluding debit - it's store credit, not actual payment)
+            double total = (double.tryParse(cash) ?? 0) +
+                (double.tryParse(card) ?? 0) +
+                (double.tryParse(upi) ?? 0) +
+                (double.tryParse(cod) ?? 0);
+
+            _paidAmountController.text = total.toStringAsFixed(2);
+            _updateBalanceAmount();
+          },
+          onConfirmOrder: () async {
+            // Set loading state BEFORE closing modal so button shows loading immediately
+            setState(() {
+              isLoadingConfirmOrder = true;
+              _hasOpenedPaymentModalOnce = true; // Mark as opened when confirmed via checkout modal
+            });
+            // Close modal after setting loading state
+            if (mounted) Navigator.of(dialogContext).pop();
+            // Then call confirm (loading state is already set)
+            await _confirmOrder();
+          },
+          onConfirmAndPrint: () async {
+            // Set loading state BEFORE closing modal so button shows loading immediately
+            setState(() {
+              isLoadingCreateOrder = true;
+              _hasOpenedPaymentModalOnce = true; // Mark as opened when confirmed via checkout modal
+            });
+            // Close modal after setting loading state
+            if (mounted) Navigator.of(dialogContext).pop();
+            // Then call confirm and print (loading state is already set)
+            await _createOrderAndPrint();
+          },
+        );
+      },
+    );
   }
 
   // Multi-payment helper methods
@@ -4914,18 +5218,6 @@ class BillingPageState extends State<BillingPage>
       builder: (context, localProductProvider, child) {
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
-        final currency = appSettingsProvider.appSettings?.currency ?? '';
-        double totalPaid = _getTotalPaidAmount();
-        double cartTotal = localProductProvider.cartTotal;
-        // For balance calculation, only include actual cash payments (not debit/store credit)
-        double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
-        double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
-        double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
-        double codAmount = double.tryParse(_codAmountController.text) ?? 0.0;
-        double actualCashPaid = cashAmount + cardAmount + upiAmount + codAmount;
-
-        // Use the helper method for consistent balance calculation
-        double balance = _calculateBalanceAmount();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -5013,63 +5305,8 @@ class BillingPageState extends State<BillingPage>
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            // Payment Summary in minimized view
-            Padding(
-              padding: const EdgeInsets.only(left: 5.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        '${'billing.total_paid'.tr}: ',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s15,
-                          0.14,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      Text(
-                        '$currency ${totalPaid.toStringAsFixed(2)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s15,
-                          0.14,
-                          ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 10),
-                  Row(
-                    children: [
-                      Text(
-                        '${'billing.balance'.tr}: ',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s15,
-                          0.14,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      Text(
-                        '$currency ${balance.toStringAsFixed(2)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s15,
-                          0.14,
-                          balance > 0
-                              ? ColorManager.kButtonGreen
-                              : ColorManager.textColorRed,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            // Note: Total Paid and Balance are now shown in the sidebar footer
+            // This matches the Restaurant Page layout
           ],
         );
       },
