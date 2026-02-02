@@ -6072,7 +6072,10 @@ class _OrderPanelState extends State<_OrderPanel> {
     setState(() {
       _hasOpenedPaymentModalOnce = false;
     });
-    
+
+    // Sync LocalProductProvider cart with order items before showing checkout modal
+    _syncOrderItemsWithLocalCart();
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -6155,13 +6158,20 @@ class _OrderPanelState extends State<_OrderPanel> {
               _isCouponApplied = isApplied;
               _flatDiscount = flat;
               _percentageDiscount = percent;
-              
+
               if (!isApplied) {
                 _couponCode = "";
                 _flatDiscount = 0.0;
                 _percentageDiscount = 0.0;
               }
             });
+
+            // Also update LocalProductProvider so the summary reflects the discount
+            final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+            localProductProvider.applyDiscount(
+              flatDiscount: _flatDiscount,
+              percentageDiscount: _percentageDiscount,
+            );
           },
           onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
             setState(() {
@@ -6228,6 +6238,82 @@ class _OrderPanelState extends State<_OrderPanel> {
               0.0;
     }
     return total;
+  }
+
+  /// Syncs the order items with LocalProductProvider's cart
+  /// This ensures the checkout modal shows correct totals based on order items
+  void _syncOrderItemsWithLocalCart() {
+    if (_selectedOrder == null) return;
+
+    try {
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
+
+      debugPrint('🔄 Syncing order items with LocalProductProvider cart...');
+      debugPrint('   Order items count: ${orderItems.length}');
+
+      // Clear the current cart first
+      localProductProvider.clearCart();
+
+      // Add each order item to the cart
+      for (var item in orderItems) {
+        final productId = int.tryParse(item['product_id']?.toString() ?? '0');
+        if (productId == null || productId == 0) continue;
+
+        // Find the product in the product list
+        GetProduct? product;
+        try {
+          product = localProductProvider.products.firstWhere(
+            (p) => p.productId == productId,
+          );
+        } catch (_) {
+          debugPrint('⚠️ Product $productId not found in product list');
+          continue;
+        }
+
+        if (product == null) continue;
+
+        final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(
+          item['unit_price']?.toString() ??
+          item['price']?.toString() ??
+          item['product_price']?.toString() ?? '0'
+        ) ?? 0.0;
+
+        // Find the stock entry if available
+        Stock? selectedStock;
+        if (item['stock_id'] != null) {
+          final stockId = int.tryParse(item['stock_id'].toString());
+          if (stockId != null && product.stock != null) {
+            try {
+              selectedStock = product.stock!.firstWhere((s) => s.id == stockId);
+            } catch (_) {
+              // Stock not found, use null
+            }
+          }
+        }
+
+        // Add to cart with the order's price and quantity
+        localProductProvider.addToCart(
+          product: product,
+          quantity: quantity.toInt(),
+          price: unitPrice > 0 ? unitPrice : null,
+          selectedStock: selectedStock,
+        );
+
+        debugPrint('   ✓ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
+      }
+
+      // Apply discounts from the order
+      localProductProvider.applyDiscount(
+        flatDiscount: _flatDiscount,
+        percentageDiscount: _percentageDiscount,
+      );
+
+      debugPrint('✅ Order items synced with LocalProductProvider cart');
+    } catch (e) {
+      debugPrint('❌ Error syncing order items with cart: $e');
+    }
   }
 
 

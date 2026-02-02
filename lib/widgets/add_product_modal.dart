@@ -45,6 +45,15 @@ class _AddProductWithBarcodeModalState
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
+
+  // Focus nodes for each text field
+  final FocusNode _barcodeFocusNode = FocusNode();
+  final FocusNode _productNameFocusNode = FocusNode();
+  final FocusNode _mrpFocusNode = FocusNode();
+  final FocusNode _quantityFocusNode = FocusNode();
+  final FocusNode _sellingPriceFocusNode = FocusNode();
+  final FocusNode _purchasePriceFocusNode = FocusNode();
+
   bool isLoading = false;
   bool isBarcodeGenerating = false;
   String? selectedUnit;
@@ -62,6 +71,24 @@ class _AddProductWithBarcodeModalState
     super.initState();
   }
 
+  // Helper method to unfocus all text fields except the specified one
+  void _unfocusAllExcept(FocusNode? keepFocused) {
+    final allFocusNodes = [
+      _barcodeFocusNode,
+      _productNameFocusNode,
+      _mrpFocusNode,
+      _quantityFocusNode,
+      _sellingPriceFocusNode,
+      _purchasePriceFocusNode,
+    ];
+
+    for (final node in allFocusNodes) {
+      if (node != keepFocused && node.hasFocus) {
+        node.unfocus();
+      }
+    }
+  }
+
   @override
   void dispose() {
     _productBarcodeController.dispose();
@@ -72,6 +99,15 @@ class _AddProductWithBarcodeModalState
     _productPurchasePriceController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
+
+    // Dispose focus nodes
+    _barcodeFocusNode.dispose();
+    _productNameFocusNode.dispose();
+    _mrpFocusNode.dispose();
+    _quantityFocusNode.dispose();
+    _sellingPriceFocusNode.dispose();
+    _purchasePriceFocusNode.dispose();
+
     isLoading = false;
     selectedUnit = null;
     selectedCategory = null;
@@ -217,6 +253,7 @@ class _AddProductWithBarcodeModalState
                         TextInputType.text,
                         size,
                         isRequired: true,
+                        focusNode: _productNameFocusNode,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -246,13 +283,14 @@ class _AddProductWithBarcodeModalState
                   children: [
                     Expanded(
                       child: _buildTextField(
-                        "Product MRP",
+                        "Max Sale Price / MRP",
                         _productMRPController,
                         TextInputType.number,
                         size,
                         isRequired: false,
                         inputFormatter: FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _mrpFocusNode,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -265,6 +303,7 @@ class _AddProductWithBarcodeModalState
                         isRequired: true,
                         inputFormatter: FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _purchasePriceFocusNode,
                       ),
                     ),
                   ],
@@ -283,6 +322,7 @@ class _AddProductWithBarcodeModalState
                         isRequired: true,
                         inputFormatter: FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _sellingPriceFocusNode,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -295,6 +335,7 @@ class _AddProductWithBarcodeModalState
                         isRequired: true,
                         inputFormatter: FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _quantityFocusNode,
                       ),
                     ),
                   ],
@@ -345,7 +386,8 @@ class _AddProductWithBarcodeModalState
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
                             : const Text(
@@ -375,6 +417,7 @@ class _AddProductWithBarcodeModalState
     Size size, {
     bool isRequired = false,
     TextInputFormatter? inputFormatter,
+    FocusNode? focusNode,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,9 +457,15 @@ class _AddProductWithBarcodeModalState
           width: double.infinity,
           child: TextFormField(
             controller: controller,
+            focusNode: focusNode,
             keyboardType: keyboardType,
             inputFormatters: inputFormatter != null ? [inputFormatter] : null,
             cursorColor: ColorManager.kPrimaryColor,
+            onTap: () {
+              if (focusNode != null) {
+                _unfocusAllExcept(focusNode);
+              }
+            },
             decoration: const InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(vertical: 12),
@@ -483,8 +532,12 @@ class _AddProductWithBarcodeModalState
                 width: double.infinity,
                 child: TextFormField(
                   controller: _productBarcodeController,
+                  focusNode: _barcodeFocusNode,
                   readOnly: widget.barcode != null,
                   cursorColor: ColorManager.kPrimaryColor,
+                  onTap: () {
+                    _unfocusAllExcept(_barcodeFocusNode);
+                  },
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 12),
@@ -525,7 +578,8 @@ class _AddProductWithBarcodeModalState
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : const Icon(Icons.refresh, size: 18, color: Colors.white),
