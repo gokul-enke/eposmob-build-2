@@ -860,21 +860,32 @@ class _RestaurantPageState extends State<RestaurantPage> {
           // Get current time for KOT (using DateHelper for timezone support)
           final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
 
-          // Navigate to simple KOT print page
+          // Try auto-print with default printer first
           if (mounted) {
-
-            Navigator.push(
+            KotPrintPage.autoPrint(
               context,
-              MaterialPageRoute(
-                builder: (context) => KotPrintPage(
-                  orderNumber: orderNumber,
-                  tableName: tableName,
-                  orderTime: orderTime,
-                  items: printItems,
-                  comment: currentComment.isNotEmpty ? currentComment : null,
-                ),
-              ),
-            );
+              orderNumber: orderNumber,
+              tableName: tableName,
+              orderTime: orderTime,
+              items: printItems,
+              comment: currentComment.isNotEmpty ? currentComment : null,
+            ).then((success) {
+              // Only show print page if auto-print failed
+              if (!success && mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => KotPrintPage(
+                      orderNumber: orderNumber,
+                      tableName: tableName,
+                      orderTime: orderTime,
+                      items: printItems,
+                      comment: currentComment.isNotEmpty ? currentComment : null,
+                    ),
+                  ),
+                );
+              }
+            });
           }
         }
       } else {
@@ -5522,22 +5533,36 @@ class _OrderPanelState extends State<_OrderPanel> {
     debugPrint('⚙️ _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
 
     if (enableKOTPrint) {
-      debugPrint('🖨️ _printSavedOrderKot: Navigating to KotPrintPage');
+      debugPrint('🖨️ _printSavedOrderKot: Trying auto-print first');
       debugPrint(
           '📋 Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
-      // Navigate to KOT print page
-      Navigator.push(
+
+      // Try auto-print with default printer first
+      KotPrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => KotPrintPage(
-            orderNumber: orderNumber,
-            tableName: tableName,
-            orderTime: orderTime,
-            items: printItems,
-            comment: comment,
-          ),
-        ),
-      );
+        orderNumber: orderNumber,
+        tableName: tableName,
+        orderTime: orderTime,
+        items: printItems,
+        comment: comment,
+      ).then((success) {
+        // Only show print page if auto-print failed
+        if (!success && mounted) {
+          debugPrint('🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => KotPrintPage(
+                orderNumber: orderNumber,
+                tableName: tableName,
+                orderTime: orderTime,
+                items: printItems,
+                comment: comment,
+              ),
+            ),
+          );
+        }
+      });
     } else {
       debugPrint(
           '⚠️ _printSavedOrderKot: KOT printing is disabled in app settings');

@@ -1381,20 +1381,32 @@ class _KitchenMasterState extends State<KitchenMaster> {
       });
     }
 
-    // Navigate to KOT print page
+    // Try auto-print with default printer first
     if (mounted) {
-      Navigator.push(
+      KotPrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => KotPrintPage(
-            orderNumber: order.id,
-            tableName: order.tableId,
-            orderTime: orderTime,
-            items: printItems,
-            comment: order.notes,
-          ),
-        ),
-      );
+        orderNumber: order.id,
+        tableName: order.tableId,
+        orderTime: orderTime,
+        items: printItems,
+        comment: order.notes,
+      ).then((success) {
+        // Only show print page if auto-print failed
+        if (!success && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => KotPrintPage(
+                orderNumber: order.id,
+                tableName: order.tableId,
+                orderTime: orderTime,
+                items: printItems,
+                comment: order.notes,
+              ),
+            ),
+          );
+        }
+      });
     }
   }
 }

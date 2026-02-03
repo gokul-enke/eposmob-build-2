@@ -682,7 +682,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         discountAmount:
             orderDetailsModelData!.priceSummary?.discount?.toString() ?? '0.00',
         orderDate: orderDetailsModelData!.orderDate ??
-            DateTime.now().toIso8601String(),
+            DateHelper.now().toIso8601String(),
         orderNumber: orderNumber,
         isFromLocalStorage: false,
         selectedPaperSize: 'A4',

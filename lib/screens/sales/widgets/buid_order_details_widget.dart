@@ -150,7 +150,7 @@ class OrderDetailWidget extends StatelessWidget {
                                         ColorManager.textColor),
                                 children: <TextSpan>[
                                   TextSpan(
-                                    text: DateHelper.formatISODateToIST(
+                                    text: DateHelper.formatInputToDisplay(
                                         orderDetailsModelData?.orderDate
                                                 ?.toString() ??
                                             ''),
@@ -651,7 +651,7 @@ class OrderDetailWidget extends StatelessWidget {
             final dateTime = parts[1];
             try {
               final date = DateTime.parse(dateTime);
-              return '$status - ${DateHelper.formatISODateToIST(date.toString())}';
+              return '$status - ${DateHelper.formatTimeOnly(date.toString())}';
             } catch (e) {
               return value; // Return original if parsing fails
             }

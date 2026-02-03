@@ -60,26 +60,48 @@ class PrintService {
           orderDetails.data?.customerDetails?.address?.join(', ');
 
       if (!context.mounted) return;
-      Navigator.push(
+
+      // Try auto-print with default printer first
+      final autoPrintSuccess = await PrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: storeName,
-            cartItems: cart!.cartItems!,
-            formattedTotal: formattedTotal,
-            savedTotal: savedTotal,
-            discountAmount:
-                orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
-            orderDate: DateHelper.formatInputToDisplay(orderDate),
-            orderNumber: orderDetails.data!.orderNumber ?? '',
-            customerName: customerName,
-            customerPhone: customerPhone,
-            customerEmail: customerEmail,
-            customerAddress: customerAddress,
-            isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
-          ),
-        ),
+        storeName: storeName,
+        cartItems: cart!.cartItems!,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount:
+            orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
+        orderDate: DateHelper.formatInputToDisplay(orderDate),
+        orderNumber: orderDetails.data!.orderNumber ?? '',
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        customerAddress: customerAddress,
+        isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
       );
+
+      // Only show print page if auto-print failed
+      if (!autoPrintSuccess && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PrintPage(
+              storeName: storeName,
+              cartItems: cart.cartItems!,
+              formattedTotal: formattedTotal,
+              savedTotal: savedTotal,
+              discountAmount:
+                  orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
+              orderDate: DateHelper.formatInputToDisplay(orderDate),
+              orderNumber: orderDetails.data!.orderNumber ?? '',
+              customerName: customerName,
+              customerPhone: customerPhone,
+              customerEmail: customerEmail,
+              customerAddress: customerAddress,
+              isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
+            ),
+          ),
+        );
+      }
     } catch (_) {
       // Swallow errors; original code logged and continued
     }
@@ -128,32 +150,57 @@ class PrintService {
       final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
-      Navigator.push(
+      // Try auto-print with default printer first
+      final autoPrintSuccess = await PrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: storeName,
-            cartItems: cartItems,
-            formattedTotal: netTotal.toString(),
-            savedTotal: youSaved.toString(),
-            discountAmount: (savedOrder.flatDiscount != null ||
-                    savedOrder.percentageDiscount != null)
-                ? ((savedOrder.flatDiscount ?? 0.0) +
-                        ((savedOrder.percentageDiscount ?? 0.0) > 0
-                            ? (savedOrder.total *
-                                (savedOrder.percentageDiscount ?? 0.0) /
-                                100)
-                            : 0.0))
-                    .toString()
-                : "0.00",
-            orderDate: savedOrder.createdAt,
-            orderNumber: savedOrder.orderNumber,
-            isFromLocalStorage: true,
-            // Balance info not available for offline saved orders
-            isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
-          ),
-        ),
+        storeName: storeName,
+        cartItems: cartItems,
+        formattedTotal: netTotal.toString(),
+        savedTotal: youSaved.toString(),
+        discountAmount: (savedOrder.flatDiscount != null ||
+                savedOrder.percentageDiscount != null)
+            ? ((savedOrder.flatDiscount ?? 0.0) +
+                    ((savedOrder.percentageDiscount ?? 0.0) > 0
+                        ? (savedOrder.total *
+                            (savedOrder.percentageDiscount ?? 0.0) /
+                            100)
+                        : 0.0))
+                .toString()
+            : "0.00",
+        orderDate: savedOrder.createdAt,
+        orderNumber: savedOrder.orderNumber,
+        isFromLocalStorage: true,
+        isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
       );
+
+      // Only show print page if auto-print failed
+      if (!autoPrintSuccess && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PrintPage(
+              storeName: storeName,
+              cartItems: cartItems,
+              formattedTotal: netTotal.toString(),
+              savedTotal: youSaved.toString(),
+              discountAmount: (savedOrder.flatDiscount != null ||
+                      savedOrder.percentageDiscount != null)
+                  ? ((savedOrder.flatDiscount ?? 0.0) +
+                          ((savedOrder.percentageDiscount ?? 0.0) > 0
+                              ? (savedOrder.total *
+                                  (savedOrder.percentageDiscount ?? 0.0) /
+                                  100)
+                              : 0.0))
+                      .toString()
+                  : "0.00",
+              orderDate: savedOrder.createdAt,
+              orderNumber: savedOrder.orderNumber,
+              isFromLocalStorage: true,
+              isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
+            ),
+          ),
+        );
+      }
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
     }

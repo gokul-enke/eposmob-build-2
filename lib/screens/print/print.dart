@@ -73,6 +73,198 @@ class PrintPage extends StatefulWidget {
 
   @override
   _PrintPageState createState() => _PrintPageState();
+
+  /// Auto-print with default printer without showing UI
+  /// Returns true if printing succeeded, false if no printer or failed
+  static Future<bool> autoPrint(BuildContext context, {
+    required List<dynamic> cartItems,
+    String? storeName,
+    required String formattedTotal,
+    String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    bool isFromLocalStorage = false,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    OrderReturns? orderReturns,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
+    String? orderComment,
+    String? customerAlternatePhone,
+    String? paymentMethod,
+    Map<String, dynamic>? paymentBreakdown,
+    bool isDefaultCustomer = false,
+    String? netExcTax,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final defaultPrinterJson = prefs.getString('default_printer');
+
+      if (defaultPrinterJson == null) {
+        debugPrint('[PrintPage] No default printer found');
+        return false;
+      }
+
+      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
+      final selectedPrinter = BluetoothPrinter(
+        deviceName: printerData['deviceName'],
+        address: printerData['address'],
+        vendorId: printerData['vendorId'],
+        productId: printerData['productId'],
+        typePrinter: PrinterType.values.firstWhere(
+          (e) => e.toString() == printerData['typePrinter'],
+        ),
+      );
+
+      debugPrint('[PrintPage] Auto-printing with default printer: ${selectedPrinter.deviceName}');
+
+      // Load document config
+      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      final appSettings = appSettingsProvider.appSettings;
+
+      if (appSettings == null) {
+        debugPrint('[PrintPage] App settings not loaded');
+        return false;
+      }
+
+      // Determine type based on orderReturns
+      final hasReturns = orderReturns != null &&
+          orderReturns.returnItems != null &&
+          orderReturns.returnItems!.isNotEmpty;
+      final type = hasReturns ? 'sales_and_return_bill' : 'bill';
+
+      DocumentConfig? billDocumentConfig;
+      if (accessToken != null) {
+        billDocumentConfig = await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
+          accessToken: accessToken,
+          type: type,
+        );
+        if (billDocumentConfig == null) {
+          billDocumentConfig = hasReturns
+              ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+              : docConfigProvider.getDocumentConfig("Bill");
+        }
+      } else {
+        billDocumentConfig = hasReturns
+            ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+            : docConfigProvider.getDocumentConfig("Bill");
+      }
+
+      if (billDocumentConfig == null) {
+        debugPrint('[PrintPage] Document config not loaded');
+        return false;
+      }
+
+      // Get paper size
+      String paperSize = prefs.getString('default_paper_size') ?? '80mm';
+      if (paperSize == 'Thermal') {
+        paperSize = '80mm';
+      }
+
+      // Get receipt theme
+      final theme = await _getReceiptThemeStatic(billDocumentConfig, prefs);
+      final layout = ReceiptLayoutFactory.getLayout(theme);
+
+      // Fetch ZATCA credentials
+      final sharedPrefProvider = SharedPreferenceProvider();
+      final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+      final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
+
+      // Create params
+      final params = ReceiptLayoutParams(
+        context: context,
+        selectedPrinter: selectedPrinter,
+        cartItems: cartItems,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount: discountAmount,
+        orderDate: orderDate,
+        orderNumber: orderNumber,
+        isFromLocalStorage: isFromLocalStorage,
+        selectedPaperSize: paperSize,
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: appSettings.customerCarePhone,
+        customerCareEmail: appSettings.customerCareEmail,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        customerAddress: customerAddress,
+        orderReturns: orderReturns,
+        customerOldBalance: customerOldBalance,
+        customerCurrentBalance: customerCurrentBalance,
+        paidAmount: paidAmount,
+        orderComment: orderComment,
+        customerAlternatePhone: customerAlternatePhone,
+        paymentMethod: paymentMethod,
+        paymentBreakdown: paymentBreakdown,
+        zatcaVatNumber: zatcaVatNumber,
+        zatcaCompanyName: zatcaCompanyName,
+        isDefaultCustomer: isDefaultCustomer,
+        netExcTax: netExcTax,
+      );
+
+      // Print
+      if (paperSize == '80mm' || paperSize == '58mm') {
+        await layout.printThermal(params);
+      } else {
+        final standardPrinter = StandardPrinter(context);
+        await standardPrinter.generateAndPrintPDF(
+          selectedPrinter: selectedPrinter,
+          cartItems: cartItems,
+          formattedTotal: formattedTotal,
+          savedTotal: savedTotal,
+          discountAmount: discountAmount,
+          orderDate: orderDate,
+          orderNumber: orderNumber,
+          isFromLocalStorage: isFromLocalStorage,
+          selectedPaperSize: paperSize,
+          billDocumentConfig: billDocumentConfig,
+          customerCareNumber: appSettings.customerCarePhone,
+          customerCareEmail: appSettings.customerCareEmail,
+          customerName: customerName,
+          customerPhone: customerPhone,
+          customerEmail: customerEmail,
+          customerAddress: customerAddress,
+          orderReturns: orderReturns,
+          customerOldBalance: customerOldBalance,
+          customerCurrentBalance: customerCurrentBalance,
+          paidAmount: paidAmount,
+          orderComment: orderComment,
+          customerAlternatePhone: customerAlternatePhone,
+          paymentMethod: paymentMethod,
+          zatcaVatNumber: zatcaVatNumber,
+          zatcaCompanyName: zatcaCompanyName,
+        );
+      }
+
+      debugPrint('[PrintPage] Auto-print successful');
+      return true;
+    } catch (e) {
+      debugPrint('[PrintPage] Auto-print failed: $e');
+      return false;
+    }
+  }
+
+  static Future<String> _getReceiptThemeStatic(DocumentConfig? billDocumentConfig, SharedPreferences prefs) async {
+    final localTheme = prefs.getString('billing_receipt_theme');
+
+    if (localTheme != null && localTheme.isNotEmpty) {
+      return localTheme;
+    }
+
+    final apiTheme = billDocumentConfig?.activeTheme;
+    if (apiTheme != null && apiTheme.isNotEmpty) {
+      return apiTheme;
+    }
+
+    return 'classic';
+  }
 }
 
 class _PrintPageState extends State<PrintPage> {
@@ -82,7 +274,6 @@ class _PrintPageState extends State<PrintPage> {
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
   bool _isLoading = true;
-  bool _isAutoPrinting = false;
   String selectedPaperSize = '80mm';
 
   DocumentConfig? _billDocumentConfig;
@@ -281,16 +472,8 @@ class _PrintPageState extends State<PrintPage> {
             Provider.of<AppSettingsProvider>(context, listen: false);
         final appSettings = appSettingsProvider.appSettings;
         if (appSettings != null) {
-          setState(() {
-            _isAutoPrinting = true;
-          });
-          await _handlePrinting(
+          _handlePrinting(
               appSettings.customerCarePhone, appSettings.customerCareEmail);
-          if (mounted) {
-            setState(() {
-              _isAutoPrinting = false;
-            });
-          }
         }
       }
     } else {
@@ -651,13 +834,11 @@ class _PrintPageState extends State<PrintPage> {
         elevation: 0,
         backgroundColor: primaryColor,
       ),
-      body: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+      body: Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             // Paper Size Selection Card
             Card(
               elevation: 2,
@@ -794,7 +975,6 @@ class _PrintPageState extends State<PrintPage> {
                                   : null,
                             ),
                             child: ListTile(
-                            enabled: !_isAutoPrinting,
                             leading: Icon(
                               Icons.print,
                               color: isSelected
@@ -836,9 +1016,7 @@ class _PrintPageState extends State<PrintPage> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
-                                onPressed: _isAutoPrinting
-                                    ? null
-                                    : () => selectPrinter(printer),
+                                onPressed: () => selectPrinter(printer),
                                 child: Text(
                                   isSelected ? 'Selected' : 'Select',
                                   style: const TextStyle(
@@ -896,35 +1074,33 @@ class _PrintPageState extends State<PrintPage> {
                 ),
               ),
             ElevatedButton.icon(
-              onPressed: _isAutoPrinting
-                  ? null
-                  : () {
-                      debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
-                      if (selectedPrinter == null) {
-                        debugPrint("[LOGO_DEBUG] No printer selected");
-                        showScaffoldError(
-                          context: context,
-                          message: "Please select a printer first",
-                        );
-                        return;
-                      }
-                      if (_billDocumentConfig == null) {
-                        debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
-                        showScaffoldError(
-                          context: context,
-                          message:
-                              "Document configuration not loaded. Please wait or try again.",
-                        );
-                        return;
-                      }
-                      debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
-                      _handlePrinting(appSettings!.customerCarePhone,
-                          appSettings.customerCareEmail);
-                    },
+              onPressed: () {
+                debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
+                if (selectedPrinter == null) {
+                  debugPrint("[LOGO_DEBUG] No printer selected");
+                  showScaffoldError(
+                    context: context,
+                    message: "Please select a printer first",
+                  );
+                  return;
+                }
+                if (_billDocumentConfig == null) {
+                  debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
+                  showScaffoldError(
+                    context: context,
+                    message:
+                        "Document configuration not loaded. Please wait or try again.",
+                  );
+                  return;
+                }
+                debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
+                _handlePrinting(appSettings!.customerCarePhone,
+                    appSettings.customerCareEmail);
+              },
               icon: const Icon(Icons.receipt_long),
-              label: Text(
-                _isAutoPrinting ? 'Printing...' : 'Print Receipt',
-                style: const TextStyle(
+              label: const Text(
+                'Print Receipt',
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -942,63 +1118,12 @@ class _PrintPageState extends State<PrintPage> {
           ],
         ),
       ),
-      if (_isAutoPrinting)
-        Positioned.fill(
-          child: Container(
-            color: Colors.black.withOpacity(0.6),
-            child: BackdropFilter(
-              filter: ColorFilter.mode(
-                Colors.black.withOpacity(0.3),
-                BlendMode.srcOver,
-              ),
-              child: Center(
-                child: Card(
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                          strokeWidth: 3,
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Printing Receipt...',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: textPrimaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Please wait while we print your receipt',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: textSecondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-    ],
-    ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _isScanning || _isAutoPrinting ? null : _checkPermissions,
+        onPressed: _isScanning ? null : _checkPermissions,
         tooltip: 'Scan for printers',
-        backgroundColor: _isScanning || _isAutoPrinting ? textSecondaryColor : primaryColor,
+        backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
         elevation: 4,
-        child: _isScanning || _isAutoPrinting
+        child: _isScanning
             ? const SizedBox(
                 width: 24,
                 height: 24,

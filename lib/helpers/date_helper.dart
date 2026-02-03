@@ -211,6 +211,17 @@ class DateHelper {
     }
   }
 
+  // Format time only (no timezone conversion)
+  static String formatTimeOnly(String dateString) {
+    try {
+      DateTime date = DateTime.parse(dateString);
+      final DateFormat formatter = DateFormat('hh:mm a');
+      return formatter.format(date);
+    } catch (e) {
+      return dateString;
+    }
+  }
+
   // Format duration as "time ago" (e.g., "5m ago", "2h ago", "3d ago")
   static String formatTimeAgo(Duration duration) {
     final minutes = duration.inMinutes;
