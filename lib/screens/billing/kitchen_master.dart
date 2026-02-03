@@ -1800,7 +1800,7 @@ class _ExpandableOrderCardState extends State<_ExpandableOrderCard> {
     final onUpdateAllItemsStatus = widget.onUpdateAllItemsStatus;
     final loadingOrderIds = widget.loadingOrderIds;
 
-    final timeSinceOrder = DateTime.now().difference(order.timestamp);
+    final timeSinceOrder = DateHelper.now().difference(order.timestamp);
     final isSelected = selectedOrder?.id == order.id;
 
     // Determine the actual order status based on items
@@ -2253,7 +2253,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
   }
 
   Widget _buildSelectedOrderDetails(KitchenOrder order) {
-    final timeSinceOrder = DateTime.now().difference(order.timestamp);
+    final timeSinceOrder = DateHelper.now().difference(order.timestamp);
 
     // Determine the actual order status based on items
     final OrderStatus actualOrderStatus = _determineActualOrderStatus(order);

@@ -5406,9 +5406,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     } catch (_) {}
 
     // Get current time
-    final now = DateTime.now();
-    final orderTime =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
 
     // Build items list for KOT
     List<Map<String, dynamic>> printItems = [];

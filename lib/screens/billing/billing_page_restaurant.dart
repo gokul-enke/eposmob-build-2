@@ -4205,15 +4205,12 @@ class BillingPageState extends State<BillingPageRestaurant>
         debugPrint("Error printing saved order: ${error.toString()}");
       }
 
-      // KOT Print for Delivery and Takeaway
-      if (deliveryMethod == "Car Delivery" ||
-          deliveryMethod == "Store Takeaway") {
-        final appSettingsProvider =
-            Provider.of<AppSettingsProvider>(context, listen: false);
-        if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
-          List<LocalCartItem> kotCartItems = orderToUse.items;
-          await _printKOT(orderToUse.orderNumber, kotCartItems);
-        }
+      // KOT Print for all delivery methods
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+        List<LocalCartItem> kotCartItems = orderToUse.items;
+        await _printKOT(orderToUse.orderNumber, kotCartItems);
       }
 
       resetAutocomplete();
@@ -4544,17 +4541,14 @@ class BillingPageState extends State<BillingPageRestaurant>
             debugPrint("❌ Error fetching order details for print: $error");
           }
 
-          // KOT Print for Delivery and Takeaway
-          if (deliveryMethod == "Car Delivery" ||
-              deliveryMethod == "Store Takeaway") {
-            final appSettingsProvider =
-                Provider.of<AppSettingsProvider>(context, listen: false);
-            if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
-              _printKOT(
-                  response["order_number"]?.toString() ??
-                      'ORD-${response["order_id"]}',
-                  cartItems);
-            }
+          // KOT Print for all delivery methods
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: false);
+          if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+            _printKOT(
+                response["order_number"]?.toString() ??
+                    'ORD-${response["order_id"]}',
+                cartItems);
           }
 
           // Clear the mobile number after successful save

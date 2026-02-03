@@ -278,8 +278,8 @@ class _CustomerTransactionsWidgetState
     double savedAmount = 0.0;
 
     // Get current date and time for the report
-    String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-    String orderNumber = "TXN-REPORT-${DateTime.now().millisecondsSinceEpoch}";
+    String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateHelper.now());
+    String orderNumber = "TXN-REPORT-${DateHelper.now().millisecondsSinceEpoch}";
 
     // Get date range values
     String? fromDate =

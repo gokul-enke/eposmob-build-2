@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_transaction.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
@@ -914,8 +915,8 @@ class _SimpleTransactionDetailsScreenState
     double savedAmount = 0.0;
 
     // Get current date and time for the report
-    String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-    String orderNumber = "TXN-REPORT-${DateTime.now().millisecondsSinceEpoch}";
+    String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateHelper.now());
+    String orderNumber = "TXN-REPORT-${DateHelper.now().millisecondsSinceEpoch}";
 
     // Get date range values
     String? fromDate =

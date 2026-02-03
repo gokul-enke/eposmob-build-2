@@ -875,7 +875,7 @@ Thank you for your purchase!
 
 📋 Order Number: #${order.orderNumber}
 💰 Total Amount: $currency $totalAmount
-📅 Date: ${DateTime.now().toString().split(' ')[0]}
+📅 Date: ${DateHelper.formatDate(DateHelper.now())}
 
 Please find your invoice attached.
 ---
@@ -917,7 +917,7 @@ Thank you for your purchase!
 
 📋 Order Number: #${order.orderNumber}
 💰 Total Amount: $currency $totalAmount
-📅 Date: ${DateTime.now().toString().split(' ')[0]}
+📅 Date: ${DateHelper.formatDate(DateHelper.now())}
 
 PDF invoice has been generated and saved.
 

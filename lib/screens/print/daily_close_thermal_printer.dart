@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
@@ -319,11 +320,9 @@ class DailyCloseThermalPrinter {
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
       rows.add(_ReportDividerRow(char: '═'));
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
-      
-      final now = DateTime.now();
-      final formatter = DateFormat('dd-MM-yyyy hh:mm a');
+
       rows.add(_ReportTextRow(
-        'Printed: ${formatter.format(now)}',
+        'Printed: ${DateHelper.getCurrentFormattedTimeWithAMPM()}',
         scale: getSmallScale(is58mm),
         center: true,
       ));

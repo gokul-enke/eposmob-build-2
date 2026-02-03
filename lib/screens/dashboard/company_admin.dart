@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -391,7 +392,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      DateFormat('d MMMM y').format(DateTime.now()),
+                      DateHelper.formatDate(DateHelper.now()),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,

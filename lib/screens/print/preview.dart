@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:intl/intl.dart';
 
 class ReceiptPreviewWidget extends StatelessWidget {
@@ -51,7 +52,7 @@ class ReceiptPreviewWidget extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   Text(
-                    'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
+                    'Date: ${DateHelper.getCurrentFormattedTimeWithAMPM()}',
                     style: const TextStyle(fontSize: 12),
                     textAlign: TextAlign.center,
                   ),

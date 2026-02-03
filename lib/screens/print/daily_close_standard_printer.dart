@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -142,7 +143,7 @@ class DailyCloseStandardPrinter {
                       ],
                       pw.SizedBox(height: 5),
                       pw.Text(
-                        'Generated on: ${DateFormat('dd-MM-yyyy hh:mm a').format(DateTime.now())}',
+                        'Generated on: ${DateHelper.getCurrentFormattedTimeWithAMPM()}',
                         style: pw.TextStyle(
                           font: regularFont,
                           fontSize: isA5 ? 8.0 : 10.0,

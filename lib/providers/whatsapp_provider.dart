@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:whatsapp_bot_flutter/whatsapp_bot_flutter.dart';
 import '../controllers/whatsapp_controller.dart';
+import '../helpers/date_helper.dart';
 
 class WhatsappProvider extends ChangeNotifier {
   final WhatsappController _whatsappController = Get.put(WhatsappController(), permanent: true);
@@ -418,7 +419,7 @@ Thank you for your purchase! Here are your order details:
 
 📋 Order Number: #$orderNumber
 💰 Total Amount: $totalAmount
-📅 Date: ${DateTime.now().toString().split(' ')[0]}
+📅 Date: ${DateHelper.formatDate(DateHelper.now())}
 
 We appreciate your business!
 ''';

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/services/print_service.dart';
@@ -246,7 +247,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
     }
 
     // Apply date filter
-    final now = DateTime.now();
+    final now = DateHelper.now();
     switch (_selectedFilter) {
       case 'Today':
         filtered = filtered.where((order) {
@@ -490,7 +491,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
   }
 
   String _formatDate(DateTime date) {
-    final now = DateTime.now();
+    final now = DateHelper.now();
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {

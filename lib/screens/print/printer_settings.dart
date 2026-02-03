@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -889,10 +890,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               height: textSizeSmall));
 
       // Date and time
+      final now = DateHelper.now();
       bytes += generator.row([
         PosColumn(
             text:
-                '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                '${now.day}/${now.month}/${now.year}',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,
@@ -901,7 +903,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 height: textSizeSmall)),
         PosColumn(
             text:
-                '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+                '${now.hour}:${now.minute.toString().padLeft(2, '0')}',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,

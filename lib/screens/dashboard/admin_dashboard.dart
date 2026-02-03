@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -233,7 +234,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      DateFormat('d MMMM y').format(DateTime.now()),
+                      DateHelper.formatDate(DateHelper.now()),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
