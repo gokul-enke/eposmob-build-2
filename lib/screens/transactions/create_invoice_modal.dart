@@ -214,8 +214,8 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
       final customerProvider =
           Provider.of<CustomerProvider>(context, listen: false);
       final authModel = Provider.of<AuthModel>(context, listen: false);
-      await customerProvider.fetchCustomers(
-        accessToken: authModel.token ?? "",
+      await customerProvider.loadAllCustomers(
+        authModel.token ?? '',
       );
       if (mounted) {
         setState(() {

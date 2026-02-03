@@ -848,20 +848,16 @@ class StandardPrinter {
               if (context.mounted) {
                 showScaffold(
                     context: context, message: "PDF created successfully");
-                Navigator.pop(context);
-                SideBarController sideBarController =
-                    Get.put(SideBarController());
-                sideBarController.index.value = 46;
+                // Note: Navigation is now handled by the caller
+                // PrintPage has its own back button, auto-print doesn't need navigation
               }
             }
           } else {
             if (context.mounted) {
               showScaffold(
                   context: context, message: "PDF opened for printing");
-              Navigator.pop(context);
-              SideBarController sideBarController =
-                  Get.put(SideBarController());
-              sideBarController.index.value = 46;
+              // Note: Navigation is now handled by the caller
+              // PrintPage has its own back button, auto-print doesn't need navigation
             }
           }
         } catch (e) {
@@ -872,10 +868,8 @@ class StandardPrinter {
             if (context.mounted) {
               showScaffold(
                   context: context, message: "PDF created successfully");
-              Navigator.pop(context);
-              SideBarController sideBarController =
-                  Get.put(SideBarController());
-              sideBarController.index.value = 46;
+              // Note: Navigation is now handled by the caller
+              // PrintPage has its own back button, auto-print doesn't need navigation
             }
           }
         }
@@ -897,21 +891,19 @@ class StandardPrinter {
       // First try to open with the default Windows PDF viewer
       final result = await OpenFile.open(file.path);
 
-      // Always close the page on Windows, regardless of result
+      // Always show success message
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        // Note: Navigation is now handled by the caller
+        // PrintPage has its own back button, auto-print doesn't need navigation
       }
     } catch (e) {
       debugPrint("Windows PDF handling error: $e");
-      // Still close the page on error
+      // Still show success on error
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        // Note: Navigation is now handled by the caller
+        // PrintPage has its own back button, auto-print doesn't need navigation
       }
     }
   }
@@ -919,10 +911,8 @@ class StandardPrinter {
   // Show information about file location (for Windows) - Now unused but kept for reference
   void _showFileLocationInfo(File file) {
     if (context.mounted) {
-      // Just close the page instead of showing dialog
-      Navigator.pop(context);
-      SideBarController sideBarController = Get.put(SideBarController());
-      sideBarController.index.value = 46;
+      // Note: Navigation is now handled by the caller
+      // PrintPage has its own back button, auto-print doesn't need navigation
     }
   }
 
@@ -942,9 +932,8 @@ class StandardPrinter {
         if (context.mounted) {
           showScaffold(
               context: context, message: "PDF shared. Please open it to print");
-          Navigator.pop(context);
-          SideBarController sideBarController = Get.put(SideBarController());
-          sideBarController.index.value = 46;
+          // Note: Navigation is now handled by the caller
+          // PrintPage has its own back button, auto-print doesn't need navigation
         }
       } else {
         // For Windows, show the file location

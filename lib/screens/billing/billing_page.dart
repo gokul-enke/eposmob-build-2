@@ -5206,11 +5206,17 @@ class BillingPageState extends State<BillingPage>
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
-      paidMethods.add({
-        // Use payment method ID if available, otherwise fallback to string
-        "method": billingProvider.cashPaymentMethodId ?? "CASH",
-        "amount": double.tryParse(_cashAmountController.text) ?? 0,
-      });
+      // Adjust cash amount by deducting balance (change returned to customer)
+      double rawCashAmount = double.tryParse(_cashAmountController.text) ?? 0;
+      double netCashAmount = rawCashAmount - _balanceAmount;
+      // Only add if net cash is positive (skip if balance equals or exceeds cash)
+      if (netCashAmount > 0) {
+        paidMethods.add({
+          // Use payment method ID if available, otherwise fallback to string
+          "method": billingProvider.cashPaymentMethodId ?? "CASH",
+          "amount": netCashAmount, // Net cash kept in drawer
+        });
+      }
     }
 
     if (_isCardSelected &&

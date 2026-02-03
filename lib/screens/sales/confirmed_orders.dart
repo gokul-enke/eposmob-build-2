@@ -292,7 +292,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     return defaultPhone.isNotEmpty && phone == defaultPhone;
   }
 
-  void _printOrder(SavedOrder order) {
+  void _printOrder(SavedOrder order) async {
     try {
       // Convert SavedOrder items to the format expected by PrintPage
       List<Map<String, dynamic>> cartItems = [];
@@ -335,37 +335,63 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
-      Navigator.push(
+      // Calculate discount amount
+      double discountAmount = (order.flatDiscount ?? 0.0) +
+          ((order.percentageDiscount ?? 0.0) > 0
+              ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+              : 0.0);
+
+      // Get paid amount
+      double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
+          ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
+          : null;
+
+      // Try auto-print with default printer first
+      debugPrint("🖨️ Attempting auto-print for confirmed order #${order.orderNumber}");
+      final autoPrintSuccess = await PrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: storeName,
-            cartItems: cartItems,
-            formattedTotal: finalTotal.toString(), // Use order's total
-            savedTotal: youSaved.toString(),
-            discountAmount: ((order.flatDiscount ?? 0.0) +
-                    ((order.percentageDiscount ?? 0.0) > 0
-                        ? (order.total *
-                            (order.percentageDiscount ?? 0.0) /
-                            100)
-                        : 0.0))
-                .toString(),
-            orderDate: order.createdAt,
-            orderNumber: order.orderNumber,
-            isFromLocalStorage: true,
-            customerName: order.customerName,
-            customerPhone: order.customerPhone,
-            paymentMethod: order.paymentMethod,
-          customerAlternatePhone: order.alternatePhone,
-          orderComment: order.comment,
-          paidAmount: (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
-              ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
-              : null,
-          // Balance info not available for offline saved orders
-          isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
-        ),
-        ),
+        storeName: storeName,
+        cartItems: cartItems,
+        formattedTotal: finalTotal.toString(), // Use order's total
+        savedTotal: youSaved.toString(),
+        discountAmount: discountAmount.toString(),
+        orderDate: order.createdAt,
+        orderNumber: order.orderNumber,
+        isFromLocalStorage: true,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        paymentMethod: order.paymentMethod,
+        customerAlternatePhone: order.alternatePhone,
+        orderComment: order.comment,
+        paidAmount: paidAmount,
+        isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
       );
+
+      // Only show print page if auto-print failed
+      if (!autoPrintSuccess && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PrintPage(
+              storeName: storeName,
+              cartItems: cartItems,
+              formattedTotal: finalTotal.toString(), // Use order's total
+              savedTotal: youSaved.toString(),
+              discountAmount: discountAmount.toString(),
+              orderDate: order.createdAt,
+              orderNumber: order.orderNumber,
+              isFromLocalStorage: true,
+              customerName: order.customerName,
+              customerPhone: order.customerPhone,
+              paymentMethod: order.paymentMethod,
+              customerAlternatePhone: order.alternatePhone,
+              orderComment: order.comment,
+              paidAmount: paidAmount,
+              isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
+            ),
+          ),
+        );
+      }
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
       showScaffoldError(

@@ -1406,33 +1406,61 @@ Powered by CloudPOS''',
                 }
               }
 
-              Navigator.push(
+              // Try auto-print with default printer first
+              final autoPrintSuccess = await PrintPage.autoPrint(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => PrintPage(
-                    storeName: storeName,
-                    cartItems: orderDetails.data?.cart?.cartItems ?? [],
-                    formattedTotal: formattedTotal,
-                    savedTotal: savedTotal,
-                    discountAmount: discountAmount,
-                    orderDate: orderDate,
-                    orderNumber: orderDetails.data!.orderNumber.toString(),
-                    customerName: customerName,
-                    customerPhone: customerPhone,
-                    customerEmail: customerEmail,
-                    customerAddress: customerAddress,
-                    customerAlternatePhone: customerAlternatePhone,
-                    paymentMethod: paymentMethod,
-                    paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
-                    orderComment: orderComment,
-                    orderReturns: orderDetails.data?.orderReturns,
-                    paidAmount: paidAmount > 0 ? paidAmount : null,
-                    customerCurrentBalance: customerCurrentBalance,
-                    isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                    netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-                  ),
-                ),
+                storeName: storeName,
+                cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                formattedTotal: formattedTotal,
+                savedTotal: savedTotal,
+                discountAmount: discountAmount,
+                orderDate: orderDate,
+                orderNumber: orderDetails.data!.orderNumber.toString(),
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerEmail: customerEmail,
+                customerAddress: customerAddress,
+                customerAlternatePhone: customerAlternatePhone,
+                paymentMethod: paymentMethod,
+                paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+                orderComment: orderComment,
+                orderReturns: orderDetails.data?.orderReturns,
+                paidAmount: paidAmount > 0 ? paidAmount : null,
+                customerCurrentBalance: customerCurrentBalance,
+                isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
               );
+
+              // Only show print page if auto-print failed
+              if (!autoPrintSuccess && mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PrintPage(
+                      storeName: storeName,
+                      cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                      formattedTotal: formattedTotal,
+                      savedTotal: savedTotal,
+                      discountAmount: discountAmount,
+                      orderDate: orderDate,
+                      orderNumber: orderDetails.data!.orderNumber.toString(),
+                      customerName: customerName,
+                      customerPhone: customerPhone,
+                      customerEmail: customerEmail,
+                      customerAddress: customerAddress,
+                      customerAlternatePhone: customerAlternatePhone,
+                      paymentMethod: paymentMethod,
+                      paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+                      orderComment: orderComment,
+                      orderReturns: orderDetails.data?.orderReturns,
+                      paidAmount: paidAmount > 0 ? paidAmount : null,
+                      customerCurrentBalance: customerCurrentBalance,
+                      isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                      netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
+                    ),
+                  ),
+                );
+              }
 
               }
             } catch (error) {

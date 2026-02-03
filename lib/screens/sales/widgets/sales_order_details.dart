@@ -411,32 +411,59 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 }
               }
 
-              Navigator.push(
+              // Try auto-print with default printer first
+              final autoPrintSuccess = await PrintPage.autoPrint(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => PrintPage(
-                    storeName: storeName,
-                    cartItems: cartItems ?? [],
-                    formattedTotal: formattedTotal,
-                    savedTotal: savedTotal,
-                    discountAmount: discountAmount,
-                    orderDate: orderDate,
-                    orderNumber: orderNumber,
-                    customerName: customerName,
-                    customerPhone: customerPhone,
-                    customerEmail: customerEmail,
-                    customerAddress: customerAddress,
-                    customerAlternatePhone: customerAlternatePhone,
-                    paymentMethod: paymentMethod,
-                    orderComment: orderComment,
-                    orderReturns: orderDetailsModelData?.orderReturns,
-                    paidAmount: paidAmount > 0 ? paidAmount : null,
-                    customerCurrentBalance: customerCurrentBalance,
-                    isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                    netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax?.toString(),
-                  ),
-                ),
+                storeName: storeName,
+                cartItems: cartItems ?? [],
+                formattedTotal: formattedTotal,
+                savedTotal: savedTotal,
+                discountAmount: discountAmount,
+                orderDate: orderDate,
+                orderNumber: orderNumber,
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerEmail: customerEmail,
+                customerAddress: customerAddress,
+                customerAlternatePhone: customerAlternatePhone,
+                paymentMethod: paymentMethod,
+                orderComment: orderComment,
+                orderReturns: orderDetailsModelData?.orderReturns,
+                paidAmount: paidAmount > 0 ? paidAmount : null,
+                customerCurrentBalance: customerCurrentBalance,
+                isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax?.toString(),
               );
+
+              // Only show print page if auto-print failed
+              if (!autoPrintSuccess && mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PrintPage(
+                      storeName: storeName,
+                      cartItems: cartItems ?? [],
+                      formattedTotal: formattedTotal,
+                      savedTotal: savedTotal,
+                      discountAmount: discountAmount,
+                      orderDate: orderDate,
+                      orderNumber: orderNumber,
+                      customerName: customerName,
+                      customerPhone: customerPhone,
+                      customerEmail: customerEmail,
+                      customerAddress: customerAddress,
+                      customerAlternatePhone: customerAlternatePhone,
+                      paymentMethod: paymentMethod,
+                      orderComment: orderComment,
+                      orderReturns: orderDetailsModelData?.orderReturns,
+                      paidAmount: paidAmount > 0 ? paidAmount : null,
+                      customerCurrentBalance: customerCurrentBalance,
+                      isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                      netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax?.toString(),
+                    ),
+                  ),
+                );
+              }
             },
             height: 50,
             width: size.width * 0.19,

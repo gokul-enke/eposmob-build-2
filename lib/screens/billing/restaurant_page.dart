@@ -7082,7 +7082,15 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           // Prepare paidMethods array with IDs (only include methods with amount > 0)
           if (_isCashSelected && cashAmountVal > 0) {
-            paidMethods.add({"method": cashId, "amount": cashAmountVal});
+            // Adjust cash amount by deducting balance (change returned to customer)
+            final totalPaid = cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
+            final orderAmount = double.tryParse(totalPrice) ?? 0.0;
+            final balanceAmountVal = totalPaid - orderAmount;
+            final netCashAmount = cashAmountVal - balanceAmountVal;
+            // Only add if net cash is positive (skip if balance equals or exceeds cash)
+            if (netCashAmount > 0) {
+              paidMethods.add({"method": cashId, "amount": netCashAmount});
+            }
           }
           if (_isCardSelected && cardAmountVal > 0) {
             paidMethods.add({"method": cardId, "amount": cardAmountVal});

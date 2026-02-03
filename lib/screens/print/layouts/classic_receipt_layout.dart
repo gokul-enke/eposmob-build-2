@@ -200,9 +200,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
       if (context.mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        // Note: Navigation is now handled by the caller
+        // PrintPage has its own back button, auto-print doesn't need navigation
       }
     } catch (e, stacktrace) {
       debugPrint("ERROR in Classic Layout Print: $e");
