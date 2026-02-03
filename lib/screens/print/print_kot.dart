@@ -47,6 +47,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
   bool _isLoading = true;
+  bool _isAutoPrinting = false;
   String selectedPaperSize = '80mm';
 
   DocumentConfig? _kotDocumentConfig;
@@ -246,7 +247,15 @@ class _KotPrintPageState extends State<KotPrintPage> {
           '[KotPrintPage] Printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
 
       if (selectedPrinter != null && _kotDocumentConfig != null) {
-        _handlePrinting();
+        setState(() {
+          _isAutoPrinting = true;
+        });
+        await _handlePrinting();
+        if (mounted) {
+          setState(() {
+            _isAutoPrinting = false;
+          });
+        }
       }
     } else {
       setState(() {
@@ -519,11 +528,13 @@ class _KotPrintPageState extends State<KotPrintPage> {
         elevation: 0,
         backgroundColor: primaryColor,
       ),
-      body: Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // Paper Size Selection Card
             Card(
               elevation: 2,
@@ -660,6 +671,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                                   : null,
                             ),
                             child: ListTile(
+                              enabled: !_isAutoPrinting,
                               leading: Icon(
                                 Icons.print,
                                 color: isSelected
@@ -701,7 +713,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
-                                onPressed: () => selectPrinter(printer),
+                                onPressed: _isAutoPrinting
+                                    ? null
+                                    : () => selectPrinter(printer),
                                 child: Text(
                                   isSelected ? 'Selected' : 'Select',
                                   style: const TextStyle(
@@ -759,28 +773,30 @@ class _KotPrintPageState extends State<KotPrintPage> {
                 ),
               ),
             ElevatedButton.icon(
-              onPressed: () {
-                if (selectedPrinter == null) {
-                  showScaffoldError(
-                    context: context,
-                    message: "Please select a printer first",
-                  );
-                  return;
-                }
-                if (_kotDocumentConfig == null) {
-                  showScaffoldError(
-                    context: context,
-                    message:
-                        "Document configuration not loaded. Please wait or try again.",
-                  );
-                  return;
-                }
-                _handlePrinting();
-              },
+              onPressed: _isAutoPrinting
+                  ? null
+                  : () {
+                      if (selectedPrinter == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: "Please select a printer first",
+                        );
+                        return;
+                      }
+                      if (_kotDocumentConfig == null) {
+                        showScaffoldError(
+                          context: context,
+                          message:
+                              "Document configuration not loaded. Please wait or try again.",
+                        );
+                        return;
+                      }
+                      _handlePrinting();
+                    },
               icon: const Icon(Icons.receipt_long),
-              label: const Text(
-                'Print KOT',
-                style: TextStyle(
+              label: Text(
+                _isAutoPrinting ? 'Printing...' : 'Print KOT',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -798,12 +814,63 @@ class _KotPrintPageState extends State<KotPrintPage> {
           ],
         ),
       ),
+      if (_isAutoPrinting)
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withOpacity(0.6),
+            child: BackdropFilter(
+              filter: ColorFilter.mode(
+                Colors.black.withOpacity(0.3),
+                BlendMode.srcOver,
+              ),
+              child: Center(
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          strokeWidth: 3,
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Printing KOT...',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Please wait while we print your KOT',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+    ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _isScanning ? null : _checkPermissions,
+        onPressed: _isScanning || _isAutoPrinting ? null : _checkPermissions,
         tooltip: 'Scan for printers',
-        backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
+        backgroundColor: _isScanning || _isAutoPrinting ? textSecondaryColor : primaryColor,
         elevation: 4,
-        child: _isScanning
+        child: _isScanning || _isAutoPrinting
             ? const SizedBox(
                 width: 24,
                 height: 24,

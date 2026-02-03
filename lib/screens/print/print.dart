@@ -82,6 +82,7 @@ class _PrintPageState extends State<PrintPage> {
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
   bool _isLoading = true;
+  bool _isAutoPrinting = false;
   String selectedPaperSize = '80mm';
 
   DocumentConfig? _billDocumentConfig;
@@ -280,8 +281,16 @@ class _PrintPageState extends State<PrintPage> {
             Provider.of<AppSettingsProvider>(context, listen: false);
         final appSettings = appSettingsProvider.appSettings;
         if (appSettings != null) {
-          _handlePrinting(
+          setState(() {
+            _isAutoPrinting = true;
+          });
+          await _handlePrinting(
               appSettings.customerCarePhone, appSettings.customerCareEmail);
+          if (mounted) {
+            setState(() {
+              _isAutoPrinting = false;
+            });
+          }
         }
       }
     } else {
@@ -642,11 +651,13 @@ class _PrintPageState extends State<PrintPage> {
         elevation: 0,
         backgroundColor: primaryColor,
       ),
-      body: Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // Paper Size Selection Card
             Card(
               elevation: 2,
@@ -783,30 +794,31 @@ class _PrintPageState extends State<PrintPage> {
                                   : null,
                             ),
                             child: ListTile(
-                              leading: Icon(
-                                Icons.print,
-                                color: isSelected
-                                    ? primaryColor
-                                    : textSecondaryColor,
-                                size: 28,
+                            enabled: !_isAutoPrinting,
+                            leading: Icon(
+                              Icons.print,
+                              color: isSelected
+                                  ? primaryColor
+                                  : textSecondaryColor,
+                              size: 28,
+                            ),
+                            title: Text(
+                              printer.deviceName ?? 'Unknown device',
+                              style: TextStyle(
+                                color: textPrimaryColor,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontSize: 16,
                               ),
-                              title: Text(
-                                printer.deviceName ?? 'Unknown device',
-                                style: TextStyle(
-                                  color: textPrimaryColor,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 16,
-                                ),
+                            ),
+                            subtitle: Text(
+                              printer.address ?? '',
+                              style: const TextStyle(
+                                color: textSecondaryColor,
+                                fontSize: 14,
                               ),
-                              subtitle: Text(
-                                printer.address ?? '',
-                                style: const TextStyle(
-                                  color: textSecondaryColor,
-                                  fontSize: 14,
-                                ),
-                              ),
+                            ),
                               trailing: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: isSelected
@@ -824,7 +836,9 @@ class _PrintPageState extends State<PrintPage> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
-                                onPressed: () => selectPrinter(printer),
+                                onPressed: _isAutoPrinting
+                                    ? null
+                                    : () => selectPrinter(printer),
                                 child: Text(
                                   isSelected ? 'Selected' : 'Select',
                                   style: const TextStyle(
@@ -882,33 +896,35 @@ class _PrintPageState extends State<PrintPage> {
                 ),
               ),
             ElevatedButton.icon(
-              onPressed: () {
-                debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
-                if (selectedPrinter == null) {
-                  debugPrint("[LOGO_DEBUG] No printer selected");
-                  showScaffoldError(
-                    context: context,
-                    message: "Please select a printer first",
-                  );
-                  return;
-                }
-                if (_billDocumentConfig == null) {
-                  debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
-                  showScaffoldError(
-                    context: context,
-                    message:
-                        "Document configuration not loaded. Please wait or try again.",
-                  );
-                  return;
-                }
-                debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
-                _handlePrinting(appSettings!.customerCarePhone,
-                    appSettings.customerCareEmail);
-              },
+              onPressed: _isAutoPrinting
+                  ? null
+                  : () {
+                      debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
+                      if (selectedPrinter == null) {
+                        debugPrint("[LOGO_DEBUG] No printer selected");
+                        showScaffoldError(
+                          context: context,
+                          message: "Please select a printer first",
+                        );
+                        return;
+                      }
+                      if (_billDocumentConfig == null) {
+                        debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
+                        showScaffoldError(
+                          context: context,
+                          message:
+                              "Document configuration not loaded. Please wait or try again.",
+                        );
+                        return;
+                      }
+                      debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
+                      _handlePrinting(appSettings!.customerCarePhone,
+                          appSettings.customerCareEmail);
+                    },
               icon: const Icon(Icons.receipt_long),
-              label: const Text(
-                'Print Receipt',
-                style: TextStyle(
+              label: Text(
+                _isAutoPrinting ? 'Printing...' : 'Print Receipt',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -926,12 +942,63 @@ class _PrintPageState extends State<PrintPage> {
           ],
         ),
       ),
+      if (_isAutoPrinting)
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withOpacity(0.6),
+            child: BackdropFilter(
+              filter: ColorFilter.mode(
+                Colors.black.withOpacity(0.3),
+                BlendMode.srcOver,
+              ),
+              child: Center(
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          strokeWidth: 3,
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Printing Receipt...',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Please wait while we print your receipt',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+    ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _isScanning ? null : _checkPermissions,
+        onPressed: _isScanning || _isAutoPrinting ? null : _checkPermissions,
         tooltip: 'Scan for printers',
-        backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
+        backgroundColor: _isScanning || _isAutoPrinting ? textSecondaryColor : primaryColor,
         elevation: 4,
-        child: _isScanning
+        child: _isScanning || _isAutoPrinting
             ? const SizedBox(
                 width: 24,
                 height: 24,
