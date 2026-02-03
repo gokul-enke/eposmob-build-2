@@ -675,7 +675,7 @@ class StandardPrinter {
                                 : (isRtl
                                     ? 'المبلغ بالكلمات:'
                                     : 'Amount in words:'),
-                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency)} Only.',
                             summaryStyle,
                             isRtl: isRtl,
                           ),
@@ -742,6 +742,7 @@ class StandardPrinter {
                 summaryStyle,
                 netTotalStyle,
                 updatedSettings,
+                currency,
                 isRtl: isRtl,
               ),
               pw.SizedBox(height: 10),
@@ -2179,7 +2180,8 @@ class StandardPrinter {
     pw.TextStyle subheaderStyle,
     pw.TextStyle summaryStyle,
     pw.TextStyle netTotalStyle,
-    Map<String, DisplayOption>? displayConfig, {
+    Map<String, DisplayOption>? displayConfig,
+    String currency, {
     bool isRtl = false,
   }) {
     double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
@@ -2328,7 +2330,7 @@ class StandardPrinter {
                       ? displayConfig!['showFinalAmountInWords']!.value
                           as String
                       : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                  '${AmountHelper().convertNumberToWords(finalTotal)} Only.',
+                  '${AmountHelper().convertNumberToWords(finalTotal, currency: currency)} Only.',
                   summaryStyle,
                   isRtl: isRtl,
                 ),
@@ -2937,6 +2939,7 @@ class StandardPrinter {
                     summaryStyle,
                     netTotalStyle,
                     updatedSettings,
+                    currency,
                     isRtl: isRtl,
                   ),
                 ],
@@ -2957,7 +2960,7 @@ class StandardPrinter {
                           ? updatedSettings!['showAmountInWords']!.value
                               as String
                           : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency)} Only.',
                       summaryStyle,
                       isRtl: isRtl,
                     ),

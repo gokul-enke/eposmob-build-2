@@ -29,8 +29,6 @@ restaurantsales@funzcart.in
 restaurantsales@chillis.com
 CHILLIS_RESTAURANT_xA0zcMObAQfrv7inwqOdwI8VbT4nA143
 
-
-
 ezeee
 
 CHILLIS_RESTAURANT_RkgPh2sBuGjOx44lHU6GV5eKXAA1V3lh

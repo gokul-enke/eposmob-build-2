@@ -125,6 +125,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   bool _isCodSelected = false;
   bool _hasOpenedPaymentModalOnce = false;
   bool isInitLoading = false;
+  bool _isLoadingCustomers = false; // Track if customers are being loaded
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
   List<ListCartModelDataCartItem>? cartProductItems = [];
@@ -645,6 +646,12 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Future<void> _fetchCustomers() async {
+    // Set loading flag
+    if (_isLoadingCustomers) {
+      debugPrint("🛡️ _fetchCustomers() already in progress, skipping duplicate call");
+      return;
+    }
+
     // Early guard: if editing a saved order, do not override customer with defaults
     final currentOrder =
         Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
@@ -653,6 +660,11 @@ class BillingPageState extends State<BillingPageRestaurant>
           "🛡️ Skipping default customer fetch because a saved order is being edited");
       return;
     }
+
+    setState(() {
+      _isLoadingCustomers = true;
+    });
+
     debugPrint("🔍 _fetchCustomers() called");
     debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
     debugPrint("  - selectedCustomerID: $selectedCustomerID");
@@ -709,7 +721,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           if (!autoAssignEnabled) {
             debugPrint(
                 "🔧 APP SETTINGS: Auto-assign default customer is DISABLED - only fetching customer list");
-            return; // Exit early, only customer list is fetched
+            // No return needed here - let the setState complete and finally block clear the loading flag
           }
 
           CustomerListModelData? defaultCustomer;
@@ -802,13 +814,15 @@ class BillingPageState extends State<BillingPageRestaurant>
         });
       }
     } catch (error) {
-      debugPrint("❌ EXCEPTION in _confirmOrder: $error");
+      debugPrint("❌ EXCEPTION in _fetchCustomers: $error");
     } finally {
-      // Set loading to false at the end of the function
-      setState(() {
-        isLoadingConfirmOrder = false; // Indicate that loading has finished
-      });
-      debugPrint("🏁 Confirm Order process completed");
+      // Always clear the loading flag, even on error or early return
+      if (mounted) {
+        setState(() {
+          _isLoadingCustomers = false;
+        });
+      }
+      debugPrint("🏁 _fetchCustomers() completed");
     }
   }
 
@@ -1041,11 +1055,42 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _showCheckoutModal() {
+  void _showCheckoutModal() async {
     // Mark that payment modal opportunity has been given
     setState(() {
       _hasOpenedPaymentModalOnce = false;
     });
+
+    // Wait for customers to finish loading if they're still being fetched
+    if (_isLoadingCustomers) {
+      // Show a loading dialog while waiting for customers
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Wait for customers to finish loading
+      while (_isLoadingCustomers) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+    }
+
+    // Double-check customerList is not empty, if it is, try fetching one more time
+    if ((customerList == null || customerList!.isEmpty) && !_isLoadingCustomers) {
+      await _fetchCustomers();
+      // Wait a bit for the fetch to complete
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
+    if (!mounted) return;
 
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
