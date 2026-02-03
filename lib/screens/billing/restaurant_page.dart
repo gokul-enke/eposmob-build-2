@@ -6818,41 +6818,74 @@ class _OrderPanelState extends State<_OrderPanel> {
           }
 
           if (mounted) {
-            // Navigate to PrintPage
-            await Navigator.push(
+            // Try auto-print with default printer first
+            debugPrint("🖨️ Attempting auto-print for order #$orderNumber");
+            final autoPrintSuccess = await PrintPage.autoPrint(
               context,
-              MaterialPageRoute(
-                builder: (context) => PrintPage(
-                  storeName: storeName,
-                  cartItems: orderDetails.data!.cart!.cartItems!,
-                  formattedTotal: formattedTotal!,
-                  savedTotal: savedTotal!,
-                  discountAmount:
-                      orderDetails.data!.priceSummary?.discount?.toString() ??
-                          "0.00",
-                  orderDate: DateHelper.formatInputToDisplay(orderDate),
-                  orderNumber: orderDetails.data!.orderNumber ?? "",
-                  customerName: customerName,
-                  customerPhone: customerPhone,
-                  customerEmail: customerEmail,
-                  customerAddress: customerAddress,
-                  customerOldBalance: oldBalance,
-                  customerCurrentBalance: currentBalance,
-                  paidAmount: totalPaid > 0 ? totalPaid : null,
-                  customerAlternatePhone: customerAlternatePhone,
-                  paymentMethod: paymentMethod,
-                  paymentBreakdown: paymentBreakdown,
-                  orderComment: orderComment,
-                  isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                          context,
-                          listen: false)
-                      .isDefaultCustomer,
-                  netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-                ),
-              ),
+              storeName: storeName,
+              cartItems: orderDetails.data!.cart!.cartItems!,
+              formattedTotal: formattedTotal!,
+              savedTotal: savedTotal!,
+              discountAmount:
+                  orderDetails.data!.priceSummary?.discount?.toString() ??
+                      "0.00",
+              orderDate: DateHelper.formatInputToDisplay(orderDate),
+              orderNumber: orderDetails.data!.orderNumber ?? "",
+              customerName: customerName,
+              customerPhone: customerPhone,
+              customerEmail: customerEmail,
+              customerAddress: customerAddress,
+              customerOldBalance: oldBalance,
+              customerCurrentBalance: currentBalance,
+              paidAmount: totalPaid > 0 ? totalPaid : null,
+              customerAlternatePhone: customerAlternatePhone,
+              paymentMethod: paymentMethod,
+              paymentBreakdown: paymentBreakdown,
+              orderComment: orderComment,
+              isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                      context,
+                      listen: false)
+                  .isDefaultCustomer,
+              netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
             );
 
-            // After returning from print or successful navigation, cleanup
+            // Only show print page if auto-print failed
+            if (!autoPrintSuccess) {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrintPage(
+                    storeName: storeName,
+                    cartItems: orderDetails.data!.cart!.cartItems!,
+                    formattedTotal: formattedTotal!,
+                    savedTotal: savedTotal!,
+                    discountAmount:
+                        orderDetails.data!.priceSummary?.discount?.toString() ??
+                            "0.00",
+                    orderDate: DateHelper.formatInputToDisplay(orderDate),
+                    orderNumber: orderDetails.data!.orderNumber ?? "",
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    customerEmail: customerEmail,
+                    customerAddress: customerAddress,
+                    customerOldBalance: oldBalance,
+                    customerCurrentBalance: currentBalance,
+                    paidAmount: totalPaid > 0 ? totalPaid : null,
+                    customerAlternatePhone: customerAlternatePhone,
+                    paymentMethod: paymentMethod,
+                    paymentBreakdown: paymentBreakdown,
+                    orderComment: orderComment,
+                    isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                            context,
+                            listen: false)
+                        .isDefaultCustomer,
+                    netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
+                  ),
+                ),
+              );
+            }
+
+            // After returning from print or successful auto-print, cleanup
             if (mounted) {
               setState(() => _selectedOrder = null);
               widget.onOrderSelected(null);
