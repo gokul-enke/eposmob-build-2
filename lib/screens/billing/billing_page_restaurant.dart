@@ -1056,9 +1056,29 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   void _showCheckoutModal() async {
-    // Mark that payment modal opportunity has been given
+    // Reset payment state to start fresh each time modal opens
     setState(() {
       _hasOpenedPaymentModalOnce = false;
+
+      // Reset payment method selections
+      _isCashSelected = false;
+      _isCardSelected = false;
+      _isUpiSelected = false;
+      _isCodSelected = false;
+      _isDebitSelected = false;
+
+      // Clear payment amount controllers
+      _cashAmountController.clear();
+      _cardAmountController.clear();
+      _upiAmountController.clear();
+      _codAmountController.clear();
+      _debitAmountController.clear();
+
+      // Reset transaction number
+      _transactionNumberController.clear();
+
+      // Reset credit flag
+      _toCustomerCreditEnabled = false;
     });
 
     // Wait for customers to finish loading if they're still being fetched
