@@ -397,6 +397,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         }
       }
     });
+
+    // Notify parent with the newly loaded payment method IDs
+    // This ensures parent receives IDs as soon as they're available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _notifyChanges();
+      }
+    });
   }
 
   // Base balance calculation: always based on current purchase total

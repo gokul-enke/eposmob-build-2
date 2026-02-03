@@ -828,6 +828,19 @@ class BillingProvider extends ChangeNotifier {
   String? get upiPaymentMethodId => _upiPaymentMethodId;
   String? get codPaymentMethodId => _codPaymentMethodId;
 
+  void updatePaymentMethodIds({
+    String? cashId,
+    String? cardId,
+    String? upiId,
+    String? codId,
+  }) {
+    if (cashId != null) _cashPaymentMethodId = cashId;
+    if (cardId != null) _cardPaymentMethodId = cardId;
+    if (upiId != null) _upiPaymentMethodId = upiId;
+    if (codId != null) _codPaymentMethodId = codId;
+    notifyListeners();
+  }
+
   // 23. Payment Validation - Ensure payment methods are selected before confirmation
   bool _isPaymentValid = false;
   String? _paymentValidationError;

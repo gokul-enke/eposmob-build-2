@@ -53,6 +53,7 @@ import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
@@ -4754,7 +4755,40 @@ class BillingPageState extends State<BillingPage>
 
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
   /// This is called when clicking Confirm Order or Confirm & Print buttons
-  void _showCheckoutModal() {
+  void _showCheckoutModal() async {
+    // Reload payment methods
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+    masterDataProvider.clearPaymentMethodsCache();
+    final methods = await masterDataProvider.fetchPaymentMethods();
+
+    if (methods != null && mounted) {
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      String? cashId, cardId, upiId, codId;
+      for (var m in methods) {
+        final val = m.value.toUpperCase();
+        if (val == 'CASH') {
+          cashId = m.id.toString();
+        } else if (val == 'CARD') {
+          cardId = m.id.toString();
+        } else if (val == 'UPI') {
+          upiId = m.id.toString();
+        } else if (val == 'COD') {
+          codId = m.id.toString();
+        }
+      }
+      billingProvider.updatePaymentMethodIds(
+        cashId: cashId,
+        cardId: cardId,
+        upiId: upiId,
+        codId: codId,
+      );
+    }
+
+    // Apply default payment method
+    _applyDefaultPaymentMethod();
+
     // Mark that payment modal opportunity has been given
     setState(() {
       _hasOpenedPaymentModalOnce = false;

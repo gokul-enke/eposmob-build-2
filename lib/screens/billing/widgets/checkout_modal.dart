@@ -7,6 +7,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 // import 'package:pos_machine/resources/style_manager.dart'; // Unused
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -224,6 +225,42 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _lDebitAmount = widget.debitAmount;
     _lTransactionNumber = widget.transactionNumber;
     _lToCustomerCreditEnabled = widget.toCustomerCreditEnabled;
+
+    // Reload payment methods and apply default when modal opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+      masterDataProvider.clearPaymentMethodsCache();
+      masterDataProvider.fetchPaymentMethods();
+      _applyDefaultPaymentMethod();
+    });
+  }
+
+  void _applyDefaultPaymentMethod() {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+
+    // Only set default if no method is currently selected
+    if (_lIsCashSelected ||
+        _lIsCardSelected ||
+        _lIsUpiSelected ||
+        _lIsCodSelected ||
+        _lIsDebitSelected) {
+      return;
+    }
+
+    final defaultPayment =
+        appSettingsProvider.appSettings?.defaultPaymentMethod;
+    if (defaultPayment != null && defaultPayment.isNotEmpty) {
+      debugPrint(
+          "💰 [CheckoutModal] Applying default payment method: $defaultPayment");
+      setState(() {
+        _lIsCashSelected = defaultPayment.toUpperCase() == 'CASH';
+        _lIsCardSelected = defaultPayment.toUpperCase() == 'CARD';
+        _lIsUpiSelected = defaultPayment.toUpperCase() == 'UPI';
+        _lIsCodSelected = defaultPayment.toUpperCase() == 'COD';
+      });
+    }
   }
 
   @override
