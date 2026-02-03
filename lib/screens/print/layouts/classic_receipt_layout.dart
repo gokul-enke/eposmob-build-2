@@ -112,7 +112,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
 
       // ========== TOTALS SECTION ==========
-      _buildTotalsSection(part1Rows, params, displayConfig, isEnglish);
+      _buildTotalsSection(part1Rows, params, displayConfig, isEnglish, appSettings);
 
       // ========== FOOTER SECTION (Part 2) ==========
       _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);
@@ -773,7 +773,12 @@ class ClassicReceiptLayout implements ReceiptLayout {
     ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
+    dynamic appSettings,
   ) {
+    // Get currency from appSettings
+    final String currency = appSettings?.currency ?? 'INR';
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+
     double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
     double total = double.tryParse(params.formattedTotal) ?? 0.0;
     double discountAmountValue =
@@ -971,8 +976,25 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
     // Amount in Words
     if (displayConfig?['showAmountInWords']?.visible == true) {
-      final amountInWords =
-          '${AmountHelper().convertNumberToWords(total)} Only.';
+      rows.add(SpacingRow(5));
+
+      String amountInWords;
+
+      if (isDualLanguage) {
+        final arabicText = AmountHelper().convertNumberToWords(
+            total, currency: currency, language: 'ar');
+        final englishText = AmountHelper().convertNumberToWords(
+            total, currency: currency, language: 'en');
+
+        amountInWords = '$arabicText فقط.\n$englishText Only.';
+      } else {
+        final language = params.billDocumentConfig.language ?? 'en';
+        final amountText = AmountHelper().convertNumberToWords(total,
+            currency: currency, language: language);
+        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
+        amountInWords = '$amountText$suffix';
+      }
+
       rows.add(TextRow(amountInWords, scale: 0.9, isBold: true));
       rows.add(DividerRow());
     }

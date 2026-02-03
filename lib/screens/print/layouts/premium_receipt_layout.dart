@@ -134,7 +134,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
       _buildTotalsSection(
-          part1Rows, params, displayConfig, isEnglish, sarSymbol);
+          part1Rows, params, displayConfig, isEnglish, sarSymbol, appSettings);
 
       // ========== FOOTER SECTION (Part 2) ==========
       _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);
@@ -818,10 +818,15 @@ class PremiumReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
     ui.Image? sarSymbol,
+    dynamic appSettings,
   ) {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+
+    // Get currency from appSettings
+    final String currency = appSettings?.currency ?? 'INR';
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1035,8 +1040,24 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Amount in Words
     if (displayConfig?['showAmountInWords']?.visible == true) {
       rows.add(SpacingRow(_itemGap));
-      final amountInWords =
-          '${AmountHelper().convertNumberToWords(total)} Only.';
+
+      String amountInWords;
+
+      if (isDualLanguage) {
+        final arabicText = AmountHelper().convertNumberToWords(
+            total, currency: currency, language: 'ar');
+        final englishText = AmountHelper().convertNumberToWords(
+            total, currency: currency, language: 'en');
+
+        amountInWords = '$arabicText فقط.\n$englishText Only.';
+      } else {
+        final language = params.billDocumentConfig.language ?? 'en';
+        final amountText = AmountHelper().convertNumberToWords(total,
+            currency: currency, language: language);
+        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
+        amountInWords = '$amountText$suffix';
+      }
+
       rows.add(
           TextRow(amountInWords, scale: is58mm ? 0.7 : 0.85, isBold: true));
     }
