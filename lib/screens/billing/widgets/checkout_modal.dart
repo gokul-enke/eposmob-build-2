@@ -1278,6 +1278,41 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final bool shouldAutoFillUpi = _lIsUpiSelected && totalPaid == 0 && !shouldAutoFillCash && !shouldAutoFillCard;
     final bool shouldAutoFillCod = _lIsCodSelected && totalPaid == 0 && !shouldAutoFillCash && !shouldAutoFillCard && !shouldAutoFillUpi;
 
+    // SYNC AUTO-FILLED VALUES TO LOCAL STATE
+    if (needsAutoFill && !anyMethodSelected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (shouldAutoFillCash) {
+          _handlePaymentUpdate(
+            true, _lIsCardSelected, _lIsUpiSelected, _lIsCodSelected, _lIsDebitSelected,
+            effectiveTotal.toStringAsFixed(2), _lCardAmount, _lUpiAmount, _lCodAmount, _lDebitAmount,
+            _lTransactionNumber, _lToCustomerCreditEnabled,
+            cashMethodId: widget.cashMethodId,
+          );
+        } else if (shouldAutoFillCard) {
+          _handlePaymentUpdate(
+            _lIsCashSelected, true, _lIsUpiSelected, _lIsCodSelected, _lIsDebitSelected,
+            _lCashAmount, effectiveTotal.toStringAsFixed(2), _lUpiAmount, _lCodAmount, _lDebitAmount,
+            _lTransactionNumber, _lToCustomerCreditEnabled,
+            cardMethodId: widget.cardMethodId,
+          );
+        } else if (shouldAutoFillUpi) {
+          _handlePaymentUpdate(
+            _lIsCashSelected, _lIsCardSelected, true, _lIsCodSelected, _lIsDebitSelected,
+            _lCashAmount, _lCardAmount, effectiveTotal.toStringAsFixed(2), _lCodAmount, _lDebitAmount,
+            _lTransactionNumber, _lToCustomerCreditEnabled,
+            upiMethodId: widget.upiMethodId,
+          );
+        } else if (shouldAutoFillCod) {
+          _handlePaymentUpdate(
+            _lIsCashSelected, _lIsCardSelected, _lIsUpiSelected, true, _lIsDebitSelected,
+            _lCashAmount, _lCardAmount, _lUpiAmount, effectiveTotal.toStringAsFixed(2), _lDebitAmount,
+            _lTransactionNumber, _lToCustomerCreditEnabled,
+            codMethodId: widget.codMethodId,
+          );
+        }
+      });
+    }
+
     return Column(
       children: [
         Expanded(
