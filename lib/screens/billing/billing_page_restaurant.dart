@@ -4482,6 +4482,10 @@ class BillingPageState extends State<BillingPageRestaurant>
             String? paymentMethod =
                 orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
 
+            // Extract payment breakdown (method -> amount mapping from API)
+            Map<String, dynamic>? paymentBreakdown =
+                orderDetails.data?.payments;
+
             String? orderComment;
             if (orderDetails.data?.orderProps != null) {
               try {
@@ -4541,6 +4545,7 @@ class BillingPageState extends State<BillingPageRestaurant>
               paidAmount: totalPaid > 0 ? totalPaid : null,
               customerAlternatePhone: customerAlternatePhone,
               paymentMethod: paymentMethod,
+              paymentBreakdown: paymentBreakdown,
               orderComment: orderComment,
               isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                       context,
@@ -4574,6 +4579,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                     paidAmount: totalPaid > 0 ? totalPaid : null,
                     customerAlternatePhone: customerAlternatePhone,
                     paymentMethod: paymentMethod,
+                    paymentBreakdown: paymentBreakdown,
                     orderComment: orderComment,
                     isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                             context,

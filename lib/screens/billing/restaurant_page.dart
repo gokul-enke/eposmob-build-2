@@ -6787,6 +6787,10 @@ class _OrderPanelState extends State<_OrderPanel> {
           String? paymentMethod =
               orderDetails.data?.paymentDetails?.paymentMethod;
 
+          // Extract payment breakdown (method -> amount mapping from API)
+          Map<String, dynamic>? paymentBreakdown =
+              orderDetails.data?.payments;
+
           String? orderComment;
           if (orderDetails.data?.orderProps != null) {
             try {
@@ -6837,6 +6841,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   paidAmount: totalPaid > 0 ? totalPaid : null,
                   customerAlternatePhone: customerAlternatePhone,
                   paymentMethod: paymentMethod,
+                  paymentBreakdown: paymentBreakdown,
                   orderComment: orderComment,
                   isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                           context,
