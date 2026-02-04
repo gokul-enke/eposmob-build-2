@@ -210,6 +210,8 @@ class DailySalesCloseSummary {
   String? onlineSales;
   String? creditAmount;
   String? creditCollected;
+  String? totalReturns;
+  String? totalRefunds;
 
   DailySalesCloseSummary({
     this.userName,
@@ -226,6 +228,8 @@ class DailySalesCloseSummary {
     this.onlineSales,
     this.creditAmount,
     this.creditCollected,
+    this.totalReturns,
+    this.totalRefunds,
   });
 
   DailySalesCloseSummary.fromJson(Map<String, dynamic> json) {
@@ -243,6 +247,8 @@ class DailySalesCloseSummary {
     onlineSales = json['online_sales'];
     creditAmount = json['credit_amount'];
     creditCollected = json['credit_collected'];
+    totalReturns = json['total_returns'];
+    totalRefunds = json['total_refunds'];
   }
 }
 

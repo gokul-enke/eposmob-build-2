@@ -881,6 +881,37 @@ class _DayCloseModalState extends State<DayCloseModal> {
     );
   }
 
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey.shade500),
+        const SizedBox(width: 10),
+        Text(
+          '$label:',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s11,
+            0.18,
+            Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s11,
+              0.18,
+              ColorManager.kTitleTextColor,
+            ),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -980,6 +1011,36 @@ class _DayCloseModalState extends State<DayCloseModal> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // User Name & Store Info Section
+                      Text(
+                        'Session Information',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s12,
+                          0.21,
+                          Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildInfoRow(Icons.person_outline, 'User', summary?.userName ?? '-'),
+                            const SizedBox(height: 10),
+                            _buildInfoRow(Icons.calendar_today_outlined, 'Opening', '${summary?.openingDate ?? '-'} at ${summary?.openingTime ?? '-'}'),
+                            const SizedBox(height: 10),
+                            _buildInfoRow(Icons.event_available_outlined, 'Closing', '${summary?.closingDate ?? '-'} at ${summary?.closingTime ?? '-'}'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
                       Text(
                         'Transaction Overview',
                         style: buildCustomStyle(
@@ -1049,6 +1110,27 @@ class _DayCloseModalState extends State<DayCloseModal> {
                         '$currency ${summary?.creditAmount ?? '0.00'}',
                         'CREDIT COLLECTED',
                         '$currency ${summary?.creditCollected ?? '0.00'}',
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Returns & Refunds Section
+                      Text(
+                        'Returns & Refunds',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s12,
+                          0.21,
+                          Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSmallSummaryRow(
+                        'TOTAL RETURNS',
+                        '$currency ${summary?.totalReturns ?? '0.00'}',
+                        'TOTAL REFUNDS',
+                        '$currency ${summary?.totalRefunds ?? '0.00'}',
+                        color1: Colors.red.shade600,
+                        color2: Colors.red.shade600,
                       ),
 
                     ],
