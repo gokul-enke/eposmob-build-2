@@ -642,32 +642,7 @@ class HiveCategory extends HiveObject {
   }
 }
 
-@HiveType(typeId: 12)
-// Adapter for HiveDocumentConfig
-class HiveDocumentConfigAdapter extends TypeAdapter<HiveDocumentConfig> {
-  @override
-  final int typeId = 10;
-
-  @override
-  HiveDocumentConfig read(BinaryReader reader) {
-    final numOfFields = reader.readByte();
-    final fields = {
-      0: (String? v) => HiveDocumentConfig(v),
-    };
-    return fields[0]!(
-      reader.read()?['serializedData'] as String?,
-    );
-  }
-
-  @override
-  void write(BinaryWriter writer, HiveDocumentConfig obj) {
-    writer
-      ..writeByte(1)
-      ..writeByte(0)
-      ..write(obj.serializedData);
-  }
-}
-
+@HiveType(typeId: 9)
 class HiveParentCategory extends HiveObject {
   @HiveField(0)
   final int? id;

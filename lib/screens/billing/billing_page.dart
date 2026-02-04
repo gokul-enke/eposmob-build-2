@@ -120,6 +120,7 @@ class BillingPageState extends State<BillingPage>
   bool _isDebitSelected = false;
   bool _hasOpenedPaymentModalOnce = false;
   bool isInitLoading = false;
+  bool _isLoadingCustomers = false; // Track if customers are being loaded
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
   List<ListCartModelDataCartItem>? cartProductItems = [];
@@ -648,6 +649,12 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _fetchCustomers() async {
+    // Set loading flag - check for duplicate calls first
+    if (_isLoadingCustomers) {
+      debugPrint("🛡️ _fetchCustomers() already in progress, skipping duplicate call");
+      return;
+    }
+
     // Early guard: if editing a saved order, do not override customer with defaults
     final currentOrder =
         Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
@@ -656,6 +663,11 @@ class BillingPageState extends State<BillingPage>
           "🛡️ Skipping default customer fetch because a saved order is being edited");
       return;
     }
+
+    setState(() {
+      _isLoadingCustomers = true;
+    });
+
     debugPrint("🔍 _fetchCustomers() called");
     debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
     debugPrint("  - selectedCustomerID: $selectedCustomerID");
@@ -805,7 +817,15 @@ class BillingPageState extends State<BillingPage>
         });
       }
     } catch (error) {
-      debugPrint('Error fetching customers: $error');
+      debugPrint("❌ EXCEPTION in _fetchCustomers: $error");
+    } finally {
+      // Always clear the loading flag, even on error or early return
+      if (mounted) {
+        setState(() {
+          _isLoadingCustomers = false;
+        });
+      }
+      debugPrint("🏁 _fetchCustomers() completed");
     }
   }
 
@@ -4756,6 +4776,60 @@ class BillingPageState extends State<BillingPage>
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
   /// This is called when clicking Confirm Order or Confirm & Print buttons
   void _showCheckoutModal() async {
+    // Reset payment state to start fresh each time modal opens
+    setState(() {
+      _hasOpenedPaymentModalOnce = false;
+
+      // Reset payment method selections
+      _isCashSelected = false;
+      _isCardSelected = false;
+      _isUpiSelected = false;
+      _isCodSelected = false;
+      _isDebitSelected = false;
+
+      // Clear payment amount controllers
+      _cashAmountController.clear();
+      _cardAmountController.clear();
+      _upiAmountController.clear();
+      _codAmountController.clear();
+      _debitAmountController.clear();
+
+      // Reset transaction number
+      _transactionNumberController.clear();
+
+      // Reset credit flag
+      _toCustomerCreditEnabled = false;
+    });
+
+    // Wait for customers to finish loading if they're still being fetched
+    if (_isLoadingCustomers) {
+      // Show a loading dialog while waiting for customers
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Wait for customers to finish loading
+      while (_isLoadingCustomers) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+    }
+
+    // Double-check customerList is not empty, if it is, try fetching one more time
+    if ((customerList == null || customerList!.isEmpty) && !_isLoadingCustomers) {
+      await _fetchCustomers();
+      // Wait a bit for the fetch to complete
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
     // Reload payment methods
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
@@ -4788,11 +4862,6 @@ class BillingPageState extends State<BillingPage>
 
     // Apply default payment method
     _applyDefaultPaymentMethod();
-
-    // Mark that payment modal opportunity has been given
-    setState(() {
-      _hasOpenedPaymentModalOnce = false;
-    });
 
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);

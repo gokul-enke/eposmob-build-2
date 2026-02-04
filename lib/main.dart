@@ -91,6 +91,8 @@ void main() async {
   // Register category adapters
   Hive.registerAdapter(HiveCategoryAdapter());
   Hive.registerAdapter(HiveParentCategoryAdapter());
+  // Register product tax adapter
+  Hive.registerAdapter(HiveProductTaxAdapter());
   // Register document config adapter
   Hive.registerAdapter(HiveDocumentConfigAdapter());
 

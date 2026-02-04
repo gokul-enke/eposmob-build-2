@@ -2579,6 +2579,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   String? _selectedCustomerPhone;
   List<CustomerListModelData> _customers = [];
   bool _customersInitialized = false;
+  bool _isLoadingCustomers = false;
   bool _isCustomerManuallySelected = false; // Flag to track manual override
 
   // Discount Variables
@@ -2707,6 +2708,12 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Future<void> _fetchCustomers() async {
+    if (_isLoadingCustomers) return; // Prevent duplicate calls
+
+    setState(() {
+      _isLoadingCustomers = true;
+    });
+
     debugPrint("🔍 [DEBUG] Restaurant: _fetchCustomers called");
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -2720,6 +2727,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       setState(() {
         _customers = customerProvider.allCustomers ?? [];
+        _isLoadingCustomers = false;
         debugPrint(
             "🔍 [DEBUG] Restaurant: Fetched ${_customers.length} total customers (incl. background load)");
       });
@@ -2727,6 +2735,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       // Apply default customer logic after fetching
       _applyDefaultCustomer();
     } catch (e) {
+      setState(() {
+        _isLoadingCustomers = false;
+      });
       debugPrint('❌ [DEBUG] Error fetching customers: $e');
     }
   }
@@ -6090,11 +6101,42 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
-  void _showCheckoutModal() {
+  void _showCheckoutModal() async {
     // Mark that payment modal opportunity has been given (via checkout dialog)
     setState(() {
       _hasOpenedPaymentModalOnce = false;
     });
+
+    // Wait for customers to finish loading if they're still being fetched
+    if (_isLoadingCustomers) {
+      // Show a loading dialog while waiting for customers
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Wait for customers to finish loading
+      while (_isLoadingCustomers) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+    }
+
+    // Double-check _customers is not empty, if it is, try fetching one more time
+    if (_customers.isEmpty && !_isLoadingCustomers) {
+      await _fetchCustomers();
+      // Wait a bit for the fetch to complete
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
+    if (!mounted) return;
 
     // Sync LocalProductProvider cart with order items before showing checkout modal
     _syncOrderItemsWithLocalCart();

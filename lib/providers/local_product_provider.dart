@@ -148,12 +148,14 @@ class LocalProductProvider extends ChangeNotifier {
   List<GetProduct> get filteredProducts => _filteredProducts;
 
   /// Returns only sellable products from filtered list (for billing screens)
+  /// Products with null sellable are treated as sellable (default behavior)
   List<GetProduct> get sellableFilteredProducts =>
-      _filteredProducts.where((p) => p.sellable == true).toList();
+      _filteredProducts.where((p) => p.sellable != false).toList();
 
   /// Returns only sellable products from complete list (for billing screens)
+  /// Products with null sellable are treated as sellable (default behavior)
   List<GetProduct> get sellableProducts =>
-      _products.where((p) => p.sellable == true).toList();
+      _products.where((p) => p.sellable != false).toList();
 
   // Currently selected product (for showing product details).
   GetProduct? _selectedProduct;
