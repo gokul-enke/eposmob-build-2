@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
+import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
@@ -75,13 +76,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
       });
 
       // Load categories from CategoryProvider with caching (same as sidebar and stock)
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint("📥 Loading categories from API...");
         await categoryProvider.listAllCategory();
         debugPrint("✅ Categories loaded and cached");
       } else {
-        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+        debugPrint(
+            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
       }
 
       LocalProductProvider localProductProvider =
@@ -166,460 +169,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   void _showProductDetails(GetProduct product) {
-    setState(() {
-      selectedProduct = product;
-    });
-
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 8,
-        backgroundColor: Colors.white,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.8,
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Product Details',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    // Product Details in 3 columns
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left Column - Basic Info
-                        Expanded(
-                          child: Column(
-                            children: [
-                              _buildDetailRow(
-                                  'Product Name', product.productName ?? 'N/A'),
-                              _buildDetailRow(
-                                  'Slug', product.productSlug ?? 'N/A'),
-                              _buildDetailRow(
-                                  'Category', product.category?.name ?? 'N/A'),
-                              _buildDetailRow(
-                                  'Barcode', product.barcode ?? 'N/A'),
-                              _buildDetailRow('Unit', product.unit ?? 'N/A'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Middle Column - Pricing Info
-                        Expanded(
-                          child: Column(
-                            children: [
-                              _buildDetailRow('Price',
-                                  product.price?.price?.toString() ?? 'N/A'),
-                              _buildDetailRow(
-                                  'MRP', product.mrp?.toString() ?? 'N/A'),
-                              _buildDetailRow(
-                                  'Purchase Price',
-                                  product.purchasePrice ??
-                                      (product.stock != null &&
-                                              product.stock!.isNotEmpty
-                                          ? product.stock!.first.purchasePrice
-                                          : null) ??
-                                      'N/A'),
-                              _buildDetailRow('Offer Price',
-                                  product.offerPrice?.toString() ?? 'N/A'),
-                              _buildDetailRow(
-                                  'Currency', product.currency ?? 'N/A'),
-                              _buildDetailRow(
-                                  'SKU', product.sku ?? 'Not Available'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Right Column - Additional Info
-                        Expanded(
-                          child: Column(
-                            children: [
-                              _buildDetailRow(
-                                  'Rating', product.rating ?? 'N/A'),
-                              _buildDetailRow('Available Qty',
-                                  product.numberOfProductsAvailable ?? 'N/A'),
-                              _buildDetailRow('Location',
-                                  product.productLocation?.toString() ?? 'N/A'),
-                              if (product.weightInfo != null) ...[
-                                _buildDetailRow(
-                                    'Weight',
-                                    product.weightInfo!.weight?.toString() ??
-                                        'N/A'),
-                                _buildDetailRow(
-                                    'Is Weighted',
-                                    product.weightInfo!.isWeighted == true
-                                        ? 'Yes'
-                                        : 'No'),
-                              ] else ...[
-                                _buildDetailRow('Weight', 'N/A'),
-                                _buildDetailRow('Is Weighted', 'N/A'),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Description Section
-                    if (product.description != null &&
-                        product.description.toString().isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Description',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s16,
-                          0.20,
-                          ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        child: Text(
-                          product.description.toString(),
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            FontSize.s14,
-                            0.20,
-                            ColorManager.textColor,
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    // Product Properties Section
-                    if (product.productProps != null &&
-                        product.productProps!.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Product Properties',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s16,
-                          0.20,
-                          ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: product.productProps!.map((prop) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color:
-                                    ColorManager.kPrimaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                    color: ColorManager.kPrimaryColor
-                                        .withOpacity(0.3)),
-                              ),
-                              child: Text(
-                                '${prop.label ?? ''}: ${prop.masterValue ?? ''}',
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.18,
-                                  ColorManager.kPrimaryColor,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
-
-                    // Stock Information Section
-                    const SizedBox(height: 16),
-                    Text(
-                      'Stock Information',
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s16,
-                        0.20,
-                        ColorManager.kPrimaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Show stock information in table format
-                    if (product.stock != null && product.stock!.isNotEmpty)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        child: Column(
-                          children: [
-                            // Table Header
-                            Container(
-                              decoration: const BoxDecoration(
-                                color: ColorManager.tableBGColor,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(8),
-                                  topRight: Radius.circular(8),
-                                ),
-                              ),
-                              child: Table(
-                                columnWidths: const {
-                                  0: FlexColumnWidth(0.6), // Sl No
-                                  1: FlexColumnWidth(1.2), // Quantity
-                                  2: FlexColumnWidth(1.2), // Price
-                                  3: FlexColumnWidth(1.2), // MRP
-                                  4: FlexColumnWidth(1.2), // Purchase Price
-                                  5: FlexColumnWidth(1.5), // Supplier
-                                  6: FlexColumnWidth(1.0), // SKU
-                                  7: FlexColumnWidth(1.2), // Date
-                                  8: FlexColumnWidth(1.2), // Expiry Date
-                                  9: FlexColumnWidth(1.0), // Rack
-                                },
-                                border: null,
-                                defaultVerticalAlignment:
-                                    TableCellVerticalAlignment.middle,
-                                children: [
-                                  TableRow(
-                                    children: [
-                                      _buildStockTableHeader('Sl No'),
-                                      _buildStockTableHeader('Quantity'),
-                                      _buildStockTableHeader('Price'),
-                                      _buildStockTableHeader('MRP'),
-                                      _buildStockTableHeader('Purchase Price'),
-                                      _buildStockTableHeader('Supplier'),
-                                      _buildStockTableHeader('SKU'),
-                                      _buildStockTableHeader('Date'),
-                                      _buildStockTableHeader('Expiry Date'),
-                                      _buildStockTableHeader('Rack'),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Table Body
-                            ...product.stock!.asMap().entries.map((entry) {
-                              int stockIndex = entry.key;
-                              var stock = entry.value;
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: stockIndex % 2 == 0
-                                      ? Colors.white
-                                      : Colors.grey.withOpacity(0.05),
-                                ),
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(0.6), // Sl No
-                                    1: FlexColumnWidth(1.2), // Quantity
-                                    2: FlexColumnWidth(1.2), // Price
-                                    3: FlexColumnWidth(1.2), // MRP
-                                    4: FlexColumnWidth(1.2), // Purchase Price
-                                    5: FlexColumnWidth(1.5), // Supplier
-                                    6: FlexColumnWidth(1.0), // SKU
-                                    7: FlexColumnWidth(1.2), // Date
-                                    8: FlexColumnWidth(1.2), // Expiry Date
-                                    9: FlexColumnWidth(1.0), // Rack
-                                  },
-                                  border: null,
-                                  defaultVerticalAlignment:
-                                      TableCellVerticalAlignment.middle,
-                                  children: [
-                                    TableRow(
-                                      children: [
-                                        _buildStockTableCell(
-                                            '${stockIndex + 1}'),
-                                        _buildStockTableCell(
-                                            stock.quantity?.toString() ??
-                                                'N/A'),
-                                        _buildStockTableCell(
-                                            stock.price ?? 'N/A'),
-                                        _buildStockTableCell(
-                                            stock.mrp ?? 'N/A'),
-                                        _buildStockTableCell(
-                                            stock.purchasePrice ?? 'N/A'),
-                                        _buildStockTableCell(
-                                            stock.supplier ?? 'N/A'),
-                                        _buildStockTableCell(
-                                            stock.sku ?? 'N/A'),
-                                        _buildStockTableCell(
-                                            stock.date ?? 'N/A'),
-                                        _buildStockTableCell(
-                                            stock.expiryDate ?? 'N/A'),
-                                        _buildStockTableCell(
-                                            stock.rack ?? 'N/A'),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'No stock information available',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s14,
-                              0.20,
-                              Colors.grey[600]!,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Close",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              '$label: ',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s14,
-                0.20,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.20,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStockTableHeader(String text) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-        child: Center(
-          child: Text(
-            text,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s14,
-              0.18,
-              ColorManager.kPrimaryColor,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStockTableCell(String text) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-        child: Center(
-          child: Text(
-            text,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s13,
-              0.18,
-              Colors.black,
-            ),
-          ),
-        ),
+      barrierDismissible: true,
+      builder: (ctx) => ProductDetailsDialog(
+        product: product,
       ),
     );
   }
@@ -636,7 +190,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
@@ -652,8 +206,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
             children: [
               // Fixed Header Section
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 20.0, horizontal: 20.0),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -685,11 +239,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 15),
 
                     // First row of filters - Name, Category, Price, Barcode
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         // Name filter
                         Expanded(
@@ -697,15 +251,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Name",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
+                              // Text(
+                              //   "Name",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
                               const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
@@ -727,16 +281,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Category",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Category",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               Consumer<CategoryProvider>(
                                 builder: (context, categoryProvider, child) {
                                   List<Category>? categoryList =
@@ -798,16 +352,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Price",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Price",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
                                 onchanged: (value) {
@@ -828,16 +382,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Barcode",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Barcode",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
                                 onchanged: (value) {
@@ -854,7 +408,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
 
                     // Second row of filters - HSN Code, Properties, Store, Supplier, Reset Button
                     Row(
@@ -866,16 +420,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "HSN Code",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "HSN Code",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               buildColumnWidgetForTextFields(
                                 height: 45,
                                 onchanged: (value) {
@@ -896,16 +450,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Product Properties",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Product Properties",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               BuildDropDownWithSearch<String>(
                                 title: null,
                                 showName: false,
@@ -935,16 +489,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Store",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Store",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               Consumer<PurchaseProvider>(
                                 builder: (context, purchaseProvider, child) {
                                   List<GetStoreModelData> stores =
@@ -987,16 +541,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Supplier",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              // Text(
+                              //   "Supplier",
+                              //   style: buildCustomStyle(
+                              //     FontWeightManager.regular,
+                              //     FontSize.s14,
+                              //     0.27,
+                              //     Colors.black.withOpacity(0.6),
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 8),
                               Consumer<PurchaseProvider>(
                                 builder: (context, purchaseProvider, child) {
                                   List<GetSuppliersModelData> suppliers =
@@ -1020,7 +574,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       }
                                     },
                                     displayText: (supplier) =>
-                                        supplier.user?.name ?? 'No Name',
+                                        supplier.displayName,
                                     searchController: supplierSearchController,
                                     height: 45,
                                     margin: const EdgeInsets.symmetric(
@@ -1238,19 +792,36 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         "${product.mrp ?? 'N/A'}"),
                                                     _buildTableCell(() {
                                                       // Debug purchase price resolution
-                                                      final productPurchasePrice = product.purchasePrice;
-                                                      final stockPurchasePrice = product.stock != null && product.stock!.isNotEmpty 
-                                                          ? product.stock!.first.purchasePrice 
-                                                          : null;
-                                                      final finalPrice = productPurchasePrice ?? stockPurchasePrice ?? 'N/A';
-                                                      
-                                                      debugPrint("🔍 PURCHASE PRICE DEBUG for ${product.productName}:");
-                                                      debugPrint("  - Product Purchase Price: $productPurchasePrice");
-                                                      debugPrint("  - Stock Purchase Price: $stockPurchasePrice");
-                                                      debugPrint("  - Final Display Price: $finalPrice");
-                                                      debugPrint("  - Stock Count: ${product.stock?.length ?? 0}");
-                                                      
-                                                      return finalPrice.toString();
+                                                      final productPurchasePrice =
+                                                          product.purchasePrice;
+                                                      final stockPurchasePrice =
+                                                          product.stock !=
+                                                                      null &&
+                                                                  product.stock!
+                                                                      .isNotEmpty
+                                                              ? product
+                                                                  .stock!
+                                                                  .first
+                                                                  .purchasePrice
+                                                              : null;
+                                                      final finalPrice =
+                                                          productPurchasePrice ??
+                                                              stockPurchasePrice ??
+                                                              'N/A';
+
+                                                      debugPrint(
+                                                          "🔍 PURCHASE PRICE DEBUG for ${product.productName}:");
+                                                      debugPrint(
+                                                          "  - Product Purchase Price: $productPurchasePrice");
+                                                      debugPrint(
+                                                          "  - Stock Purchase Price: $stockPurchasePrice");
+                                                      debugPrint(
+                                                          "  - Final Display Price: $finalPrice");
+                                                      debugPrint(
+                                                          "  - Stock Count: ${product.stock?.length ?? 0}");
+
+                                                      return finalPrice
+                                                          .toString();
                                                     }()),
                                                     _buildTableCell(
                                                         product.unit ?? 'N/A'),
@@ -1313,7 +884,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     // Pagination Always at Bottom
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 10.0, horizontal: 20.0),
+                          horizontal: 20.0, vertical: 10),
                       child: Consumer<LocalProductProvider>(
                         builder: (context, productProvider, child) {
                           if (productProvider.paginatedProducts.isEmpty) {

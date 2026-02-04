@@ -203,6 +203,7 @@ class PriceSummary {
   double? netTotal;
   double? discount;
   double? netPayable;
+  double? netExcTax;
 
   PriceSummary({
     this.subTotal,
@@ -210,6 +211,7 @@ class PriceSummary {
     this.netTotal,
     this.discount,
     this.netPayable,
+    this.netExcTax,
   });
 
   factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
@@ -218,6 +220,7 @@ class PriceSummary {
         netTotal: (json["net_total"] as num?)?.toDouble(),
         discount: (json["discount"] as num?)?.toDouble(),
         netPayable: (json["net_payable"] as num?)?.toDouble(),
+        netExcTax: (json["net_exc_tax"] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -226,5 +229,6 @@ class PriceSummary {
         "net_total": netTotal,
         "discount": discount,
         "net_payable": netPayable,
+        "net_exc_tax": netExcTax,
       };
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -37,7 +38,8 @@ class _PriceTextFieldState extends State<PriceTextField> {
   @override
   void initState() {
     super.initState();
-    controller = TextEditingController(text: widget.item.price.toString());
+    controller =
+        TextEditingController(text: (widget.item.price ?? 0.0).toString());
     focusNode = FocusNode();
 
     // Listen for any text changes from either physical or virtual keyboards
@@ -49,7 +51,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
     super.didUpdateWidget(oldWidget);
     // Only refresh controller text if the field is NOT focused
     if (!focusNode.hasFocus && oldWidget.item.price != widget.item.price) {
-      controller.text = widget.item.price.toString();
+      controller.text = (widget.item.price ?? 0.0).toString();
     }
   }
 
@@ -66,7 +68,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         // Check if the price has changed and update the controller if needed
-        final currentPrice = widget.item.price.toString();
+        final currentPrice = (widget.item.price ?? 0.0).toString();
 
         // Consider the field to be in-edit if it has focus OR a virtual keyboard is currently
         // shown for this controller. In that case we must NOT overwrite the text.
@@ -85,20 +87,24 @@ class _PriceTextFieldState extends State<PriceTextField> {
           });
         }
 
+        final fontProvider =
+            Provider.of<AppFontProvider>(context, listen: true);
+
         return TextField(
           textAlign: TextAlign.left,
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 11),
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: fontProvider.billingTableInputSize),
+          decoration: InputDecoration(
             isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             border: InputBorder.none,
             hintText: 'Price',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 11,
+              fontSize: fontProvider.billingTableInputSize,
             ),
           ),
           onTap: () {
@@ -146,7 +152,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
               );
             } else {
               // Revert to original price if invalid
-              controller.text = widget.item.price.toString();
+              controller.text = (widget.item.price ?? 0.0).toString();
             }
           },
         );
@@ -236,20 +242,24 @@ class _MrpTextFieldState extends State<MrpTextField> {
           });
         }
 
+        final fontProvider =
+            Provider.of<AppFontProvider>(context, listen: true);
+
         return TextField(
           textAlign: TextAlign.left,
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 11),
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: fontProvider.billingTableInputSize),
+          decoration: InputDecoration(
             isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             border: InputBorder.none,
             hintText: 'MRP',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 11,
+              fontSize: fontProvider.billingTableInputSize,
             ),
           ),
           onTap: () {
@@ -301,6 +311,50 @@ class _MrpTextFieldState extends State<MrpTextField> {
               controller.text = (widget.item.mrp ?? 0.0).toString();
             }
           },
+        );
+      },
+    );
+  }
+}
+
+class TaxTextField extends StatelessWidget {
+  final LocalCartItem item;
+  final LocalProductProvider localProductProvider;
+
+  const TaxTextField({
+    super.key,
+    required this.item,
+    required this.localProductProvider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppFontProvider>(
+      builder: (context, fontProvider, child) {
+        // Display Tax Rate (Percentage) - Read Only
+        final taxRate = (item.taxRate ?? 0.0).toString();
+
+        return TextField(
+          controller: TextEditingController(text: taxRate),
+
+          readOnly: true, // Make read-only as requested
+          enabled: false, // Visually disable editing
+          textAlign: TextAlign.left,
+          keyboardType: TextInputType.number,
+          style: TextStyle(
+              fontSize: fontProvider.billingTableInputSize,
+              color: Colors.black),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            border: InputBorder.none,
+            hintText: 'Tax',
+            hintStyle: TextStyle(
+              color: Colors.black,
+              fontSize: fontProvider.billingTableInputSize,
+            ),
+          ),
         );
       },
     );

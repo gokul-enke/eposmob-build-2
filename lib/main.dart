@@ -9,10 +9,12 @@ import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/providers/discount_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/cart.dart';
+import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/customer_voucher_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -26,28 +28,44 @@ import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
+import 'providers/cart.dart';
 import 'providers/carousel_provider.dart';
 import 'providers/purchase_provider.dart';
 import 'screens/login/login.dart';
-import 'screens/base_url_wrapper.dart';
-import 'screens/api_key_screen.dart';
+import 'screens/login/base_url_wrapper.dart';
+import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
+import 'helpers/date_helper.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'resources/localization_service.dart';
+import 'resources/app_translations.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    await _requestPermissions();
+  }
 
   // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
   // Safer than Documents (less likely to be deleted by user)
@@ -70,9 +88,16 @@ void main() async {
   Hive.registerAdapter(HiveProductCategoryAdapter());
   Hive.registerAdapter(HiveProductPriceAdapter());
   Hive.registerAdapter(HiveAttachmentAdapter());
+  // Register category adapters
+  Hive.registerAdapter(HiveCategoryAdapter());
+  Hive.registerAdapter(HiveParentCategoryAdapter());
 
   // Open boxes with error handling and retry logic
   await _initializeHiveBoxes();
+
+  tz.initializeTimeZones();
+  await LocalizationService.init();
+  await DateHelper.init();
 
   Get.put(SideBarController());
 
@@ -87,15 +112,64 @@ void main() async {
   runApp(const MyApp());
 }
 
+Future<void> _requestPermissions() async {
+  final statuses = await [
+    Permission.bluetooth,
+    Permission.bluetoothConnect,
+    Permission.bluetoothScan,
+    Permission.locationWhenInUse,
+    Permission.location,
+  ].request();
+
+  statuses.forEach((permission, status) {
+    if (status.isGranted) {
+      debugPrint('$permission permission granted.');
+    } else if (status.isDenied) {
+      debugPrint('$permission permission denied.');
+    } else if (status.isPermanentlyDenied) {
+      debugPrint('$permission permission permanently denied.');
+      openAppSettings();
+    }
+  });
+}
+
 Future<void> _initializeHiveBoxes() async {
   const maxRetries = 3;
   const retryDelay = Duration(seconds: 2);
+
+  const boxesToResetBeforeInit = ['products', 'categories'];
+
+  for (final boxName in boxesToResetBeforeInit) {
+    try {
+      if (Hive.isBoxOpen(boxName)) {
+        final box = Hive.box(boxName);
+        debugPrint(
+            '⚠️ Box $boxName was open during initialization. Clearing and closing before reset.');
+        await box.clear();
+        await box.close();
+      }
+
+      final exists = await Hive.boxExists(boxName);
+
+      if (exists) {
+        debugPrint(
+            '🧹 Clearing existing data for $boxName box before initialization');
+        await Hive.deleteBoxFromDisk(boxName);
+        debugPrint('✅ Cleared $boxName box from disk');
+      } else {
+        debugPrint('ℹ️ No existing data found for $boxName box to clear');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Unable to clear $boxName box before initialization: $e');
+    }
+  }
 
   final boxNames = [
     'products',
     'cart_items',
     'saved_orders',
-    'confirmed_orders'
+    'confirmed_orders',
+    'categories'
   ];
 
   for (String boxName in boxNames) {
@@ -127,6 +201,9 @@ Future<void> _initializeHiveBoxes() async {
           case 'confirmed_orders':
             await Hive.openBox<HiveSavedOrder>(boxName);
             break;
+          case 'categories':
+            await Hive.openBox<HiveCategory>(boxName);
+            break;
         }
 
         debugPrint('✅ Successfully opened $boxName box');
@@ -151,6 +228,9 @@ Future<void> _initializeHiveBoxes() async {
               case 'saved_orders':
               case 'confirmed_orders':
                 await Hive.openBox<HiveSavedOrder>(boxName);
+                break;
+              case 'categories':
+                await Hive.openBox<HiveCategory>(boxName);
                 break;
             }
             debugPrint('✅ Successfully opened $boxName box after cleanup');
@@ -205,6 +285,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => GridSelectionProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => StockProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => Cart()),
@@ -214,11 +295,13 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PurchaseProvider()),
         ChangeNotifierProvider(create: (_) => InvoiceProvider()),
         ChangeNotifierProvider(create: (_) => LocationProvider()),
+        ChangeNotifierProvider(create: (_) => MasterDataProvider()),
         ChangeNotifierProvider(create: (_) => CustomerProvider()),
         ChangeNotifierProvider(create: (_) => CustomerSelectionProvider()),
         ChangeNotifierProvider(create: (_) => ReportsProvider()),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => DiscountProvider()),
         ChangeNotifierProvider(create: (_) => DeliveryMethodsProvider()),
         ChangeNotifierProvider(create: (_) => LocalProductProvider()),
         ChangeNotifierProvider(create: (_) => PaymentGatewaysProvider()),
@@ -234,17 +317,26 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
+        ChangeNotifierProvider(create: (_) => StoreSessionProvider()),
         ChangeNotifierProvider(create: (_) => TableProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => BillingProvider()),
         ChangeNotifierProvider(create: (_) => WhatsappProvider()),
+        ChangeNotifierProvider(create: (_) => PineLabsTerminalProvider()),
+        ChangeNotifierProvider(create: (_) => RoleProvider()),
+        ChangeNotifierProvider(create: (_) => CustomerVoucherProvider()),
+        ChangeNotifierProvider(create: (_) => SupplierVoucherProvider()),
+        ChangeNotifierProvider(create: (_) => AppFontProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'CLOUD POS',
+          title: 'CLOUDPOS',
           theme: ThemeData(),
+          translations: AppTranslations(LocalizationService.translations),
+          locale: LocalizationService.locale,
+          fallbackLocale: LocalizationService.fallbackLocale,
           builder: (context, child) {
             return Stack(
               children: [

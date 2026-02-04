@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -18,6 +19,16 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
 
   const ConfirmedOrderDetailModal({Key? key, required this.order})
       : super(key: key);
+
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
 
   // Calculate total MRP from all order items
   double _calculateTotalMRP() {
@@ -249,7 +260,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
                                       "Delivery Date",
-                                      DateHelper.formatISODate(
+                                      DateHelper.formatToISODateOnlyFromISO(
                                           order.deliveryDate!)),
                                 ],
                                 if (order.deliveryTime != null &&
@@ -435,14 +446,14 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
   }
 
   static String _formatDateTime(String isoDateString) {
-    return DateHelper.formatISODate(isoDateString);
+    return DateHelper.formatToISODateOnlyFromISO(isoDateString);
   }
 
   static String _formatTime(String isoDateString) {
-    return DateHelper.formatISODateToIST(isoDateString);
+    return DateHelper.formatToISODateFromIST(isoDateString);
   }
 
-  void _printOrder(BuildContext context) {
+  void _printOrder(BuildContext context) async {
     try {
       // Convert SavedOrder items to the format expected by PrintPage
       List<Map<String, dynamic>> cartItems = [];
@@ -477,28 +488,72 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       debugPrint("  - Net Total: $netTotal");
       debugPrint("  - You Saved: $youSaved");
 
-      Navigator.push(
+      // Get active store name
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeName = storeSession.activeStore?.storeName ?? "Store";
+
+      // Calculate discount amount
+      double discountAmount = (order.flatDiscount ?? 0.0) +
+          ((order.percentageDiscount ?? 0.0) > 0
+              ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+              : 0.0);
+
+      // Get paid amount
+      double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
+          ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
+          : null;
+
+      // Try auto-print with default printer first
+      debugPrint(
+          "🖨️ Attempting auto-print for confirmed order #${order.orderNumber}");
+      final autoPrintSuccess = await PrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: "SOUQ POINT",
-            cartItems: cartItems,
-            formattedTotal: netTotal.toString(), // Use calculated net total
-            savedTotal:
-                youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
-            discountAmount: ((order.flatDiscount ?? 0.0) +
-                    ((order.percentageDiscount ?? 0.0) > 0
-                        ? (order.total *
-                            (order.percentageDiscount ?? 0.0) /
-                            100)
-                        : 0.0))
-                .toString(),
-            orderDate: order.createdAt,
-            orderNumber: order.orderNumber,
-            isFromLocalStorage: true,
-          ),
-        ),
+        storeName: storeName,
+        cartItems: cartItems,
+        formattedTotal: netTotal.toString(), // Use calculated net total
+        savedTotal: youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+        discountAmount: discountAmount.toString(),
+        orderDate: order.createdAt,
+        orderNumber: order.orderNumber,
+        isFromLocalStorage: true,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        paymentMethod: order.paymentMethod,
+        customerAlternatePhone: order.alternatePhone,
+        orderComment: order.comment,
+        paidAmount: paidAmount,
+        isDefaultCustomer:
+            _isDefaultCustomerPhone(context, order.customerPhone),
       );
+
+      // Only show print page if auto-print failed
+      if (!autoPrintSuccess) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PrintPage(
+              storeName: storeName,
+              cartItems: cartItems,
+              formattedTotal: netTotal.toString(), // Use calculated net total
+              savedTotal:
+                  youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+              discountAmount: discountAmount.toString(),
+              orderDate: order.createdAt,
+              orderNumber: order.orderNumber,
+              isFromLocalStorage: true,
+              customerName: order.customerName,
+              customerPhone: order.customerPhone,
+              paymentMethod: order.paymentMethod,
+              customerAlternatePhone: order.alternatePhone,
+              orderComment: order.comment,
+              paidAmount: paidAmount,
+              isDefaultCustomer:
+                  _isDefaultCustomerPhone(context, order.customerPhone),
+            ),
+          ),
+        );
+      }
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -538,6 +593,20 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     );
   }
 
+  /// Helper function to convert payment method ID or value to display name
+  static String _getPaymentMethodDisplayName(String methodIdOrName) {
+    // If it's a numeric ID, try to convert to a display name
+    // This handles both legacy string names (CASH, CARD, UPI) and new numeric IDs
+    if (RegExp(r'^\d+$').hasMatch(methodIdOrName)) {
+      // It's a numeric ID - for now just show the ID with a label
+      // Ideally we would look up from cached payment methods
+      // Common IDs might be: 1=CASH, 2=CARD, 3=UPI, etc.
+      return "Payment #$methodIdOrName";
+    }
+    // It's already a name (CASH, CARD, UPI, etc.)
+    return methodIdOrName;
+  }
+
   static Widget _buildPaymentMethodInfo(
       String paymentMethodJsonOrString, String currency) {
     try {
@@ -556,11 +625,13 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             double amountValue = double.tryParse(amount.toString()) ?? 0.0;
             if (amountValue > 0) {
               totalPaid += amountValue;
+              // Convert method ID/name to display name
+              String displayName = _getPaymentMethodDisplayName(method);
               methodWidgets.add(
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, top: 4.0),
                   child: _buildInfoRow(
-                    "$method Payment",
+                    "$displayName Payment",
                     "$currency${amountValue.toStringAsFixed(2)}",
                     valueStyle: const TextStyle(
                       color: Colors.green,
@@ -601,6 +672,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       debugPrint("Error parsing payment method JSON: $e");
     }
     // Fallback for single payment method or parsing error
+    // Convert ID to display name if needed
+    String displayName =
+        _getPaymentMethodDisplayName(paymentMethodJsonOrString);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -613,7 +687,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _buildInfoRow("Method", paymentMethodJsonOrString,
+        _buildInfoRow("Method", displayName,
             valueStyle: const TextStyle(
               color: Colors.green,
               fontWeight: FontWeight.w600,

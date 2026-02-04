@@ -1,49 +1,42 @@
-git tag v0.1.0-dev.210
-git push build v0.1.0-dev.209
-git push build1 v0.1.0-dev.179
-git push origin v0.1.0-dev.184
+demo build
+git tag v0.1.0-dev.468
+git push build v0.1.0-dev.468
 
-# eposenke demo
-https://eposdemo.hypersouq.in
-EPOSENKE_84BFT1haKrbIJeosgyPH0OES1Y6DNkLx
-attender@eposenke.in
-123456
-kitchenmaster@eposenke.in
-123456
-salesexecutive@eposenke.in
-123456
 
-# epos souqpoint
-SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
-salesexecutive@souqpoint.in
-123456
+git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
-# epos eposenke
-EPOSENKE_KxUdXaoVWvIHzAZAdkva5lX4vqEw2KuF
-salesexecutive1@eposenke.in
+git tag v0.1.0-dev.468
+git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git v0.1.0-dev.468
+
+souq build
+git tag v0.1.0-dev.359
+git push build v0.1.0-dev.359
+
+yougoit build
+git tag v0.1.0-dev.259
+git push build1 v0.1.0-dev.259
+
+
+salesexecutive2@gmail.com
+CLOUDPOS_Z2IcS8wMtPlfNsaK1kKbcpMZcv2B10RO
 123456
 
-# yougoit
-RESTOPOS_oidkN1BDC0Fl6ti5sFtkVpTg0gultasn
-salesexecutive@restopos.com
+CYCLOPEDIA_lss7VsbctNSByFd7h2vszA0eMHHXi2fj
+salesexecutive2@cyclopedia.in
 123456
 
-
-
-
-
-
-
-
-
-
-
-# eposdemo souq
-https://eposdemo.hypersouq.in/HYPERSOUK
-HYPERSOUK_W9DNqq4uR9Zjpoe4Rw4WQhsV2u7Ay9Zi
-attender@hypersouq.in
+FUNZCART_nCRY4bH0ASOtZWqKsDl7xabUTcc7gaft
+salesexecutive1@funzcart.in
 123456
-kitchenmaster@hypersouq.in
-123456
-salesexecutive@hypersouq.in
-123456
+kitchenmaster@funzcart.in
+attender@funzcart.in
+restaurantsales@funzcart.in
+
+restaurantsales@chillis.com
+CHILLIS_RESTAURANT_xA0zcMObAQfrv7inwqOdwI8VbT4nA143
+
+ezeee
+
+CHILLIS_RESTAURANT_RkgPh2sBuGjOx44lHU6GV5eKXAA1V3lh
+restaurantsales@chillis.in
+

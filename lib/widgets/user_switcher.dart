@@ -11,6 +11,9 @@ import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/screens/login/store_selection_screen.dart';
+import 'dart:convert';
 
 class UserSwitcher extends StatefulWidget {
   const UserSwitcher({Key? key}) : super(key: key);
@@ -194,20 +197,56 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                     executiveModel.data;
 
                                 if (executiveModelData != null) {
+                                  // Get current active store
+                                  final storeSession = Provider.of<StoreSessionProvider>(
+                                      context, listen: false);
+                                  final currentActiveStore = storeSession.activeStore;
+                                  final newUserStores = executiveModelData.stores ?? [];
+
+                                  // Check if new user has access to current store
+                                  bool hasAccessToCurrentStore = currentActiveStore == null || 
+                                      newUserStores.any((store) => store.storeId == currentActiveStore.storeId);
+
+                                  if (!hasAccessToCurrentStore && newUserStores.isNotEmpty) {
+                                    // User doesn't have access to current store - DO NOT SWITCH USER
+                                    showScaffoldError(
+                                      context: context,
+                                      message: '${executive.name} doesn\'t have access to current store. Please logout and try.',
+                                    );
+                                    return;
+                                  } else if (!hasAccessToCurrentStore && newUserStores.isEmpty) {
+                                    // User has no store access at all
+                                    showScaffoldError(
+                                      context: context,
+                                      message: '${executive.name} has no permission to any store. Please contact your administrator.',
+                                    );
+                                    return;
+                                  }
+
+                                  // User has access to current store, proceed with normal switch
                                   // Update auth state
-                                  Provider.of<AuthModel>(context, listen: false)
-                                      .login(
+                                  Provider.of<AuthModel>(context, listen: false).login(
                                     executiveModelData.accessToken ?? "",
                                     executiveModelData.userId ?? 0,
                                   );
 
+                                  // Convert stores list to JSON string for shared preferences
+                                  String? storesJson;
+                                  if (newUserStores.isNotEmpty) {
+                                    storesJson = json.encode(
+                                        newUserStores.map((store) => store.toJson()).toList());
+                                  }
+
                                   // Save to shared preferences
-                                  SharedPreferenceProvider()
-                                      .saveAccessTokenandCustomerId(
+                                  SharedPreferenceProvider().saveAccessTokenandCustomerId(
                                     executiveModelData.accessToken ?? "",
                                     executiveModelData.userId ?? 0,
                                     executiveModelData.userName ?? "",
                                     executiveModelData.userRole ?? "",
+                                    tokenType: executiveModelData.tokenType,
+                                    companyId: executiveModelData.companyId,
+                                    companyName: executiveModelData.companyName,
+                                    storesJson: storesJson,
                                   );
 
                                   // Switch to the selected executive

@@ -10,6 +10,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -171,7 +172,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                           order.deliveryDate!.isNotEmpty) ...[
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Delivery Date: ${DateHelper.formatISODate(order.deliveryDate!)}',
+                                          'Delivery Date: ${DateHelper.formatToISODateOnlyFromISO(order.deliveryDate!)}',
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s10,
@@ -274,14 +275,24 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
   }
 
   String _formatDateTime(String isoDateString) {
-    return DateHelper.formatISODate(isoDateString);
+    return DateHelper.formatToISODateOnlyFromISO(isoDateString);
   }
 
   String _formatTime(String isoDateString) {
-    return DateHelper.formatISODateToIST(isoDateString);
+    return DateHelper.formatToISODateFromIST(isoDateString);
   }
 
-  void _printOrder(SavedOrder order) {
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
+  void _printOrder(SavedOrder order) async {
     try {
       // Convert SavedOrder items to the format expected by PrintPage
       List<Map<String, dynamic>> cartItems = [];
@@ -319,27 +330,68 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       // Use the stored total from order (already rounded when saved)
       double finalTotal = order.total;
 
-      Navigator.push(
+      // Get active store name
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeName = storeSession.activeStore?.storeName ?? "Store";
+
+      // Calculate discount amount
+      double discountAmount = (order.flatDiscount ?? 0.0) +
+          ((order.percentageDiscount ?? 0.0) > 0
+              ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+              : 0.0);
+
+      // Get paid amount
+      double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
+          ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
+          : null;
+
+      // Try auto-print with default printer first
+      debugPrint("🖨️ Attempting auto-print for confirmed order #${order.orderNumber}");
+      final autoPrintSuccess = await PrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: "SOUQ POINT",
-            cartItems: cartItems,
-            formattedTotal: finalTotal.toString(), // Use order's total
-            savedTotal: youSaved.toString(),
-            discountAmount: ((order.flatDiscount ?? 0.0) +
-                    ((order.percentageDiscount ?? 0.0) > 0
-                        ? (order.total *
-                            (order.percentageDiscount ?? 0.0) /
-                            100)
-                        : 0.0))
-                .toString(),
-            orderDate: order.createdAt,
-            orderNumber: order.orderNumber,
-            isFromLocalStorage: true,
-          ),
-        ),
+        storeName: storeName,
+        cartItems: cartItems,
+        formattedTotal: finalTotal.toString(), // Use order's total
+        savedTotal: youSaved.toString(),
+        discountAmount: discountAmount.toString(),
+        orderDate: order.createdAt,
+        orderNumber: order.orderNumber,
+        isFromLocalStorage: true,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        paymentMethod: order.paymentMethod,
+        customerAlternatePhone: order.alternatePhone,
+        orderComment: order.comment,
+        paidAmount: paidAmount,
+        isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
       );
+
+      // Only show print page if auto-print failed
+      if (!autoPrintSuccess && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PrintPage(
+              storeName: storeName,
+              cartItems: cartItems,
+              formattedTotal: finalTotal.toString(), // Use order's total
+              savedTotal: youSaved.toString(),
+              discountAmount: discountAmount.toString(),
+              orderDate: order.createdAt,
+              orderNumber: order.orderNumber,
+              isFromLocalStorage: true,
+              customerName: order.customerName,
+              customerPhone: order.customerPhone,
+              paymentMethod: order.paymentMethod,
+              customerAlternatePhone: order.alternatePhone,
+              orderComment: order.comment,
+              paidAmount: paidAmount,
+              isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
+            ),
+          ),
+        );
+      }
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
       showScaffoldError(
@@ -582,13 +634,15 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           'quantity': item.quantity,
           'price': item.price,
           'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
+          'stock_id': item
+              .selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
         });
       }
 
       bool orderProcessed = false;
 
       try {
-        // Handle multi-payment if stored as JSON
+        // Handle payment method - ALWAYS use clear format (either single OR multi, not both)
         String? paymentMethod = order.paymentMethod;
         String? paidAmount = order.paidAmount;
         List<String>? paymentMethods;
@@ -605,46 +659,59 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                   Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
 
               paidMethods = [];
-              if (amounts['CASH'] != null && amounts['CASH'] != "0") {
-                paidMethods.add({
-                  "method": "CASH",
-                  "amount": double.tryParse(amounts['CASH']) ?? 0,
-                });
-              }
-              if (amounts['CARD'] != null && amounts['CARD'] != "0") {
-                paidMethods.add({
-                  "method": "CARD",
-                  "amount": double.tryParse(amounts['CARD']) ?? 0,
-                });
-              }
-              if (amounts['UPI'] != null && amounts['UPI'] != "0") {
-                paidMethods.add({
-                  "method": "UPI",
-                  "amount": double.tryParse(amounts['UPI']) ?? 0,
-                });
+              
+              // Iterate through the selected methods and get their amounts
+              // This handles both dynamic IDs (e.g., "1", "2") and legacy strings ("CASH", "CARD")
+              for (String methodId in paymentMethods) {
+                final amountStr = amounts[methodId]?.toString();
+                if (amountStr != null && amountStr != "0" && amountStr.isNotEmpty) {
+                  final amount = double.tryParse(amountStr) ?? 0;
+                  if (amount > 0) {
+                    paidMethods.add({
+                      "method": methodId,
+                      "amount": amount,
+                    });
+                  }
+                }
               }
 
-              // For multi-payment, set single payment fields to null
+              // ✅ For multi-payment, EXPLICITLY set single payment fields to null
               paymentMethod = null;
               paidAmount = null;
+
+              debugPrint("✅ Using multi-payment format for sync");
+              debugPrint("  - Payment Methods: $paymentMethods");
+              debugPrint("  - Paid Methods: $paidMethods");
             }
           } catch (e) {
             debugPrint("Error parsing multi-payment data during sync: $e");
-            // Fallback to single payment
+            // Fallback to single payment - EXPLICITLY set multi-payment to null
             paymentMethod = order.paymentMethod ?? "CASH";
             paidAmount = order.paidAmount ?? order.total.toString();
+            paymentMethods = null;
+            paidMethods = null;
+
+            debugPrint("⚠️ Fallback to single-payment format");
+            debugPrint("  - Payment Method: $paymentMethod");
+            debugPrint("  - Paid Amount: $paidAmount");
           }
         } else {
-          // Single payment method
+          // Single payment method - EXPLICITLY set multi-payment to null
           paymentMethod = order.paymentMethod ?? "CASH";
           paidAmount = order.paidAmount ?? order.total.toString();
+          paymentMethods = null;
+          paidMethods = null;
+
+          debugPrint("⚠️ Single-payment format (no JSON detected)");
+          debugPrint("  - Payment Method: $paymentMethod");
+          debugPrint("  - Paid Amount: $paidAmount");
         }
 
         // Call API to add order and WAIT for completion
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
         final response = await cartProvider.addToOrderAPI(
           items: items,
-          cartIds: 0, // Default cart ID as we're syncing saved orders
+          cartIds: 0, // Not used in API, but required parameter
           accessToken: accessToken,
           // Use stored data from local order, with fallbacks if needed
           transactionId: order.transactionId ?? order.orderNumber,
@@ -661,7 +728,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           deliveryMethodId: order.deliveryMethodId ??
               "1", // Use stored delivery method or default
           carNumber: order.carNumber,
-          status: order.status ?? "confirmed",
+          status:
+              "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
           // Include discount data from saved order
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,

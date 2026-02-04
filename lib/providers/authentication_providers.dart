@@ -6,6 +6,8 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:pos_machine/helpers/date_helper.dart';
+
 class AuthenticationProvider {
   //                 *********************** Login API ***************************************************
 
@@ -21,25 +23,36 @@ class AuthenticationProvider {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    debugPrint("apiKey: $apiKey");
-
     final Map<String, dynamic> apiBodyData = {
       'email': email,
       'password': password,
     };
-    // debugPrint(json.encode(apiBodyData));
+    debugPrint('Login request body: ${json.encode(apiBodyData)}');
     final url = Uri.parse(APPUrl.loginUrl);
+    debugPrint('Login URL: $url');
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      
+      // Sync server time from headers
+      if (response.headers['date'] != null) {
+        try {
+          // Date header format: Wed, 21 Oct 2015 07:28:00 GMT
+          final serverTime = HttpDate.parse(response.headers['date']!);
+          DateHelper.setServerTime(serverTime);
+        } catch (e) {
+          debugPrint("Error parsing server date header: $e");
+        }
+      }
+
+      debugPrint('Login response status code: ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||
           response.statusCode == 401) {
-        // debugPrint(json.decode(response.body).toString());
+        debugPrint('Login response body: ${response.body}');
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("User Not Found.Try Again!");

@@ -10,7 +10,17 @@ class AppSettings {
   final bool priceRoundOff;
   final bool discountAndCoupon;
   final bool autoAssignDefaultCustomer;
+  final String autoAssignDefaultCustomerPhone;
   final String currency;
+  final bool zatcaPhase1Enabled;
+  final bool zatcaPhase2Enabled;
+  final bool showTaxPos;
+  final bool showMrpPos;
+  final bool showTaxRatePos;
+  final bool showConfirmOrderButton;
+  final bool enableKOTPrint;
+  final String defaultDeliveryMethod;
+  final String defaultPaymentMethod;
 
   AppSettings({
     required this.barcodeSales,
@@ -22,7 +32,17 @@ class AppSettings {
     required this.priceRoundOff,
     required this.discountAndCoupon,
     required this.autoAssignDefaultCustomer,
+    required this.autoAssignDefaultCustomerPhone,
     required this.currency,
+    required this.zatcaPhase1Enabled,
+    required this.zatcaPhase2Enabled,
+    required this.showTaxPos,
+    required this.showMrpPos,
+    required this.showTaxRatePos,
+    required this.showConfirmOrderButton,
+    required this.enableKOTPrint,
+    required this.defaultDeliveryMethod,
+    required this.defaultPaymentMethod,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -79,7 +99,21 @@ class AppSettings {
       discountAndCoupon: settingsMap['DISCOUNT_AND_COUPON']?['status'] ?? false,
       autoAssignDefaultCustomer:
           settingsMap['AUTO_ASSIGN_DEFAULT_CUSTOMER']?['status'] ?? false,
+      autoAssignDefaultCustomerPhone:
+          settingsMap['AUTO_ASSIGN_DEFAULT_CUSTOMER']?['value'] ?? "",
       currency: settingsMap['CURRENCY']?['value'] ?? "",
+      zatcaPhase1Enabled: settingsMap['ZATCA_PHASE_1']?['status'] ?? false,
+      zatcaPhase2Enabled: settingsMap['ZATCA_PHASE_2']?['status'] ?? false,
+      showTaxPos: settingsMap['SHOW_TAX_POS']?['status'] ?? false,
+      showMrpPos: settingsMap['SHOW_MRP_POS']?['status'] ?? false,
+      showTaxRatePos: settingsMap['SHOW_TAXRATE_POS']?['status'] ?? false,
+      showConfirmOrderButton:
+          settingsMap['SHOW_CONFIRM_ORDER_BUTTON']?['status'] ?? true,
+      enableKOTPrint: settingsMap['ENABLE_KOT_PRINT']?['status'] ?? false,
+      defaultDeliveryMethod:
+          settingsMap['DEFAULT_DELIVERY_METHOD']?['value'] ?? "",
+      defaultPaymentMethod:
+          settingsMap['DEFAULT_PAYMENT_METHOD']?['value'] ?? "",
     );
   }
 
@@ -145,6 +179,60 @@ class AppSettings {
           "code": "CURRENCY",
           "value": currency,
           "status": currency.toString(),
+        },
+        {
+          "name": "Zatca Phase 1",
+          "code": "ZATCA_PHASE_1",
+          "value": zatcaPhase1Enabled.toString(),
+          "status": zatcaPhase1Enabled.toString(),
+        },
+        {
+          "name": "Zatca Phase 2",
+          "code": "ZATCA_PHASE_2",
+          "value": zatcaPhase2Enabled.toString(),
+          "status": zatcaPhase2Enabled.toString(),
+        },
+        {
+          "name": "Show Tax POS",
+          "code": "SHOW_TAX_POS",
+          "value": "",
+          "status": showTaxPos.toString(),
+        },
+        {
+          "name": "Show MRP POS",
+          "code": "SHOW_MRP_POS",
+          "value": "",
+          "status": showMrpPos.toString(),
+        },
+        {
+          "name": "Show Tax Rate POS",
+          "code": "SHOW_TAXRATE_POS",
+          "value": "",
+          "status": showTaxRatePos.toString(),
+        },
+        {
+          "name": "Show Confirm Order Button",
+          "code": "SHOW_CONFIRM_ORDER_BUTTON",
+          "value": "",
+          "status": showConfirmOrderButton.toString(),
+        },
+        {
+          "name": "Enable KOT Print",
+          "code": "ENABLE_KOT_PRINT",
+          "value": "",
+          "status": enableKOTPrint.toString(),
+        },
+        {
+          "name": "Default Delivery Method",
+          "code": "DEFAULT_DELIVERY_METHOD",
+          "value": defaultDeliveryMethod.toString(),
+          "status": defaultDeliveryMethod.toString(),
+        },
+        {
+          "name": "Default Payment Method",
+          "code": "DEFAULT_PAYMENT_METHOD",
+          "value": defaultPaymentMethod.toString(),
+          "status": defaultPaymentMethod.toString(),
         },
       ],
     };

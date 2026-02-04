@@ -106,7 +106,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
 
   void _onFocusChanged() {
     if (!mounted) return;
-    
+
     if (_focusNode.hasFocus && !_isDropdownOpen) {
       _showDropdown();
     }
@@ -156,7 +156,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
 
     _filterItems(_controller.text);
     _createOverlay();
-    
+
     // Request focus on keyboard node for navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -179,7 +179,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
 
   void _createOverlay() {
     if (!mounted) return;
-    
+
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
@@ -190,7 +190,8 @@ class _BuildMultiSelectDropDownWithSearchState<T>
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onTap: () {
-                  debugPrint('🔻 Background tapped - closing multiselect dropdown');
+                  debugPrint(
+                      '🔻 Background tapped - closing multiselect dropdown');
                   _hideDropdown();
                 },
               ),
@@ -198,7 +199,8 @@ class _BuildMultiSelectDropDownWithSearchState<T>
           ),
           // The actual dropdown
           _MultiSelectDropdownOverlay<T>(
-            key: ValueKey('overlay_${widget.selectedItems.length}_${widget.selectedItems.hashCode}'),
+            key: ValueKey(
+                'overlay_${widget.selectedItems.length}_${widget.selectedItems.hashCode}'),
             layerLink: _layerLink,
             items: _filteredItems,
             selectedItems: widget.selectedItems,
@@ -231,7 +233,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
 
   void _updateOverlay() {
     if (!mounted) return;
-    
+
     _removeOverlay();
     if (mounted) {
       _createOverlay();
@@ -245,7 +247,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
 
   void _onItemToggled(T item) {
     if (!mounted) return;
-    
+
     final updated = List<T>.from(widget.selectedItems);
     if (updated.contains(item)) {
       updated.remove(item);
@@ -253,7 +255,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
       updated.add(item);
     }
     widget.onChanged(updated);
-    
+
     // Update the overlay to reflect the new selection state
     if (_isDropdownOpen && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -266,11 +268,12 @@ class _BuildMultiSelectDropDownWithSearchState<T>
 
   void _clearAllSelections() {
     if (!mounted) return;
-    
-    debugPrint('🔄 Clearing all selections: ${widget.selectedItems.length} items');
+
+    debugPrint(
+        '🔄 Clearing all selections: ${widget.selectedItems.length} items');
     if (widget.selectedItems.isNotEmpty) {
       widget.onChanged([]);
-      
+
       // Update the overlay to reflect the cleared state
       if (_isDropdownOpen && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -588,15 +591,52 @@ class _MultiSelectDropdownOverlay<T> extends StatefulWidget {
 class _MultiSelectDropdownOverlayState<T>
     extends State<_MultiSelectDropdownOverlay<T>> {
   late FocusNode _searchFocusNode;
+  late TextEditingController _localSearchController;
+  List<T> _localFilteredItems = [];
+  bool _isLocalLoading = false;
 
   @override
   void initState() {
     super.initState();
     _searchFocusNode = FocusNode();
+    _localSearchController = TextEditingController();
+    _localFilteredItems = widget.items;
+
+    // Listen to local search controller changes
+    _localSearchController.addListener(_onLocalSearchChanged);
 
     // Auto-focus search field when overlay opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _onLocalSearchChanged() {
+    final query = _localSearchController.text;
+    setState(() {
+      _isLocalLoading = true;
+    });
+
+    // Filter items locally
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (!mounted) return;
+
+      List<T> filtered;
+      if (query.isEmpty) {
+        filtered = widget.items;
+      } else {
+        filtered = widget.items.where((item) {
+          return widget
+              .displayText(item)
+              .toLowerCase()
+              .contains(query.toLowerCase());
+        }).toList();
+      }
+
+      setState(() {
+        _localFilteredItems = filtered;
+        _isLocalLoading = false;
+      });
     });
   }
 
@@ -605,18 +645,24 @@ class _MultiSelectDropdownOverlayState<T>
     super.didUpdateWidget(oldWidget);
     // Force rebuild when selected items change
     if (widget.selectedItems != oldWidget.selectedItems) {
-      debugPrint('🔄 Overlay selectedItems changed: ${widget.selectedItems.length} items');
+      debugPrint(
+          '🔄 Overlay selectedItems changed: ${widget.selectedItems.length} items');
       // The widget will rebuild automatically due to the state change
+    }
+    // Update filtered items if source items change
+    if (widget.items != oldWidget.items) {
+      _localFilteredItems = widget.items;
+      _onLocalSearchChanged(); // Re-filter with current search
     }
   }
 
   @override
   void dispose() {
+    _localSearchController.removeListener(_onLocalSearchChanged);
+    _localSearchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -636,8 +682,8 @@ class _MultiSelectDropdownOverlayState<T>
               color: Colors.white,
               borderRadius: BorderRadius.circular(7),
               border: Border.all(color: Colors.grey.withOpacity(0.3)),
-              boxShadow: [
-                const BoxShadow(
+              boxShadow: const [
+                BoxShadow(
                   color: ColorManager.boxShadowColor,
                   blurRadius: 6,
                   offset: Offset(1, 1),
@@ -668,11 +714,11 @@ class _MultiSelectDropdownOverlayState<T>
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                                color: Colors.grey.withOpacity(0.3)),
+                            border:
+                                Border.all(color: Colors.grey.withOpacity(0.3)),
                           ),
                           child: TextField(
-                            controller: widget.searchController,
+                            controller: _localSearchController,
                             focusNode: _searchFocusNode,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
@@ -693,20 +739,19 @@ class _MultiSelectDropdownOverlayState<T>
                                 size: 16,
                                 color: Colors.grey.shade600,
                               ),
-                              suffixIcon:
-                                  widget.searchController.text.isNotEmpty
-                                      ? GestureDetector(
-                                          onTap: () {
-                                            widget.searchController.clear();
-                                            _searchFocusNode.requestFocus();
-                                          },
-                                          child: Icon(
-                                            Icons.close,
-                                            size: 16,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        )
-                                      : null,
+                              suffixIcon: _localSearchController.text.isNotEmpty
+                                  ? GestureDetector(
+                                      onTap: () {
+                                        _localSearchController.clear();
+                                        _searchFocusNode.requestFocus();
+                                      },
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    )
+                                  : null,
                               border: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -725,8 +770,8 @@ class _MultiSelectDropdownOverlayState<T>
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                                color: Colors.grey.withOpacity(0.3)),
+                            border:
+                                Border.all(color: Colors.grey.withOpacity(0.3)),
                           ),
                           child: Icon(
                             Icons.close,
@@ -745,8 +790,8 @@ class _MultiSelectDropdownOverlayState<T>
                 // Footer with selection count
                 if (widget.selectedItems.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.blue.shade50,
                       borderRadius: const BorderRadius.only(
@@ -795,7 +840,7 @@ class _MultiSelectDropdownOverlayState<T>
   }
 
   Widget _buildContent() {
-    if (widget.isLoading) {
+    if (_isLocalLoading || widget.isLoading) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -827,7 +872,7 @@ class _MultiSelectDropdownOverlayState<T>
       );
     }
 
-    if (widget.items.isEmpty) {
+    if (_localFilteredItems.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -856,9 +901,9 @@ class _MultiSelectDropdownOverlayState<T>
 
     // Ensure selected index is within bounds
     if (widget.selectedIndex != null &&
-        widget.selectedIndex! >= widget.items.length) {
+        widget.selectedIndex! >= _localFilteredItems.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onIndexChanged(widget.items.length - 1);
+        widget.onIndexChanged(_localFilteredItems.length - 1);
       });
     }
 
@@ -867,10 +912,10 @@ class _MultiSelectDropdownOverlayState<T>
       padding: const EdgeInsets.symmetric(vertical: 4),
       shrinkWrap: true,
       itemExtent: widget.itemHeight,
-      itemCount: widget.items.length,
+      itemCount: _localFilteredItems.length,
       physics: const ClampingScrollPhysics(),
       itemBuilder: (context, index) {
-        final item = widget.items[index];
+        final item = _localFilteredItems[index];
         final isSelected = widget.selectedItems.contains(item);
         final isHighlighted = widget.selectedIndex == index;
 
@@ -937,7 +982,8 @@ class _MultiSelectDropdownItemState<T>
       },
       child: GestureDetector(
         onTap: () {
-          debugPrint('✅ Multiselect item tapped: ${widget.displayText(widget.item)}');
+          debugPrint(
+              '✅ Multiselect item tapped: ${widget.displayText(widget.item)}');
           widget.onTap();
         },
         child: Container(

@@ -9,6 +9,8 @@ import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/widgets/drawer_list_tile_expandable.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/category_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -269,6 +271,15 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       .logout(token, context)
                       .then((value) async {
                     if (value["status"] == "success") {
+                      // Clear all local data for multi-tenant isolation
+                      final localProductProvider =
+                          Provider.of<LocalProductProvider>(context,
+                              listen: false);
+                      final categoryProvider =
+                          Provider.of<CategoryProvider>(context, listen: false);
+                      await localProductProvider.clearAllLocalData();
+                      await categoryProvider.clearAllCategories();
+
                       authModel.logout();
                       SharedPreferenceProvider().removeTokenAndCustomerId();
                       showScaffold(

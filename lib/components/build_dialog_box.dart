@@ -6,6 +6,7 @@ import '../resources/style_manager.dart';
 
 // Global overlay entry to ensure messages appear above modals
 OverlayEntry? _currentOverlayEntry;
+OverlayEntry? _loadingOverlayEntry;
 
 ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
   // Remove any existing overlay message
@@ -88,6 +89,64 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
 
   // Return ScaffoldMessenger for compatibility
   return ScaffoldMessenger.of(context);
+}
+
+void showLoadingOverlay(BuildContext context, {String message = 'Please wait...'}) {
+  _loadingOverlayEntry?.remove();
+  final screenWidth = MediaQuery.of(context).size.width;
+  final isMobile = screenWidth < 600;
+  _loadingOverlayEntry = OverlayEntry(
+    builder: (context) => Stack(
+      children: [
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withOpacity(0.35),
+          ),
+        ),
+        Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 16 : 20,
+                vertical: isMobile ? 14 : 16,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.6),
+                  ),
+                  SizedBox(width: isMobile ? 10 : 12),
+                  Text(
+                    message,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      isMobile ? FontSize.s12 : FontSize.s13,
+                      0.12,
+                      Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+  Overlay.of(context).insert(_loadingOverlayEntry!);
+}
+
+void hideLoadingOverlay() {
+  _loadingOverlayEntry?.remove();
+  _loadingOverlayEntry = null;
 }
 
 ScaffoldMessengerState showScaffoldError(

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,8 +15,12 @@ class SalesProvider with ChangeNotifier {
   List<ListOrderModelData> _orders = [];
   List<SalesReturnOrder> _salesReturnOrders = [];
   List<SalesReturnCart> _salesReturnItems = [];
+  List<DailySalesCloseData> dailySalesCloseList = [];
+  Pagination? dailySalesClosePagination;
   int currentPage = 1;
   int totalPages = 1;
+  int salesReturnCurrentPage = 1;
+  int salesReturnTotalPages = 1;
   List<ListOrderModelData> get orders => _orders;
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
@@ -44,6 +49,111 @@ class SalesProvider with ChangeNotifier {
 
   setOrderId(String value) {
     _orderId = value;
+    notifyListeners();
+  }
+
+  // Filter visibility state
+  bool _showFilters = false;
+  bool get showFilters => _showFilters;
+
+  void toggleFilters() {
+    _showFilters = !_showFilters;
+    notifyListeners();
+  }
+
+  void setFiltersVisibility(bool value) {
+    _showFilters = value;
+    notifyListeners();
+  }
+
+  // Filter parameters
+  String? _filterOrderNumber;
+  String? _filterCustomerName;
+  String? _filterPhone;
+  String? _filterPrice;
+  String? _filterEmail;
+  String? _filterStore;
+  String? _filterStatus;
+  DateTime? _filterDate;
+
+  String? get filterOrderNumber => _filterOrderNumber;
+  String? get filterCustomerName => _filterCustomerName;
+  String? get filterPhone => _filterPhone;
+  String? get filterPrice => _filterPrice;
+  String? get filterEmail => _filterEmail;
+  String? get filterStore => _filterStore;
+  String? get filterStatus => _filterStatus;
+  DateTime? get filterDate => _filterDate;
+
+  void setFilterOrderNumber(String? value) {
+    _filterOrderNumber = value;
+    notifyListeners();
+  }
+
+  void setFilterCustomerName(String? value) {
+    _filterCustomerName = value;
+    notifyListeners();
+  }
+
+  void setFilterPhone(String? value) {
+    _filterPhone = value;
+    notifyListeners();
+  }
+
+  void setFilterPrice(String? value) {
+    _filterPrice = value;
+    notifyListeners();
+  }
+
+  void setFilterEmail(String? value) {
+    _filterEmail = value;
+    notifyListeners();
+  }
+
+  void setFilterStore(String? value) {
+    _filterStore = value;
+    notifyListeners();
+  }
+
+  void setFilterStatus(String? value) {
+    _filterStatus = value;
+    notifyListeners();
+  }
+
+  void setFilterDate(DateTime? value) {
+    _filterDate = value;
+    notifyListeners();
+  }
+
+  void clearAllFilters() {
+    _filterOrderNumber = null;
+    _filterCustomerName = null;
+    _filterPhone = null;
+    _filterPrice = null;
+    _filterEmail = null;
+    _filterStore = null;
+    _filterStatus = null;
+    _filterDate = null;
+    notifyListeners();
+  }
+
+  bool get hasActiveFilters {
+    return _filterOrderNumber != null ||
+        _filterCustomerName != null ||
+        _filterPhone != null ||
+        _filterPrice != null ||
+        _filterEmail != null ||
+        _filterStore != null ||
+        _filterStatus != null ||
+        _filterDate != null;
+  }
+
+  DailySalesCloseData? _selectedDailySalesCloseData;
+  DailySalesCloseData? get selectedDailySalesCloseData =>
+      _selectedDailySalesCloseData;
+
+  void setSelectedDailySalesCloseData(DailySalesCloseData? data) {
+    _selectedDailySalesCloseData = data;
     notifyListeners();
   }
 
@@ -84,14 +194,16 @@ class SalesProvider with ChangeNotifier {
     }
     if (page != null) queryParameters['page'] = page.toString();
 
-    final uri = Uri.parse(APPUrl.getListOrder).replace(queryParameters: queryParameters);
+    final uri = Uri.parse(APPUrl.getListOrder)
+        .replace(queryParameters: queryParameters);
 
     // DEBUG: Print request details
     debugPrint('=== SALES API REQUEST DEBUG ===');
     debugPrint('Base URL: ${APPUrl.getListOrder}');
     debugPrint('Query Parameters: $queryParameters');
     debugPrint('Final URL with Query: $uri');
-    debugPrint('Access Token: ${accessToken.isNotEmpty ? "Present" : "Missing"}');
+    debugPrint(
+        'Access Token: ${accessToken.isNotEmpty ? "Present" : "Missing"}');
 
     try {
       // Get API key from SharedPreferences
@@ -119,29 +231,35 @@ class SalesProvider with ChangeNotifier {
         if (response.body.isNotEmpty) {
           debugPrint('=== RAW RESPONSE BODY ===');
           debugPrint('Raw Response: ${response.body}');
-          
+
           final jsonData = json.decode(response.body);
           debugPrint('=== PARSED JSON STRUCTURE ===');
           debugPrint('JSON Type: ${jsonData.runtimeType}');
-          debugPrint('JSON Keys: ${jsonData is Map ? jsonData.keys.toList() : "Not a Map"}');
-          
+          debugPrint(
+              'JSON Keys: ${jsonData is Map ? jsonData.keys.toList() : "Not a Map"}');
+
           if (jsonData is Map) {
             debugPrint('Status: ${jsonData["status"]}');
             debugPrint('Message: ${jsonData["message"]}');
             debugPrint('Data Type: ${jsonData["data"]?.runtimeType}');
-            
+
             if (jsonData["data"] != null) {
-              debugPrint('Data Keys: ${jsonData["data"] is Map ? jsonData["data"].keys.toList() : "Data is not a Map"}');
-              
+              debugPrint(
+                  'Data Keys: ${jsonData["data"] is Map ? jsonData["data"].keys.toList() : "Data is not a Map"}');
+
               if (jsonData["data"] is Map && jsonData["data"]["data"] != null) {
-                debugPrint('Orders Array Type: ${jsonData["data"]["data"].runtimeType}');
-                debugPrint('Orders Array Length: ${jsonData["data"]["data"] is List ? jsonData["data"]["data"].length : "Not a List"}');
-                
-                if (jsonData["data"]["data"] is List && jsonData["data"]["data"].isNotEmpty) {
+                debugPrint(
+                    'Orders Array Type: ${jsonData["data"]["data"].runtimeType}');
+                debugPrint(
+                    'Orders Array Length: ${jsonData["data"]["data"] is List ? jsonData["data"]["data"].length : "Not a List"}');
+
+                if (jsonData["data"]["data"] is List &&
+                    jsonData["data"]["data"].isNotEmpty) {
                   debugPrint('=== FIRST ORDER SAMPLE ===');
                   var firstOrder = jsonData["data"]["data"][0];
                   debugPrint('First Order Type: ${firstOrder.runtimeType}');
-                  debugPrint('First Order Keys: ${firstOrder is Map ? firstOrder.keys.toList() : "Not a Map"}');
+                  debugPrint(
+                      'First Order Keys: ${firstOrder is Map ? firstOrder.keys.toList() : "Not a Map"}');
                   if (firstOrder is Map) {
                     firstOrder.forEach((key, value) {
                       debugPrint('  $key: ${value?.runtimeType} = $value');
@@ -151,21 +269,25 @@ class SalesProvider with ChangeNotifier {
               }
             }
           }
-          
+
           try {
             debugPrint('=== ATTEMPTING MODEL PARSING ===');
             ListSalesOrderModel listSalesOrderModel =
                 ListSalesOrderModel.fromJson(jsonData);
-            
+
             debugPrint('Model Status: ${listSalesOrderModel.status}');
             debugPrint('Model Message: ${listSalesOrderModel.message}');
-            debugPrint('Model Data Length: ${listSalesOrderModel.data?.length ?? 0}');
-            debugPrint('Model Pagination: ${listSalesOrderModel.pagination != null ? "Present" : "Null"}');
-            
+            debugPrint(
+                'Model Data Length: ${listSalesOrderModel.data?.length ?? 0}');
+            debugPrint(
+                'Model Pagination: ${listSalesOrderModel.pagination != null ? "Present" : "Null"}');
+
             if (listSalesOrderModel.pagination != null) {
-              int newCurrentPage = listSalesOrderModel.pagination?.currentPage ?? 1;
-              int newTotalPages = listSalesOrderModel.pagination?.totalPages ?? 1;
-              
+              int newCurrentPage =
+                  listSalesOrderModel.pagination?.currentPage ?? 1;
+              int newTotalPages =
+                  listSalesOrderModel.pagination?.totalPages ?? 1;
+
               debugPrint('=== PAGINATION UPDATE ===');
               debugPrint('Previous Current Page: $currentPage');
               debugPrint('Previous Total Pages: $totalPages');
@@ -174,12 +296,14 @@ class SalesProvider with ChangeNotifier {
               debugPrint('Total Orders in Response: ${_orders.length}');
               debugPrint('From: ${listSalesOrderModel.pagination?.from}');
               debugPrint('To: ${listSalesOrderModel.pagination?.to}');
-              debugPrint('Next Page URL: ${listSalesOrderModel.pagination?.nextPageUrl}');
-              debugPrint('Prev Page URL: ${listSalesOrderModel.pagination?.prevPageUrl}');
-              
+              debugPrint(
+                  'Next Page URL: ${listSalesOrderModel.pagination?.nextPageUrl}');
+              debugPrint(
+                  'Prev Page URL: ${listSalesOrderModel.pagination?.prevPageUrl}');
+
               currentPage = newCurrentPage;
               totalPages = newTotalPages;
-              
+
               debugPrint('Updated Current Page: $currentPage');
               debugPrint('Updated Total Pages: $totalPages');
             } else {
@@ -188,10 +312,10 @@ class SalesProvider with ChangeNotifier {
               currentPage = 1;
               totalPages = 1;
             }
-            
+
             _orders = listSalesOrderModel.data ?? [];
             debugPrint('Orders Set Successfully: ${_orders.length} orders');
-            
+
             // DEBUG: Print each order details
             if (_orders.isNotEmpty) {
               debugPrint('=== ORDERS DETAILS ===');
@@ -203,11 +327,12 @@ class SalesProvider with ChangeNotifier {
                 debugPrint('  Grant Total: ${order.grantTotal}');
                 debugPrint('  Status: ${order.status}');
                 debugPrint('  Customer Name: ${order.customerName}');
-                debugPrint('  Cart Items Count: ${order.cartItems?.length ?? 0}');
+                debugPrint(
+                    '  Cart Items Count: ${order.cartItems?.length ?? 0}');
                 debugPrint('  Order Date: ${order.orderDate}');
               }
             }
-            
+
             notifyListeners();
             debugPrint('=== MODEL PARSING SUCCESS ===');
           } catch (e, stackTrace) {
@@ -215,13 +340,13 @@ class SalesProvider with ChangeNotifier {
             debugPrint('Error Type: ${e.runtimeType}');
             debugPrint('Error Message: $e');
             debugPrint('Stack Trace: $stackTrace');
-            
+
             // Try to identify specific parsing issues
             if (e.toString().contains('type')) {
               debugPrint('=== TYPE MISMATCH ANALYSIS ===');
               // Additional type analysis could be added here
             }
-            
+
             throw Exception('Failed to parse order list data: $e');
           }
         } else {
@@ -281,12 +406,9 @@ class SalesProvider with ChangeNotifier {
 
   Future<void> fetchSalesReturn({
     required String accessToken,
-    required int customerId,
     int? page,
   }) async {
-    final queryParameters = <String, String>{
-      'customer_id': "1",
-    };
+    final queryParameters = <String, String>{};
     if (page != null) queryParameters['page'] = page.toString();
 
     final uri = Uri.parse(APPUrl.listSalesReturn)
@@ -323,7 +445,15 @@ class SalesProvider with ChangeNotifier {
           final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
           debugPrint(
               'fetch Sales Return list response data: ${salesReturnResponse.data.data}');
-          _salesReturnOrders = salesReturnResponse.data.data; // Store fetched data from nested structure
+          _salesReturnOrders = salesReturnResponse
+              .data.data; // Store fetched data from nested structure
+
+          // Update pagination for sales return
+          salesReturnCurrentPage = salesReturnResponse.data.currentPage;
+          salesReturnTotalPages = salesReturnResponse.data.lastPage;
+          debugPrint(
+              'Sales Return Pagination - Current: $salesReturnCurrentPage, Total: $salesReturnTotalPages');
+
           notifyListeners(); // Notify listeners to update UI
         } catch (e, stackTrace) {
           debugPrint('=== JSON PARSING ERROR ===');
@@ -457,6 +587,9 @@ class SalesProvider with ChangeNotifier {
   Future<void> completeSalesReturn({
     required String accessToken,
     required int returnOrderId,
+    String? paymentMethod,
+    double? paidAmount,
+    bool? hasPayment,
   }) async {
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
@@ -468,6 +601,28 @@ class SalesProvider with ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Debug print the request body
+    final requestBody = jsonEncode({
+      'return_order_id': returnOrderId,
+      if (hasPayment == true) ...{
+        'payment_method': paymentMethod,
+        'paid_amount': paidAmount,
+        'has_payment': hasPayment,
+      } else ...{
+        'has_payment': false,
+      }
+    });
+    debugPrint('=== COMPLETE SALES RETURN REQUEST BODY ===');
+    debugPrint(requestBody);
+    debugPrint('=== END REQUEST BODY ===');
+
+    debugPrint("accessToken $accessToken");
+    debugPrint("returnOrderId $returnOrderId");
+    debugPrint("hasPayment $hasPayment");
+    debugPrint("paymentMethod $paymentMethod");
+    debugPrint("paidAmount $paidAmount");
+
     final response = await http.post(
       url,
       headers: {
@@ -475,13 +630,8 @@ class SalesProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       },
-      body: jsonEncode({
-        'return_order_id': returnOrderId,
-      }),
+      body: requestBody,
     );
-
-    debugPrint("accessToken $accessToken");
-    debugPrint("returnOrderId $returnOrderId");
 
     if (response.statusCode == 200) {
       debugPrint('Sales return submitted successfully: ${response.body}');
@@ -490,6 +640,199 @@ class SalesProvider with ChangeNotifier {
       debugPrint(
           'Failed to submit sales return: ${response.statusCode} - ${response.body}');
       throw Exception('Failed to submit sales return');
+    }
+  }
+
+  Future<void> fetchDailySalesClose({
+    required String accessToken,
+    String? startDate,
+    String? endDate,
+    int page = 1,
+    required int userId,
+    required int storeId,
+  }) async {
+    final queryParameters = <String, String>{
+      'user_id[]': userId.toString(),
+      'store_id[]': storeId.toString(),
+      'page': page.toString(),
+    };
+    if (startDate != null) queryParameters['start_date'] = startDate;
+    if (endDate != null) queryParameters['end_date'] = endDate;
+
+    final uri = Uri.parse(APPUrl.listDailySalesClose)
+        .replace(queryParameters: queryParameters);
+
+    // DEBUG: Print request details
+    debugPrint('=== DEBUG: fetchDailySalesClose START ===');
+    debugPrint('Full URL: $uri');
+    debugPrint('Query Parameters: $queryParameters');
+    debugPrint('User ID: $userId');
+    debugPrint('Store ID: $storeId');
+    debugPrint('Start Date: $startDate');
+    debugPrint('End Date: $endDate');
+    debugPrint('Page: $page');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      };
+
+      // DEBUG: Print headers (masking sensitive data)
+      debugPrint('=== DEBUG: Request Headers ===');
+      debugPrint(
+          'Authorization: Bearer ${accessToken.length > 10 ? accessToken.substring(0, 10) + '...' : accessToken}');
+      debugPrint('Content-Type: ${headers['Content-Type']}');
+      debugPrint(
+          'X-Tenant: ${apiKey.length > 8 ? apiKey.substring(0, 8) + '...' : apiKey}');
+
+      final response = await http
+          .get(
+            uri,
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
+
+      // DEBUG: Print response details
+      debugPrint('=== DEBUG: Response Details ===');
+      debugPrint('Response Status Code: ${response.statusCode}');
+      debugPrint('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final model = DailySalesCloseModel.fromJson(jsonData);
+        dailySalesCloseList = model.data ?? [];
+        dailySalesClosePagination = model.pagination;
+        notifyListeners();
+        debugPrint('=== DEBUG: fetchDailySalesClose SUCCESS ===');
+      } else {
+        dailySalesCloseList = [];
+        notifyListeners();
+        debugPrint(
+            '=== DEBUG: fetchDailySalesClose FAILED (Non-200 Status) ===');
+      }
+    } catch (error, stackTrace) {
+      debugPrint('=== DEBUG: fetchDailySalesClose ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
+      dailySalesCloseList = [];
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<DailySalesCloseSummary?> fetchDailySalesCloseSummary({
+    required String accessToken,
+    required int storeId,
+  }) async {
+    final queryParameters = <String, String>{
+      'store_id': storeId.toString(),
+    };
+
+    final uri = Uri.parse(APPUrl.dailySalesCloseSummary);
+    // .replace(queryParameters: queryParameters);
+
+    debugPrint('=== DEBUG: fetchDailySalesCloseSummary START ===');
+    debugPrint('Full URL: $uri');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
+      debugPrint('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final model = DailySalesCloseSummaryResponse.fromJson(jsonData);
+        return model.data;
+      } else {
+        throw HttpException('Failed to fetch summary: ${response.statusCode}');
+      }
+    } catch (error, stackTrace) {
+      debugPrint('=== DEBUG: fetchDailySalesCloseSummary ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> createDailySalesClose({
+    required String accessToken,
+    required int storeId,
+  }) async {
+    final queryParameters = <String, String>{
+      'store_id': storeId.toString(),
+    };
+
+    final uri = Uri.parse(APPUrl.dailySalesCloseCreate)
+        .replace(queryParameters: queryParameters);
+
+    debugPrint('=== DEBUG: createDailySalesClose START ===');
+    debugPrint('Full URL: $uri');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
+      debugPrint('Response Body: ${response.body}');
+
+      final jsonData = json.decode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': jsonData['success'] ?? true,
+          'message': jsonData['message'] ?? 'Day close created successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': jsonData['message'] ?? 'Failed to create day close',
+        };
+      }
+    } catch (error, stackTrace) {
+      debugPrint('=== DEBUG: createDailySalesClose ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
+      return {
+        'success': false,
+        'message': error.toString(),
+      };
     }
   }
 }

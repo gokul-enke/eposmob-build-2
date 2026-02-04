@@ -456,62 +456,75 @@ class BillingPageState extends State<BillingPage>
             return; // Exit early, only customer list is fetched
           }
 
-          CustomerListModelData? salesCustomer;
+          CustomerListModelData? defaultCustomer;
 
           if (billingProvider.customerList!.isNotEmpty) {
-            // Get current sales executive's information
-            final salesExecutiveProvider =
-                Provider.of<SalesExecutiveProvider>(context, listen: false);
-            final currentExecutive =
-                salesExecutiveProvider.getCurrentUser(context);
+            // Get the default customer phone from app settings
+            final defaultPhone = appSettingsProvider
+                    .appSettings?.autoAssignDefaultCustomerPhone ??
+                "";
 
             debugPrint(
-                "🏢 BILLING: Setting up default customer from sales executive");
-            debugPrint("  - Current executive: ${currentExecutive?.name}");
-            debugPrint("  - Executive phone: ${currentExecutive?.phone}");
+                "🏢 BILLING: Setting up default customer from app settings phone");
+            debugPrint("  - Default phone from settings: '$defaultPhone'");
             debugPrint(
                 "  - Available customers in list: ${billingProvider.customerList!.length}");
 
-            if (currentExecutive != null) {
-              // Create a virtual customer using sales executive's information
-              salesCustomer = CustomerListModelData(
-                id: currentExecutive.id, // Use executive ID
-                name: currentExecutive.name,
-                phone: currentExecutive.phone,
-                email: currentExecutive.email,
-                createdAt: currentExecutive.createdAt,
-                updatedAt: currentExecutive.updatedAt,
-              );
-              debugPrint(
-                  "✅ Created virtual customer from sales executive: ${salesCustomer.name} (${salesCustomer.phone})");
+            if (defaultPhone.isNotEmpty) {
+              // Try to find customer by phone number
+              try {
+                defaultCustomer = billingProvider.customerList!.firstWhere(
+                  (customer) => customer.phone == defaultPhone,
+                );
+                debugPrint(
+                    "✅ Found customer by phone: ${defaultCustomer.name} (${defaultCustomer.phone})");
+
+                debugPrint(
+                    "🎯 Selected default customer: ${defaultCustomer.name} (${defaultCustomer.phone})");
+
+                debugPrint("📝 SETTING DEFAULT CUSTOMER STATE:");
+                billingProvider
+                    .setMobileNumberText(defaultCustomer.phone ?? "");
+                billingProvider.mobileNumberTextController.text =
+                    "${defaultCustomer.name ?? ''} ${defaultCustomer.phone ?? ''}"
+                        .trim();
+
+                debugPrint(
+                    "  - Set mobileNumberText: '${defaultCustomer.phone}'");
+                debugPrint(
+                    "  - Set mobileNumberTextController.text: '${billingProvider.mobileNumberTextController.text}'");
+
+                // Set the default customer in the global provider and mark as default
+                billingProvider.setSelectedCustomer(defaultCustomer,
+                    isManual: false);
+                debugPrint("✅ Default customer set:");
+                debugPrint(
+                    "  - selectedCustomerID: ${billingProvider.selectedCustomerID}");
+                debugPrint(
+                    "  - selectedCustomerPhone: ${billingProvider.selectedCustomerPhone}");
+                debugPrint(
+                    "  - selectedCustomer: ${billingProvider.selectedCustomer?.name}");
+              } catch (e) {
+                // Customer not found - just show the phone number from settings
+                debugPrint(
+                    "⚠️ No customer found with phone '$defaultPhone', using phone number only");
+
+                debugPrint("📝 SETTING PHONE NUMBER ONLY (no customer found):");
+                billingProvider.setMobileNumberText(defaultPhone);
+                billingProvider.mobileNumberTextController.text = defaultPhone;
+
+                // Clear any previous customer selection
+                billingProvider.clearSelectedCustomer();
+
+                debugPrint(
+                    "  - Set mobileNumberTextController.text: '$defaultPhone'");
+                debugPrint("  - Cleared selectedCustomer");
+              }
             } else {
               debugPrint(
-                  "⚠️ No current executive found, falling back to first customer");
-              salesCustomer = billingProvider.customerList![0];
+                  "⚠️ No default phone configured, leaving customer field empty");
+              // Don't set any customer - leave the field empty
             }
-            debugPrint(
-                "🎯 Selected default customer: ${salesCustomer.name} (${salesCustomer.phone})");
-
-            debugPrint("📝 SETTING DEFAULT CUSTOMER STATE:");
-            billingProvider.setMobileNumberText(salesCustomer.phone!);
-            billingProvider.mobileNumberTextController.text =
-                "${salesCustomer.name!} ${salesCustomer.phone!}";
-
-            debugPrint("  - Set mobileNumberText: '${salesCustomer.phone!}'");
-            debugPrint(
-                "  - Set mobileNumberText: '${billingProvider.mobileNumberText}'");
-            debugPrint(
-                "  - Set mobileNumberTextController.text: '${billingProvider.mobileNumberTextController.text}'");
-
-            // Set the default customer in the global provider and mark as default
-            billingProvider.setSelectedCustomer(salesCustomer, isManual: false);
-            debugPrint("✅ Default customer set:");
-            debugPrint(
-                "  - selectedCustomerID: ${billingProvider.selectedCustomerID}");
-            debugPrint(
-                "  - selectedCustomerPhone: ${billingProvider.selectedCustomerPhone}");
-            debugPrint(
-                "  - selectedCustomer: ${billingProvider.selectedCustomer?.name}");
           }
         });
       }

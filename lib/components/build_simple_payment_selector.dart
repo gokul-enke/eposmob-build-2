@@ -20,8 +20,9 @@ class SimplePaymentData {
     this.secondaryAmount = '',
   });
 
-  bool get hasPaymentMethods => primaryMethod != null || secondaryMethod != null;
-  
+  bool get hasPaymentMethods =>
+      primaryMethod != null || secondaryMethod != null;
+
   double get totalAmount {
     double primary = double.tryParse(primaryAmount) ?? 0;
     double secondary = double.tryParse(secondaryAmount) ?? 0;
@@ -61,16 +62,18 @@ class BuildSimplePaymentSelector extends StatefulWidget {
       _BuildSimplePaymentSelectorState();
 }
 
-class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector> {
+class _BuildSimplePaymentSelectorState
+    extends State<BuildSimplePaymentSelector> {
   SimplePaymentType? primaryMethod;
   SimplePaymentType? secondaryMethod;
   final TextEditingController primaryAmountController = TextEditingController();
-  final TextEditingController secondaryAmountController = TextEditingController();
+  final TextEditingController secondaryAmountController =
+      TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    
+
     if (widget.initialData != null) {
       primaryMethod = widget.initialData!.primaryMethod;
       secondaryMethod = widget.initialData!.secondaryMethod;
@@ -180,13 +183,13 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Payment method buttons
           Row(
             children: widget.availableMethods.map((method) {
               bool isSelected = _isMethodSelected(method);
               Color methodColor = _getMethodColor(method);
-              
+
               return Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(
@@ -201,7 +204,8 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
                         color: isSelected ? methodColor : Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isSelected ? methodColor : Colors.grey.shade300,
+                          color:
+                              isSelected ? methodColor : Colors.grey.shade300,
                           width: 2,
                         ),
                         boxShadow: isSelected
@@ -246,7 +250,7 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
               );
             }).toList(),
           ),
-          
+
           // Amount input fields
           if (primaryMethod != null || secondaryMethod != null) ...[
             const SizedBox(height: 16),
@@ -257,7 +261,8 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
                     child: _buildAmountInput(
                       method: primaryMethod!,
                       controller: primaryAmountController,
-                      placeholder: 'Enter ${_getMethodName(primaryMethod!)} Amount',
+                      placeholder:
+                          'Enter ${_getMethodName(primaryMethod!)} Amount',
                     ),
                   ),
                 if (primaryMethod != null && secondaryMethod != null)
@@ -267,15 +272,17 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
                     child: _buildAmountInput(
                       method: secondaryMethod!,
                       controller: secondaryAmountController,
-                      placeholder: 'Enter ${_getMethodName(secondaryMethod!)} Amount',
+                      placeholder:
+                          'Enter ${_getMethodName(secondaryMethod!)} Amount',
                     ),
                   ),
               ],
             ),
           ],
-          
+
           // Total amount display
-          if (widget.showTotalAmount && (primaryMethod != null || secondaryMethod != null)) ...[
+          if (widget.showTotalAmount &&
+              (primaryMethod != null || secondaryMethod != null)) ...[
             const SizedBox(height: 12),
             _buildTotalDisplay(),
           ],
@@ -328,11 +335,14 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
 
   Widget _buildTotalDisplay() {
     double primaryAmount = double.tryParse(primaryAmountController.text) ?? 0;
-    double secondaryAmount = double.tryParse(secondaryAmountController.text) ?? 0;
+    double secondaryAmount =
+        double.tryParse(secondaryAmountController.text) ?? 0;
     double total = primaryAmount + secondaryAmount;
-    
+
     Color totalColor = widget.expectedAmount != null
-        ? (total == widget.expectedAmount ? ColorManager.kSuccessColor : ColorManager.kErrorColor)
+        ? (total == widget.expectedAmount
+            ? ColorManager.kSuccessColor
+            : ColorManager.kErrorColor)
         : ColorManager.kPrimaryColor;
 
     return Container(
@@ -346,7 +356,7 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total: ₹${total.toStringAsFixed(2)}',
+            'Total: ${total.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -356,7 +366,7 @@ class _BuildSimplePaymentSelectorState extends State<BuildSimplePaymentSelector>
           ),
           if (widget.expectedAmount != null) ...[
             Text(
-              'Expected: ₹${widget.expectedAmount!.toStringAsFixed(2)}',
+              'Expected: ${widget.expectedAmount!.toStringAsFixed(2)}',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

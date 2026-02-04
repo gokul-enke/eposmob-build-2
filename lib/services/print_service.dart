@@ -7,9 +7,22 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 
 class PrintService {
   const PrintService();
+
+  /// Helper method to check if a phone number matches the default customer phone from app settings
+  bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
 
   /// Fetch order details by order id and navigate to PrintPage
   Future<void> printOrderById(BuildContext context, String ordersId) async {
@@ -47,25 +60,48 @@ class PrintService {
           orderDetails.data?.customerDetails?.address?.join(', ');
 
       if (!context.mounted) return;
-      Navigator.push(
+
+      // Try auto-print with default printer first
+      final autoPrintSuccess = await PrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: storeName,
-            cartItems: cart!.cartItems!,
-            formattedTotal: formattedTotal,
-            savedTotal: savedTotal,
-            discountAmount:
-                orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
-            orderDate: orderDate,
-            orderNumber: orderDetails.data!.orderNumber ?? '',
-            customerName: customerName,
-            customerPhone: customerPhone,
-            customerEmail: customerEmail,
-            customerAddress: customerAddress,
-          ),
-        ),
+        storeName: storeName,
+        cartItems: cart!.cartItems!,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount:
+            orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
+        orderDate: DateHelper.formatInputToDisplay(orderDate),
+        orderNumber: orderDetails.data!.orderNumber ?? '',
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        customerAddress: customerAddress,
+        isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
       );
+
+      // Only show print page if auto-print failed
+      if (!autoPrintSuccess && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PrintPage(
+              storeName: storeName,
+              cartItems: cart.cartItems!,
+              formattedTotal: formattedTotal,
+              savedTotal: savedTotal,
+              discountAmount:
+                  orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
+              orderDate: DateHelper.formatInputToDisplay(orderDate),
+              orderNumber: orderDetails.data!.orderNumber ?? '',
+              customerName: customerName,
+              customerPhone: customerPhone,
+              customerEmail: customerEmail,
+              customerAddress: customerAddress,
+              isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
+            ),
+          ),
+        );
+      }
     } catch (_) {
       // Swallow errors; original code logged and continued
     }
@@ -109,30 +145,62 @@ class PrintService {
       }
 
       if (!context.mounted) return;
-      Navigator.push(
+
+      // Get active store name
+      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeName = storeSession.activeStore?.storeName ?? "Store";
+
+      // Try auto-print with default printer first
+      final autoPrintSuccess = await PrintPage.autoPrint(
         context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: "SOUQ POINT",
-            cartItems: cartItems,
-            formattedTotal: netTotal.toString(),
-            savedTotal: youSaved.toString(),
-            discountAmount: (savedOrder.flatDiscount != null ||
-                    savedOrder.percentageDiscount != null)
-                ? ((savedOrder.flatDiscount ?? 0.0) +
-                        ((savedOrder.percentageDiscount ?? 0.0) > 0
-                            ? (savedOrder.total *
-                                (savedOrder.percentageDiscount ?? 0.0) /
-                                100)
-                            : 0.0))
-                    .toString()
-                : "0.00",
-            orderDate: savedOrder.createdAt,
-            orderNumber: savedOrder.orderNumber,
-            isFromLocalStorage: true,
-          ),
-        ),
+        storeName: storeName,
+        cartItems: cartItems,
+        formattedTotal: netTotal.toString(),
+        savedTotal: youSaved.toString(),
+        discountAmount: (savedOrder.flatDiscount != null ||
+                savedOrder.percentageDiscount != null)
+            ? ((savedOrder.flatDiscount ?? 0.0) +
+                    ((savedOrder.percentageDiscount ?? 0.0) > 0
+                        ? (savedOrder.total *
+                            (savedOrder.percentageDiscount ?? 0.0) /
+                            100)
+                        : 0.0))
+                .toString()
+            : "0.00",
+        orderDate: savedOrder.createdAt,
+        orderNumber: savedOrder.orderNumber,
+        isFromLocalStorage: true,
+        isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
       );
+
+      // Only show print page if auto-print failed
+      if (!autoPrintSuccess && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PrintPage(
+              storeName: storeName,
+              cartItems: cartItems,
+              formattedTotal: netTotal.toString(),
+              savedTotal: youSaved.toString(),
+              discountAmount: (savedOrder.flatDiscount != null ||
+                      savedOrder.percentageDiscount != null)
+                  ? ((savedOrder.flatDiscount ?? 0.0) +
+                          ((savedOrder.percentageDiscount ?? 0.0) > 0
+                              ? (savedOrder.total *
+                                  (savedOrder.percentageDiscount ?? 0.0) /
+                                  100)
+                              : 0.0))
+                      .toString()
+                  : "0.00",
+              orderDate: savedOrder.createdAt,
+              orderNumber: savedOrder.orderNumber,
+              isFromLocalStorage: true,
+              isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
+            ),
+          ),
+        );
+      }
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
     }

@@ -1,0 +1,121 @@
+Date,Module,Start Time-End Time,Total Time ,Description,Project Name,Reporting To
+7/1/2025,Sales App,9:30 to 06:30,8 hrs,"souq build, print width changed",EPOS,Shafeek
+7/2/2025,Sales App,9:30 to 06:30,8 hrs,"removed refactor files., safe fixes, cash/upi updation done, new fix line to 11, print security update",EPOS,Shafeek
+7/3/2025,Sales App,9:30 to 06:30,8 hrs,"font size reduced, bug fixes, changed link to staging, transactions ui updated, bug fix, transaction pagination completed, first commit-Transactions, refactored, souq build return bug fix",EPOS,Shafeek
+7/4/2025,Sales App,9:30 to 06:30,8 hrs,"virtual keyboard added, bug fix",EPOS,Shafeek
+7/5/2025,Sales App,9:30 to 06:30,8 hrs,"bug fix, souq build, keyboard functionality completed, bug fix",EPOS,Shafeek
+7/6/2025,,,,,,
+7/7/2025,Sales App,9:30 to 06:30,8 hrs,"Added customer transactions, url changed, bug fix",EPOS,Shafeek
+7/8/2025,Sales App,9:30 to 06:30,8 hrs,"souq build, Barcode listener and Credit fix, barcode listener added, customer bug fix, bug fix",EPOS,Shafeek
+7/9/2025,Sales App,9:30 to 06:30,8 hrs,"souq build, bug fix",EPOS,Shafeek
+7/10/2025,Sales App,9:30 to 06:30,8 hrs,"souq build, Delivery Date and Time Added, bug fix",EPOS,Shafeek
+7/11/2025,Sales App,9:30 to 06:30,8 hrs,"customer-profile completed, bug fix",EPOS,Shafeek
+7/12/2025,,,,,,
+7/13/2025,,,,,,
+7/14/2025,Sales App,9:30 to 06:30,8 hrs,"customer-profile completed, bug fix",EPOS,Shafeek
+7/15/2025,Sales App,9:30 to 06:30,8 hrs,"filters intransaction section, bug fix",EPOS,Shafeek
+7/16/2025,Sales App,9:30 to 06:30,8 hrs,"customer-profile completed, bug fix",EPOS,Shafeek
+7/17/2025,,,,,,
+7/18/2025,Sales App,9:30 to 06:30,8 hrs,"customer-profile completed, bug fix",EPOS,Shafeek
+7/19/2025,Sales App,9:30 to 06:30,8 hrs,"customer-profile completed, bug fix",EPOS,Shafeek
+7/20/2025,Sales App,9:30 to 06:30,8 hrs,"customer-profile completed, bug fix",EPOS,Shafeek
+7/21/2025,Sales App,9:30 to 06:30,8 hrs,"filter&search sections completed",EPOS,Shafeek
+7/22/2025,Sales App,9:30 to 06:30,8 hrs,"product mrp changes, url changed to staging, api token added",EPOS,Shafeek
+7/23/2025,Sales App,9:30 to 06:30,8 hrs,"app url changed, new build, url changed, workflow changed, round off added",EPOS,Shafeek
+7/24/2025,Sales App,9:30 to 06:30,8 hrs,"UI changes, bug fixes, working invoice &receipt show details",EPOS,Shafeek
+7/25/2025,Sales App,9:30 to 06:30,8 hrs,"UI changes, bug fixes, working invoice &receipt show details",EPOS,Shafeek
+7/26/2025,Sales App,9:30 to 06:30,8 hrs,"UI changes, bug fixes, working invoice &receipt show details, bug fix",EPOS,Shafeek
+7/27/2025,Sales App,9:30 to 06:30,8 hrs,"new changes, ui changed, new, tenancy added, bug fix",EPOS,Shafeek
+7/28/2025,Sales App,9:30 to 06:30,8 hrs,"new changes, bug fix",EPOS,Shafeek
+7/29/2025,Sales App,9:30 to 06:30,8 hrs,"new url, new release, bug fix",EPOS,Shafeek
+7/30/2025,Sales App,9:30 to 06:30,8 hrs,"new url, bug fix",EPOS,Shafeek
+7/31/2025,Sales App,9:30 to 06:30,8 hrs,"customer section bug fixes, bug fixes, ui changes",EPOS,Shafeek
+8/1/2025,Sales App,9:30 to 06:30,8 hrs,"add stock debugg, bug fix",EPOS,Shafeek
+8/2/2025,Sales App,9:30 to 06:30,8 hrs,"bug fixes, new, bug fixes, bug fix",EPOS,Shafeek
+8/3/2025,,,,,,
+8/4/2025,Sales App,9:30 to 06:30,8 hrs,"app url changed, bug fix",EPOS,Shafeek
+8/5/2025,Sales App,9:30 to 06:30,8 hrs,"new build, bug fix",EPOS,Shafeek
+8/6/2025,Sales App,9:30 to 06:30,8 hrs,"kitchen changes, add stock barcode auto, bug fix",EPOS,Shafeek
+8/7/2025,Sales App,9:30 to 06:30,8 hrs,"kitchen changes, bug fix",EPOS,Shafeek
+8/8/2025,Sales App,9:30 to 06:30,8 hrs,"bug fixes, bug fixes, ui changes, ui changes, bug fix",EPOS,Shafeek
+8/9/2025,,,,,,
+8/10/2025,,,,,,
+8/11/2025,Sales App,9:30 to 06:30,8 hrs,"url change, bug fixes, bug fix",EPOS,Shafeek
+8/12/2025,Sales App,9:30 to 06:30,8 hrs,"url change, bug fix",EPOS,Shafeek
+8/13/2025,Sales App,9:30 to 06:30,8 hrs,"url change, bug fix",EPOS,Shafeek
+8/14/2025,Sales App,9:30 to 06:30,8 hrs,"bug fix, ui fix, api implemented, ui fix, scroll completed, ui fix, table list added, bug fix, bug fix",EPOS,Shafeek
+8/15/2025,Sales App,9:30 to 06:30,8 hrs,"new build, bug fix, new, bug fix, local order working, bug fix, bug fix, bug, bug fix, attender working fine, Mobile Screen UI complete",EPOS,Shafeek
+8/16/2025,,,,,,
+8/17/2025,,,,,,
+8/18/2025,Sales App,9:30 to 06:30,8 hrs,"customer err solved, new release, customer added, side menu updated, print bug fixed, print done, print fixed, bug fix",EPOS,Shafeek
+8/19/2025,Sales App,9:30 to 06:30,8 hrs,"Coupon added, coupon implemented, new build, bug fix",EPOS,Shafeek
+8/20/2025,Sales App,9:30 to 06:30,8 hrs,"new change, bug fixes, clear bug fix, discount and coupon working, multi payment methods added, bug fix",EPOS,Shafeek
+8/21/2025,Sales App,9:30 to 06:30,8 hrs,"payment completed, payment method fix added, bug fix, clear bug fix, share fix, mobile screen functions, rehydration fix, bug fix, critical bug fix",EPOS,Shafeek
+8/22/2025,Sales App,9:30 to 06:30,8 hrs,"new change, bug fix",EPOS,Shafeek
+8/23/2025,Sales App,9:30 to 06:30,8 hrs,"test_changes, UI changes, new, bug fixes, bug fix, new build, bug fix, print bug fix",EPOS,Shafeek
+8/24/2025,,,,,,
+8/25/2025,Sales App,9:30 to 06:30,8 hrs,"fix, fix, new, new build, bug fix, net payable fixed, name changed",EPOS,Shafeek
+8/26/2025,Sales App,9:30 to 06:30,8 hrs,"bug fix, style fix, bug fixes, bug fix, bug fixes, new release, auto select cash also added, product structure updated",EPOS,Shafeek
+8/27/2025,Sales App,9:30 to 06:30,8 hrs,"new url, debug prints added, restaurant bug fix, ui fix, bug fix added customer clear, kitchen bug cleared",EPOS,Shafeek
+8/28/2025,Sales App,9:30 to 06:30,8 hrs,"stock err fix and sync button",EPOS,Shafeek
+8/29/2025,Sales App,9:30 to 06:30,8 hrs,"stock addition working, bug fixes, bug fix",EPOS,Shafeek
+8/30/2025,Sales App,9:30 to 06:30,8 hrs,"new release, new release, new, add stock done, currency pushed, pdf fix, bug fixes and ui changes, new, add stock",EPOS,Shafeek
+8/31/2025,,,,,,
+9/1/2025,Sales App,9:30 to 06:30,8 hrs,"sales return, java version updated, bug fixes, souq release, bug fix, bug fix, url changed, currency dynamic changed",EPOS,Shafeek
+9/2/2025,Sales App,9:30 to 06:30,8 hrs,"calendar updated, calendar updated, calendar ui, new release, bug fix, sync added, stock sync added, stock updation added, add stock done",EPOS,Shafeek
+9/3/2025,Sales App,9:30 to 06:30,8 hrs,"new release, new build, bug fix, dropdown bug fixed, supplier bugs also, add product fully localised, add suplier, some bug fixes .Common Date format through the entire APP.",EPOS,Shafeek
+9/4/2025,,,,,,
+9/5/2025,,,,,,
+9/6/2025,,,,,,
+9/7/2025,Sales App,9:30 to 06:30,8 hrs,"some bug fixes .Common Date format through the entire APP.",EPOS,Shafeek
+9/8/2025,,,,,,
+9/9/2025,Sales App,9:30 to 06:30,8 hrs,"Auto assigning bug fix, bug fix, balance filter in supplier, changed to demo, new build, new, bug fix 28 and 29, new build, new fix, bug fix",EPOS,Shafeek
+9/10/2025,Sales App,9:30 to 06:30,8 hrs,"Bug fix, demo build, bug fix, live build, company account and sales executive reports page UI done, coupon fix, bug fixes, fix, kitchen search menu added, new change, bug fix, new build, stock sync added",EPOS,Shafeek
+9/11/2025,Sales App,9:30 to 06:30,8 hrs,"API integration for company account and reports, mobile screen added, demo build, new build, new fix",EPOS,Shafeek
+9/12/2025,Sales App,9:30 to 06:30,8 hrs,"WhatsApp added, Update app_url.dart, company account details page and hsn filter in product page, ui fix, new bug fix, epos build, demo build, yougoit app build",EPOS,Shafeek
+9/13/2025,Sales App,9:30 to 06:30,8 hrs,"New fix, bug fix, bug fix, stock issue list err, bug fix and mobile ui, company info page, billing provider added, billing provider created, internet checking added, settings icon changed",EPOS,Shafeek
+9/14/2025,Sales App,9:30 to 06:30,8 hrs,"Build error resolved, system stability improved",EPOS,Shafeek
+9/15/2025,Sales App,9:30 to 06:30,8 hrs,"Provider added, new build, bug fixes",EPOS,Shafeek
+9/16/2025,Sales App,9:30 to 06:30,8 hrs,"New location for hive, hive location changed, fetch product fix",EPOS,Shafeek
+9/17/2025,Sales App,9:30 to 06:30,8 hrs,"New build, category added, ui changes and fixes, head row responsive fix and logo fixed in sidebar, sidebar logo added, responsiveness for snackbar dialoge, message responsiveness added, billing provider, login, app url ui completed mobile billing page also",EPOS,Shafeek
+9/18/2025,Sales App,9:30 to 06:30,8 hrs,"Tab order and dropdown fixed, my changes, customer transaction report UI",EPOS,Shafeek
+9/19/2025,Sales App,9:30 to 06:30,8 hrs,"New build, tab order and bug fix, print statement complete, logo fixed, new build",EPOS,Shafeek
+9/20/2025,,,,,,
+9/21/2025,Sales App,9:30 to 06:30,8 hrs,"Minor bug fix, minor bug fix",EPOS,Shafeek
+9/22/2025,Sales App,9:30 to 06:30,8 hrs,"Souq build, bug fix, bug fix, supplier_profile page, filter in reports",EPOS,Shafeek
+9/23/2025,Sales App,9:30 to 06:30,8 hrs,"Demo build, ui changes, bug fix",EPOS,Shafeek
+9/24/2025,Sales App,9:30 to 06:30,8 hrs,"Demo build, bug fixes, bug fix, print changed, whatsapp working",EPOS,Shafeek
+9/25/2025,Sales App,9:30 to 06:30,8 hrs,"Documentation reorganized, supplier statement module enhanced, new build, bug fixes",EPOS,Shafeek
+9/26/2025,Sales App,9:30 to 06:30,8 hrs,"New, demo build, live build, bug fixes, customer bug fixes, supplier and customer added, customer transaction filters, customer statement",EPOS,Shafeek
+9/27/2025,Sales App,9:30 to 06:30,8 hrs,"New build, date removed, transactions done, statement UI",EPOS,Shafeek
+9/28/2025,,,,,,
+9/29/2025,Sales App,9:30 to 06:30,8 hrs,"new build, bug fix",EPOS,Shafeek
+9/30/2025,Sales App,9:30 to 06:30,8 hrs,"production ready, stock addition added, stock addition added, production ready",EPOS,Shafeek
+10/1/2025,,,,,,
+10/2/2025,Sales App,9:30 to 06:30,8 hrs,"production ready, bug fix",EPOS,Shafeek
+10/3/2025,Sales App,9:30 to 06:30,8 hrs,"bug fixes, critical bug fix",EPOS,Shafeek
+10/4/2025,Sales App,9:30 to 06:30,8 hrs,"souq build, bug fix added, critical bug fix",EPOS,Shafeek
+10/5/2025,,,,,,
+10/6/2025,Sales App,9:30 to 06:30,8 hrs,"yougoit build, bug fix",EPOS,Shafeek
+10/7/2025,Sales App,9:30 to 06:30,8 hrs,"production build, barcode bug fix, bug fix",EPOS,Shafeek
+10/8/2025,Sales App,9:30 to 06:30,8 hrs,"bug fixes, critical bug fix",EPOS,Shafeek
+10/9/2025,Sales App,9:30 to 06:30,8 hrs,"bug fixes, critical bug fix",EPOS,Shafeek
+10/10/2025,Sales App,9:30 to 06:30,8 hrs,"new, bug fix, bug fix, dashboard, ui to build",EPOS,Shafeek
+10/11/2025,,,,,,
+10/12/2025,Sales App,9:30 to 06:30,8 hrs,"ui to build, bug fix",EPOS,Shafeek
+10/13/2025,Sales App,9:30 to 06:30,8 hrs,"bug fixes, supplier print fixed, new production release, supplier statement added, thermal bug fix, customer statement completed, critical bug fix",EPOS,Shafeek
+10/14/2025,Sales App,9:30 to 06:30,8 hrs,"new build, bug fixes, ui changes, bug fixes, print bug fixes, demo build, dashboard, critical bug fix",EPOS,Shafeek
+10/15/2025,Sales App,9:30 to 06:30,8 hrs,"return statement in print section, bug fix",EPOS,Shafeek
+10/16/2025,Sales App,9:30 to 06:30,8 hrs,"bug fixes, critical bug fix",EPOS,Shafeek
+10/17/2025,Sales App,9:30 to 06:30,8 hrs,"demo build, new build, bug fixes, bug fixes, bug fixes, bug fixes, bug fixes, bug fixes, store selection system added, Order return Document Configuration API, Cart expandable feature removed, Product Grid height fixed, sidebar title removed in mobile, docs fix, critical bug fix",EPOS,Shafeek
+10/18/2025,Sales App,9:30 to 06:30,8 hrs,"demo build, new, new build script, live build, bug fixes, bug fixes, supplier bug fixed, bug fixes in sales return list, date time print fix and sales return bug fix, payment modal ui bug fix, stock validation removed, store selection fixed in add stock, store id added in addtoorder api cart provider, store switch feature completed, store fixes, store selection added, critical bug fix",EPOS,Shafeek
+10/19/2025,,,,,,
+10/20/2025,Sales App,9:30 to 06:30,8 hrs,"demo build, bug fix",EPOS,Shafeek
+10/21/2025,Sales App,9:30 to 06:30,8 hrs,"new app, pinelabs working fine, pinelabs fixes, rename project, Update app_url.dart, pinelabs integration added, critical bug fix",EPOS,Shafeek
+10/22/2025,Sales App,9:30 to 06:30,8 hrs,"souq build, ui bug fixes, bug fix",EPOS,Shafeek
+10/23/2025,Sales App,9:30 to 06:30,8 hrs,"yougoit build, sales return completed, zatca completed, bug fixes, critical bug fix",EPOS,Shafeek
+10/24/2025,Sales App,9:30 to 06:30,8 hrs,"yougo it build, demo build, new, user switcher updated, yougo it build, bug fix",EPOS,Shafeek
+10/25/2025,,,,,,
+10/26/2025,Sales App,9:30 to 06:30,8 hrs,"yougo it build, bug fix",EPOS,Shafeek
+10/27/2025,Sales App,9:30 to 06:30,8 hrs,"epos build, sidebar and stocks issue solved, roles added, bug fix",EPOS,Shafeek
+10/28/2025,Sales App,9:30 to 06:30,8 hrs,"demo build, souq build, demo build, demo build, yougoit build, souq build, demo build, customer balance calculation added from api, total Mrp to left side, report, side bar done, category also done, yougoit build, sidebar permission fixes added, critical bug fix",EPOS,Shafeek

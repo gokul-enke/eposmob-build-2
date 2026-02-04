@@ -34,9 +34,15 @@ class CartItemsTable extends StatelessWidget {
         const double priceWidth = 80;
         const double totalWidth = 80;
         const double actionsWidth = 50;
-        
-        const double totalTableWidth = indexWidth + itemNameWidth + unitWidth + 
-                                     qtyWidth + mrpWidth + priceWidth + totalWidth + actionsWidth;
+
+        const double totalTableWidth = indexWidth +
+            itemNameWidth +
+            unitWidth +
+            qtyWidth +
+            mrpWidth +
+            priceWidth +
+            totalWidth +
+            actionsWidth;
 
         return Column(
           children: [
@@ -69,7 +75,7 @@ class CartItemsTable extends StatelessWidget {
             //     ],
             //   ),
             // ),
-            
+
             // Fixed header with horizontal scroll
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -87,19 +93,27 @@ class CartItemsTable extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    _buildFixedHeaderCell('#', width: indexWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Item Name', width: itemNameWidth, alignment: Alignment.centerLeft),
-                    _buildFixedHeaderCell('Unit', width: unitWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Quantity', width: qtyWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('MRP', width: mrpWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Price', width: priceWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Total', width: totalWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('', width: actionsWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('#',
+                        width: indexWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Item Name',
+                        width: itemNameWidth, alignment: Alignment.centerLeft),
+                    _buildFixedHeaderCell('Unit',
+                        width: unitWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Quantity',
+                        width: qtyWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('MRP',
+                        width: mrpWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Price',
+                        width: priceWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Total',
+                        width: totalWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('',
+                        width: actionsWidth, alignment: Alignment.center),
                   ],
                 ),
               ),
             ),
-            
+
             // Scrollable content
             Expanded(
               child: SingleChildScrollView(
@@ -114,7 +128,9 @@ class CartItemsTable extends StatelessWidget {
                       final item = cartItems[index];
                       return Container(
                         decoration: BoxDecoration(
-                          color: index % 2 == 0 ? Colors.white : Colors.grey.shade50,
+                          color: index % 2 == 0
+                              ? Colors.white
+                              : Colors.grey.shade50,
                           border: Border(
                             bottom: BorderSide(
                               color: Colors.grey.shade200,
@@ -219,7 +235,7 @@ class CartItemsTable extends StatelessWidget {
                             // Total
                             _buildFixedContentCell(
                               Text(
-                                '₹${(item.price! * item.quantity).toStringAsFixed(2)}',
+                                '${(item.price! * item.quantity).toStringAsFixed(2)}',
                                 style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   12,
@@ -251,7 +267,9 @@ class CartItemsTable extends StatelessWidget {
                                 constraints: const BoxConstraints(),
                                 visualDensity: VisualDensity.compact,
                                 onPressed: () async {
-                                  final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+                                  final billingProvider =
+                                      Provider.of<BillingProvider>(context,
+                                          listen: false);
                                   billingProvider.setLoadingAddItem(true);
                                   try {
                                     localProductProvider.removeFromCart(
@@ -314,14 +332,16 @@ class CartItemsTable extends StatelessWidget {
     );
   }
 
-  Widget _buildFixedHeaderCell(String text, {required double width, required Alignment alignment}) {
+  Widget _buildFixedHeaderCell(String text,
+      {required double width, required Alignment alignment}) {
     return Container(
       width: width,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       alignment: alignment,
       child: Text(
         text,
-        textAlign: alignment == Alignment.center ? TextAlign.center : TextAlign.left,
+        textAlign:
+            alignment == Alignment.center ? TextAlign.center : TextAlign.left,
         style: buildCustomStyle(
           FontWeightManager.bold,
           12,
@@ -334,7 +354,8 @@ class CartItemsTable extends StatelessWidget {
     );
   }
 
-  Widget _buildFixedContentCell(Widget child, {required double width, required Alignment alignment}) {
+  Widget _buildFixedContentCell(Widget child,
+      {required double width, required Alignment alignment}) {
     return Container(
       width: width,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

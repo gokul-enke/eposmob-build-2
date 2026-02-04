@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/build_title.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/providers/supplier_provider.dart';
+
+enum PaymentType { none, to_pay, to_receive }
 
 class SupplierInformationEditWidget extends StatefulWidget {
   final Size size;
@@ -34,8 +44,10 @@ class _SupplierInformationEditWidgetState
   late TextEditingController _addressController;
   late TextEditingController _balanceController;
   late TextEditingController _currentBalanceController;
-  late TextEditingController _paymentTypeController;
   late TextEditingController _productCategoriesController;
+  
+  // Payment type selection
+  PaymentType selectedPaymentType = PaymentType.to_pay;
 
   @override
   void initState() {
@@ -49,13 +61,31 @@ class _SupplierInformationEditWidgetState
     _phoneController = TextEditingController(text: widget.supplier.phone);
     _altPhoneController = TextEditingController(text: widget.supplier.altPhone);
     _addressController = TextEditingController(text: widget.supplier.address);
-    _balanceController = TextEditingController(text: widget.supplier.balance.toStringAsFixed(2));
+    // Show balance as absolute value (remove negative sign)
+    final balanceValue = widget.supplier.balance.abs();
+    _balanceController = TextEditingController(text: balanceValue.toStringAsFixed(2));
     _currentBalanceController = TextEditingController(
         text: widget.supplier.currentBalance?.toStringAsFixed(2));
-    _paymentTypeController =
-        TextEditingController(text: widget.supplier.paymentType);
     _productCategoriesController =
         TextEditingController(text: widget.supplier.productCategories);
+    
+    // Initialize payment type based on supplier data
+    debugPrint("Supplier balance: ${widget.supplier.balance}");
+    debugPrint("Supplier payment type: ${widget.supplier.paymentType}");
+
+    switch (widget.supplier.paymentType.toLowerCase()) {
+      case 'to_pay':
+        selectedPaymentType = PaymentType.to_pay;
+        debugPrint("Set payment type to: To Pay");
+        break;
+      case 'to_receive':
+        selectedPaymentType = PaymentType.to_receive;
+        debugPrint("Set payment type to: To Receive");
+        break;
+      default:
+        selectedPaymentType = PaymentType.to_pay;
+        debugPrint("Set payment type to: To Pay (default)");
+    }
   }
 
   @override
@@ -67,7 +97,6 @@ class _SupplierInformationEditWidgetState
     _addressController.dispose();
     _balanceController.dispose();
     _currentBalanceController.dispose();
-    _paymentTypeController.dispose();
     _productCategoriesController.dispose();
     super.dispose();
   }
@@ -148,6 +177,7 @@ class _SupplierInformationEditWidgetState
                   rightLabel: 'Phone Number',
                   rightHint: 'Enter phone number',
                   rightKeyboardType: TextInputType.phone,
+                  rightRequired: true,
                 ),
                 const SizedBox(height: 20),
                 _buildTextField(
@@ -182,24 +212,12 @@ class _SupplierInformationEditWidgetState
               title: 'Financial Information',
               icon: Icons.account_balance_wallet_outlined,
               children: [
-                _buildTwoFieldRow(
-                  leftController: _balanceController,
-                  leftLabel: 'Balance',
-                  leftHint: 'Enter balance amount',
-                  leftKeyboardType: TextInputType.number,
-                  rightController: _currentBalanceController,
-                  rightLabel: 'Current Balance',
-                  rightHint: 'Enter current balance',
-                  rightKeyboardType: TextInputType.number,
-                ),
+                _buildBalanceAndPaymentTypeFields(),
                 const SizedBox(height: 20),
-                _buildTwoFieldRow(
-                  leftController: _paymentTypeController,
-                  leftLabel: 'Payment Type',
-                  leftHint: 'e.g., Credit, Cash, Bank Transfer',
-                  rightController: _productCategoriesController,
-                  rightLabel: 'Product Categories',
-                  rightHint: 'e.g., Electronics, Furniture',
+                _buildTextField(
+                  controller: _productCategoriesController,
+                  label: 'Product Categories',
+                  hintText: 'e.g., Electronics, Furniture',
                 ),
               ],
             ),
@@ -283,6 +301,7 @@ class _SupplierInformationEditWidgetState
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
     bool isRequired = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,6 +328,7 @@ class _SupplierInformationEditWidgetState
           keyboardType: keyboardType,
           size: widget.size,
           width: double.infinity,
+          inputFormatters: inputFormatters,
           validator: isRequired ? (value) {
             if (value == null || value.isEmpty) {
               return '$label is required';
@@ -326,11 +346,13 @@ class _SupplierInformationEditWidgetState
     required String leftHint,
     TextInputType leftKeyboardType = TextInputType.text,
     bool leftRequired = false,
+    List<TextInputFormatter>? leftInputFormatters,
     required TextEditingController rightController,
     required String rightLabel,
     required String rightHint,
     TextInputType rightKeyboardType = TextInputType.text,
     bool rightRequired = false,
+    List<TextInputFormatter>? rightInputFormatters,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,6 +364,7 @@ class _SupplierInformationEditWidgetState
             hintText: leftHint,
             keyboardType: leftKeyboardType,
             isRequired: leftRequired,
+            inputFormatters: leftInputFormatters,
           ),
         ),
         const SizedBox(width: 20),
@@ -352,6 +375,7 @@ class _SupplierInformationEditWidgetState
             hintText: rightHint,
             keyboardType: rightKeyboardType,
             isRequired: rightRequired,
+            inputFormatters: rightInputFormatters,
           ),
         ),
       ],
@@ -391,41 +415,193 @@ class _SupplierInformationEditWidgetState
     );
   }
 
-  void _saveChanges() {
-    if (_formKey.currentState!.validate()) {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            color: ColorManager.kPrimaryColor,
-          ),
+  Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: ColorManager.kPrimaryColor,
         ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token') ?? '';
+
+      final provider = context.read<SupplierProvider>();
+
+      // Prepare payment type value
+      String? paymentTypeValue;
+      if (selectedPaymentType != PaymentType.none) {
+        paymentTypeValue =
+            selectedPaymentType == PaymentType.to_pay ? 'to_pay' : 'to_receive';
+      }
+
+      final result = await provider.updateSupplier(
+        id: widget.supplier.id,
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        accessToken: accessToken,
+        balance: double.tryParse(_balanceController.text.trim()) ?? 0.0,
+        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+        altPhone: _altPhoneController.text.trim().isEmpty ? null : _altPhoneController.text.trim(),
+        paymentStatus: paymentTypeValue,
+        productCategories: _productCategoriesController.text.trim().isEmpty ? null : _productCategoriesController.text.trim(),
       );
 
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 1), () {
-        Navigator.pop(context); // Close loading dialog
-        
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('Supplier information updated successfully'),
-              ],
-            ),
-            backgroundColor: ColorManager.kSuccessColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
+      Navigator.pop(context);
+
+      final isSuccess = (result['status']?.toString().toLowerCase() == 'success');
+      final message = result['message']?.toString() ?? 'Updated';
+
+      // Show success or error dialog
+      if (isSuccess) {
+        showScaffold(
+          context: context,
+          message: 'Supplier information updated successfully',
         );
-      });
+        
+        // Navigate back to supplier list after successful save
+        final sideBarController = Get.find<SideBarController>();
+        sideBarController.index.value = 52; // Supplier list index
+      } else {
+        showScaffoldError(
+          context: context,
+          message: message,
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      showScaffoldError(
+        context: context,
+        message: 'Failed to update supplier',
+      );
     }
+  }
+
+  Widget _buildBalanceAndPaymentTypeFields() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Payment type on the left - custom built to match text field styling
+        Expanded(
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BuildTextTile(
+                title: 'Payment Type',
+                isStarRed: true,
+                textStyle: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s14,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              // Container matching text field style
+              BuildBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                padding: const EdgeInsets.only(left: 15),
+                height: widget.size.height * .07,
+                width: double.infinity,
+                child: Row(
+                  children: [
+                    Radio<PaymentType>(
+                      value: PaymentType.to_pay,
+                      groupValue: selectedPaymentType,
+                      activeColor: ColorManager.kPrimaryColor,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: const VisualDensity(
+                        horizontal: VisualDensity.minimumDensity,
+                        vertical: VisualDensity.minimumDensity,
+                      ),
+                      onChanged: (PaymentType? value) {
+                        setState(() {
+                          selectedPaymentType = value ?? PaymentType.to_pay;
+                        });
+                      },
+                    ),
+                    Text(
+                      'To Pay',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s13,
+                        0.27,
+                        ColorManager.textColor.withOpacity(.5),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Radio<PaymentType>(
+                      value: PaymentType.to_receive,
+                      groupValue: selectedPaymentType,
+                      activeColor: ColorManager.kPrimaryColor,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: const VisualDensity(
+                        horizontal: VisualDensity.minimumDensity,
+                        vertical: VisualDensity.minimumDensity,
+                      ),
+                      onChanged: (PaymentType? value) {
+                        setState(() {
+                          selectedPaymentType = value ?? PaymentType.to_pay;
+                        });
+                      },
+                    ),
+                    Text(
+                      'To Receive',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s13,
+                        0.27,
+                        ColorManager.textColor.withOpacity(.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 20),
+        // Balance field on the right
+        Expanded(
+          flex: 2,
+          child: buildColumnWidgetForTextFields(
+            controller: _balanceController,
+            hintText: 'Balance',
+            title: 'Balance',
+            size: widget.size,
+            width: double.infinity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+            ],
+            validator: (value) {
+              if (value != null && value.isNotEmpty) {
+                final balance = double.tryParse(value);
+                if (balance == null) {
+                  return 'Please enter a valid balance';
+                }
+                if (balance < 0) {
+                  return 'Balance cannot be negative';
+                }
+              }
+              return null;
+            },
+            onchanged: (value) {
+              // Trigger validation when balance changes
+              setState(() {});
+            },
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -10,13 +10,16 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/print_thermal.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/screens/print/layouts/layouts.dart';
+// import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -31,6 +34,16 @@ class PrintPage extends StatefulWidget {
   final String? customerPhone;
   final String? customerEmail;
   final String? customerAddress;
+  final OrderReturns? orderReturns; // Add this line
+  final double? customerOldBalance;
+  final double? customerCurrentBalance;
+  final double? paidAmount;
+  final String? orderComment;
+  final String? customerAlternatePhone;
+  final String? paymentMethod;
+  final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
+  final bool isDefaultCustomer;
+  final String? netExcTax;
 
   const PrintPage({
     super.key,
@@ -46,10 +59,212 @@ class PrintPage extends StatefulWidget {
     this.customerPhone,
     this.customerEmail,
     this.customerAddress,
+    this.orderReturns, // Add this line
+    this.customerOldBalance,
+    this.customerCurrentBalance,
+    this.paidAmount,
+    this.orderComment,
+    this.customerAlternatePhone,
+    this.paymentMethod,
+    this.paymentBreakdown,
+    this.isDefaultCustomer = false,
+    this.netExcTax,
   });
 
   @override
   _PrintPageState createState() => _PrintPageState();
+
+  /// Auto-print with default printer without showing UI
+  /// Returns true if printing succeeded, false if no printer or failed
+  static Future<bool> autoPrint(BuildContext context, {
+    required List<dynamic> cartItems,
+    String? storeName,
+    required String formattedTotal,
+    String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    bool isFromLocalStorage = false,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    OrderReturns? orderReturns,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
+    String? orderComment,
+    String? customerAlternatePhone,
+    String? paymentMethod,
+    Map<String, dynamic>? paymentBreakdown,
+    bool isDefaultCustomer = false,
+    String? netExcTax,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final defaultPrinterJson = prefs.getString('default_printer');
+
+      if (defaultPrinterJson == null) {
+        debugPrint('[PrintPage] No default printer found');
+        return false;
+      }
+
+      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
+      final selectedPrinter = BluetoothPrinter(
+        deviceName: printerData['deviceName'],
+        address: printerData['address'],
+        vendorId: printerData['vendorId'],
+        productId: printerData['productId'],
+        typePrinter: PrinterType.values.firstWhere(
+          (e) => e.toString() == printerData['typePrinter'],
+        ),
+      );
+
+      debugPrint('[PrintPage] Auto-printing with default printer: ${selectedPrinter.deviceName}');
+
+      // Load document config
+      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      final appSettings = appSettingsProvider.appSettings;
+
+      if (appSettings == null) {
+        debugPrint('[PrintPage] App settings not loaded');
+        return false;
+      }
+
+      // Determine type based on orderReturns
+      final hasReturns = orderReturns != null &&
+          orderReturns.returnItems != null &&
+          orderReturns.returnItems!.isNotEmpty;
+      final type = hasReturns ? 'sales_and_return_bill' : 'bill';
+
+      DocumentConfig? billDocumentConfig;
+      if (accessToken != null) {
+        billDocumentConfig = await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
+          accessToken: accessToken,
+          type: type,
+        );
+        if (billDocumentConfig == null) {
+          billDocumentConfig = hasReturns
+              ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+              : docConfigProvider.getDocumentConfig("Bill");
+        }
+      } else {
+        billDocumentConfig = hasReturns
+            ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+            : docConfigProvider.getDocumentConfig("Bill");
+      }
+
+      if (billDocumentConfig == null) {
+        debugPrint('[PrintPage] Document config not loaded');
+        return false;
+      }
+
+      // Get paper size
+      String paperSize = prefs.getString('default_paper_size') ?? '80mm';
+      if (paperSize == 'Thermal') {
+        paperSize = '80mm';
+      }
+
+      // Get receipt theme
+      final theme = await _getReceiptThemeStatic(billDocumentConfig, prefs);
+      final layout = ReceiptLayoutFactory.getLayout(theme);
+
+      // Fetch ZATCA credentials
+      final sharedPrefProvider = SharedPreferenceProvider();
+      final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+      final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
+
+      // Create params
+      final params = ReceiptLayoutParams(
+        context: context,
+        selectedPrinter: selectedPrinter,
+        cartItems: cartItems,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount: discountAmount,
+        orderDate: orderDate,
+        orderNumber: orderNumber,
+        isFromLocalStorage: isFromLocalStorage,
+        selectedPaperSize: paperSize,
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: appSettings.customerCarePhone,
+        customerCareEmail: appSettings.customerCareEmail,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        customerAddress: customerAddress,
+        orderReturns: orderReturns,
+        customerOldBalance: customerOldBalance,
+        customerCurrentBalance: customerCurrentBalance,
+        paidAmount: paidAmount,
+        orderComment: orderComment,
+        customerAlternatePhone: customerAlternatePhone,
+        paymentMethod: paymentMethod,
+        paymentBreakdown: paymentBreakdown,
+        zatcaVatNumber: zatcaVatNumber,
+        zatcaCompanyName: zatcaCompanyName,
+        isDefaultCustomer: isDefaultCustomer,
+        netExcTax: netExcTax,
+      );
+
+      // Print
+      if (paperSize == '80mm' || paperSize == '58mm') {
+        await layout.printThermal(params);
+      } else {
+        final standardPrinter = StandardPrinter(context);
+        await standardPrinter.generateAndPrintPDF(
+          selectedPrinter: selectedPrinter,
+          cartItems: cartItems,
+          formattedTotal: formattedTotal,
+          savedTotal: savedTotal,
+          discountAmount: discountAmount,
+          orderDate: orderDate,
+          orderNumber: orderNumber,
+          isFromLocalStorage: isFromLocalStorage,
+          selectedPaperSize: paperSize,
+          billDocumentConfig: billDocumentConfig,
+          customerCareNumber: appSettings.customerCarePhone,
+          customerCareEmail: appSettings.customerCareEmail,
+          customerName: customerName,
+          customerPhone: customerPhone,
+          customerEmail: customerEmail,
+          customerAddress: customerAddress,
+          orderReturns: orderReturns,
+          customerOldBalance: customerOldBalance,
+          customerCurrentBalance: customerCurrentBalance,
+          paidAmount: paidAmount,
+          orderComment: orderComment,
+          customerAlternatePhone: customerAlternatePhone,
+          paymentMethod: paymentMethod,
+          zatcaVatNumber: zatcaVatNumber,
+          zatcaCompanyName: zatcaCompanyName,
+        );
+      }
+
+      debugPrint('[PrintPage] Auto-print successful');
+      return true;
+    } catch (e) {
+      debugPrint('[PrintPage] Auto-print failed: $e');
+      return false;
+    }
+  }
+
+  static Future<String> _getReceiptThemeStatic(DocumentConfig? billDocumentConfig, SharedPreferences prefs) async {
+    final localTheme = prefs.getString('billing_receipt_theme');
+
+    if (localTheme != null && localTheme.isNotEmpty) {
+      return localTheme;
+    }
+
+    final apiTheme = billDocumentConfig?.activeTheme;
+    if (apiTheme != null && apiTheme.isNotEmpty) {
+      return apiTheme;
+    }
+
+    return 'classic';
+  }
 }
 
 class _PrintPageState extends State<PrintPage> {
@@ -94,7 +309,8 @@ class _PrintPageState extends State<PrintPage> {
 
   @override
   void dispose() {
-    debugPrint('[PrintPage] dispose(): canceling discovery subscription if any');
+    debugPrint(
+        '[PrintPage] dispose(): canceling discovery subscription if any');
     _subscription?.cancel();
     super.dispose();
   }
@@ -111,7 +327,8 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   Future<bool> _requestPermissions() async {
-    debugPrint('[PrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
+    debugPrint(
+        '[PrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
     if (Theme.of(context).platform == TargetPlatform.android) {
       Map<Permission, PermissionStatus> statuses = await [
         Permission.bluetooth,
@@ -121,14 +338,16 @@ class _PrintPageState extends State<PrintPage> {
       ].request();
 
       statuses.forEach((perm, status) {
-        debugPrint('[PrintPage] Permission ${perm.toString()} => ${status.toString()}');
+        debugPrint(
+            '[PrintPage] Permission ${perm.toString()} => ${status.toString()}');
       });
 
       final granted = statuses.values.every((status) => status.isGranted);
       debugPrint('[PrintPage] All permissions granted: $granted');
       return granted;
     }
-    debugPrint('[PrintPage] Non-Android platform; skipping runtime permission request.');
+    debugPrint(
+        '[PrintPage] Non-Android platform; skipping runtime permission request.');
     return true;
   }
 
@@ -154,10 +373,12 @@ class _PrintPageState extends State<PrintPage> {
 
   void _scan() async {
     if (_isScanning) {
-      debugPrint('[PrintPage] _scan() requested but a scan is already in progress. Ignoring.');
+      debugPrint(
+          '[PrintPage] _scan() requested but a scan is already in progress. Ignoring.');
       return;
     }
-    debugPrint('[PrintPage] Starting scan... platform=${Platform.operatingSystem}');
+    debugPrint(
+        '[PrintPage] Starting scan... platform=${Platform.operatingSystem}');
     await _subscription?.cancel();
     setState(() {
       _isScanning = true;
@@ -171,7 +392,8 @@ class _PrintPageState extends State<PrintPage> {
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
-          debugPrint('[PrintPage] BT device found: name=${device.name}, address=${device.address}');
+          debugPrint(
+              '[PrintPage] BT device found: name=${device.name}, address=${device.address}');
           final printer = BluetoothPrinter(
             deviceName: device.name,
             address: device.address,
@@ -183,16 +405,21 @@ class _PrintPageState extends State<PrintPage> {
         }, onError: (err) {
           debugPrint('[PrintPage] Bluetooth discovery error: $err');
         }, onDone: () {
-          final btCount = devices.where((p) => p.typePrinter == PrinterType.bluetooth).length;
-          debugPrint('[PrintPage] Bluetooth discovery done. Total BT devices: $btCount');
+          final btCount = devices
+              .where((p) => p.typePrinter == PrinterType.bluetooth)
+              .length;
+          debugPrint(
+              '[PrintPage] Bluetooth discovery done. Total BT devices: $btCount');
         }, cancelOnError: false);
       } else {
-        debugPrint('[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
+        debugPrint(
+            '[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
       debugPrint('[PrintPage] Beginning USB discovery');
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint('[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+        debugPrint(
+            '[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -203,7 +430,8 @@ class _PrintPageState extends State<PrintPage> {
           devices.add(printer);
         });
       });
-      debugPrint('[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
+      debugPrint(
+          '[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {
       debugPrint('[PrintPage] Error during scanning: $e');
       debugPrint('[PrintPage] Stacktrace: $st');
@@ -216,7 +444,8 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   Future<void> _loadDefaultPrinter() async {
-    debugPrint('[PrintPage] _loadDefaultPrinter() reading from SharedPreferences');
+    debugPrint(
+        '[PrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
     final defaultPrinterJson = prefs.getString('default_printer');
 
@@ -235,16 +464,17 @@ class _PrintPageState extends State<PrintPage> {
         );
         _isLoading = false;
       });
-      debugPrint('[PrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
+      debugPrint(
+          '[PrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
 
       if (selectedPrinter != null && _billDocumentConfig != null) {
-          final appSettingsProvider =
-              Provider.of<AppSettingsProvider>(context, listen: false);
-          final appSettings = appSettingsProvider.appSettings;
-          if (appSettings != null) {
-            _handlePrinting(
-                appSettings.customerCarePhone, appSettings.customerCareEmail);
-          }
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        final appSettings = appSettingsProvider.appSettings;
+        if (appSettings != null) {
+          _handlePrinting(
+              appSettings.customerCarePhone, appSettings.customerCareEmail);
+        }
       }
     } else {
       setState(() {
@@ -267,7 +497,8 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   void selectPrinter(BluetoothPrinter printer) {
-    debugPrint('[PrintPage] selectPrinter(): name=${printer.deviceName}, address=${printer.address}, type=${printer.typePrinter}');
+    debugPrint(
+        '[PrintPage] selectPrinter(): name=${printer.deviceName}, address=${printer.address}, type=${printer.typePrinter}');
     setState(() {
       selectedPrinter = printer;
     });
@@ -286,28 +517,52 @@ class _PrintPageState extends State<PrintPage> {
     try {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
-      
-      debugPrint("Loading document configurations from provider...");
-      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      
-      if (_billDocumentConfig == null) {
-        debugPrint("WARNING: Bill document configuration not found in provider, may need to load manually");
-        // Fallback: try to load if not available
-        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-        if (accessToken != null) {
-          debugPrint("Fetching document configurations from API...");
-          await _loadDocumentConfigurations(accessToken);
-          return;
+      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+
+      // Get current language from LocalizationService
+      // final language = LocalizationService.locale.languageCode;
+
+      // Determine type based on orderReturns
+      final hasReturns = widget.orderReturns != null &&
+          widget.orderReturns!.returnItems != null &&
+          widget.orderReturns!.returnItems!.isNotEmpty;
+
+      final type = hasReturns ? 'sales_and_return_bill' : 'bill';
+
+      // debugPrint("Loading document config: type=$type, language=$language");
+
+      if (accessToken != null) {
+        // Use new language-aware API
+        _billDocumentConfig =
+            await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
+          accessToken: accessToken,
+          type: type,
+          // language: language,
+        );
+
+        if (_billDocumentConfig != null) {
+          // debugPrint(
+          //     "SUCCESS: Document configuration loaded with language=$language");
+        } else {
+          debugPrint(
+              "WARNING: Could not load document config, falling back to cached");
+          // Fallback to cached config
+          _billDocumentConfig = hasReturns
+              ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+              : docConfigProvider.getDocumentConfig("Bill");
         }
       } else {
-        debugPrint("SUCCESS: Bill document configuration loaded from provider");
+        debugPrint("No access token, using cached config");
+        _billDocumentConfig = hasReturns
+            ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
+            : docConfigProvider.getDocumentConfig("Bill");
       }
 
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("ERROR getting document configurations from provider: $e");
+      debugPrint("ERROR getting document configurations: $e");
       setState(() {
         _isLoading = false;
       });
@@ -322,12 +577,32 @@ class _PrintPageState extends State<PrintPage> {
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      
-      if (_billDocumentConfig != null) {
-        debugPrint("SUCCESS: Bill document configuration loaded from API");
+      // Check if orderReturns data is available and load appropriate config
+      if (widget.orderReturns != null &&
+          widget.orderReturns!.returnItems != null &&
+          widget.orderReturns!.returnItems!.isNotEmpty) {
+        debugPrint(
+            "Order has returns, loading 'Sales Return Bill' configuration from API...");
+        _billDocumentConfig =
+            docConfigProvider.getDocumentConfig("Sales and Return Bill");
+
+        if (_billDocumentConfig != null) {
+          debugPrint(
+              "SUCCESS: Sales Return Bill configuration loaded from API");
+        } else {
+          debugPrint(
+              "Sales Return Bill not found, falling back to Bill configuration");
+          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+        }
       } else {
-        debugPrint("ERROR: Bill document configuration still null after API fetch");
+        debugPrint("No returns, loading 'Bill' configuration from API...");
+        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      }
+
+      if (_billDocumentConfig != null) {
+        debugPrint("SUCCESS: Document configuration loaded from API");
+      } else {
+        debugPrint("ERROR: Document configuration still null after API fetch");
       }
 
       setState(() {
@@ -349,6 +624,9 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _handlePrinting(
       String customerCareNumber, String customerCareEmail) async {
+    debugPrint("[LOGO_DEBUG] _handlePrinting entry in print.dart");
+    debugPrint("[LOGO_DEBUG] selectedPaperSize: $selectedPaperSize");
+
     if (_billDocumentConfig == null) {
       debugPrint("ERROR: Bill document configuration not loaded yet.");
       if (mounted) {
@@ -362,16 +640,33 @@ class _PrintPageState extends State<PrintPage> {
 
     if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
       await _printThermalReceipt(customerCareNumber, customerCareEmail);
-      } else {
+    } else {
       await _generateAndPrintPDF(customerCareNumber, customerCareEmail);
     }
   }
 
   Future<void> _printThermalReceipt(
       String customerCareNumber, String customerCareEmail) async {
-    final thermalPrinter = ThermalPrinter(context);
-
-    await thermalPrinter.printReceipt(
+    // Get theme with priority: Local SharedPreferences > API fallback
+    final theme = await _getReceiptTheme();
+    final layout = ReceiptLayoutFactory.getLayout(theme);
+    
+    debugPrint("[PrintPage] Using receipt theme: $theme");
+    
+    // Fetch ZATCA credentials for Saudi Arabia e-invoicing
+    final sharedPrefProvider = SharedPreferenceProvider();
+    final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+    final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
+    
+    if (zatcaVatNumber != null && zatcaCompanyName != null) {
+      debugPrint("[PrintPage] ZATCA credentials found - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
+    } else {
+      debugPrint("[PrintPage] No ZATCA credentials found, using standard QR");
+    }
+    
+    // Create params object for the layout
+    final params = ReceiptLayoutParams(
+      context: context,
       selectedPrinter: selectedPrinter!,
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
@@ -381,19 +676,68 @@ class _PrintPageState extends State<PrintPage> {
       orderNumber: widget.orderNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
-      billDocumentConfig: _billDocumentConfig,
+      billDocumentConfig: _billDocumentConfig!,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
       customerName: widget.customerName,
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
+      orderReturns: widget.orderReturns,
+      customerOldBalance: widget.customerOldBalance,
+      customerCurrentBalance: widget.customerCurrentBalance,
+      paidAmount: widget.paidAmount,
+      orderComment: widget.orderComment,
+      customerAlternatePhone: widget.customerAlternatePhone,
+      paymentMethod: widget.paymentMethod,
+      paymentBreakdown: widget.paymentBreakdown,
+      zatcaVatNumber: zatcaVatNumber,
+      zatcaCompanyName: zatcaCompanyName,
+      isDefaultCustomer: widget.isDefaultCustomer,
+      netExcTax: widget.netExcTax,
     );
+    
+    // Print using the selected layout
+    await layout.printThermal(params);
+  }
+
+  /// Get receipt theme with priority: Local setting > API fallback
+  Future<String> _getReceiptTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final localTheme = prefs.getString('billing_receipt_theme');
+    
+    // Priority: Local setting takes precedence
+    if (localTheme != null && localTheme.isNotEmpty) {
+      debugPrint("[PrintPage] Using local theme preference: $localTheme");
+      return localTheme;
+    }
+    
+    // Fallback to API theme from document config
+    final apiTheme = _billDocumentConfig?.activeTheme;
+    if (apiTheme != null && apiTheme.isNotEmpty) {
+      debugPrint("[PrintPage] Using API theme: $apiTheme");
+      return apiTheme;
+    }
+    
+    // Default to classic
+    debugPrint("[PrintPage] No theme set, using default: classic");
+    return 'classic';
   }
 
   Future<void> _generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
     final standardPrinter = StandardPrinter(context);
+
+    // Fetch ZATCA credentials for Saudi Arabia e-invoicing
+    final sharedPrefProvider = SharedPreferenceProvider();
+    final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+    final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
+
+    if (zatcaVatNumber != null && zatcaCompanyName != null) {
+      debugPrint("[PrintPage] ZATCA credentials found for PDF - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
+    } else {
+      debugPrint("[PrintPage] No ZATCA credentials found for PDF, using standard QR");
+    }
 
     await standardPrinter.generateAndPrintPDF(
       selectedPrinter: selectedPrinter,
@@ -412,6 +756,15 @@ class _PrintPageState extends State<PrintPage> {
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
+      orderReturns: widget.orderReturns, // Add this line
+      customerOldBalance: widget.customerOldBalance,
+      customerCurrentBalance: widget.customerCurrentBalance,
+      paidAmount: widget.paidAmount,
+      orderComment: widget.orderComment,
+      customerAlternatePhone: widget.customerAlternatePhone,
+      paymentMethod: widget.paymentMethod,
+      zatcaVatNumber: zatcaVatNumber,
+      zatcaCompanyName: zatcaCompanyName,
     );
   }
 
@@ -425,11 +778,11 @@ class _PrintPageState extends State<PrintPage> {
           if (defaultPaperSize == 'Thermal') {
             selectedPaperSize = '80mm';
             _saveDefaultPaperSize('80mm');
-      } else {
+          } else {
             selectedPaperSize = defaultPaperSize;
           }
         });
-        } else {
+      } else {
         _saveDefaultPaperSize(selectedPaperSize);
       }
     } catch (e) {
@@ -622,30 +975,30 @@ class _PrintPageState extends State<PrintPage> {
                                   : null,
                             ),
                             child: ListTile(
-                              leading: Icon(
-                                Icons.print,
-                                color: isSelected
-                                    ? primaryColor
-                                    : textSecondaryColor,
-                                size: 28,
+                            leading: Icon(
+                              Icons.print,
+                              color: isSelected
+                                  ? primaryColor
+                                  : textSecondaryColor,
+                              size: 28,
+                            ),
+                            title: Text(
+                              printer.deviceName ?? 'Unknown device',
+                              style: TextStyle(
+                                color: textPrimaryColor,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontSize: 16,
                               ),
-                              title: Text(
-                                printer.deviceName ?? 'Unknown device',
-                                style: TextStyle(
-                                  color: textPrimaryColor,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 16,
-                                ),
+                            ),
+                            subtitle: Text(
+                              printer.address ?? '',
+                              style: const TextStyle(
+                                color: textSecondaryColor,
+                                fontSize: 14,
                               ),
-                              subtitle: Text(
-                                printer.address ?? '',
-                                style: const TextStyle(
-                                  color: textSecondaryColor,
-                                  fontSize: 14,
-                                ),
-                              ),
+                            ),
                               trailing: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: isSelected
@@ -702,7 +1055,9 @@ class _PrintPageState extends State<PrintPage> {
                     ),
                     TextButton(
                       onPressed: () async {
-                        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                        String? accessToken =
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
                         if (accessToken != null) {
                           await _loadDocumentConfigurations(accessToken);
                         }
@@ -720,7 +1075,9 @@ class _PrintPageState extends State<PrintPage> {
               ),
             ElevatedButton.icon(
               onPressed: () {
+                debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
                 if (selectedPrinter == null) {
+                  debugPrint("[LOGO_DEBUG] No printer selected");
                   showScaffoldError(
                     context: context,
                     message: "Please select a printer first",
@@ -728,12 +1085,15 @@ class _PrintPageState extends State<PrintPage> {
                   return;
                 }
                 if (_billDocumentConfig == null) {
+                  debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
                   showScaffoldError(
                     context: context,
-                    message: "Document configuration not loaded. Please wait or try again.",
+                    message:
+                        "Document configuration not loaded. Please wait or try again.",
                   );
                   return;
                 }
+                debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
                 _handlePrinting(appSettings!.customerCarePhone,
                     appSettings.customerCareEmail);
               },

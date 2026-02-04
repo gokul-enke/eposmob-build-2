@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/customer_input.dart';
 import 'package:pos_machine/screens/billing/widgets/payment_summary.dart';
@@ -31,6 +33,21 @@ class MobileBillingTab extends StatefulWidget {
 }
 
 class _MobileBillingTabState extends State<MobileBillingTab> {
+  @override
+  void initState() {
+    super.initState();
+    // Proactively bind Pine Labs so the first payment attempt doesn't need to bind.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final terminalProvider = context.read<PineLabsTerminalProvider>();
+        terminalProvider.ensureBinding();
+      } catch (_) {
+        // Ignore; UI will still allow manual binding on first attempt.
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -74,8 +91,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics()),
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.fromLTRB(
                 16,
                 16,
@@ -143,53 +159,48 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       bottomSheet: Container(
         color: Colors.white,
         padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            // Primary Actions Row
-            Row(
-              children: [
-                Expanded(
-                  child: CustomRoundButton(
-                    title: "Save Order",
-                    fct: widget.onSaveOrder,
-                    fontSize: 14,
-                    height: 48,
-                    width: double.infinity,
-                    boxColor: Colors.orange.shade50,
-                    borderColor: Colors.orange.shade300,
-                    textColor: Colors.orange.shade700,
-                    radius: 12,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: CustomRoundButton(
-                    title: "Print Order",
-                    fct: widget.onCreateOrderAndPrint,
-                    fontSize: 14,
-                    height: 48,
-                    width: double.infinity,
-                    boxColor: Colors.blue.shade50,
-                    borderColor: Colors.blue.shade300,
-                    textColor: Colors.blue.shade700,
-                    radius: 12,
-                  ),
-                ),
-              ],
+            // Save Order
+            Expanded(
+              child: CustomRoundButton(
+                title: "Save Order",
+                fct: widget.onSaveOrder,
+                fontSize: 14,
+                height: 48,
+                width: double.infinity,
+                boxColor: Colors.orange.shade50,
+                borderColor: Colors.orange.shade300,
+                textColor: Colors.orange.shade700,
+                radius: 12,
+              ),
             ),
-            const SizedBox(height: 12),
-            // Confirm Order Button
-            SizedBox(
-              width: double.infinity,
+            const SizedBox(width: 12),
+            // Print Order
+            Expanded(
+              child: CustomRoundButton(
+                title: "Print Order",
+                fct: widget.onCreateOrderAndPrint,
+                fontSize: 14,
+                height: 48,
+                width: double.infinity,
+                boxColor: Colors.blue.shade50,
+                borderColor: Colors.blue.shade300,
+                textColor: Colors.blue.shade700,
+                radius: 12,
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Confirm Order
+            Expanded(
               child: Consumer<LocalProductProvider>(
                 builder: (context, provider, child) {
                   final hasItems = provider.cartItems.isNotEmpty;
                   return CustomRoundButton(
                     title: "Confirm Order",
                     fct: hasItems ? widget.onConfirmOrder : () {},
-                    fontSize: 16,
-                    height: 52,
+                    fontSize: 14,
+                    height: 48,
                     width: double.infinity,
                     boxColor: hasItems
                         ? ColorManager.kPrimaryColor
@@ -328,8 +339,134 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                   ),
                 ],
               ),
-            ]
+            ],
+            const SizedBox(height: 12),
+            _buildPineLabsSection(context),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPineLabsSection(BuildContext context) {
+    return Consumer2<PineLabsTerminalProvider, BillingProvider>(
+      builder: (context, terminalProvider, billingProvider, child) {
+        final totalAmount = billingProvider.totalOrderAmount;
+        final billingRefNo = billingProvider.transactionNumberController.text;
+        // Debug: trace state when widget rebuilds (e.g., after loading saved order)
+        debugPrint(
+            '🧩 [PineLabs UI] pineLabsPaymentSuccess=${billingProvider.pineLabsPaymentSuccess} | methods=${billingProvider.getSelectedPaymentMethods()} | ref=$billingRefNo');
+
+        return CustomRoundButton(
+          title: terminalProvider.isProcessing
+              ? 'Processing...'
+              : billingProvider.pineLabsPaymentSuccess
+                  ? 'Paid with Pinelabs  ✓'
+                  : 'Pay with Pine Labs',
+          fct: () async {
+            if (totalAmount <= 0) {
+              showScaffoldError(
+                context: context,
+                message: 'Invalid amount for Pine Labs payment',
+              );
+              return;
+            }
+
+            // reset success state before a new attempt
+            billingProvider.setPineLabsPaymentSuccess(false);
+
+            final String resultStr = await terminalProvider.processSale(
+              amount: totalAmount,
+              billingRefNo: billingRefNo.isEmpty
+                  ? 'REF-${DateTime.now().millisecondsSinceEpoch}'
+                  : billingRefNo,
+            );
+            // Prefer parsing the direct result string
+            try {
+              Map<String, dynamic> decoded = jsonDecode(resultStr);
+              final response = decoded['Response'] as Map<String, dynamic>?;
+              final dynamic rawCode = response?['ResponseCode'];
+              final int code = rawCode is int
+                  ? rawCode
+                  : int.tryParse(rawCode?.toString() ?? '') ?? -1;
+              final String msg = (response?['ResponseMsg'] ?? '').toString();
+
+              if (code == 0) {
+                // Extract reference number if available
+                final detail = decoded['Detail'] as Map<String, dynamic>?;
+                final String ref = (detail?['RetrievalReferenceNumber'] ??
+                        detail?['ApprovalCode'] ??
+                        detail?['BillingRefNo'] ??
+                        '')
+                    .toString();
+
+                debugPrint('✅ [PineLabs] Payment SUCCESS');
+                debugPrint('📋 [PineLabs] Reference Number: $ref');
+
+                billingProvider.setPineLabsPaymentSuccess(true);
+
+                // Update provider with ONLINE payment and reference number
+                debugPrint('💳 [PineLabs] Setting payment method to ONLINE...');
+                billingProvider.setPaymentMethod('ONLINE', true);
+
+                debugPrint('🔢 [PineLabs] Setting transaction reference: $ref');
+                billingProvider.transactionNumberController.text = ref;
+
+                // Verify the payment method was set
+                final selectedMethods =
+                    billingProvider.getSelectedPaymentMethodsExcludingEmpty();
+                debugPrint(
+                    '✔️ [PineLabs] Selected payment methods after setting ONLINE: $selectedMethods');
+                debugPrint(
+                    '✔️ [PineLabs] isOnlineSelected flag: ${billingProvider.isOnlineSelected}');
+
+                showScaffold(
+                  context: context,
+                  message:
+                      msg.isNotEmpty ? msg : 'Pine Labs payment successful',
+                );
+              } else {
+                billingProvider.setPineLabsPaymentSuccess(false);
+                showScaffoldError(
+                  context: context,
+                  message: msg.isNotEmpty ? msg : 'Pine Labs payment failed',
+                );
+              }
+            } catch (_) {
+              // Fallback to simple contains if result is not JSON
+              final String normalized = resultStr.toUpperCase();
+              final bool isSuccess = normalized.contains('SUCCESS') ||
+                  normalized.contains('APPROVED') ||
+                  normalized.contains('TXN SUCCESS');
+              if (isSuccess) {
+                billingProvider.setPineLabsPaymentSuccess(true);
+                showScaffold(
+                  context: context,
+                  message: 'Pine Labs payment successful',
+                );
+              } else {
+                billingProvider.setPineLabsPaymentSuccess(false);
+                showScaffoldError(
+                  context: context,
+                  message: resultStr.isEmpty
+                      ? 'Pine Labs payment failed'
+                      : resultStr,
+                );
+              }
+            }
+          },
+          fontSize: 14,
+          height: 48,
+          width: double.infinity,
+          radius: 12,
+          boxColor: billingProvider.pineLabsPaymentSuccess
+              ? ColorManager.kGreen
+              : ColorManager.kPrimaryColor,
+          borderColor: billingProvider.pineLabsPaymentSuccess
+              ? ColorManager.kGreen
+              : ColorManager.kPrimaryColor,
+          textColor: Colors.white,
+          isLoading: terminalProvider.isProcessing,
         );
       },
     );
@@ -530,7 +667,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Discount Applied: ₹${(summary.flatDiscount + summary.percentageDiscount).toStringAsFixed(2)}',
+                          'Discount Applied: ${(summary.flatDiscount + summary.percentageDiscount).toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.green.shade700,

@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
@@ -427,6 +428,9 @@ class _SalesExecutiveReportScreenState
                                 3: FlexColumnWidth(1.5), // Total Sales
                                 4: FlexColumnWidth(1.5), // UPI Sales
                                 5: FlexColumnWidth(1.5), // Cash Sales
+                                6: FlexColumnWidth(1.5), // Credit Sales
+                                7: FlexColumnWidth(1.5), // Collected Sales
+                                8: FlexColumnWidth(1.2), // Actions
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -440,6 +444,9 @@ class _SalesExecutiveReportScreenState
                                     _buildTableHeader("Total Sales"),
                                     _buildTableHeader("UPI Sales"),
                                     _buildTableHeader("Cash Sales"),
+                                    _buildTableHeader("Credit Sales"),
+                                    _buildTableHeader("Collected Sales"),
+                                    _buildTableHeader("Actions"),
                                   ],
                                 ),
                               ],
@@ -481,6 +488,12 @@ class _SalesExecutiveReportScreenState
                                                     1.5), // UPI Sales
                                                 5: FlexColumnWidth(
                                                     1.5), // Cash Sales
+                                                6: FlexColumnWidth(
+                                                    1.5), // Credit Sales
+                                                7: FlexColumnWidth(
+                                                    1.5), // Collected Sales
+                                                8: FlexColumnWidth(
+                                                    1.2), // Actions
                                               },
                                               border: null,
                                               defaultVerticalAlignment:
@@ -503,11 +516,16 @@ class _SalesExecutiveReportScreenState
                                                             ?.toString() ??
                                                         "0"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedTotalSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedTotalSales}"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedUpiSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedUpiSales}"),
                                                     _buildTableCell(
-                                                        "₹${report.formattedCashSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCashSales}"),
+                                                    _buildTableCell(
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCreditSales}"),
+                                                    _buildTableCell(
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCollectedSales}"),
+                                                    _buildActionsCell(report),
                                                   ],
                                                 );
                                               }).toList(),
@@ -651,6 +669,291 @@ class _SalesExecutiveReportScreenState
             Colors.black,
           ),
         ),
+      ),
+    );
+  }
+
+  TableCell _buildActionsCell(SalesExecutiveReportData report) {
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: BuildBoxShadowContainer(
+            margin: const EdgeInsets.only(left: 5, right: 5),
+            circleRadius: 5,
+            child: IconButton(
+              icon: Icon(
+                Icons.visibility,
+                size: 18,
+                color: ColorManager.kPrimaryColor.withOpacity(0.9),
+              ),
+              onPressed: () => _showExecutiveDetails(report),
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showExecutiveDetails(SalesExecutiveReportData report) {
+    // Get date range or default to today
+    String dateRange;
+    if (fromDateController.text.isNotEmpty &&
+        toDateController.text.isNotEmpty) {
+      dateRange = '${fromDateController.text} - ${toDateController.text}';
+    } else if (fromDateController.text.isNotEmpty) {
+      dateRange = fromDateController.text;
+    } else if (toDateController.text.isNotEmpty) {
+      dateRange = toDateController.text;
+    } else {
+      dateRange = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.55,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Sales Executive Details',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s20,
+                          0.30,
+                          Colors.black,
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: ColorManager.kPrimaryColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).pop(),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: Text(
+                                'Back',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s14,
+                                  0.20,
+                                  Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Scrollable Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        // Executive Information Section
+                        _buildSection(
+                          title: 'Executive Information',
+                          children: [
+                            _buildInfoRow(
+                              _buildInfoItem('Name', report.name ?? 'N/A'),
+                              _buildInfoItem('Phone', report.phone ?? 'N/A'),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                              _buildInfoItem('Date Range', dateRange),
+                              _buildInfoItem(
+                                'Total Orders',
+                                (report.orderCount ?? 0).toString(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Financial Summary Section
+                        _buildSection(
+                          title: 'Financial Summary',
+                          children: [
+                            _buildFinancialItem(
+                              'Total Sales',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Payment Received',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalPaymentReceived}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Amount Collected On Sale',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalCollectedOnSale}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Credit Collected (Prev Balance)',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total UPI Sales',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Cash Sales',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Credit Amount',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s16,
+              0.24,
+              Colors.black,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(Widget item1, Widget item2) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: item1),
+        const SizedBox(width: 16),
+        Expanded(child: item2),
+      ],
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.18,
+            Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.20,
+            Colors.black,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinancialItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s13,
+                0.18,
+                Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s14,
+              0.20,
+              Colors.black,
+            ),
+          ),
+        ],
       ),
     );
   }

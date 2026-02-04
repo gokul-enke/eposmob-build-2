@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_back_button.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
+import 'package:pos_machine/newcomponents/custom_round_button.dart';
+import 'package:pos_machine/newcomponents/custom_container_box.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/invoice_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/models/get_users.dart';
 import 'package:provider/provider.dart';
-
-import '../../../components/build_container_box.dart';
-import '../../../components/build_dialog_box.dart';
-import '../../../components/build_round_button.dart';
-
-import '../../../components/build_title.dart';
-import '../../../controllers/sidebar_controller.dart';
-
-import '../../../models/get_users.dart';
-import '../../../providers/auth_model.dart';
-import '../../../providers/invoice_provider.dart';
-import '../../../resources/color_manager.dart';
-import '../../../resources/font_manager.dart';
-import '../../../resources/style_manager.dart';
 
 class CreateNewVoucherScreen extends StatefulWidget {
   const CreateNewVoucherScreen({Key? key}) : super(key: key);
@@ -27,487 +22,480 @@ class CreateNewVoucherScreen extends StatefulWidget {
 }
 
 class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
-  final TextEditingController paymentMethodRefController =
-      TextEditingController();
-  final TextEditingController amountController = TextEditingController();
-  final TextEditingController commentController = TextEditingController();
-  final TextEditingController particularsController = TextEditingController();
-  final TextEditingController toIdController = TextEditingController();
+  // Controllers
+  final TextEditingController _paymentRefController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
+  final TextEditingController _particularsController = TextEditingController();
 
-  String? paymentSelected;
-  String? voucherSelected;
-  GetUsersModelData? selectedUser;
+  // Focus Nodes
+  final FocusNode _accountTypeFocus = FocusNode();
+  final FocusNode _paymentMethodFocus = FocusNode();
+  final FocusNode _paymentRefFocus = FocusNode();
+  final FocusNode _amountFocus = FocusNode();
+  final FocusNode _toFocus = FocusNode();
+  final FocusNode _commentFocus = FocusNode();
+  final FocusNode _particularsFocus = FocusNode();
 
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  // Selected values
+  String? _selectedAccountType;
+  String? _selectedPaymentMethod;
+  String? _selectedUserId;
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _paymentRefController.dispose();
+    _amountController.dispose();
+    _commentController.dispose();
+    _particularsController.dispose();
+
+    _accountTypeFocus.dispose();
+    _paymentMethodFocus.dispose();
+    _paymentRefFocus.dispose();
+    _amountFocus.dispose();
+    _toFocus.dispose();
+    _commentFocus.dispose();
+    _particularsFocus.dispose();
+
+    super.dispose();
+  }
+
+  // Helper method to build labels
+  Widget _buildLabel(String text, {bool isRequired = false}) {
+    return RichText(
+      text: TextSpan(
+        text: text,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s14,
+          0.27,
+          ColorManager.textColor,
+        ),
+        children: isRequired
+            ? [
+                TextSpan(
+                  text: '*',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s14,
+                    0.27,
+                    Colors.red,
+                  ),
+                ),
+              ]
+            : [],
+      ),
+    );
+  }
+
+  // Helper method to build text fields
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller,
+    TextInputType keyboardType,
+    Size size, {
+    bool isRequired = false,
+    String? placeholder,
+    FocusNode? focusNode,
+    bool readOnly = false,
+    int maxLines = 1,
+    TextInputAction? textInputAction,
+    Function(String)? onFieldSubmitted,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(label, isRequired: isRequired),
+        const SizedBox(height: 4),
+        Container(
+          height: maxLines > 1 ? null : 48,
+          decoration: BoxDecoration(
+            color: readOnly ? Colors.grey.shade100 : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: keyboardType,
+            readOnly: readOnly,
+            maxLines: maxLines,
+            textInputAction: textInputAction,
+            onFieldSubmitted: onFieldSubmitted,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              ColorManager.textColor,
+            ),
+            decoration: InputDecoration(
+              hintText: placeholder ?? label,
+              hintStyle: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.grey.shade400,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+            validator: validator ??
+                (isRequired
+                    ? (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'This field is required';
+                        }
+                        return null;
+                      }
+                    : null),
+            inputFormatters: keyboardType == TextInputType.number
+                ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+                : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Submit voucher
+  void _submitVoucher() async {
+    if (!_formKey.currentState!.validate()) {
+      showScaffold(
+        context: context,
+        message: 'Please fill all required fields',
+      );
+      return;
+    }
+
+    if (_selectedAccountType == null ||
+        _selectedPaymentMethod == null ||
+        _selectedUserId == null) {
+      showScaffold(
+        context: context,
+        message: 'Please select all required fields',
+      );
+      return;
+    }
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator.adaptive(),
+      ),
+    );
+
+    final invoiceProvider =
+        Provider.of<InvoiceProvider>(context, listen: false);
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? "";
+
+    final result = await invoiceProvider.addVoucher(
+      comment: _commentController.text,
+      particular: _particularsController.text,
+      accountType: _selectedAccountType ?? "",
+      paymentMethod: _selectedPaymentMethod ?? "",
+      paymentMethodRef: _paymentRefController.text,
+      amount: _amountController.text,
+      toUserID: _selectedUserId ?? "",
+      type: "voucher",
+      accessToken: accessToken,
+    );
+
+    Navigator.pop(context); // Close loading
+
+    final sideBarController = Get.put(SideBarController());
+
+    if (result["status"] == "success") {
+      showScaffold(context: context, message: result["message"]);
+      sideBarController.index.value = 22;
+    } else {
+      showScaffold(context: context, message: result["message"]);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(context);
-    Map<String, String>? paymentList = invoiceProvider.getPaymentType;
-    Map<String, String>? getVoucherAccountTypesModelData =
-        invoiceProvider.getVoucherAccountTypes;
-    List<GetUsersModelData>? getUsersList = invoiceProvider.getUsersList;
-    SideBarController sideBarController = Get.put(SideBarController());
+    final size = MediaQuery.of(context).size;
+    final invoiceProvider = Provider.of<InvoiceProvider>(context);
+    final paymentList = invoiceProvider.getPaymentType;
+    final voucherAccountTypes = invoiceProvider.getVoucherAccountTypes;
+    final usersList = invoiceProvider.getUsersList;
+    final sideBarController = Get.put(SideBarController());
 
     return SafeArea(
       child: Container(
-          margin:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomBackButton(
-                    onPressed: () {
-                      sideBarController.index.value = 22;
-                    },
-                    text: 'Voucher List',
-                  ),
-                  Text(
-                    'Create New Voucher',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
-                  ),
-                  const SizedBox(height: 20),
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    blurRadius: 6,
-                    padding: const EdgeInsets.only(
-                        left: 10.0, right: 20, top: 30, bottom: 10),
-                    offsetValue: const Offset(1, 1),
-                    child: Form(
-                        key: formKey,
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      BuildTextTile(
-                                        isStarRed: true,
-                                        isTextField: true,
-                                        title: 'Account type',
-                                        textStyle: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          FontSize.s14,
-                                          0.27,
-                                          Colors.black.withOpacity(0.6),
-                                        ),
-                                      ),
-                                      BuildBoxShadowContainer(
-                                        circleRadius: 7,
-                                        alignment: Alignment.centerLeft,
-                                        margin: const EdgeInsets.symmetric(
-                                            horizontal: 5, vertical: 0),
-                                        padding:
-                                            const EdgeInsets.only(left: 15),
-                                        height: size.height * .07,
-                                        width: size.width / 3,
-                                        child: DropdownButtonFormField<String>(
-                                          decoration: const InputDecoration(
-                                            border: InputBorder.none,
-                                          ),
-                                          value: voucherSelected,
-                                          hint: Text(
-                                            'Select An Account type',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.27,
-                                              ColorManager.textColor
-                                                  .withOpacity(.5),
-                                            ),
-                                          ),
-                                          items: getVoucherAccountTypesModelData
-                                              ?.entries
-                                              .map((MapEntry<String, String>
-                                                  entry) {
-                                            return DropdownMenuItem(
-                                              value: entry.key,
-                                              child: Text(
-                                                entry.value,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                          onChanged: (String? value) {
-                                            setState(() {
-                                              voucherSelected = value;
-                                            });
-                                          },
-                                          validator: (value) {
-                                            if (value == null ||
-                                                value.isEmpty) {
-                                              return 'This field is required';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      BuildTextTile(
-                                        isStarRed: true,
-                                        isTextField: true,
-                                        title: "Payment Method",
-                                        textStyle: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          FontSize.s14,
-                                          0.27,
-                                          Colors.black.withOpacity(0.6),
-                                        ),
-                                      ),
-                                      BuildBoxShadowContainer(
-                                        circleRadius: 7,
-                                        alignment: Alignment.centerLeft,
-                                        margin: const EdgeInsets.symmetric(
-                                            horizontal: 5, vertical: 0),
-                                        padding:
-                                            const EdgeInsets.only(left: 15),
-                                        height: size.height * .07,
-                                        width: size.width / 3,
-                                        child: DropdownButtonFormField<String>(
-                                          decoration: const InputDecoration(
-                                            border: InputBorder.none,
-                                          ),
-                                          value: paymentSelected,
-                                          hint: Text(
-                                            'Select A Payment Method',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.27,
-                                              ColorManager.textColor
-                                                  .withOpacity(.5),
-                                            ),
-                                          ),
-                                          items:
-                                              paymentList!.entries.map((entry) {
-                                            return DropdownMenuItem<String>(
-                                              value: entry.key,
-                                              child: Text(
-                                                entry.value,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                          onChanged: (String? value) {
-                                            setState(() {
-                                              paymentSelected = value;
-                                            });
-                                          },
-                                          validator: (value) {
-                                            if (value == null ||
-                                                value.isEmpty) {
-                                              return 'This field is required';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  BuildTextFieldColumn(
-                                    isLeft: false,
-                                    size: size,
-                                    isStarRed: true,
-                                    hintText: 'Ref',
-                                    isTextField: true,
-                                    read: false,
-                                    controller: paymentMethodRefController,
-                                    title: "Payment Method Ref",
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'This field is required';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  BuildTextFieldColumn(
-                                    isLeft: true,
-                                    isStarRed: true,
-                                    isTextField: true,
-                                    size: size,
-                                    hintText: 'Amount',
-                                    read: false,
-                                    textInputType:
-                                        const TextInputType.numberWithOptions(),
-                                    controller: amountController,
-                                    title: "Amount",
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'This field is required';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      BuildTextTile(
-                                        isStarRed: true,
-                                        isTextField: true,
-                                        title: "To",
-                                        textStyle: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          FontSize.s14,
-                                          0.27,
-                                          Colors.black.withOpacity(0.6),
-                                        ),
-                                      ),
-                                      BuildBoxShadowContainer(
-                                        circleRadius: 7,
-                                        alignment: Alignment.centerLeft,
-                                        margin: const EdgeInsets.symmetric(
-                                            horizontal: 5, vertical: 0),
-                                        padding:
-                                            const EdgeInsets.only(left: 15),
-                                        height: size.height * .07,
-                                        width: size.width / 2.9,
-                                        child: DropdownButtonFormField<
-                                            GetUsersModelData>(
-                                          decoration: const InputDecoration(
-                                            border: InputBorder.none,
-                                          ),
-                                          value: selectedUser,
-                                          hint: Text(
-                                            'Select a User',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.27,
-                                              ColorManager.textColor
-                                                  .withOpacity(.5),
-                                            ),
-                                          ),
-                                          items: getUsersList!
-                                              .map((GetUsersModelData user) {
-                                                return DropdownMenuItem<
-                                                    GetUsersModelData>(
-                                                  value: user,
-                                                  child: Text(
-                                                    user.name ?? '',
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s12,
-                                                      0.27,
-                                                      ColorManager.textColor
-                                                          .withOpacity(.5),
-                                                    ),
-                                                  ),
-                                                );
-                                              })
-                                              .toSet()
-                                              .toList(),
-                                          onChanged:
-                                              (GetUsersModelData? selectUser) {
-                                            if (selectUser != null) {
-                                              setState(() {
-                                                selectedUser = selectUser;
-                                                toIdController.text =
-                                                    "${selectUser.id}";
-                                              });
-                                            }
-                                          },
-                                          validator: (value) {
-                                            if (value == null) {
-                                              return 'This field is required';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  BuildTextFieldColumn(
-                                    isLeft: true,
-                                    size: size,
-                                    isStarRed: false,
-                                    hintText: 'Comment',
-                                    isTextField: true,
-                                    maxlines: 3,
-                                    read: false,
-                                    controller: commentController,
-                                    title: "Comment",
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  BuildTextFieldColumn(
-                                    isLeft: false,
-                                    isStarRed: false,
-                                    isTextField: true,
-                                    size: size,
-                                    read: false,
-                                    hintText: 'Particulars',
-                                    controller: particularsController,
-                                    title: "Particulars",
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 45),
-                              Row(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: CustomRoundButton(
-                                      title: "Submit",
-                                      fct: () async {
-                                        if (formKey.currentState!.validate()) {
-                                          formKey.currentState!.save();
-                                          debugPrint(
-                                              " selectedUser $selectedUser  ${toIdController.text}\t voucherSelected $voucherSelected\npaymentSelected  $paymentSelected");
-                                          // if (toIdController.text.isEmpty ||
-                                          //     paymentSelected == null ||
-                                          //     voucherSelected == null ||
-                                          //     paymentMethodRefController
-                                          //         .text.isEmpty ||
-                                          //     amountController.text.isEmpty) {
-                                          //   showScaffold(
-                                          //     context: context,
-                                          //     message:
-                                          //         'Please Fill the Required Fields',
-                                          //   );
-                                          // } else {
-                                          showDialog(
-                                              context: context,
-                                              barrierDismissible: false,
-                                              builder: (context) {
-                                                return const Center(
-                                                  child:
-                                                      CircularProgressIndicator
-                                                          .adaptive(),
-                                                );
-                                              });
-
-                                          String? accessToken =
-                                              Provider.of<AuthModel>(context,
-                                                      listen: false)
-                                                  .token;
-                                          debugPrint(
-                                              "accessToken From AuthModel $accessToken");
-                                          invoiceProvider
-                                              .addVoucher(
-                                                  comment:
-                                                      commentController.text,
-                                                  particular:
-                                                      particularsController
-                                                          .text,
-                                                  accountType:
-                                                      voucherSelected ?? "",
-                                                  paymentMethod:
-                                                      paymentSelected ?? '',
-                                                  paymentMethodRef:
-                                                      paymentMethodRefController
-                                                          .text,
-                                                  amount: amountController.text,
-                                                  toUserID: toIdController.text,
-                                                  type: "voucher",
-                                                  accessToken:
-                                                      accessToken ?? "")
-                                              .then((value) {
-                                            if (value["status"] == "success") {
-                                              showScaffold(
-                                                  context: context,
-                                                  message: value["message"]);
-
-                                              Navigator.pop(context);
-                                              sideBarController.index.value =
-                                                  22;
-                                            } else {
-                                              Navigator.pop(context);
-
-                                              showScaffold(
-                                                  context: context,
-                                                  message: value["message"]);
-                                              sideBarController.index.value =
-                                                  22;
-                                            }
-                                          });
-                                          // }
-                                        } else {
-                                          showScaffold(
-                                            context: context,
-                                            message:
-                                                'Please fill all required fields',
-                                          );
-                                        }
-                                      },
-                                      height: 50,
-                                      width: size.width * 0.19,
-                                      fontSize: FontSize.s12,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: CustomRoundButton(
-                                      title: "Back",
-                                      boxColor: Colors.white,
-                                      textColor: ColorManager.kPrimaryColor,
-                                      fct: () async {
-                                        sideBarController.index.value = 22;
-                                      },
-                                      height: 50,
-                                      width: size.width * 0.19,
-                                      fontSize: FontSize.s12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 50,
-                              )
-                            ])),
-                  ),
-                ],
-              ),
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-          )),
+          ],
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => sideBarController.index.value = 22,
+                          icon: const Icon(Icons.arrow_back_ios),
+                          iconSize: 20,
+                        ),
+                        Text(
+                          'Create New Voucher',
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s20,
+                            0.30,
+                            ColorManager.textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Main Form Container
+                CustomBoxShadowContainer(
+                  circleRadius: 12,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row 1: Account Type & Payment Method
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Account Type", isRequired: true),
+                                const SizedBox(height: 4),
+                                CustomDropDownWithSearch<String>(
+                                  hintText: "Select account type",
+                                  title: "",
+                                  value: _selectedAccountType,
+                                  items:
+                                      voucherAccountTypes?.keys.toList() ?? [],
+                                  focusNode: _accountTypeFocus,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedAccountType = value;
+                                    });
+                                    FocusScope.of(context)
+                                        .requestFocus(_paymentMethodFocus);
+                                  },
+                                  displayText: (item) =>
+                                      voucherAccountTypes?[item] ?? item,
+                                  showName: false,
+                                  height: 48,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Payment Method", isRequired: true),
+                                const SizedBox(height: 4),
+                                CustomDropDownWithSearch<String>(
+                                  hintText: "Select payment method",
+                                  title: "",
+                                  value: _selectedPaymentMethod,
+                                  items: paymentList?.keys.toList() ?? [],
+                                  focusNode: _paymentMethodFocus,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedPaymentMethod = value;
+                                    });
+                                    FocusScope.of(context)
+                                        .requestFocus(_paymentRefFocus);
+                                  },
+                                  displayText: (item) =>
+                                      paymentList?[item] ?? item,
+                                  showName: false,
+                                  height: 48,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Row 2: Payment Ref & Amount
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              "Payment Reference",
+                              _paymentRefController,
+                              TextInputType.text,
+                              size,
+                              isRequired: true,
+                              placeholder: "Enter reference",
+                              focusNode: _paymentRefFocus,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted: (_) {
+                                FocusScope.of(context)
+                                    .requestFocus(_amountFocus);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildTextField(
+                              "Amount",
+                              _amountController,
+                              TextInputType.number,
+                              size,
+                              isRequired: true,
+                              placeholder: "0.00",
+                              focusNode: _amountFocus,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted: (_) {
+                                FocusScope.of(context).requestFocus(_toFocus);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Row 3: To (User) & Comment
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("To", isRequired: true),
+                                const SizedBox(height: 4),
+                                CustomDropDownWithSearch<String>(
+                                  hintText: "Select user",
+                                  title: "",
+                                  value: _selectedUserId,
+                                  items: usersList
+                                          ?.map((u) => u.id.toString())
+                                          .toSet()
+                                          .toList() ??
+                                      [],
+                                  focusNode: _toFocus,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedUserId = value;
+                                    });
+                                    FocusScope.of(context)
+                                        .requestFocus(_commentFocus);
+                                  },
+                                  displayText: (item) {
+                                    final user = usersList?.firstWhere(
+                                      (u) => u.id.toString() == item,
+                                      orElse: () =>
+                                          GetUsersModelData(id: 0, name: ""),
+                                    );
+                                    return user?.name ?? "Unknown";
+                                  },
+                                  showName: false,
+                                  height: 48,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildTextField(
+                              "Comment",
+                              _commentController,
+                              TextInputType.text,
+                              size,
+                              placeholder: "Optional comment",
+                              focusNode: _commentFocus,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted: (_) {
+                                FocusScope.of(context)
+                                    .requestFocus(_particularsFocus);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Row 4: Particulars (full width)
+                      _buildTextField(
+                        "Particulars",
+                        _particularsController,
+                        TextInputType.text,
+                        size,
+                        placeholder: "Enter particulars",
+                        focusNode: _particularsFocus,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) {
+                          _submitVoucher();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    CustomRoundButtonAdvanced(
+                      title: "Cancel",
+                      fct: () => sideBarController.index.value = 22,
+                      width: 120,
+                      height: 45,
+                      fontSize: 14,
+                      boxColor: Colors.white,
+                      textColor: ColorManager.kPrimaryColor,
+                      borderColor: ColorManager.kPrimaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    CustomRoundButtonAdvanced(
+                      title: "Submit",
+                      fct: _submitVoucher,
+                      width: 120,
+                      height: 45,
+                      fontSize: 14,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

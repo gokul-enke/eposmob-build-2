@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/get_product_sales_report_model.dart';
 import 'package:pos_machine/models/get_sales_report_model.dart';
 import 'package:pos_machine/models/get_supplier_sales_report_model.dart';
+import 'package:pos_machine/models/get_non_stock_report_model.dart';
 
 import '../models/get_customer_account_book_model.dart';
 import '../resources/app_url.dart';
@@ -17,6 +18,7 @@ class ReportsProvider with ChangeNotifier {
   GetProductSalesReportResponse? _productSalesReport;
   GetSalesReportResponse? _salesReport;
   GetSupplierSalesReportResponse? _supplierSalesReport;
+  GetNonStockReportResponse? _nonStockReport;
 
   GetCustomerAccountBookResponse? get customerAccountBook =>
       _customerAccountBook;
@@ -24,6 +26,7 @@ class ReportsProvider with ChangeNotifier {
   GetSalesReportResponse? get salesReport => _salesReport;
   GetSupplierSalesReportResponse? get supplierSalesReport =>
       _supplierSalesReport;
+  GetNonStockReportResponse? get nonStockReport => _nonStockReport;
 
   Future<void> fetchCustomerAccountBook({
     required String accessToken,
@@ -49,7 +52,6 @@ class ReportsProvider with ChangeNotifier {
     final uri = Uri.parse(APPUrl.customerAccountBook)
         .replace(queryParameters: queryParameters);
 
-    // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
@@ -75,7 +77,6 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load customer account book');
       }
     } catch (error) {
-      // debugPrint('Error fetching customer account book: $error');
       rethrow;
     }
   }
@@ -90,7 +91,6 @@ class ReportsProvider with ChangeNotifier {
   }) async {
     final queryParameters = <String, String>{};
 
-    // Add query parameters if they are not null or empty
     if (categoryId != null) {
       queryParameters['category_id'] = categoryId.toString();
     }
@@ -110,7 +110,6 @@ class ReportsProvider with ChangeNotifier {
     final uri = Uri.parse(APPUrl.productSalesReport)
         .replace(queryParameters: queryParameters);
 
-    // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
@@ -125,7 +124,7 @@ class ReportsProvider with ChangeNotifier {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
-      ).timeout(const Duration(seconds: 15)); // Adding a timeout
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
@@ -134,7 +133,6 @@ class ReportsProvider with ChangeNotifier {
               GetProductSalesReportResponse.fromJson(jsonData);
           notifyListeners();
         } else {
-          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -143,8 +141,7 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load product sales report');
       }
     } catch (error) {
-      // debugPrint('Error fetching product sales report: $error');
-      rethrow; // Rethrow the error for further handling
+      rethrow;
     }
   }
 
@@ -157,7 +154,6 @@ class ReportsProvider with ChangeNotifier {
   }) async {
     final queryParameters = <String, String>{};
 
-    // Add query parameters if they are not null or empty
     if (customerName != null && customerName.isNotEmpty) {
       queryParameters['customer_name'] = customerName;
     }
@@ -174,7 +170,6 @@ class ReportsProvider with ChangeNotifier {
     final uri =
         Uri.parse(APPUrl.salesReport).replace(queryParameters: queryParameters);
 
-    // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
@@ -189,7 +184,7 @@ class ReportsProvider with ChangeNotifier {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
-      ).timeout(const Duration(seconds: 15)); // Adding a timeout
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
@@ -197,7 +192,6 @@ class ReportsProvider with ChangeNotifier {
           _salesReport = GetSalesReportResponse.fromJson(jsonData);
           notifyListeners();
         } else {
-          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -206,8 +200,7 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load sales report');
       }
     } catch (error) {
-      // debugPrint('Error fetching sales report: $error');
-      rethrow; // Rethrow the error for further handling
+      rethrow;
     }
   }
 
@@ -220,7 +213,6 @@ class ReportsProvider with ChangeNotifier {
   }) async {
     final queryParameters = <String, String>{};
 
-    // Add query parameters if they are not null or empty
     if (supplierName != null && supplierName.isNotEmpty) {
       queryParameters['supplier_name'] = supplierName;
     }
@@ -237,7 +229,6 @@ class ReportsProvider with ChangeNotifier {
     final uri = Uri.parse(APPUrl.supplierSalesReport)
         .replace(queryParameters: queryParameters);
 
-    // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
@@ -252,7 +243,7 @@ class ReportsProvider with ChangeNotifier {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
-      ).timeout(const Duration(seconds: 15)); // Adding a timeout
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
@@ -261,7 +252,6 @@ class ReportsProvider with ChangeNotifier {
               GetSupplierSalesReportResponse.fromJson(jsonData);
           notifyListeners();
         } else {
-          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -270,10 +260,70 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load supplier sales report');
       }
     } catch (error) {
-      // debugPrint('Error fetching supplier sales report: $error');
-      rethrow; // Rethrow the error for further handling
+      rethrow;
     }
   }
 
-  // You can add other report-related methods here as needed
+  Future<void> fetchNonStockReport({
+    required String accessToken,
+    String? store,
+    String? category,
+    String? product,
+    String? barcode,
+    int? page,
+  }) async {
+    final queryParameters = <String, String>{};
+
+    if (store != null && store.isNotEmpty) {
+      queryParameters['store'] = store;
+    }
+    if (category != null && category.isNotEmpty) {
+      queryParameters['category'] = category;
+    }
+    if (product != null && product.isNotEmpty) {
+      queryParameters['product'] = product;
+    }
+    if (barcode != null && barcode.isNotEmpty) {
+      queryParameters['barcode'] = barcode;
+    }
+    if (page != null) {
+      queryParameters['page'] = page.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.nonStockReportUrl)
+        .replace(queryParameters: queryParameters);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        if (response.body.isNotEmpty) {
+          final jsonData = json.decode(response.body);
+          _nonStockReport = GetNonStockReportResponse.fromJson(jsonData);
+          notifyListeners();
+        } else {
+          throw Exception('Received empty response');
+        }
+      } else {
+        debugPrint(
+            'Failed to load non-stock report: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to load non-stock report');
+      }
+    } catch (error) {
+      rethrow;
+    }
+  }
 }

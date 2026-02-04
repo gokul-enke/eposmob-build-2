@@ -38,18 +38,9 @@ Future<void> handleAddProductToCart({
 
     // Check if product has stock options
     if (product.stock != null && product.stock!.isNotEmpty) {
-      // Filter available stock options (quantity > 0)
-      List<Stock> availableStocks = product.stock!
-          .where((stock) => stock.quantity != null && stock.quantity! > 0)
-          .toList();
-
-      if (availableStocks.isEmpty) {
-        // No stock available
-        if (onError != null) {
-          onError("No stock available for this product.");
-        }
-        return;
-      }
+      // Get all stock options (don't filter by quantity - physical stock may be available)
+      // Physical stock at shop matters more than digital count
+      List<Stock> availableStocks = List.from(product.stock!);
 
       // If multiple stock options are available, show selection modal
       if (availableStocks.length > 1) {

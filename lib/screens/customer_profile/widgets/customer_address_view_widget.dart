@@ -7,6 +7,7 @@ import '../../../components/build_container_box.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
+import 'customer_address_form_widget.dart';
 
 class CustomerAddressViewWidget extends StatefulWidget {
   final Size size;
@@ -26,6 +27,8 @@ class CustomerAddressViewWidget extends StatefulWidget {
 class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
   bool isLoading = false;
   CustomerListModelData? detailedCustomer;
+  bool showForm = false;
+  Address? addressToEdit;
 
   @override
   void initState() {
@@ -90,148 +93,257 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                   color: ColorManager.kPrimaryColor,
                 ),
               )
-            : Column(
-                children: [
-                  // Header Section
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: ColorManager.kPrimaryWithOpacity10,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
+            : showForm
+                ? Column(
+                    children: [
+                      CustomerAddressFormWidget(
+                        size: size,
+                        customer: currentCustomer!,
+                        address: addressToEdit,
+                        onSuccess: (newAddress) {
+                          setState(() {
+                            showForm = false;
+                            addressToEdit = null;
+
+                            if (detailedCustomer != null) {
+                              List<Address> currentAddresses =
+                                  List.from(detailedCustomer!.addresses ?? []);
+                              int index = currentAddresses
+                                  .indexWhere((a) => a.id == newAddress.id);
+
+                              if (index != -1) {
+                                // Update existing
+                                currentAddresses[index] = newAddress;
+                              } else {
+                                // Add new
+                                currentAddresses.add(newAddress);
+                              }
+
+                              // Create a new CustomerListModelData with updated addresses
+                              detailedCustomer = CustomerListModelData(
+                                id: detailedCustomer!.id,
+                                name: detailedCustomer!.name,
+                                email: detailedCustomer!.email,
+                                phone: detailedCustomer!.phone,
+                                altPhone: detailedCustomer!.altPhone,
+                                gender: detailedCustomer!.gender,
+                                dob: detailedCustomer!.dob,
+                                profileImage: detailedCustomer!.profileImage,
+                                storeId: detailedCustomer!.storeId,
+                                userId: detailedCustomer!.userId,
+                                createdAt: detailedCustomer!.createdAt,
+                                updatedAt: detailedCustomer!.updatedAt,
+                                deletedAt: detailedCustomer!.deletedAt,
+                                cardNumber: detailedCustomer!.cardNumber,
+                                loyaltyPoints: detailedCustomer!.loyaltyPoints,
+                                validFrom: detailedCustomer!.validFrom,
+                                validUntil: detailedCustomer!.validUntil,
+                                cardStatus: detailedCustomer!.cardStatus,
+                                membershipName:
+                                    detailedCustomer!.membershipName,
+                                membershipCode:
+                                    detailedCustomer!.membershipCode,
+                                minRedeemablePoints:
+                                    detailedCustomer!.minRedeemablePoints,
+                                pricePerPoint: detailedCustomer!.pricePerPoint,
+                                balance: detailedCustomer!.balance,
+                                paymentType: detailedCustomer!.paymentType,
+                                customerType: detailedCustomer!.customerType,
+                                address: detailedCustomer!.address,
+                                pincode: detailedCustomer!.pincode,
+                                city: detailedCustomer!.city,
+                                state: detailedCustomer!.state,
+                                country: detailedCustomer!.country,
+                                district: detailedCustomer!.district,
+                                companyId: detailedCustomer!.companyId,
+                                storeName: detailedCustomer!.storeName,
+                                kyc: detailedCustomer!.kyc,
+                                transactions: detailedCustomer!.transactions,
+                                orders: detailedCustomer!.orders,
+                                addresses: currentAddresses,
+                              );
+                            }
+                          });
+                          _fetchCustomerDetails();
+                        },
+                        onCancel: () {
+                          setState(() {
+                            showForm = false;
+                            addressToEdit = null;
+                          });
+                        },
                       ),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 24, horizontal: 24),
-                    child: Row(
-                      children: [
-                        // Address Icon
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                                color:
-                                    ColorManager.kPrimaryColor.withOpacity(0.2),
-                                width: 2),
-                          ),
-                          child: const Icon(
-                            Icons.location_on,
-                            size: 32,
-                            color: ColorManager.kPrimaryColor,
+                    ],
+                  )
+                : Column(
+                    children: [
+                      // Header Section
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: ColorManager.kPrimaryWithOpacity10,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(12),
+                            topRight: Radius.circular(12),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        // Address Header Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Address Information",
-                                style: buildCustomStyle(
-                                  FontWeightManager.bold,
-                                  FontSize.s20,
-                                  0,
-                                  ColorManager.kTitleTextColor,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Customer: ${currentCustomer?.name ?? "N/A"}",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0,
-                                  ColorManager.kGreyColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Address Type Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: ColorManager.kButtonBlue,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            "Primary",
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.30,
-                              Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Content Section
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 24, horizontal: 24),
+                        child: Row(
                           children: [
-                            // Address Information Card
-                            _buildInfoCard(
-                              title: "Address Details",
-                              icon: Icons.location_on_outlined,
-                              children: [
-                                _buildInfoRow(
-                                  icon: Icons.place_outlined,
-                                  label: "Address",
-                                  value: currentCustomer?.address ??
-                                      "Not provided",
-                                ),
-                                const SizedBox(height: 16),
-                                _buildInfoRow(
-                                  icon: Icons.flag_outlined,
-                                  label: "Country",
-                                  value: currentCustomer?.country ??
-                                      "Not provided",
-                                ),
-                                const SizedBox(height: 16),
-                                _buildInfoRow(
-                                  icon: Icons.map_outlined,
-                                  label: "State",
-                                  value:
-                                      currentCustomer?.state ?? "Not provided",
-                                ),
-                                const SizedBox(height: 16),
-                                _buildInfoRow(
-                                  icon: Icons.domain_outlined,
-                                  label: "District",
-                                  value: currentCustomer?.district ??
-                                      "Not provided",
-                                ),
-                                const SizedBox(height: 16),
-                                _buildInfoRow(
-                                  icon: Icons.pin_drop_outlined,
-                                  label: "Pincode",
-                                  value: currentCustomer?.pincode ??
-                                      "Not provided",
-                                ),
-                              ],
+                            // Address Icon
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color:
+                                    ColorManager.kPrimaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                    color: ColorManager.kPrimaryColor
+                                        .withOpacity(0.2),
+                                    width: 2),
+                              ),
+                              child: const Icon(
+                                Icons.location_on,
+                                size: 32,
+                                color: ColorManager.kPrimaryColor,
+                              ),
                             ),
-
-                            const SizedBox(height: 24),
+                            const SizedBox(width: 16),
+                            // Address Header Info
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Address Information",
+                                    style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      FontSize.s20,
+                                      0,
+                                      ColorManager.kTitleTextColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Customer: ${currentCustomer?.name ?? "N/A"}",
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0,
+                                      ColorManager.kGreyColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // Add Address Button
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  addressToEdit = null;
+                                  showForm = true;
+                                });
+                              },
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text("Add New"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: ColorManager.kPrimaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
+
+                      // Content Section
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Show the list of addresses
+                                if (currentCustomer?.addresses != null &&
+                                    currentCustomer!.addresses!.isNotEmpty) ...[
+                                  ...currentCustomer.addresses!
+                                      .map((addr) => Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 16.0),
+                                            child: _buildInfoCard(
+                                              title:
+                                                  "Address (${addr.type ?? 'Other'})",
+                                              icon: Icons.location_on_outlined,
+                                              onEdit: () {
+                                                setState(() {
+                                                  addressToEdit = addr;
+                                                  showForm = true;
+                                                });
+                                              },
+                                              children: [
+                                                _buildInfoRow(
+                                                    icon: Icons.place_outlined,
+                                                    label: "Address",
+                                                    value: addr.address ??
+                                                        "Not provided"),
+                                                const SizedBox(height: 12),
+                                                _buildInfoRow(
+                                                    icon: Icons
+                                                        .location_city_outlined,
+                                                    label: "City",
+                                                    value: addr.city ??
+                                                        "Not provided"),
+                                                const SizedBox(height: 12),
+                                                _buildInfoRow(
+                                                    icon:
+                                                        Icons.pin_drop_outlined,
+                                                    label: "Pincode ID",
+                                                    value: addr.pincodeId
+                                                            ?.toString() ??
+                                                        "Not provided"),
+                                              ],
+                                            ),
+                                          ))
+                                      .toList(),
+                                ] else if (!isLoading) ...[
+                                  // Empty state
+                                  Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const SizedBox(height: 100),
+                                        Icon(Icons.location_off_outlined,
+                                            size: 80,
+                                            color: ColorManager.kGreyColor
+                                                .withOpacity(0.3)),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          "No address records found",
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s16,
+                                            0,
+                                            ColorManager.kGreyColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
       ),
     );
   }
@@ -240,6 +352,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
     required String title,
     required IconData icon,
     required List<Widget> children,
+    VoidCallback? onEdit,
   }) {
     return Container(
       width: double.infinity,
@@ -278,6 +391,16 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                     ColorManager.kPrimaryColor,
                   ),
                 ),
+                if (onEdit != null) ...[
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.edit,
+                        size: 20, color: ColorManager.kPrimaryColor),
+                    onPressed: onEdit,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ],
             ),
           ),

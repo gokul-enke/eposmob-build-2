@@ -270,7 +270,7 @@ class TransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.5 : 9.0,
         color: PdfColors.black,
         height: 2, // Add line height for better spacing between lines
       );
@@ -280,13 +280,13 @@ class TransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 7.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 8.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
         height: 1.5, // Reduced line height for A5
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 6.5 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 4.5 : 7.5,
         color: PdfColors.black,
         height: 1.5, // Reduced line height for A5
       );
@@ -329,129 +329,118 @@ class TransactionReportStandardPrinter {
             ),
           ),
           build: (pw.Context context) => [
-            // Wrap entire content in a Column so it flows
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Header with store information - professional design to match PHP template
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      // Show header if enabled
-                      if (updatedSettings?['showHeader']?.visible == true)
-                        pw.Text(
-                          billDocumentConfig.header ?? 'EPosenke',
-                          style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey800,
-                          ),
-                        ),
-                      pw.SizedBox(height: 5),
-                      // Show subheader if enabled
-                      if (updatedSettings?['showSubheader']?.visible == true)
-                        pw.Text(
-                          billDocumentConfig.subheader ??
-                              'Customer Statement',
-                          style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey800,
-                          ),
-                        ),
-                      pw.SizedBox(height: 10),
-                      pw.Container(
-                        height: 2,
+            // Header with store information - professional design to match PHP template
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  if (updatedSettings?['showHeader']?.visible == true)
+                    pw.Text(
+                      billDocumentConfig.header ?? 'EPosenke',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
+                        fontWeight: pw.FontWeight.bold,
                         color: PdfColors.grey800,
                       ),
-                    ],
-                  ),
-                ),
-
-                pw.SizedBox(height: 15),
-
-                // Customer Information Section - if available
-                if (customerName != null ||
-                    customerPhone != null ||
-                    customerEmail != null ||
-                    customerAddress != null)
-                  _buildCustomerDetailsPDF(
-                    selectedPaperSize,
-                    customerName,
-                    customerPhone,
-                    customerEmail,
-                    customerAddress,
-                    subheaderStyle,
-                    bodyStyle,
-                    fromDate,
-                    toDate,
-                    updatedSettings,
-                  ),
-
-                // Add date range information outside customer card and align to right
-                // Only show if showDates is enabled
-                if ((updatedSettings?['showDates']?.visible ?? true) &&
-                    ((fromDate != null && fromDate.isNotEmpty) ||
-                        (toDate != null && toDate.isNotEmpty)))
+                    ),
+                  pw.SizedBox(height: 5),
+                  if (updatedSettings?['showSubheader']?.visible == true)
+                    pw.Text(
+                      billDocumentConfig.subheader ?? 'Customer Statement',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.grey800,
+                      ),
+                    ),
+                  pw.SizedBox(height: 10),
                   pw.Container(
-                    margin: const pw.EdgeInsets.only(bottom: 10),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                    height: 2,
+                    color: PdfColors.grey800,
+                  ),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 15),
+
+            // Customer Information Section - if available
+            if (customerName != null ||
+                customerPhone != null ||
+                customerEmail != null ||
+                customerAddress != null)
+              _buildCustomerDetailsPDF(
+                selectedPaperSize,
+                customerName,
+                customerPhone,
+                customerEmail,
+                customerAddress,
+                subheaderStyle,
+                bodyStyle,
+                fromDate,
+                toDate,
+                updatedSettings,
+              ),
+
+            // Add date range information outside customer card and align to right
+            if ((updatedSettings?['showDates']?.visible ?? true) &&
+                ((fromDate != null && fromDate.isNotEmpty) ||
+                    (toDate != null && toDate.isNotEmpty)))
+              pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 10),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.end,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.end,
-                          children: [
-                            pw.Text(
-                              'From: ${fromDate ?? 'N/A'},',
-                              style: pw.TextStyle(
-                                  fontSize:
-                                      selectedPaperSize == 'A5' ? 9.0 : 12.0,
-                                  color: PdfColors.black,
-                                  fontWeight: pw.FontWeight.bold),
-                            ),
-                            pw.SizedBox(
-                                height: 4), // Add spacing between date lines
-                            pw.Text(
-                              'To : ${toDate ?? 'N/A'},',
-                              style: pw.TextStyle(
-                                  fontSize:
-                                      selectedPaperSize == 'A5' ? 9.0 : 12.0,
-                                  color: PdfColors.black,
-                                  fontWeight: pw.FontWeight.bold),
-                            ),
-                          ],
+                        pw.Text(
+                          'From: ${fromDate ?? 'N/A'},',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
+                            color: PdfColors.black,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'To : ${toDate ?? 'N/A'},',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
+                            color: PdfColors.black,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-
-                pw.SizedBox(height: 15),
-
-                // Items table - professional design with borders to match PHP template
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                      vertical: 15, horizontal: 0),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      _buildPdfTransactionReportItemsTable(
-                          tableHeaderStyle,
-                          bodyStyle,
-                          updatedSettings,
-                          cartItems,
-                          isFromLocalStorage,
-                          billDocumentConfig),
-                    ],
-                  ),
+                  ],
                 ),
+              ),
 
-                // Cart Total Row - added after items table
-                _buildCartTotalRow(selectedPaperSize, cartItems,
-                    isFromLocalStorage, summaryStyle),
+            pw.SizedBox(height: 15),
 
-                pw.SizedBox(height: 15),
-              ],
+            // Items table - professional design with borders to match PHP template
+            pw.Container(
+              padding:
+                  const pw.EdgeInsets.symmetric(vertical: 15, horizontal: 0),
+              child: _buildPdfTransactionReportItemsTable(
+                tableHeaderStyle,
+                bodyStyle,
+                updatedSettings,
+                cartItems,
+                isFromLocalStorage,
+                billDocumentConfig,
+              ),
             ),
+
+            // Cart Total Row - added after items table
+            _buildCartTotalRow(
+              selectedPaperSize,
+              cartItems,
+              isFromLocalStorage,
+              summaryStyle,
+            ),
+
+            pw.SizedBox(height: 15),
           ],
         ),
       );
@@ -603,6 +592,7 @@ class TransactionReportStandardPrinter {
       String transactionType = '';
       String type = '';
       double amount = 0.0;
+      double transactionBalance = 0.0;
       String tax = '0.00';
       String status = '';
       String date = '';
@@ -613,6 +603,7 @@ class TransactionReportStandardPrinter {
         transactionType = item['transactionType'] ?? 'N/A';
         type = item['type'] ?? 'N/A';
         amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+        transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
         status = item['status'] ?? 'N/A';
         date = item['date'] ?? 'N/A';
       } else {
@@ -629,6 +620,7 @@ class TransactionReportStandardPrinter {
               'N/A';
           type = item['type']?.toString() ?? 'N/A';
           amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+          transactionBalance = double.tryParse(item['balance']?.toString() ?? '0') ?? 0.0;
           status = item['status']?.toString() ?? 'N/A';
           date = item['date']?.toString() ?? 'N/A';
         } else {
@@ -647,6 +639,7 @@ class TransactionReportStandardPrinter {
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
             amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
+            transactionBalance = double.tryParse(item.balance?.toString() ?? '0') ?? 0.0;
             status = item.status?.toString() ?? 'N/A';
             date = item.date?.toString() ?? 'N/A';
 
@@ -661,6 +654,7 @@ class TransactionReportStandardPrinter {
             transactionType = 'N/A';
             type = 'N/A';
             amount = 0.0;
+            transactionBalance = 0.0;
             status = 'N/A';
             date = 'N/A';
           }
@@ -684,11 +678,8 @@ class TransactionReportStandardPrinter {
       String creditAmount =
           (type.toLowerCase() == 'credit') ? formattedAmount : '-';
 
-      if (type.toLowerCase() == 'debit') {
-        runningBalance -= amount;
-      } else if (type.toLowerCase() == 'credit') {
-        runningBalance += amount;
-      }
+      // Use API-provided balance instead of calculating
+      runningBalance = transactionBalance;
 
       // Format date to show only date (no time)
       String formattedDate = date;
@@ -1195,13 +1186,13 @@ class TransactionReportStandardPrinter {
   ) {
     // Create styles to match screenshot
     final customerDetailStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
       color: PdfColors.black,
     );
 
     // Create a style for customer information header
     final customerInfoHeaderStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 9.0 : 14.0,
+      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
       fontWeight: pw.FontWeight.bold,
       color: PdfColors.grey700,
     );
@@ -1433,14 +1424,14 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Total Credit: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
                   pw.Text(
                     '${totalCredit.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
@@ -1454,14 +1445,14 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Total Debit: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
                   pw.Text(
                     '${totalDebit.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                       color: PdfColors.grey700,
                     ),
                   ),
@@ -1475,7 +1466,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Balance: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 9.0 : 13.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 11.0,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.black,
                     ),
@@ -1483,7 +1474,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     '${balance.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 9.0 : 13.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 11.0,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.black,
                     ),
@@ -1615,7 +1606,7 @@ class TransactionReportStandardPrinter {
         color: PdfColors.grey700,
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.5 : 9.0,
         color: PdfColors.black,
       );
       final smallStyle = pw.TextStyle(
@@ -1623,12 +1614,12 @@ class TransactionReportStandardPrinter {
         color: PdfColors.grey600,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 7.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 8.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 6.5 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 4.5 : 7.5,
         color: PdfColors.black,
       );
       final summaryStyle = pw.TextStyle(
@@ -1669,131 +1660,118 @@ class TransactionReportStandardPrinter {
             ),
           ),
           build: (pw.Context context) => [
-            // Wrap entire content in a Column so it flows
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Header with store information - professional design to match PHP template
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      // Show header if enabled
-                      if (updatedSettings?['showHeader']?.visible == true)
-                        pw.Text(
-                          billDocumentConfig.header ?? 'EPosenke',
-                          style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey800,
-                          ),
-                        ),
-                      pw.SizedBox(height: 5),
-                      // Show subheader if enabled
-                      if (updatedSettings?['showSubheader']?.visible == true)
-                        pw.Text(
-                          billDocumentConfig.subheader ??
-                              'Customer Statement',
-                          style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey800,
-                          ),
-                        ),
-                      pw.SizedBox(height: 10),
-                      pw.Container(
-                        height: 2,
+            // Header with store information - professional design to match PHP template
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  if (updatedSettings?['showHeader']?.visible == true)
+                    pw.Text(
+                      billDocumentConfig.header ?? 'EPosenke',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
+                        fontWeight: pw.FontWeight.bold,
                         color: PdfColors.grey800,
                       ),
-                    ],
-                  ),
-                ),
-
-                pw.SizedBox(height: 15),
-
-                // Customer Information Section - if available
-                if (customerName != null ||
-                    customerPhone != null ||
-                    customerEmail != null ||
-                    customerAddress != null)
-                  _buildCustomerDetailsPDF(
-                    selectedPaperSize,
-                    customerName,
-                    customerPhone,
-                    customerEmail,
-                    customerAddress,
-                    subheaderStyle,
-                    bodyStyle,
-                    fromDate,
-                    toDate,
-                    updatedSettings,
-                  ),
-
-                // Add date range information outside customer card and align to right
-                // Only show if showDates is enabled
-                if ((updatedSettings?['showDates']?.visible ?? true) &&
-                    ((fromDate != null && fromDate.isNotEmpty) ||
-                        (toDate != null && toDate.isNotEmpty)))
+                    ),
+                  pw.SizedBox(height: 5),
+                  if (updatedSettings?['showSubheader']?.visible == true)
+                    pw.Text(
+                      billDocumentConfig.subheader ?? 'Customer Statement',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.grey800,
+                      ),
+                    ),
+                  pw.SizedBox(height: 10),
                   pw.Container(
-                    margin: const pw.EdgeInsets.only(bottom: 10),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                    height: 2,
+                    color: PdfColors.grey800,
+                  ),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 15),
+
+            // Customer Information Section - if available
+            if (customerName != null ||
+                customerPhone != null ||
+                customerEmail != null ||
+                customerAddress != null)
+              _buildCustomerDetailsPDF(
+                selectedPaperSize,
+                customerName,
+                customerPhone,
+                customerEmail,
+                customerAddress,
+                subheaderStyle,
+                bodyStyle,
+                fromDate,
+                toDate,
+                updatedSettings,
+              ),
+
+            // Add date range information outside customer card and align to right
+            if ((updatedSettings?['showDates']?.visible ?? true) &&
+                ((fromDate != null && fromDate.isNotEmpty) ||
+                    (toDate != null && toDate.isNotEmpty)))
+              pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 10),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.end,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.end,
-                          children: [
-                            pw.Text(
-                              'From: ${fromDate ?? 'N/A'},',
-                              style: pw.TextStyle(
-                                fontSize:
-                                    selectedPaperSize == 'A5' ? 9.0 : 12.0,
-                                color: PdfColors.black,
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                            pw.SizedBox(
-                                height: 4), // Add spacing between date lines
-                            pw.Text(
-                              'To : ${toDate ?? 'N/A'},',
-                              style: pw.TextStyle(
-                                fontSize:
-                                    selectedPaperSize == 'A5' ? 9.0 : 12.0,
-                                color: PdfColors.black,
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        pw.Text(
+                          'From: ${fromDate ?? 'N/A'},',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
+                            color: PdfColors.black,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'To : ${toDate ?? 'N/A'},',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 7.5 : 10.0,
+                            color: PdfColors.black,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-
-                pw.SizedBox(height: 15),
-
-                // Items table - professional design with borders to match PHP template
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                      vertical: 15, horizontal: 0),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      _buildPdfTransactionReportItemsTable(
-                          tableHeaderStyle,
-                          bodyStyle,
-                          updatedSettings,
-                          cartItems,
-                          isFromLocalStorage,
-                          billDocumentConfig),
-                    ],
-                  ),
+                  ],
                 ),
+              ),
 
-                // Cart Total Row - added after items table
-                _buildCartTotalRow(selectedPaperSize, cartItems,
-                    isFromLocalStorage, summaryStyle),
+            pw.SizedBox(height: 15),
 
-                pw.SizedBox(height: 15),
-              ],
+            // Items table - professional design with borders to match PHP template
+            pw.Container(
+              padding:
+                  const pw.EdgeInsets.symmetric(vertical: 15, horizontal: 0),
+              child: _buildPdfTransactionReportItemsTable(
+                tableHeaderStyle,
+                bodyStyle,
+                updatedSettings,
+                cartItems,
+                isFromLocalStorage,
+                billDocumentConfig,
+              ),
             ),
+
+            // Cart Total Row - added after items table
+            _buildCartTotalRow(
+              selectedPaperSize,
+              cartItems,
+              isFromLocalStorage,
+              summaryStyle,
+            ),
+
+            pw.SizedBox(height: 15),
           ],
         ),
       );

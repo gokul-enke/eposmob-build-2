@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.pos_machine">
+    package="com.enke.cloudpos">
    <application
         android:label="pos_machine"
         android:name="${applicationName}"

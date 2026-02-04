@@ -1,22 +1,20 @@
 class APPUrl {
-  // static String baseURL = "https://epos.enke.ae";
-  // static String baseURL = "https://hypersouq.enke.in";
-  // static String baseURL = "https://epos.mevcakes.com";
-  // static String baseURL = "https://kmstoys.enke.in";
-  //  static String baseURL = "https://stagingepos.enke.ae";
-  // static String baseURL = "https://tenant.hypersouq.in";
-   static String baseURL = "https://eposdemo.hypersouq.in";
+  static const String baseURL = String.fromEnvironment('BASE_URL',
+      defaultValue: "https://eposdemo.yougoit.in");
+  // static String baseURL = "https://eposdemo.yougoit.in";
+
+  // static String baseURL = "https://linetolinepos.yougoit.in";
   // static String baseURL = "https://epos.hypersouq.in";
-  //  static String baseURL = "https://epos.yougoit.in";
-  // static String baseURL = "https://open-poems-sneeze.loca.lt";
-  // static String baseURL = "http://localhost:8000";
-  // static String baseURL = "https://icy-goats-brake.loca.lt";
-  // static void setBaseUrl(String url) {
-  //   baseURL = url;
-  // }
+  // static String baseURL = "https://eeezeeerp.cloudposai.com";
 
   static String verifyApiKey = '$baseURL/api/v1/verify-api-key';
-  static String categoryListUrl = '$baseURL/api/v1/category/list-category';
+  static String categoryListUrl =
+      '$baseURL/api/v1/category/list-category?type=sellable';
+  static String getSellableCategoryListUrl =
+      '$baseURL/api/v1/category/list-category?type=sellable';
+  // URL to fetch all categories without type=sellable filter
+  static String getRawCategoryListUrl =
+      '$baseURL/api/v1/category/list-category';
   static String viewCategoryListUrl = '$baseURL/api/v1/category-details';
   static String addCategoryUrl = '$baseURL/api/v1/category/add-category';
   static String editCategoryUrl = '$baseURL/api/v1/category/edit-category';
@@ -24,9 +22,15 @@ class APPUrl {
       '$baseURL/api/v1/product/fetch-prop-values';
 
   // static String getProcductUrl = '$baseURL/api/v1/list-products';
-  static String getProductUrl =
+  static String getSellableProductUrl =
+      '$baseURL/api/v1/product/executive/list-products';
+  static String getAllProductsUrl =
+      '$baseURL/api/v1/product/executive/list-products';
+  // URL to fetch all products without type=sellable filter
+  static String getRawProductUrl =
       '$baseURL/api/v1/product/executive/list-products';
   static String addToCartUrl = '$baseURL/api/v1/cart/add-to-cart';
+  static String listRoles = '$baseURL/api/v1/roles/list';
   static String removeFromCartUrl = '$baseURL/api/v1/cart/remove-from-cart';
   static String listCartUrl = '$baseURL/api/v1/cart/executive/list-cart-items';
   static String updateCartItemPriceUrl =
@@ -61,6 +65,10 @@ class APPUrl {
   // static String customerListUrl = '$baseURL/api/v1/sales/list-customer';
   static String customerListUrl = '$baseURL/api/v1/customer/customer-searchbar';
   static String userDetailsUrl = '$baseURL/api/v1/user/get-user-details';
+  static String executiveAddAddressUrl =
+      '$baseURL/api/v1/customer/executive-add-address';
+  static String executiveUpdateAddressUrl =
+      '$baseURL/api/v1/customer/executive-update-address';
   static String findCustomerByPhone = '$baseURL/api/v1/search-user-by-key';
 
   static String createProductUrl = '$baseURL/api/v1/product/create-product';
@@ -87,6 +95,7 @@ class APPUrl {
   // static String listPurchases =
   //     '$baseURL/api/v1/purchases/list-purchase-order';
   static String addSupplier = '$baseURL/api/v1/add-supplier';
+  static String updateSupplier = '$baseURL/api/v1/update-suppliers';
   static String listPurchases = '$baseURL/api/v1/purchases/list-purchase-order';
   static String listPurchaseVoucher =
       '$baseURL/api/v1/purchases/voucher-searchbar';
@@ -125,8 +134,17 @@ class APPUrl {
       '$baseURL/api/v1/transaction/list-transactions';
   static String listAllInvoices = '$baseURL/api/v1/invoice/list-invoices';
   static String listAllReceipts = '$baseURL/api/v1/receipt/list-receipts';
+  static String createReceipt = '$baseURL/api/v1/receipt/create-receipt';
   static String detailsOfReceipt = '$baseURL/api/v1/receipt/receipt-details';
   static String detailsOfInvoice = '$baseURL/api/v1/invoice/invoice-details';
+  static String createInvoice = '$baseURL/api/v1/invoice/invoice-create';
+  static String listCustomerVouchers = '$baseURL/api/v1/voucher/vouchers-list';
+  static String createCustomerVoucher =
+      '$baseURL/api/v1/voucher/vouchers-create';
+  static String listSupplierVouchers =
+      '$baseURL/api/v1/suppliers/list-supplier-voucher';
+  static String createSupplierVoucher =
+      '$baseURL/api/v1/suppliers/create-supplier-voucher';
   static String listStates = '$baseURL/api/v1/location/get-states';
   static String listDistricts = '$baseURL/api/v1/location/get-district';
   static String listPincodes = '$baseURL/api/v1/location/list-pincodes';
@@ -141,6 +159,7 @@ class APPUrl {
   static String supplierSalesReport =
       '$baseURL/api/v1/reports/supplier-sales-report';
   static String applyCoupon = '$baseURL/api/v1/discount/apply-coupon';
+  static String listDiscounts = '$baseURL/api/v1/discount/list-discounts';
   static String listFaqs = '$baseURL/api/v1/faq/faqs/company/1';
   static String getGeneralSettings = '$baseURL/api/v1/general';
   static String getAppSettings = '$baseURL/api/v1/website-settings';
@@ -156,31 +175,62 @@ class APPUrl {
   static String getMasterDataValues = '$baseURL/api/v1/master-data-values';
   static String getTableList =
       '$baseURL/api/v1/master-data-values?code=TABLE_LIST';
+  static String getPaymentMethods =
+      '$baseURL/api/v1/master-data-values?code=PAYMENT_METHOD';
   static String documentConfigs = '$baseURL/api/v1/document/document-configs';
   static String supplierTransactions =
       '$baseURL/api/v1/suppliers/list-transactions';
+  static String supplierTransactionsV2 =
+      '$baseURL/api/v1/suppliers/supplier-transactions';
+  static String customerTransactions =
+      '$baseURL/api/v1/transaction/customer-transactions';
   static String calculateTax = '$baseURL/api/v1/calculate-tax';
   static String getCartItemStatuses = '$baseURL/api/v1/cart/cart-item-statuses';
   static String updateCartItemStatus =
       '$baseURL/api/v1/cart/update-cart-item-status';
   static String generateBarcode = '$baseURL/api/v1/product/generate-barcode';
+  static String updateAllOrderItemsStatus =
+      '$baseURL/api/v1/order/update-order-items-status';
 
   static String getSalesExecutiveReport =
       '$baseURL/api/v1/sales-executive-report';
   static String getCompanyaccounts =
       '$baseURL/api/v1/accounts/company-accounts';
 
-
-
-  static String companyOverview =
-      '$baseURL/api/v1/dashboard/company-overview';   
-  static String ordersGraph =
-      '$baseURL/api/v1/dashboard/orders-graph'; 
-  static String customersGraph =
-      '$baseURL/api/v1/dashboard/customers-graph';      
+  static String companyOverview = '$baseURL/api/v1/dashboard/company-overview';
+  static String ordersGraph = '$baseURL/api/v1/dashboard/orders-graph';
+  static String customersGraph = '$baseURL/api/v1/dashboard/customers-graph';
   static String executivesOverview =
       '$baseURL/api/v1/dashboard/executives-overview';
-  static String salesGraph =
-      '$baseURL/api/v1/dashboard/executive-sales-graph';    
+  static String salesGraph = '$baseURL/api/v1/dashboard/executive-sales-graph';
 
+  // ZATCA endpoints
+  static String zatcaPhase1InvoicePrint =
+      '$baseURL/api/v1/zatca/phase1/invoice/print';
+  static String zatcaPhase2InvoicePrint =
+      '$baseURL/api/v1/zatca/phase2/invoice/print';
+  static String zatcaPhase2InvoiceResync =
+      '$baseURL/api/v1/zatca/phase2/invoice/resync';
+
+  // ZATCA Voucher endpoints
+  static String zatcaPhase2VoucherPrint =
+      '$baseURL/api/v1/zatca/phase2/voucher/print';
+  static String zatcaPhase2VoucherResync =
+      '$baseURL/api/v1/zatca/phase2/voucher/resync';
+
+  // Supplier Dashboard Endpoints
+  static String suppliersOverview =
+      '$baseURL/api/v1/dashboard/suppliers-overview';
+  static String suppliersPurchaseGraph =
+      '$baseURL/api/v1/dashboard/suppliers-purchase-graph';
+  static String supplierTransactionsGraph =
+      '$baseURL/api/v1/dashboard/supplier-transactions-graph';
+  static String supplierCreditBalance =
+      '$baseURL/api/v1/dashboard/supplier-credit-balance';
+  static String nonStockReportUrl = '$baseURL/api/v1/non-stock-report';
+  static String listDailySalesClose = '$baseURL/api/v1/daily-sales-close/list';
+  static String dailySalesCloseSummary =
+      '$baseURL/api/v1/daily-sales-close/summary';
+  static String dailySalesCloseCreate =
+      '$baseURL/api/v1/daily-sales-close/create';
 }

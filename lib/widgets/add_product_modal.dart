@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -12,8 +10,11 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
-import 'package:pos_machine/components/build_dropdown_with_search.dart';
+import 'package:pos_machine/newcomponents/custom_container_box.dart';
+import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 
 class AddProductWithBarcodeModal extends StatefulWidget {
   final String? barcode;
@@ -44,6 +45,15 @@ class _AddProductWithBarcodeModalState
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
+
+  // Focus nodes for each text field
+  final FocusNode _barcodeFocusNode = FocusNode();
+  final FocusNode _productNameFocusNode = FocusNode();
+  final FocusNode _mrpFocusNode = FocusNode();
+  final FocusNode _quantityFocusNode = FocusNode();
+  final FocusNode _sellingPriceFocusNode = FocusNode();
+  final FocusNode _purchasePriceFocusNode = FocusNode();
+
   bool isLoading = false;
   bool isBarcodeGenerating = false;
   String? selectedUnit;
@@ -55,7 +65,28 @@ class _AddProductWithBarcodeModalState
     if (widget.barcode != null) {
       _productBarcodeController.text = widget.barcode!;
     }
+
+    // Set default quantity value to 0 when opening the modal
+    _productQuantityController.text = '0';
     super.initState();
+  }
+
+  // Helper method to unfocus all text fields except the specified one
+  void _unfocusAllExcept(FocusNode? keepFocused) {
+    final allFocusNodes = [
+      _barcodeFocusNode,
+      _productNameFocusNode,
+      _mrpFocusNode,
+      _quantityFocusNode,
+      _sellingPriceFocusNode,
+      _purchasePriceFocusNode,
+    ];
+
+    for (final node in allFocusNodes) {
+      if (node != keepFocused && node.hasFocus) {
+        node.unfocus();
+      }
+    }
   }
 
   @override
@@ -68,6 +99,15 @@ class _AddProductWithBarcodeModalState
     _productPurchasePriceController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
+
+    // Dispose focus nodes
+    _barcodeFocusNode.dispose();
+    _productNameFocusNode.dispose();
+    _mrpFocusNode.dispose();
+    _quantityFocusNode.dispose();
+    _sellingPriceFocusNode.dispose();
+    _purchasePriceFocusNode.dispose();
+
     isLoading = false;
     selectedUnit = null;
     selectedCategory = null;
@@ -144,507 +184,641 @@ class _AddProductWithBarcodeModalState
     List<Category>? categoryList = categoryProvider.category;
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
       ),
-      elevation: 8,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       child: Container(
         constraints: BoxConstraints(
-            maxWidth: size.width / 2,
-            maxHeight: MediaQuery.of(context).size.height * 0.8),
-        padding: const EdgeInsets.all(24),
+            maxWidth: size.width * 0.45,
+            maxHeight: MediaQuery.of(context).size.height * 0.75),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
         child: Form(
-          // Step 2
-          key: formKey, // Step 1
-          child: ListView(
-            shrinkWrap: true,
-            physics: const BouncingScrollPhysics(),
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Create New Product",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Create New Product",
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s20,
+                        0.30,
+                        ColorManager.textColor,
+                      ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black54),
+                      onPressed: () => Navigator.of(context).pop(),
+                      splashRadius: 20,
+                    ),
+                  ],
+                ),
+                Text(
+                  widget.barcode != null
+                      ? "No product found with barcode ${widget.barcode}"
+                      : "Create a new product with custom barcode",
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.27,
+                    Colors.black54,
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              Text(
-                widget.barcode != null
-                    ? "No product was found with the barcode ${widget.barcode} , would you like to create a new product?"
-                    : "Create a new product with custom barcode",
-                style: const TextStyle(fontSize: 16, color: Colors.black54),
-              ),
-              const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 16),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Product Name TextField
-                  buildColumnWidgetForTextFields(
-                    autofocus: true,
-                    isStarRed: true,
-                    controller: _productNameController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    onchanged: (value) {
-                      // Remove validation loop - only validate on submit
-                    },
-                    hintText: 'Product Name',
-                    size: size,
-                    width: size.width / 4.5,
-                  ),
+                // Row 1: Product Name, Barcode
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        "Product Name",
+                        _productNameController,
+                        TextInputType.text,
+                        size,
+                        isRequired: true,
+                        focusNode: _productNameFocusNode,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildBarcodeField(size),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
 
-                  // Product Barcode TextField with Generate Button
-                  Container(
-                    width: size.width / 4.5,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: buildColumnWidgetForTextFields(
-                            autofocus: true,
-                            isStarRed: true,
-                            controller: _productBarcodeController,
-                            margin: const EdgeInsets.all(0),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'This field is required';
-                              }
-                              return null;
-                            },
-                            onchanged: (value) {
-                              // Remove validation loop - only validate on submit
-                            },
-                            hintText: 'Barcode',
-                            readOnly: widget.barcode != null,
-                            size: size,
-                            width: size.width / 4.5 -
-                                56, // Adjust width for button
+                // Row 2: Unit, Category
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildUnitDropdown(size, unitList),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildCategoryDropdown(size, categoryList),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Row 3: MRP, Purchase Price
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        "Max Sale Price / MRP",
+                        _productMRPController,
+                        TextInputType.number,
+                        size,
+                        isRequired: false,
+                        inputFormatter: FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _mrpFocusNode,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildTextField(
+                        "Purchase Price",
+                        _productPurchasePriceController,
+                        TextInputType.number,
+                        size,
+                        isRequired: true,
+                        inputFormatter: FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _purchasePriceFocusNode,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Row 4: Selling Price, Quantity
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        "Selling Price",
+                        _productSellingPriceController,
+                        TextInputType.number,
+                        size,
+                        isRequired: true,
+                        inputFormatter: FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _sellingPriceFocusNode,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildTextField(
+                        "Quantity",
+                        _productQuantityController,
+                        TextInputType.number,
+                        size,
+                        isRequired: true,
+                        inputFormatter: FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _quantityFocusNode,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Close Button
+                    SizedBox(
+                      width: 100,
+                      height: 40,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, null),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: ColorManager.kPrimaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed:
-                                widget.barcode != null || isBarcodeGenerating
-                                    ? null
-                                    : generateBarcode,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                        child: Text(
+                          "Close",
+                          style: TextStyle(
+                            color: ColorManager.kPrimaryColor,
+                            fontSize: FontSize.s12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Add Product Button
+                    SizedBox(
+                      width: 120,
+                      height: 40,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ColorManager.kPrimaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                "Add Product",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: FontSize.s12,
+                                ),
                               ),
-                            ),
-                            child: isBarcodeGenerating
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white),
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.refresh,
-                                    size: 18,
-                                  ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Product Unit Dropdown
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SizedBox(
-                    width: size.width / 4.4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BuildDropDownWithSearch<String>(
-                          title: 'Product Unit',
-                          hintText: 'Choose Product Unit',
-                          value: selectedUnit,
-                          margin: const EdgeInsets.only(left: 5),
-                          items: unitList?.entries
-                                  .map((entry) => entry.key)
-                                  .toList() ??
-                              [],
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              selectedUnit = newValue;
-                            });
-                          },
-                          displayText: (item) => unitList?[item] ?? '',
-                          searchController: _unitSearchController,
-                          isRequired: true,
-                          height: size.height * .07,
-                          showName: false,
-                        ),
-                        if (isValidatedOnce && selectedUnit == null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 5, top: 5),
-                            child: Text(
-                              'Product Unit is required',
-                              style: TextStyle(
-                                color: Colors.red[700],
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  // Product Category Dropdown
-                  SizedBox(
-                    width: size.width / 4.4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BuildDropDownWithSearch<Category>(
-                          title: 'Product Category',
-                          hintText: 'Select Category',
-                          value: selectedCategory,
-                          margin: const EdgeInsets.only(right: 5),
-                          items: categoryList ?? [],
-                          onChanged: (Category? newCategory) {
-                            setState(() {
-                              selectedCategory = newCategory;
-                            });
-                          },
-                          displayText: (category) =>
-                              category.categoryName ?? '',
-                          searchController: _categorySearchController,
-                          isRequired: true,
-                          height: size.height * .07,
-                          showName: false,
-                          width: size.width / 4.5,
-                        ),
-                        if (isValidatedOnce && selectedCategory == null)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 5, top: 5),
-                            child: Text(
-                              'Product Category is required',
-                              style: TextStyle(
-                                color: Colors.red[700],
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Product MRP TextField
-                  buildColumnWidgetForTextFields(
-                    width: size.width / 4.5,
-                    autofocus: true,
-                    isStarRed: true,
-                    controller: _productMRPController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    onchanged: (value) {
-                      // Remove validation loop - only validate on submit
-                    },
-                    hintText: 'Product MRP',
-                    size: size,
-                  ),
-                  // Product Purchase Price TextField
-                  buildColumnWidgetForTextFields(
-                    autofocus: true,
-                    isStarRed: true,
-                    controller: _productPurchasePriceController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    onchanged: (value) {
-                      // Remove validation loop - only validate on submit
-                    },
-                    hintText: 'Purchase Price',
-                    size: size,
-                    width: size.width / 4.5,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Product Selling Price TextField
-                  buildColumnWidgetForTextFields(
-                    autofocus: true,
-                    isStarRed: true,
-                    controller: _productSellingPriceController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    onchanged: (value) {
-                      // Remove validation loop - only validate on submit
-                    },
-                    hintText: 'Product Selling Price',
-                    size: size,
-                    width: size.width / 4.5,
-                  ),
-                  // Product Quantity TextField
-                  buildColumnWidgetForTextFields(
-                    width: size.width / 4.5,
-                    autofocus: true,
-                    isStarRed: true,
-                    controller: _productQuantityController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    onchanged: (value) {
-                      // Remove validation loop - only validate on submit
-                    },
-                    hintText: 'Quantity',
-                    size: size,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Close Button
-
-                  CustomRoundButton(
-                    title: "Close",
-                    isLoading: isLoading,
-                    fontSize: FontSize.s12,
-                    height: MediaQuery.of(context).size.height * .05,
-                    width: 120,
-                    textColor: Colors.blue,
-                    borderColor: Colors.blue,
-                    boxColor: Colors.white,
-                    fct: () async {
-                      Navigator.pop(context, null);
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  // Add Product Button
-                  CustomRoundButton(
-                    title: "Add Product",
-                    isLoading: isLoading,
-                    fontSize: FontSize.s12,
-                    height: MediaQuery.of(context).size.height * .05,
-                    width: 120,
-                    fct: () async {
-                      setState(() {
-                        isValidatedOnce = true;
-                      });
-
-                      // Validate form fields and dropdowns
-                      bool isFormValid = formKey.currentState!.validate();
-                      bool isUnitValid = selectedUnit != null;
-                      bool isCategoryValid = selectedCategory != null;
-
-                      if (isFormValid && isUnitValid && isCategoryValid) {
-                        formKey.currentState!.save();
-
-                        setState(() {
-                          isLoading = true;
-                        });
-                        try {
-                          String? accessToken =
-                              Provider.of<AuthModel>(context, listen: false)
-                                  .token;
-                          GridSelectionProvider gridSelectionProvider =
-                              Provider.of<GridSelectionProvider>(context,
-                                  listen: false);
-
-                          final result =
-                              await gridSelectionProvider.createProductAPI(
-                            categoryId: selectedCategory!.categoryId.toString(),
-                            productName: _productNameController.text,
-                            sellingPrice: _productSellingPriceController.text,
-                            mrp: _productMRPController.text,
-                            unit: selectedUnit!,
-                            quantity: _productQuantityController.text,
-                            barcode: _productBarcodeController.text,
-                            accessToken: accessToken ?? "",
-                            purchasePrice: _productPurchasePriceController.text,
-                          );
-
-                          // Handle success response
-                          if (result is Map<String, dynamic> &&
-                              result.containsKey('data')) {
-                            try {
-                              GetProduct product =
-                                  GetProduct.fromJson(result['data']);
-                              Provider.of<LocalProductProvider>(context,
-                                      listen: false)
-                                  .addProduct(product);
-                            } catch (e) {
-                              debugPrint("Error parsing product: $e");
-                            }
-
-                            // Add the product directly to the cart
-                            if (widget.isAddToCart) {
-                              Provider.of<LocalProductProvider>(context,
-                                      listen: false)
-                                  .addToCart(
-                                productId: result["data"]['product_id'],
-                                price: double.parse(
-                                    _productSellingPriceController.text),
-                                quantity: 1,
-                              );
-                            }
-
-                            Provider.of<LocalProductProvider>(context,
-                                    listen: false)
-                                .refreshProducts();
-
-                            // Return the created product and the entered quantity back to the caller so they can auto-fill
-                            // Prefer returning the parsed GetProduct object. Include initialQuantity explicitly.
-                            try {
-                              final returnedProduct = GetProduct.fromJson(result['data']);
-                              Navigator.pop(context, {
-                                'product': returnedProduct,
-                                'initialQuantity': _productQuantityController.text,
-                              });
-                            } catch (_) {
-                              Navigator.pop(context, {
-                                'product': result['data'],
-                                'initialQuantity': _productQuantityController.text,
-                              });
-                            }
-                            showScaffold(
-                              context: context,
-                              message: 'Product added successfully',
-                            );
-                          } else {
-                            // Handle error response
-                            String errorMessage = 'Failed to add product';
-
-                            if (result is Map<String, dynamic>) {
-                              if (result.containsKey('message')) {
-                                errorMessage = result['message'].toString();
-                              } else if (result.containsKey('errors')) {
-                                // Handle validation errors
-                                Map<String, dynamic> errors = result['errors'];
-                                List<String> errorMessages = [];
-                                errors.forEach((field, messages) {
-                                  if (messages is List) {
-                                    for (var message in messages) {
-                                      errorMessages.add("$field: $message");
-                                    }
-                                  } else {
-                                    errorMessages.add("$field: $messages");
-                                  }
-                                });
-                                errorMessage = errorMessages.join('\n');
-                              }
-                            } else if (result is String) {
-                              try {
-                                // Try to parse as JSON if it's a string
-                                final jsonResponse = json.decode(result);
-                                if (jsonResponse['message'] != null) {
-                                  errorMessage = jsonResponse['message'];
-                                }
-                              } catch (e) {
-                                errorMessage = result;
-                              }
-                            }
-
-                            showScaffoldError(
-                              context: context,
-                              message: errorMessage,
-                            );
-                          }
-                        } catch (e) {
-                          showScaffoldError(
-                            context: context,
-                            message: 'Error adding product: ${e.toString()}',
-                          );
-                          debugPrint("Error in product creation: $e");
-                        } finally {
-                          setState(() {
-                            isLoading = false;
-                          });
-                        }
-                      } else {
-                        // Show validation error
-                        showScaffoldError(
-                          context: context,
-                          message: 'Please fill all required fields correctly',
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  // Helper method for text fields
+  Widget _buildTextField(
+    String title,
+    TextEditingController controller,
+    TextInputType keyboardType,
+    Size size, {
+    bool isRequired = false,
+    TextInputFormatter? inputFormatter,
+    FocusNode? focusNode,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: title,
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              if (isRequired)
+                TextSpan(
+                  text: ' *',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.27,
+                    Colors.red,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        CustomBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.only(left: 12),
+          height: size.height * 0.048,
+          width: double.infinity,
+          child: TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatter != null ? [inputFormatter] : null,
+            cursorColor: ColorManager.kPrimaryColor,
+            onTap: () {
+              if (focusNode != null) {
+                _unfocusAllExcept(focusNode);
+              }
+            },
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(vertical: 12),
+            ),
+            validator: isRequired
+                ? (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    return null;
+                  }
+                : null,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s11,
+              0.27,
+              ColorManager.textColor.withOpacity(0.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Barcode field with generate button
+  Widget _buildBarcodeField(Size size) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: 'Barcode',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              TextSpan(
+                text: ' *',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: CustomBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.only(left: 12),
+                height: size.height * 0.048,
+                width: double.infinity,
+                child: TextFormField(
+                  controller: _productBarcodeController,
+                  focusNode: _barcodeFocusNode,
+                  readOnly: widget.barcode != null,
+                  cursorColor: ColorManager.kPrimaryColor,
+                  onTap: () {
+                    _unfocusAllExcept(_barcodeFocusNode);
+                  },
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    return null;
+                  },
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    ColorManager.textColor.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: size.height * 0.048,
+              width: size.height * 0.048,
+              child: ElevatedButton(
+                onPressed: widget.barcode != null || isBarcodeGenerating
+                    ? null
+                    : generateBarcode,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ColorManager.kPrimaryColor,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                ),
+                child: isBarcodeGenerating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.refresh, size: 18, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Unit dropdown
+  Widget _buildUnitDropdown(Size size, Map<String, String>? unitList) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: 'Product Unit',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              TextSpan(
+                text: ' *',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        CustomDropDownWithSearch<String>(
+          title: "",
+          hintText: "Choose Product Unit",
+          value: selectedUnit,
+          height: size.height * 0.048,
+          margin: EdgeInsets.zero,
+          items: unitList?.entries.map((entry) => entry.key).toList() ?? [],
+          onChanged: (String? newValue) {
+            setState(() {
+              selectedUnit = newValue;
+            });
+          },
+          displayText: (item) => unitList?[item] ?? '',
+          searchController: _unitSearchController,
+        ),
+        if (isValidatedOnce && selectedUnit == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Required',
+              style: TextStyle(color: Colors.red[700], fontSize: 11),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Category dropdown
+  Widget _buildCategoryDropdown(Size size, List<Category>? categoryList) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: 'Product Category',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              TextSpan(
+                text: ' *',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        CustomDropDownWithSearch<Category>(
+          title: "",
+          hintText: "Select Category",
+          value: selectedCategory,
+          height: size.height * 0.048,
+          margin: EdgeInsets.zero,
+          items: categoryList ?? [],
+          onChanged: (Category? newCategory) {
+            setState(() {
+              selectedCategory = newCategory;
+            });
+          },
+          displayText: (category) => category.categoryName ?? '',
+          searchController: _categorySearchController,
+        ),
+        if (isValidatedOnce && selectedCategory == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Required',
+              style: TextStyle(color: Colors.red[700], fontSize: 11),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Submit form
+  Future<void> _submitForm() async {
+    setState(() {
+      isValidatedOnce = true;
+    });
+
+    bool isFormValid = formKey.currentState!.validate();
+    bool isUnitValid = selectedUnit != null;
+    bool isCategoryValid = selectedCategory != null;
+
+    if (isFormValid && isUnitValid && isCategoryValid) {
+      formKey.currentState!.save();
+      setState(() {
+        isLoading = true;
+      });
+
+      try {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        GridSelectionProvider gridSelectionProvider =
+            Provider.of<GridSelectionProvider>(context, listen: false);
+
+        final result = await gridSelectionProvider.createProductAPI(
+          categoryId: selectedCategory!.categoryId.toString(),
+          productName: _productNameController.text,
+          sellingPrice: _productSellingPriceController.text,
+          mrp: _productMRPController.text,
+          unit: selectedUnit!,
+          quantity: _productQuantityController.text,
+          barcode: _productBarcodeController.text,
+          accessToken: accessToken ?? "",
+          purchasePrice: _productPurchasePriceController.text,
+        );
+
+        if (result is Map<String, dynamic> && result.containsKey('data')) {
+          try {
+            GetProduct product = GetProduct.fromJson(result['data']);
+            Provider.of<LocalProductProvider>(context, listen: false)
+                .addProduct(product);
+          } catch (e) {
+            debugPrint("Error parsing product: $e");
+          }
+
+          if (widget.isAddToCart) {
+            Provider.of<LocalProductProvider>(context, listen: false).addToCart(
+              productId: result["data"]['product_id'],
+              price: double.parse(_productSellingPriceController.text),
+              quantity: 1,
+            );
+          }
+
+          Provider.of<LocalProductProvider>(context, listen: false)
+              .refreshProducts();
+
+          try {
+            final returnedProduct = GetProduct.fromJson(result['data']);
+            Navigator.pop(context, {
+              'product': returnedProduct,
+              'initialQuantity': _productQuantityController.text,
+            });
+          } catch (_) {
+            Navigator.pop(context, {
+              'product': result['data'],
+              'initialQuantity': _productQuantityController.text,
+            });
+          }
+          showScaffold(context: context, message: 'Product added successfully');
+        } else {
+          String errorMessage = 'Failed to add product';
+          if (result is Map<String, dynamic>) {
+            if (result.containsKey('message')) {
+              errorMessage = result['message'].toString();
+            } else if (result.containsKey('errors')) {
+              Map<String, dynamic> errors = result['errors'];
+              List<String> errorMessages = [];
+              errors.forEach((field, messages) {
+                if (messages is List) {
+                  for (var message in messages) {
+                    errorMessages.add("$field: $message");
+                  }
+                } else {
+                  errorMessages.add("$field: $messages");
+                }
+              });
+              errorMessage = errorMessages.join('\n');
+            }
+          } else if (result is String) {
+            try {
+              final jsonResponse = json.decode(result);
+              if (jsonResponse['message'] != null) {
+                errorMessage = jsonResponse['message'];
+              }
+            } catch (e) {
+              errorMessage = result;
+            }
+          }
+          showScaffoldError(context: context, message: errorMessage);
+        }
+      } catch (e) {
+        showScaffoldError(
+          context: context,
+          message: 'Error adding product: ${e.toString()}',
+        );
+        debugPrint("Error in product creation: $e");
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } else {
+      showScaffoldError(
+        context: context,
+        message: 'Please fill all required fields correctly',
+      );
+    }
   }
 }

@@ -2,16 +2,19 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/view_category.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/models/local_models.dart';
 
 import '../resources/app_url.dart';
 
 class CategoryProvider extends ChangeNotifier {
   bool isLoading = false;
-  bool _isCategoriesLoaded = false; // Add this flag to track if categories are loaded
+  bool _isCategoriesLoaded =
+      false; // Add this flag to track if categories are loaded
   List<Category>? categoryList = [];
   List<Category>? searchCategoryList = [];
   List<Category>? filteredcategoryList = [];
@@ -98,24 +101,44 @@ class CategoryProvider extends ChangeNotifier {
     String? filterName,
     String? filterParent,
     int? page,
+    bool sellableOnly = true,
+    bool force = false,
   }) async {
     // If categories are already loaded and no filtering is applied, return early
     // BUT also check if categoryList is not empty to avoid empty list issues
-    if (_isCategoriesLoaded && 
-        filterName == null && 
-        filterParent == null && 
-        categoryList != null && 
+    if (!force &&
+        _isCategoriesLoaded &&
+        filterName == null &&
+        filterParent == null &&
+        categoryList != null &&
         categoryList!.isNotEmpty) {
-      debugPrint("🏷️ [CategoryProvider] Using cached categories: ${categoryList!.length}");
+      debugPrint(
+          "🏷️ [CategoryProvider] Using cached categories: ${categoryList!.length}");
       return;
     }
 
     // If filtering is applied, we need to make a new API call regardless
     if (filterName != null || filterParent != null) {
-      debugPrint("🏷️ [CategoryProvider] Making API call for filtering: filterName=$filterName");
+      debugPrint(
+          "🏷️ [CategoryProvider] Making API call for filtering: filterName=$filterName");
       // Don't reset the loaded flag for filtered results, just make the call
     } else {
-      debugPrint("🏷️ [CategoryProvider] Making initial API call for categories");
+      debugPrint(
+          "🏷️ [CategoryProvider] Making initial API call for categories");
+
+      // Try to load from Hive first for non-filtered requests
+      if (categoryList == null || categoryList!.isEmpty) {
+        final cachedCategories = await loadCategoriesFromHive();
+        if (cachedCategories.isNotEmpty) {
+          categoryList = cachedCategories;
+          _originalCategoryList = List.from(categoryList!);
+          _isCategoriesLoaded = true;
+          isLoading = false;
+          notifyListeners();
+          debugPrint("🏷️ [CategoryProvider] Using categories from Hive cache");
+          return;
+        }
+      }
     }
 
     isLoading = true;
@@ -134,8 +157,16 @@ class CategoryProvider extends ChangeNotifier {
       queryParameters['filter_parent'] = filterParent;
     }
 
-    final uri = Uri.parse(APPUrl.categoryListUrl)
-        .replace(queryParameters: queryParameters);
+    // Choose the appropriate URL based on the sellableOnly flag
+    final urlString = sellableOnly
+        ? APPUrl.getSellableCategoryListUrl
+        : APPUrl.getRawCategoryListUrl;
+
+    final baseUri = Uri.parse(urlString);
+    final finalQueryParameters =
+        Map<String, dynamic>.from(baseUri.queryParameters)
+          ..addAll(queryParameters);
+    final uri = baseUri.replace(queryParameters: finalQueryParameters);
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -165,6 +196,11 @@ class CategoryProvider extends ChangeNotifier {
         if (filterName == null && filterParent == null) {
           _originalCategoryList = List.from(categoryList!);
           _isCategoriesLoaded = true;
+
+          // Save to Hive for future offline use
+          if (categoryList != null && categoryList!.isNotEmpty) {
+            await saveCategoriesToHive(categoryList!);
+          }
         }
 
         isLoading = false;
@@ -188,16 +224,20 @@ class CategoryProvider extends ChangeNotifier {
     _isCategoriesLoaded = false;
     categoryList?.clear();
     _originalCategoryList?.clear();
+
+    // Clear Hive cache for fresh data
+    await clearCategoriesFromHive();
+
     await listAllCategory();
   }
 
   // Add a method to check if categories are properly loaded
-  bool get hasValidCategories => 
+  bool get hasValidCategories =>
       categoryList != null && categoryList!.isNotEmpty;
 
   // Add a getter to check if categories are loaded
   bool get isCategoriesLoaded => _isCategoriesLoaded;
-  
+
   // Add a setter to update the categories loaded flag
   set isCategoriesLoaded(bool value) {
     _isCategoriesLoaded = value;
@@ -207,10 +247,12 @@ class CategoryProvider extends ChangeNotifier {
   // Method to ensure categories are available for UI components like sidebar
   Future<void> ensureCategoriesLoaded() async {
     if (!_isCategoriesLoaded || categoryList == null || categoryList!.isEmpty) {
-      debugPrint("🏷️ [CategoryProvider] ensureCategoriesLoaded - loading categories");
+      debugPrint(
+          "🏷️ [CategoryProvider] ensureCategoriesLoaded - loading categories");
       await listAllCategory();
     } else {
-      debugPrint("🏷️ [CategoryProvider] ensureCategoriesLoaded - categories already available: ${categoryList!.length}");
+      debugPrint(
+          "🏷️ [CategoryProvider] ensureCategoriesLoaded - categories already available: ${categoryList!.length}");
     }
   }
 
@@ -246,8 +288,11 @@ class CategoryProvider extends ChangeNotifier {
       queryParameters['filter_parent'] = filterParent;
     }
 
-    final uri = Uri.parse(APPUrl.categoryListUrl)
-        .replace(queryParameters: queryParameters);
+    final baseUri = Uri.parse(APPUrl.getSellableCategoryListUrl);
+    final finalQueryParameters =
+        Map<String, dynamic>.from(baseUri.queryParameters)
+          ..addAll(queryParameters);
+    final uri = baseUri.replace(queryParameters: finalQueryParameters);
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -531,6 +576,101 @@ class CategoryProvider extends ChangeNotifier {
       }
     } catch (e) {
       // debugPrint('Error fetching prop values: ${e.toString()}');
+    }
+  }
+
+  // Hive storage methods for categories
+  Future<void> saveCategoriesToHive(List<Category> categories) async {
+    try {
+      final categoriesBox = await Hive.openBox<HiveCategory>('categories');
+
+      // Clear existing categories
+      await categoriesBox.clear();
+
+      // Save new categories
+      for (Category category in categories) {
+        final hiveCategory = HiveCategory.fromCategory(category);
+        await categoriesBox.put(category.categoryId, hiveCategory);
+      }
+
+      debugPrint(
+          "🏷️ [CategoryProvider] Saved ${categories.length} categories to Hive");
+    } catch (e) {
+      debugPrint("🏷️ [CategoryProvider] Error saving categories to Hive: $e");
+    }
+  }
+
+  Future<List<Category>> loadCategoriesFromHive() async {
+    try {
+      if (!Hive.isBoxOpen('categories')) {
+        await Hive.openBox<HiveCategory>('categories');
+      }
+
+      final categoriesBox = Hive.box<HiveCategory>('categories');
+      final hiveCategories = categoriesBox.values.toList();
+
+      // Convert Hive categories back to app model
+      final categories = hiveCategories
+          .map((hiveCategory) => hiveCategory.toCategory())
+          .toList();
+
+      debugPrint(
+          "🏷️ [CategoryProvider] Loaded ${categories.length} categories from Hive");
+      return categories;
+    } catch (e) {
+      debugPrint(
+          "🏷️ [CategoryProvider] Error loading categories from Hive: $e");
+      return [];
+    }
+  }
+
+  Future<void> clearCategoriesFromHive() async {
+    try {
+      if (Hive.isBoxOpen('categories')) {
+        await Hive.box<HiveCategory>('categories').clear();
+        debugPrint("🏷️ [CategoryProvider] Cleared categories from Hive");
+      }
+    } catch (e) {
+      debugPrint(
+          "🏷️ [CategoryProvider] Error clearing categories from Hive: $e");
+    }
+  }
+
+  /// Clears ALL category data for multi-tenant isolation.
+  /// Call this during logout or when switching API keys (tenants)
+  /// to prevent data leakage between different tenants.
+  Future<void> clearAllCategories() async {
+    debugPrint("🧹 CLEARING ALL CATEGORY DATA FOR TENANT ISOLATION");
+
+    try {
+      // Clear Hive storage
+      await clearCategoriesFromHive();
+
+      // Clear in-memory lists
+      categoryList?.clear();
+      searchCategoryList?.clear();
+      filteredcategoryList?.clear();
+      categoryListWithoutQuery?.clear();
+      _originalCategoryList?.clear();
+
+      // Reset state
+      _isCategoriesLoaded = false;
+      viewCategory = null;
+      categoryText = '';
+      parentCategory = '0';
+      editCategoryId = 0;
+      propCategory = 0;
+      categoryCount = 0;
+      currentPage = 1;
+      totalPages = 1;
+      propValues = null;
+      _selectedCategoryIndex = 0;
+
+      notifyListeners();
+      debugPrint("✅ ALL CATEGORY DATA CLEARED SUCCESSFULLY");
+    } catch (e) {
+      debugPrint("❌ Error clearing category data: $e");
+      rethrow;
     }
   }
 }

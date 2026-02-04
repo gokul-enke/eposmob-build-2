@@ -208,7 +208,7 @@ class SupplierTransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.5 : 9.0,
         color: PdfColors.black,
         height: 2, // Add line height for better spacing between lines
       );
@@ -218,15 +218,15 @@ class SupplierTransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 8.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
-        height: 2, // Add line height for better spacing between lines
+        height: 1.5, // Reduced line height for A5
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 4.5 : 7.5,
         color: PdfColors.black,
-        height: 2, // Add line height for better spacing between lines
+        height: 1.5, // Reduced line height for A5
       );
       final summaryStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
@@ -267,128 +267,122 @@ class SupplierTransactionReportStandardPrinter {
             ),
           ),
           build: (pw.Context context) => [
-            // Wrap entire content in a Column so it flows
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Header with store information - professional design to match PHP template
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      // Show header if enabled
-                      if (updatedSettings?['showHeader']?.visible == true)
-                        pw.Text(
-                          billDocumentConfig?.header ?? 'EPosenke',
-                          style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey800,
-                          ),
-                        ),
-                      pw.SizedBox(height: 5),
-                      // Show subheader if enabled
-                      if (updatedSettings?['showSubheader']?.visible == true)
-                        pw.Text(
-                          billDocumentConfig?.subheader ??
-                              'Supplier Transaction Report',
-                          style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey800,
-                          ),
-                        ),
-                      pw.SizedBox(height: 10),
-                      pw.Container(
-                        height: 2,
+            // Header with store information - professional design to match PHP template
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  // Show header if enabled
+                  if (updatedSettings?['showHeader']?.visible == true)
+                    pw.Text(
+                      billDocumentConfig?.header ?? 'EPosenke',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
+                        fontWeight: pw.FontWeight.bold,
                         color: PdfColors.grey800,
                       ),
-                    ],
-                  ),
-                ),
-
-                pw.SizedBox(height: 15),
-
-                // Supplier Information Section - if available
-                if (supplierName != null ||
-                    supplierPhone != null ||
-                    supplierEmail != null ||
-                    supplierAddress != null)
-                  _buildSupplierDetailsPDF(
-                    selectedPaperSize,
-                    supplierName,
-                    supplierPhone,
-                    supplierEmail,
-                    supplierAddress,
-                    subheaderStyle,
-                    bodyStyle,
-                    fromDate,
-                    toDate,
-                    updatedSettings,
-                  ),
-
-                // Add date range information outside supplier card and align to right
-                if ((fromDate != null && fromDate.isNotEmpty) ||
-                    (toDate != null && toDate.isNotEmpty))
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.end,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: [
-                          if (updatedSettings?['showDates']?.visible == true) ...[
-                            pw.Text(
-                              'From: ${fromDate ?? 'N/A'}',
-                              style: pw.TextStyle(
-                                  fontSize:
-                                      selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                                  color: PdfColor.fromHex('#2d3748'),
-                                  fontWeight: pw.FontWeight.bold,
-                                  height: 2), // Add line height for better spacing
-                            ),
-                            pw.SizedBox(
-                                height: 6), // Add spacing between date lines
-                            pw.Text(
-                              'To: ${toDate ?? 'N/A'}',
-                              style: pw.TextStyle(
-                                  fontSize:
-                                      selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                                  color: PdfColor.fromHex('#2d3748'),
-                                  fontWeight: pw.FontWeight.bold,
-                                  height: 2), // Add line height for better spacing
-                            ),
-                          ],
-                        ],
+                    ),
+                  pw.SizedBox(height: 5),
+                  // Show subheader if enabled
+                  if (updatedSettings?['showSubheader']?.visible == true)
+                    pw.Text(
+                      billDocumentConfig?.subheader ??
+                          'Supplier Transaction Report',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.grey800,
                       ),
-                    ],
+                    ),
+                  pw.SizedBox(height: 10),
+                  pw.Container(
+                    height: 2,
+                    color: PdfColors.grey800,
                   ),
-
-                pw.SizedBox(height: 15),
-
-                // Items table - professional design with borders to match PHP template
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                      vertical: 15, horizontal: 0),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      _buildPdfSupplierTransactionReportItemsTable(
-                          tableHeaderStyle,
-                          bodyStyle,
-                          updatedSettings,
-                          cartItems,
-                          isFromLocalStorage,
-                          billDocumentConfig),
-                    ],
-                  ),
-                ),
-
-                // Cart Total Row - added after items table
-                _buildCartTotalRow(selectedPaperSize, cartItems,
-                    isFromLocalStorage, summaryStyle, updatedSettings),
-
-                pw.SizedBox(height: 15),
-              ],
+                ],
+              ),
             ),
+
+            pw.SizedBox(height: 15),
+
+            // Supplier Information Section - if available
+            if (supplierName != null ||
+                supplierPhone != null ||
+                supplierEmail != null ||
+                supplierAddress != null)
+              _buildSupplierDetailsPDF(
+                selectedPaperSize,
+                supplierName,
+                supplierPhone,
+                supplierEmail,
+                supplierAddress,
+                subheaderStyle,
+                bodyStyle,
+                fromDate,
+                toDate,
+                updatedSettings,
+              ),
+
+            // Add date range information outside supplier card and align to right
+            if ((fromDate != null && fromDate.isNotEmpty) ||
+                (toDate != null && toDate.isNotEmpty))
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      if (updatedSettings?['showDates']?.visible == true) ...[
+                        pw.Text(
+                          'From: ${fromDate ?? 'N/A'}',
+                          style: pw.TextStyle(
+                              fontSize:
+                                  selectedPaperSize == 'A5' ? 7.5 : 10.0,
+                              color: PdfColor.fromHex('#2d3748'),
+                              fontWeight: pw.FontWeight.bold,
+                              height: 2),
+                        ),
+                        pw.SizedBox(height: 6),
+                        pw.Text(
+                          'To: ${toDate ?? 'N/A'}',
+                          style: pw.TextStyle(
+                              fontSize:
+                                  selectedPaperSize == 'A5' ? 7.5 : 10.0,
+                              color: PdfColor.fromHex('#2d3748'),
+                              fontWeight: pw.FontWeight.bold,
+                              height: 2),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+
+            pw.SizedBox(height: 15),
+
+            // Items table - professional design with borders to match PHP template
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                  vertical: 15, horizontal: 0),
+              child: _buildPdfSupplierTransactionReportItemsTable(
+                tableHeaderStyle,
+                bodyStyle,
+                updatedSettings,
+                cartItems,
+                isFromLocalStorage,
+                billDocumentConfig,
+              ),
+            ),
+
+            // Cart Total Row - added after items table
+            _buildCartTotalRow(
+              selectedPaperSize,
+              cartItems,
+              isFromLocalStorage,
+              summaryStyle,
+              updatedSettings,
+            ),
+
+            pw.SizedBox(height: 15),
           ],
         ),
       );
@@ -535,14 +529,14 @@ class SupplierTransactionReportStandardPrinter {
   ) {
     // Create styles to match screenshot
     final supplierDetailStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+      fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
       color: PdfColors.black,
       height: 2, // Add line height for better spacing between lines
     );
 
     // Create a style for supplier information header
     final supplierInfoHeaderStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 12.0 : 14.0,
+      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
       fontWeight: pw.FontWeight.bold,
       color: PdfColors.grey700,
       height: 2, // Add line height for better spacing between lines
@@ -872,7 +866,7 @@ class SupplierTransactionReportStandardPrinter {
             pw.Text(
               'Total Credit: ',
               style: pw.TextStyle(
-                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                 color: PdfColors.grey700,
                 height: 2,
               ),
@@ -880,7 +874,7 @@ class SupplierTransactionReportStandardPrinter {
             pw.Text(
               '${totalCredit.toStringAsFixed(2)}',
               style: pw.TextStyle(
-                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                 color: PdfColors.grey700,
                 height: 2,
               ),
@@ -900,7 +894,7 @@ class SupplierTransactionReportStandardPrinter {
             pw.Text(
               'Total Debit: ',
               style: pw.TextStyle(
-                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                 color: PdfColors.grey700,
                 height: 2,
               ),
@@ -908,7 +902,7 @@ class SupplierTransactionReportStandardPrinter {
             pw.Text(
               '${totalDebit.toStringAsFixed(2)}',
               style: pw.TextStyle(
-                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                 color: PdfColors.grey700,
                 height: 2,
               ),
@@ -928,7 +922,7 @@ class SupplierTransactionReportStandardPrinter {
             pw.Text(
               'Balance: ',
               style: pw.TextStyle(
-                fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                fontSize: selectedPaperSize == 'A5' ? 8.0 : 11.0,
                 fontWeight: pw.FontWeight.bold,
                 color: PdfColors.black,
                 height: 2,
@@ -937,7 +931,7 @@ class SupplierTransactionReportStandardPrinter {
             pw.Text(
               '${balance.toStringAsFixed(2)}',
               style: pw.TextStyle(
-                fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                fontSize: selectedPaperSize == 'A5' ? 8.0 : 11.0,
                 fontWeight: pw.FontWeight.bold,
                 color: PdfColors.black,
                 height: 2,
@@ -1115,7 +1109,7 @@ class SupplierTransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.5 : 9.0,
         color: PdfColors.black,
         height: 2, // Add line height for better spacing between lines
       );
@@ -1125,15 +1119,15 @@ class SupplierTransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 8.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
-        height: 2, // Add line height for better spacing between lines
+        height: 1.5, // Reduced line height for A5
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 4.5 : 7.5,
         color: PdfColors.black,
-        height: 2, // Add line height for better spacing between lines
+        height: 1.5, // Reduced line height for A5
       );
       final summaryStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,

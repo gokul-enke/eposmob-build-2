@@ -1,16 +1,17 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart'; // Added import
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 /// A widget to display saved orders in a grid layout with new order button at top
 class HorizontalSavedOrdersView extends StatefulWidget {
@@ -91,7 +92,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         circleRadius: 8,
         color: Colors.white,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             debugPrint("===== NEW ORDER (+) BUTTON PRESSED =====");
             debugPrint("🔄 Current state:");
             debugPrint("  - Current order ID: ${provider.currentOrder?.id}");
@@ -117,7 +118,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                 debugPrint(
                     "  - Current order phone before save: ${provider.currentOrder!.customerPhone}");
                 // Call the billing page's save method to properly save with current customer info
-                billingPageState.saveCurrentOrder();
+                await billingPageState.saveCurrentOrder();
                 debugPrint(
                     "  - Current order phone after save: ${provider.currentOrder?.customerPhone}");
               } else {
@@ -142,7 +143,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
               if (billingPageState != null) {
                 debugPrint("💾 Saving new order with current customer info");
                 // Call the billing page's save method to properly save with current customer info
-                billingPageState.saveCurrentOrder();
+                await billingPageState.saveCurrentOrder();
               } else {
                 // Fallback - save without customer info (not ideal)
                 debugPrint(
@@ -186,20 +187,20 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
 
             debugPrint("===== NEW ORDER (+) BUTTON COMPLETE =====");
           },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.add_circle,
                   size: 24,
                   color: ColorManager.kPrimaryColor,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Text(
-                  "Create New Order",
-                  style: TextStyle(
+                  'common.create_new_order'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: ColorManager.kPrimaryColor,
@@ -215,13 +216,12 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
 
   Widget _buildSavedOrderCard(
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
-    String time = _formatTimeWith12Hour(order.createdAt);
+    String date = DateHelper.formatToISODateOnlyFromISO(order.createdAt);
+    String time = DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
 
-    // Get currency from AppSettingsProvider
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? '';
+    debugPrint("SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
+    debugPrint("SavedOrder ${order.orderNumber} formatted date: $date | formatted time: $time");
 
     return ConstrainedBox(
       constraints: const BoxConstraints(
@@ -243,21 +243,26 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Header row with order number and time
+                Text(
+                  order.orderNumber,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: isSelected
+                        ? ColorManager.kPrimaryColor
+                        : Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Text(
-                        order.orderNumber,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: isSelected
-                              ? ColorManager.kPrimaryColor
-                              : Colors.black87,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
                       ),
                     ),
                     Text(
@@ -274,16 +279,21 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "$currency ${order.total.toStringAsFixed(2)}",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.green,
-                      ),
+                    Consumer<AppSettingsProvider>(
+                      builder: (context, settings, _) {
+                        final currency = settings.appSettings?.currency ?? 'INR';
+                        return Text(
+                          "$currency ${order.total.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.green,
+                          ),
+                        );
+                      },
                     ),
                     Text(
-                      "${order.items.length} items",
+                      "${order.items.length} ${'common.items'.tr}",
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
@@ -336,7 +346,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
           ),
           const SizedBox(height: 12),
           Text(
-            "No saved orders yet",
+            'common.no_saved_orders'.tr,
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey.withOpacity(0.7),
@@ -345,7 +355,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
           ),
           const SizedBox(height: 4),
           Text(
-            "Create your first order above",
+            'common.create_first_order'.tr,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.withOpacity(0.6),
@@ -355,17 +365,6 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
       ),
     );
   }
-
-  String _formatTimeWith12Hour(String isoDate) {
-    // Convert ISO date string to DateTime
-    DateTime dateTime = DateTime.parse(isoDate);
-
-    // Format time in 12-hour format with AM/PM
-    String formattedTime = DateFormat('h:mm a').format(dateTime);
-
-    return formattedTime;
-  }
-
   void _showDeleteConfirmationDialog(
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
     DeleteConfirmationDialog.show(

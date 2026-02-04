@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:pos_machine/models/get_product.dart';
 
 OrderDetailsModel orderDetailsModelFromJson(String str) =>
     OrderDetailsModel.fromJson(json.decode(str));
@@ -78,7 +79,9 @@ class OrderDetailsModelData {
       OrderDetailsModelData(
         ordersId: json["orders_id"],
         storeId: json["store_id"],
-        storeName: json["store_name"],
+        // Use cart store name as fallback when order store name is not available
+        storeName: json["store_name"] ??
+            (json["cart"] != null ? (json["cart"] as Map)["store_name"] : null),
         orderDate: json["order_date"],
         deliveryDate: json["delivery_date"],
         deliveryTime: json["delivery_time"],
@@ -107,18 +110,161 @@ class OrderDetailsModelData {
                 .map((x) => OrderDetailsModelDataOrderProp.fromJson(x))),
         deliveryMethodId: json["delivery_method_id"]?.toString(),
         deliveryMethodName: json["delivery_method_name"]?.toString(),
-        orderReturns: json["order_returns"] == null
-            ? null
-            : OrderReturns.fromJson(
-                json["order_returns"] is Map<String, dynamic>
-                    ? json["order_returns"]
-                    : {},
-              ),
+        orderReturns: _parseOrderReturns(json["order_returns"]),
         points: json["points"],
-        payments: json["payments"] is Map<String, dynamic> 
+        payments: json["payments"] is Map<String, dynamic>
             ? Map<String, dynamic>.from(json["payments"])
             : null,
       );
+
+  // Helper method to handle order_returns which can be null, empty List, or Map
+  static OrderReturns? _parseOrderReturns(dynamic orderReturns) {
+    if (orderReturns == null) return null;
+    // If it's an empty list [], return null (no returns)
+    if (orderReturns is List && orderReturns.isEmpty) return null;
+    // If it's a Map, parse it
+    if (orderReturns is Map<String, dynamic>) {
+      return OrderReturns.fromJson(orderReturns);
+    }
+    return null;
+  }
+
+  // Helper to extract customer address from order_props
+  String? getCustomerAddressFromProps() {
+    if (orderProps == null) return null;
+    try {
+      // Prioritize CUSTOMER_ADDRESS
+      final addressProp = orderProps!.firstWhere(
+        (prop) => prop.propsCode == "CUSTOMER_ADDRESS",
+        orElse: () => OrderDetailsModelDataOrderProp(),
+      );
+      if (addressProp.propsValue != null &&
+          addressProp.propsValue!.isNotEmpty) {
+        return _formatAddress(addressProp.propsValue!);
+      }
+
+      // Fallback to DELIVERY_ADDRESS if needed
+      final deliveryAddressProp = orderProps!.firstWhere(
+        (prop) => prop.propsCode == "DELIVERY_ADDRESS",
+        orElse: () => OrderDetailsModelDataOrderProp(),
+      );
+      if (deliveryAddressProp.propsValue != null &&
+          deliveryAddressProp.propsValue!.isNotEmpty) {
+        return _formatAddress(deliveryAddressProp.propsValue!);
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }
+
+  // Helper to format address string from JSON string or raw string
+  String _formatAddress(String rawAddress) {
+    try {
+      // Check if it looks like a JSON object (starts with {)
+      if (rawAddress.trim().startsWith('{')) {
+        // It might be a raw string representation of a Map like "{city: thalassery, ...}"
+        // which is not valid JSON. We need to parse it carefully or use regex.
+        
+        // If it's valid JSON, decode it
+        try {
+          final Map<String, dynamic> addressMap = json.decode(rawAddress);
+          return _buildAddressString(addressMap);
+        } catch (e) {
+          // Not valid JSON, try to parse the raw string representation
+          // Example: {city: thalassery, name: Athira, ...}
+          
+          String address = "";
+          String city = "";
+          String state = "";
+          String pincode = "";
+          
+          // Extract address
+          final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
+          if (addressMatch != null) address = addressMatch.group(1)?.trim() ?? "";
+          
+          // Extract city
+          final cityMatch = RegExp(r'city:\s*([^,]+)').firstMatch(rawAddress);
+          if (cityMatch != null) city = cityMatch.group(1)?.trim() ?? "";
+          
+          // Extract state (might be nested or simple)
+          final stateMatch = RegExp(r'state:\s*([^,]+)').firstMatch(rawAddress);
+          if (stateMatch != null) {
+             // If state is an object {id: 10, name: KERALA...}
+             if (stateMatch.group(1)?.trim().startsWith('{') ?? false) {
+                final stateNameMatch = RegExp(r'name:\s*([^,]+)').firstMatch(stateMatch.group(1)!);
+                if (stateNameMatch != null) state = stateNameMatch.group(1)?.trim() ?? "";
+             } else {
+                state = stateMatch.group(1)?.trim() ?? "";
+             }
+          }
+          
+          // Extract pincode
+          final pincodeMatch = RegExp(r'pincode:\s*([^,]+)').firstMatch(rawAddress);
+          if (pincodeMatch != null) {
+             // If pincode is an object {id: 3382, pin_code: 670101...}
+             if (pincodeMatch.group(1)?.trim().startsWith('{') ?? false) {
+                final pinCodeValMatch = RegExp(r'pin_code:\s*([^,]+)').firstMatch(pincodeMatch.group(1)!);
+                if (pinCodeValMatch != null) pincode = pinCodeValMatch.group(1)?.trim() ?? "";
+             } else {
+                pincode = pincodeMatch.group(1)?.trim() ?? "";
+             }
+          }
+          
+          List<String> parts = [];
+          if (address.isNotEmpty) parts.add(address);
+          if (city.isNotEmpty) parts.add(city);
+          if (state.isNotEmpty) parts.add(state);
+          if (pincode.isNotEmpty) parts.add(pincode);
+          
+          if (parts.isNotEmpty) return parts.join(', ');
+        }
+      }
+      
+      // If it's a list string "[{...}]"
+      if (rawAddress.trim().startsWith('[')) {
+         try {
+            final List<dynamic> list = json.decode(rawAddress);
+            if (list.isNotEmpty && list[0] is Map) {
+               return _buildAddressString(list[0]);
+            }
+         } catch (e) {
+            // Regex fallback for list string
+            final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
+            if (addressMatch != null) return addressMatch.group(1)?.trim() ?? rawAddress;
+         }
+      }
+      
+      return rawAddress;
+    } catch (e) {
+      return rawAddress;
+    }
+  }
+
+  String _buildAddressString(Map<dynamic, dynamic> map) {
+    List<String> parts = [];
+    
+    if (map['address'] != null) parts.add(map['address'].toString());
+    if (map['city'] != null) parts.add(map['city'].toString());
+    
+    if (map['state'] != null) {
+      if (map['state'] is Map) {
+        if (map['state']['name'] != null) parts.add(map['state']['name'].toString());
+      } else {
+        parts.add(map['state'].toString());
+      }
+    }
+    
+    if (map['pincode'] != null) {
+      if (map['pincode'] is Map) {
+        if (map['pincode']['pin_code'] != null) parts.add(map['pincode']['pin_code'].toString());
+      } else {
+        parts.add(map['pincode'].toString());
+      }
+    }
+    
+    return parts.join(', ');
+  }
 
   Map<String, dynamic> toJson() => {
         "orders_id": ordersId,
@@ -215,6 +361,7 @@ class OrderDetailsModelDataCartItem {
   final String? taxAmount; // Added tax_amount field
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final Names? names; // Add bilingual names support
 
   OrderDetailsModelDataCartItem({
     this.id,
@@ -232,6 +379,7 @@ class OrderDetailsModelDataCartItem {
     this.taxAmount, // Added tax_amount field
     this.createdAt,
     this.updatedAt,
+    this.names, // Add to constructor
   });
 
   factory OrderDetailsModelDataCartItem.fromJson(Map<String, dynamic> json) =>
@@ -259,6 +407,11 @@ class OrderDetailsModelDataCartItem {
         updatedAt: json["updated_at"] == null
             ? null
             : DateTime.parse(json["updated_at"]),
+        names: json["product_names"] == null // Fix: Parse from "product_names" key (API returns this)
+            ? null
+            : json["product_names"] is List && (json["product_names"] as List).isEmpty
+                ? null // Handle empty array case
+                : Names.fromJson(json["product_names"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -279,6 +432,7 @@ class OrderDetailsModelDataCartItem {
         "tax_amount": taxAmount, // Added tax_amount serialization
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
+        "names": names?.toJson(), // Add names to serialization
       };
 }
 
@@ -343,6 +497,8 @@ class OrderDetailsModelDataPriceSummary {
   final num? savedTotal;
   final num? discount;
   final num? netPayable;
+  final num? totalMrp;
+  final num? netExcTax;
 
   OrderDetailsModelDataPriceSummary({
     this.subTotal,
@@ -351,18 +507,31 @@ class OrderDetailsModelDataPriceSummary {
     this.savedTotal,
     this.discount,
     this.netPayable,
+    this.totalMrp,
+    this.netExcTax,
   });
 
   factory OrderDetailsModelDataPriceSummary.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPriceSummary(
-        subTotal: json["sub_total"] is num ? json["sub_total"] : null,
-        totalTax: json["total_tax"] is num ? json["total_tax"] : null,
-        netTotal: json["net_total"] is num ? json["net_total"] : null,
-        savedTotal: json["total_saved"] is num ? json["total_saved"] : null,
-        discount: num.tryParse(json["discount"]?.toString() ?? ""),
-        netPayable: num.tryParse(json["net_payable"]?.toString() ?? ""),
+        // Handle both num and String types for all numeric fields
+        subTotal: _parseNum(json["sub_total"]),
+        totalTax: _parseNum(json["total_tax"]),
+        netTotal: _parseNum(json["net_total"]),
+        savedTotal: _parseNum(json["total_saved"]),
+        discount: _parseNum(json["discount"]),
+        netPayable: _parseNum(json["net_payable"]),
+        totalMrp: _parseNum(json["total_mrp"]),
+        netExcTax: _parseNum(json["net_exc_tax"]),
       );
+
+  // Helper method to parse num from either num or String
+  static num? _parseNum(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value);
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         "sub_total": subTotal,
@@ -371,6 +540,8 @@ class OrderDetailsModelDataPriceSummary {
         "total_saved": savedTotal,
         "discount": discount,
         "net_payable": netPayable,
+        "total_mrp": totalMrp,
+        "net_exc_tax": netExcTax,
       };
 }
 
@@ -381,12 +552,15 @@ class OrderDetailsModelDataCustomerDetails {
   final int? customerId; // Keep as int? if it's an int in JSON
   final List<dynamic>? address; // Changed to List<dynamic>
 
+  final String? alternatePhone; // Added alternate_phone
+
   OrderDetailsModelDataCustomerDetails({
     this.name,
     this.email,
     this.phone,
     this.customerId,
     this.address,
+    this.alternatePhone,
   });
 
   factory OrderDetailsModelDataCustomerDetails.fromJson(
@@ -398,6 +572,7 @@ class OrderDetailsModelDataCustomerDetails {
         customerId: json["customer_id"], // Keep as int? if it's an int
         address:
             json["address"] == null ? [] : List<dynamic>.from(json["address"]),
+        alternatePhone: json["alternate_phone"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -406,6 +581,7 @@ class OrderDetailsModelDataCustomerDetails {
         "phone": phone,
         "customer_id": customerId,
         "address": address,
+        "alternate_phone": alternatePhone,
       };
 }
 
@@ -424,7 +600,8 @@ class OrderDetailsModelDataOrderProp {
       OrderDetailsModelDataOrderProp(
         propsId: json["props_id"],
         propsCode: json["props_code"],
-        propsValue: _parsePropsValue(json["props_value"]), // Handle different types
+        propsValue:
+            _parsePropsValue(json["props_value"]), // Handle different types
       );
 
   // Helper method to handle props_value which can be String, Map, or other types
@@ -446,7 +623,7 @@ class OrderDetailsModelDataOrderProp {
 }
 
 class OrderDetailsModelDataPaymentDetails {
-  final int? paymentId; // Nullable int for payment_id
+  final String? paymentId; // Changed to String to handle List of IDs joined
   final String? paymentStatus; // String for payment_status
   final int? transactionId; // Nullable int for transaction_id
   final String? paymentMethod; // String for payment_method
@@ -461,13 +638,28 @@ class OrderDetailsModelDataPaymentDetails {
   factory OrderDetailsModelDataPaymentDetails.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPaymentDetails(
-        paymentId: json["payment_id"], // This can be null
+        paymentId:
+            _parsePaymentId(json["payment_id"]), // Handle int, String, or List
         paymentStatus: json["payment_status"], // This is a String
         transactionId: json["transaction_id"] is int
             ? json["transaction_id"]
-            : null, // Ensure it's an int or null
-        paymentMethod: _parsePaymentMethod(json["payment_method"]), // Handle both String and List
+            : int.tryParse(json["transaction_id"]?.toString() ??
+                ''), // Handle both int and String
+        paymentMethod: _parsePaymentMethod(
+            json["payment_method"]), // Handle both String and List
       );
+
+  // Helper method to handle payment_id which can be int, String, or List
+  static String? _parsePaymentId(dynamic paymentId) {
+    if (paymentId == null) return null;
+    if (paymentId is int) return paymentId.toString();
+    if (paymentId is String) return paymentId;
+    if (paymentId is List && paymentId.isNotEmpty) {
+      // Join all payment IDs with commas for multiple payments
+      return paymentId.map((id) => id.toString()).join(', ');
+    }
+    return null;
+  }
 
   // Helper method to handle payment_method which can be String or List<String>
   static String? _parsePaymentMethod(dynamic paymentMethod) {

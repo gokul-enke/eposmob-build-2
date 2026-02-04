@@ -67,7 +67,7 @@ class _BuildPaymentMethodSelectorState
   void initState() {
     super.initState();
     selectedMethods = List.from(widget.selectedMethods);
-    
+
     // Initialize controllers for all available methods
     for (PaymentMethod method in widget.availableMethods) {
       amountControllers[method] = TextEditingController(
@@ -130,7 +130,7 @@ class _BuildPaymentMethodSelectorState
           amountControllers[removedMethod]?.clear();
         }
         selectedMethods.add(method);
-        
+
         // Auto-focus amount input when method is selected
         if (widget.showAmountInputs) {
           Future.delayed(const Duration(milliseconds: 100), () {
@@ -150,7 +150,7 @@ class _BuildPaymentMethodSelectorState
         isSelected: true,
       );
     }).toList();
-    
+
     widget.onPaymentChanged(paymentData);
   }
 
@@ -175,7 +175,7 @@ class _BuildPaymentMethodSelectorState
                 ),
               ),
             ),
-          
+
           // Payment method selection buttons
           BuildBoxShadowContainer(
             circleRadius: 12,
@@ -186,7 +186,7 @@ class _BuildPaymentMethodSelectorState
                   children: widget.availableMethods.map((method) {
                     bool isSelected = selectedMethods.contains(method);
                     Color methodColor = _getMethodColor(method);
-                    
+
                     return Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(
@@ -200,7 +200,9 @@ class _BuildPaymentMethodSelectorState
                               color: isSelected ? methodColor : Colors.white,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isSelected ? methodColor : Colors.grey.shade300,
+                                color: isSelected
+                                    ? methodColor
+                                    : Colors.grey.shade300,
                                 width: 2,
                               ),
                               boxShadow: isSelected
@@ -218,7 +220,8 @@ class _BuildPaymentMethodSelectorState
                               children: [
                                 Icon(
                                   _getMethodIcon(method),
-                                  color: isSelected ? Colors.white : methodColor,
+                                  color:
+                                      isSelected ? Colors.white : methodColor,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
@@ -239,14 +242,15 @@ class _BuildPaymentMethodSelectorState
                     );
                   }).toList(),
                 ),
-                
+
                 // Amount input fields for selected methods
                 if (widget.showAmountInputs && selectedMethods.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Row(
                     children: selectedMethods.map((method) {
-                      String placeholder = 'Enter ${_getMethodDisplayName(method)} Amount';
-                      
+                      String placeholder =
+                          'Enter ${_getMethodDisplayName(method)} Amount';
+
                       return Expanded(
                         child: Padding(
                           padding: EdgeInsets.only(
@@ -258,9 +262,12 @@ class _BuildPaymentMethodSelectorState
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: TextFormField(
                               controller: amountControllers[method],
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d*\.?\d{0,2}')),
                               ],
                               decoration: InputDecoration(
                                 hintText: placeholder,
@@ -271,7 +278,8 @@ class _BuildPaymentMethodSelectorState
                                   Colors.grey.shade500,
                                 ),
                                 border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                                 prefixIcon: Icon(
                                   Icons.currency_rupee,
                                   color: _getMethodColor(method),
@@ -294,9 +302,11 @@ class _BuildPaymentMethodSelectorState
                     }).toList(),
                   ),
                 ],
-                
+
                 // Total amount validation display
-                if (widget.validateTotalAmount && widget.totalAmount != null && selectedMethods.isNotEmpty) ...[
+                if (widget.validateTotalAmount &&
+                    widget.totalAmount != null &&
+                    selectedMethods.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _buildTotalAmountDisplay(),
                 ],
@@ -314,11 +324,12 @@ class _BuildPaymentMethodSelectorState
       String amount = amountControllers[method]?.text ?? '';
       totalEntered += double.tryParse(amount) ?? 0;
     }
-    
+
     double expectedTotal = widget.totalAmount ?? 0;
     bool isValid = totalEntered == expectedTotal;
-    Color statusColor = isValid ? ColorManager.kSuccessColor : ColorManager.kErrorColor;
-    
+    Color statusColor =
+        isValid ? ColorManager.kSuccessColor : ColorManager.kErrorColor;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -330,7 +341,7 @@ class _BuildPaymentMethodSelectorState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total Entered: ₹${totalEntered.toStringAsFixed(2)}',
+            'Total Entered: ${totalEntered.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -339,7 +350,7 @@ class _BuildPaymentMethodSelectorState
             ),
           ),
           Text(
-            'Expected: ₹${expectedTotal.toStringAsFixed(2)}',
+            'Expected: ${expectedTotal.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,

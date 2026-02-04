@@ -3,12 +3,15 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/screens/print/return_bill_print.dart';
+import 'package:pos_machine/models/order_details.dart';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class SalesReturnDetailModal extends StatelessWidget {
   final SalesReturnOrder order;
 
-  const SalesReturnDetailModal({Key? key, required this.order})
-      : super(key: key);
+  const SalesReturnDetailModal({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +71,21 @@ class SalesReturnDetailModal extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildInfoRow("Order Number", "#${order.orderId}"),
+                    _buildInfoRow("Order Number", order.order?.orderNumber ?? "#${order.orderId}"),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Customer", "Sales Executive"),
+                    _buildInfoRow("Customer", order.order?.customer?.user?.name ?? "N/A"),
+                    const SizedBox(height: 8),
+                    Consumer<AppSettingsProvider>(
+                      builder: (context, settings, _) {
+                        final currency = settings.appSettings?.currency ?? 'INR';
+                        final raw = order.order?.grandTotal ?? '0.00';
+                        final parsed = double.tryParse(raw);
+                        final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                        return _buildInfoRow("Grand Total", "$currency $amount");
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("Payment Method", order.order?.paymentMethod?.join(", ") ?? "N/A"),
                     const SizedBox(height: 8),
                     _buildInfoRow("Date",
                         DateHelper.formatDate(order.createdAt).toString()),
@@ -121,7 +136,7 @@ class SalesReturnDetailModal extends StatelessWidget {
                       rows: order.items.map((item) {
                         return DataRow(cells: [
                           DataCell(Text(
-                            item.cartItem.product.name,
+                            item.cartItem.product?.name ?? 'Unknown Product',
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Colors.black,
@@ -131,10 +146,20 @@ class SalesReturnDetailModal extends StatelessWidget {
                             item.quantity.toString(),
                             style: const TextStyle(color: Colors.black),
                           )),
-                          DataCell(Text(
-                            item.price,
-                            style: const TextStyle(color: Colors.black),
-                          )),
+                          DataCell(
+                            Consumer<AppSettingsProvider>(
+                              builder: (context, settings, _) {
+                                final currency = settings.appSettings?.currency ?? 'INR';
+                                final raw = item.price; // string
+                                final parsed = double.tryParse(raw);
+                                final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                                return Text(
+                                  '$currency $amount',
+                                  style: const TextStyle(color: Colors.black),
+                                );
+                              },
+                            ),
+                          ),
                           DataCell(
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -161,11 +186,43 @@ class SalesReturnDetailModal extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 CustomRoundButton(
+                  fct: () {
+                    // Convert SalesReturnOrder items to OrderReturnItem list
+                    List<OrderReturnItem> returnItems = order.items.map((item) {
+                      return OrderReturnItem(
+                        id: item.id,
+                        productName: item.cartItem.product?.name ?? 'Unknown',
+                        quantity: item.quantity is int ? item.quantity as int : (item.quantity as double).toInt(),
+                        reason: item.reason,
+                      );
+                    }).toList();
+
+                    // Navigate to Return Bill Print Page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ReturnBillPrintPage(
+                          returnItems: returnItems,
+                          returnTotalAmount: order.totalAmount,
+                          orderDate: order.createdAt.toString(),
+                          orderNumber: order.order?.orderNumber ?? order.orderId.toString(),
+                          customerName: order.order?.customer?.user?.name,
+                        ),
+                      ),
+                    );
+                  },
+                  title: "Print",
+                  fontSize: FontSize.s12,
+                  height: MediaQuery.of(context).size.height * .05,
+                  width: 80,
+                ),
+                const SizedBox(width: 12),
+                CustomRoundButton(
                   fct: () => Navigator.of(context).pop(),
                   title: "Close",
                   fontSize: FontSize.s12,
                   height: MediaQuery.of(context).size.height * .05,
-                  width: 60,
+                  width: 80,
                 ),
               ],
             ),

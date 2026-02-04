@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -48,12 +49,16 @@ class ActionButtons extends StatelessWidget {
               onPressed: onCreateOrderAndPrint,
               isLoading: bp.isLoadingCreateOrder,
             ),
-            _buildActionButton(
-              text: 'Confirm Order',
-              color: ColorManager.kButtonGreen,
-              onPressed: onConfirmOrder,
-              isLoading: bp.isLoadingConfirmOrder,
-            ),
+            if (Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.showConfirmOrderButton ??
+                true)
+              _buildActionButton(
+                text: 'Confirm Order',
+                color: ColorManager.kButtonGreen,
+                onPressed: onConfirmOrder,
+                isLoading: bp.isLoadingConfirmOrder,
+              ),
           ],
           if (!bp.hasInternet) ...[
             _buildActionButton(

@@ -14,6 +14,9 @@ class CustomerProvider extends ChangeNotifier {
   List<CustomerListModelData>? _allCustomers =
       []; // Store all customers for local filtering
   CustomerListModelData? selectedCustomer;
+  // For report dropdown bindings
+  String? selectedCustomerId;
+  String? selectedCustomerName;
 
   // Pagination properties
   int _currentPage = 1;
@@ -27,6 +30,7 @@ class CustomerProvider extends ChangeNotifier {
 
   // Getters
   List<CustomerListModelData>? get getCustomerList => customerList;
+  List<CustomerListModelData>? get allCustomers => _allCustomers;
   CustomerListModelData? get getSelectedCustomer => selectedCustomer;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
@@ -36,6 +40,19 @@ class CustomerProvider extends ChangeNotifier {
   // Select a customer
   void selectCustomer(CustomerListModelData customer) {
     selectedCustomer = customer;
+    selectedCustomerId = customer.id?.toString();
+    selectedCustomerName = customer.name;
+    notifyListeners();
+  }
+
+  // Setters used by report dropdowns
+  void setSelectedCustomerId(String? id) {
+    selectedCustomerId = id;
+    notifyListeners();
+  }
+
+  void setSelectedCustomerName(String? name) {
+    selectedCustomerName = name;
     notifyListeners();
   }
 
@@ -141,6 +158,28 @@ class CustomerProvider extends ChangeNotifier {
 
     if (_allCustomers != null && _allCustomers!.isNotEmpty) {
       applyFiltersLocally(page: 1);
+    }
+  }
+
+  // Lightweight fetch for dropdown usage (similar to SupplierProvider.fetchSuppliers)
+  Future<void> fetchCustomers({
+    required String accessToken,
+    String? customerName,
+    bool listAll = true,
+  }) async {
+    try {
+      await listCustomer(
+        accessToken: accessToken,
+        filterName: customerName,
+        page: 1,
+        loadAll: listAll,
+      );
+      // When loadAll=true, listCustomer populates _allCustomers and paginates locally
+      // Notify listeners so dropdowns can rebuild with latest data
+      notifyListeners();
+    } catch (e) {
+      debugPrint('fetchCustomers error: $e');
+      rethrow;
     }
   }
 
@@ -271,10 +310,18 @@ class CustomerProvider extends ChangeNotifier {
       String email,
       String address,
       String pincode,
-      String city,
-      String state,
+      String city, // send ID string when available
+      String state, // send ID string when available
       String country,
-      BuildContext context) async {
+      BuildContext context,
+      {String? balance,
+      String? paymentType,
+      String? altPhone,
+      String? gender,
+      String? dob,
+      String? customerType,
+      String? crNumber,
+      String? vatNumber}) async {
     debugPrint("addCustomer API called");
     final Map<String, dynamic> apiBodyData = {
       'phone': phone,
@@ -287,6 +334,41 @@ class CustomerProvider extends ChangeNotifier {
       'state': state,
       'country': country,
     };
+
+    // Add optional parameters if provided
+    if (balance != null && balance.isNotEmpty) {
+      apiBodyData['balance'] = balance;
+    }
+    if (paymentType != null && paymentType.isNotEmpty) {
+      apiBodyData['payment_type'] = paymentType;
+    }
+    if (customerType != null && customerType.isNotEmpty) {
+      apiBodyData['customer_type'] = customerType;
+    }
+    if (crNumber != null && crNumber.isNotEmpty) {
+      apiBodyData['cr_number'] = crNumber;
+    }
+    if (vatNumber != null && vatNumber.isNotEmpty) {
+      apiBodyData['vat_number'] = vatNumber;
+    }
+    if (altPhone != null && altPhone.isNotEmpty) {
+      apiBodyData['alt_phone'] = altPhone;
+    }
+    if (gender != null && gender.isNotEmpty) {
+      apiBodyData['gender'] = gender;
+    }
+    if (dob != null && dob.isNotEmpty) {
+      apiBodyData['dob'] = dob;
+    }
+    if (customerType != null && customerType.isNotEmpty) {
+      apiBodyData['customer_type'] = customerType;
+    }
+    if (crNumber != null && crNumber.isNotEmpty) {
+      apiBodyData['cr_number'] = crNumber;
+    }
+    if (vatNumber != null && vatNumber.isNotEmpty) {
+      apiBodyData['vat_number'] = vatNumber;
+    }
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addCustomerUrl);
     // Get API key from SharedPreferences
@@ -367,6 +449,11 @@ class CustomerProvider extends ChangeNotifier {
     String? gender,
     String? dob,
     int? storeId,
+    String? balance,
+    String? paymentType,
+    String? customerType,
+    String? crNumber,
+    String? vatNumber,
   }) async {
     debugPrint("updateCustomer API called");
     final Map<String, dynamic> apiBodyData = {
@@ -393,6 +480,12 @@ class CustomerProvider extends ChangeNotifier {
     }
     if (storeId != null) {
       apiBodyData['store_id'] = storeId;
+    }
+    if (balance != null && balance.isNotEmpty) {
+      apiBodyData['balance'] = balance;
+    }
+    if (paymentType != null && paymentType.isNotEmpty) {
+      apiBodyData['payment_type'] = paymentType;
     }
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.updateCustomerUrl);
@@ -588,6 +681,87 @@ class CustomerProvider extends ChangeNotifier {
     } catch (error) {
       debugPrint('fetchUserById Error: ${error.toString()}');
       rethrow;
+    }
+  }
+
+  //                 *********************** ADD ADDRESS API ***************************************************
+  Future<dynamic> addAddress({
+    required String accessToken,
+    required Map<String, dynamic> addressData,
+  }) async {
+    debugPrint("addAddress API called");
+    final url = Uri.parse(APPUrl.executiveAddAddressUrl);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(addressData),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint('addAddress response status: ${response.statusCode}');
+      debugPrint('addAddress response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        return json.decode(response.body);
+      }
+    } catch (e) {
+      debugPrint("Exception in addAddress: $e");
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
+  //                 *********************** UPDATE ADDRESS API ***************************************************
+  Future<dynamic> updateAddress({
+    required String accessToken,
+    required int addressId,
+    required Map<String, dynamic> addressData,
+  }) async {
+    debugPrint("updateAddress API called for ID: $addressId");
+    final url = Uri.parse("${APPUrl.executiveUpdateAddressUrl}/$addressId");
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(addressData),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint('updateAddress response status: ${response.statusCode}');
+      debugPrint('updateAddress response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        return json.decode(response.body);
+      }
+    } catch (e) {
+      debugPrint("Exception in updateAddress: $e");
+      return {"status": "error", "message": e.toString()};
     }
   }
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -17,13 +19,13 @@ class ProductAutocomplete extends StatefulWidget {
   final bool autofocus;
 
   const ProductAutocomplete({
-    Key? key,
+    super.key,
     required this.size,
     required this.onSelected,
     required this.productList,
     this.autocompleteProductKey,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   State<ProductAutocomplete> createState() => _ProductAutocompleteState();
@@ -81,6 +83,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
   }
 
   // Independent search method that doesn't affect the provider's filteredProducts
+  // Only searches sellable products for billing screens
   List<GetProduct> _searchProducts(String query) {
     if (query.isEmpty) {
       return const <GetProduct>[];
@@ -89,8 +92,8 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
     final productProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
-    // Search through the complete products list, not the filtered one
-    return productProvider.products
+    // Search through only sellable products for billing autocomplete
+    return productProvider.sellableProducts
         .where((product) => (product.productName ?? '')
             .toLowerCase()
             .contains(query.toLowerCase()))
@@ -115,8 +118,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
       context: context,
       product: product,
       onSelected: widget.onSelected,
-      addToCartDirectly:
-          false, // Prefill form fields for review before adding to cart
+      addToCartDirectly: true, // Add product directly to cart on selection
       // Customer info will be fetched from global provider in the helper
     );
   }
@@ -229,7 +231,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               autofocus: widget.autofocus,
               size: widget.size,
               width: double.infinity,
-              hintText: 'Search Product',
+              hintText: 'common.search_product'.tr,
               onSubmitted: (_) => onFieldSubmitted(),
               onTap: () {
                 // Show alphanumeric virtual keyboard connected to this controller
@@ -240,6 +242,13 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
           );
         },
         optionsViewBuilder: (context, onSelected, options) {
+          // Get currency from app settings
+          final currency =
+              Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.currency ??
+                  'INR';
+
           // Update current options reference for Enter key handling
           currentOptions = options;
 
@@ -307,7 +316,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         trailing: Text(
-                          '${option.price?.price ?? ''} ${option.currency ?? ''}',
+                          '$currency ${option.price?.price ?? ''}',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,

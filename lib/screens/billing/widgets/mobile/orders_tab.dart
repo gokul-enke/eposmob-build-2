@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/services/print_service.dart';
@@ -43,7 +44,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
               raw is num ? raw : num.tryParse(raw?.toString() ?? '');
           if (val != null && val > 0) {
             final label = m[0] + m.substring(1).toLowerCase();
-            parts.add('$label ₹${val.toStringAsFixed(2)}');
+            parts.add('$label ${val.toStringAsFixed(2)}');
           } else {
             final label = m[0] + m.substring(1).toLowerCase();
             parts.add(label);
@@ -246,7 +247,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
     }
 
     // Apply date filter
-    final now = DateTime.now();
+    final now = DateHelper.now();
     switch (_selectedFilter) {
       case 'Today':
         filtered = filtered.where((order) {
@@ -359,7 +360,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '₹${order.total.toStringAsFixed(2)}',
+                          '${order.total.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -490,7 +491,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
   }
 
   String _formatDate(DateTime date) {
-    final now = DateTime.now();
+    final now = DateHelper.now();
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
@@ -574,7 +575,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                         'Date: ${_formatDate(DateTime.parse(order.createdAt))}',
                         'Payment: ${_formatPaymentSummary(order.paymentMethod)}',
                         'Delivery: ${order.deliveryMethod ?? 'N/A'}',
-                        'Total: ₹${order.total.toStringAsFixed(2)}',
+                        'Total: ${order.total.toStringAsFixed(2)}',
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -584,7 +585,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                         'Items (${order.items.length})',
                         order.items
                             .map((item) =>
-                                '${item.product.productName} x ${item.quantity} = ₹${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}')
+                                '${item.product.productName} x ${item.quantity} = ${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}')
                             .toList(),
                       ),
                   ],

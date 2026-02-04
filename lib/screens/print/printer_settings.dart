@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -19,26 +21,7 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/screens/print/print_thermal.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-
-class BluetoothPrinter {
-  String? deviceName;
-  String? address;
-  String? port;
-  String? vendorId;
-  String? productId;
-  String typePrinter;
-  bool isConnected;
-
-  BluetoothPrinter({
-    this.deviceName,
-    this.address,
-    this.port,
-    this.vendorId,
-    this.productId,
-    required this.typePrinter,
-    this.isConnected = false,
-  });
-}
+import 'package:pos_machine/models/bluetooth_printer.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -52,6 +35,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool isLoading = true;
   String selectedPaperSize = '80mm';
   String selectedFontStyle = 'Font A (Small & Sharp)';
+  String selectedSettingsType = 'Billing'; // 'Billing' or 'Kitchen'
+  String selectedReceiptTheme = 'classic'; // Receipt theme selection
 
   // Printer scanning variables
   var printerManager = PrinterManager.instance;
@@ -68,6 +53,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     'Font B (Default)',
   ];
 
+  // List of available receipt themes
+  final List<Map<String, String>> receiptThemes = [
+    {'id': 'classic', 'name': 'Classic'},
+    {'id': 'premium', 'name': 'Premium'},
+    {'id': 'standard', 'name': 'Standard'},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +74,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   @override
   void dispose() {
-    debugPrint('[PrinterSettings] dispose(): canceling discovery subscription if any');
+    debugPrint(
+        '[PrinterSettings] dispose(): canceling discovery subscription if any');
     _subscription?.cancel();
     super.dispose();
   }
@@ -99,7 +92,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   Future<bool> _requestPermissions() async {
-    debugPrint('[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
+    debugPrint(
+        '[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
     if (Theme.of(context).platform == TargetPlatform.android) {
       Map<Permission, PermissionStatus> statuses = await [
         Permission.bluetooth,
@@ -109,14 +103,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       ].request();
 
       statuses.forEach((perm, status) {
-        debugPrint('[PrinterSettings] Permission ${perm.toString()} => ${status.toString()}');
+        debugPrint(
+            '[PrinterSettings] Permission ${perm.toString()} => ${status.toString()}');
       });
 
       final granted = statuses.values.every((status) => status.isGranted);
       debugPrint('[PrinterSettings] All permissions granted: $granted');
       return granted;
     }
-    debugPrint('[PrinterSettings] Non-Android platform; skipping runtime permission request.');
+    debugPrint(
+        '[PrinterSettings] Non-Android platform; skipping runtime permission request.');
     return true;
   }
 
@@ -142,10 +138,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   void _scan() async {
     if (_isScanning) {
-      debugPrint('[PrinterSettings] _scan() requested but a scan is already in progress. Ignoring.');
+      debugPrint(
+          '[PrinterSettings] _scan() requested but a scan is already in progress. Ignoring.');
       return;
     }
-    debugPrint('[PrinterSettings] Starting scan... platform=${Platform.operatingSystem}');
+    debugPrint(
+        '[PrinterSettings] Starting scan... platform=${Platform.operatingSystem}');
     // Cancel any prior discovery subscription
     await _subscription?.cancel();
     setState(() {
@@ -156,15 +154,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     try {
       // Bluetooth discovery only on mobile platforms
       if (Platform.isAndroid || Platform.isIOS) {
-        debugPrint('[PrinterSettings] Beginning Bluetooth discovery (isBle=false)');
+        debugPrint(
+            '[PrinterSettings] Beginning Bluetooth discovery (isBle=false)');
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
-          debugPrint('[PrinterSettings] BT device found: name=${device.name}, address=${device.address}');
+          debugPrint(
+              '[PrinterSettings] BT device found: name=${device.name}, address=${device.address}');
           final printer = BluetoothPrinter(
             deviceName: device.name,
             address: device.address,
-            typePrinter: PrinterType.bluetooth.toString(),
+            typePrinter: PrinterType.bluetooth,
           );
           setState(() {
             devices.add(printer);
@@ -172,26 +172,30 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         }, onError: (err) {
           debugPrint('[PrinterSettings] Bluetooth discovery error: $err');
         }, onDone: () {
-          debugPrint('[PrinterSettings] Bluetooth discovery done. Total BT devices: ${devices.where((p) => p.typePrinter == PrinterType.bluetooth.toString()).length}');
+          debugPrint(
+              '[PrinterSettings] Bluetooth discovery done. Total BT devices: ${devices.where((p) => p.typePrinter == PrinterType.bluetooth.toString()).length}');
         }, cancelOnError: false);
       } else {
-        debugPrint('[PrinterSettings] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
+        debugPrint(
+            '[PrinterSettings] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
       debugPrint('[PrinterSettings] Beginning USB discovery');
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint('[PrinterSettings] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+        debugPrint(
+            '[PrinterSettings] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
           productId: device.productId,
-          typePrinter: PrinterType.usb.toString(),
+          typePrinter: PrinterType.usb,
         );
         setState(() {
           devices.add(printer);
         });
       });
-      debugPrint('[PrinterSettings] USB discovery completed. Total devices now: ${devices.length}');
+      debugPrint(
+          '[PrinterSettings] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {
       debugPrint('[PrinterSettings] Error during scanning: $e');
       debugPrint('[PrinterSettings] Stacktrace: $st');
@@ -199,7 +203,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       setState(() {
         _isScanning = false;
       });
-      debugPrint('[PrinterSettings] Scan finished. devices.length=${devices.length}');
+      debugPrint(
+          '[PrinterSettings] Scan finished. devices.length=${devices.length}');
     }
   }
 
@@ -227,7 +232,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       'productId': printer.productId,
       'typePrinter': printer.typePrinter.toString(),
     };
-    await prefs.setString('default_printer', json.encode(printerData));
+
+    // Save to appropriate key based on selected type
+    final key =
+        selectedSettingsType == 'Billing' ? 'default_printer' : 'kot_printer';
+    await prefs.setString(key, json.encode(printerData));
   }
 
   Future<void> _loadSettings() async {
@@ -236,9 +245,24 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     });
 
     final prefs = await SharedPreferences.getInstance();
-    final defaultPrinterJson = prefs.getString('default_printer');
-    final defaultPaperSize = prefs.getString('default_paper_size');
-    final defaultFontStyle = prefs.getString('default_font_style');
+
+    // Determine keys based on selected type
+    final printerKey =
+        selectedSettingsType == 'Billing' ? 'default_printer' : 'kot_printer';
+    final paperSizeKey = selectedSettingsType == 'Billing'
+        ? 'default_paper_size'
+        : 'kot_paper_size';
+    final fontStyleKey = selectedSettingsType == 'Billing'
+        ? 'default_font_style'
+        : 'kot_font_style';
+    final themeKey = selectedSettingsType == 'Billing'
+        ? 'billing_receipt_theme'
+        : 'kot_receipt_theme';
+
+    final defaultPrinterJson = prefs.getString(printerKey);
+    final defaultPaperSize = prefs.getString(paperSizeKey);
+    final defaultFontStyle = prefs.getString(fontStyleKey);
+    final savedTheme = prefs.getString(themeKey);
 
     // Load paper size
     if (defaultPaperSize != null) {
@@ -257,7 +281,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       setState(() {
         selectedPaperSize = '80mm';
       });
-      _saveDefaultPaperSize('80mm');
+      // Don't auto-save default here to avoid overwriting if just switching tabs
     }
 
     // Load font style
@@ -266,11 +290,22 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         selectedFontStyle = defaultFontStyle;
       });
     } else {
-      // Default to Font B if no preference is set
+      // Default to Font A if no preference is set
       setState(() {
         selectedFontStyle = 'Font A (Small & Sharp)';
       });
-      _saveDefaultFontStyle('Font A (Small & Sharp)');
+    }
+
+    // Load receipt theme
+    if (savedTheme != null) {
+      setState(() {
+        selectedReceiptTheme = savedTheme;
+      });
+    } else {
+      // Default to classic if no preference is set
+      setState(() {
+        selectedReceiptTheme = 'classic';
+      });
     }
 
     // Load default printer
@@ -282,8 +317,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           address: printerData['address'],
           vendorId: printerData['vendorId'],
           productId: printerData['productId'],
-          typePrinter: printerData['typePrinter'],
+          typePrinter: PrinterType.values.firstWhere(
+            (e) => e.toString() == printerData['typePrinter'],
+            orElse: () => PrinterType.bluetooth,
+          ),
         );
+      });
+    } else {
+      setState(() {
+        selectedPrinter = null;
       });
     }
 
@@ -294,24 +336,39 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> clearDefaultPrinter() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('default_printer');
+      // Use the provider to clear all printer settings (printer, paper size, font style)
+      await SharedPreferenceProvider().clearPrinterSettings();
 
       setState(() {
         selectedPrinter = null;
+        // Reset local state variables to defaults
+        selectedPaperSize = '80mm';
+        selectedFontStyle = 'Font A (Small & Sharp)';
       });
+
+      // Also clear current context keys
+      final prefs = await SharedPreferences.getInstance();
+      if (selectedSettingsType == 'Billing') {
+        await prefs.remove('default_printer');
+        await prefs.remove('default_paper_size');
+        await prefs.remove('default_font_style');
+      } else {
+        await prefs.remove('kot_printer');
+        await prefs.remove('kot_paper_size');
+        // await prefs.remove('kot_font_style'); // If added later
+      }
 
       if (mounted) {
         showScaffold(
           context: context,
-          message: "Default printer cleared successfully",
+          message: "All printer settings reset to default",
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error clearing default printer: ${e.toString()}",
+          message: "Error resetting printer settings: ${e.toString()}",
         );
       }
     }
@@ -399,7 +456,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('default_paper_size', paperSize);
+    final key = selectedSettingsType == 'Billing'
+        ? 'default_paper_size'
+        : 'kot_paper_size';
+    await prefs.setString(key, paperSize);
 
     if (mounted) {
       showScaffold(
@@ -411,12 +471,30 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _saveDefaultFontStyle(String fontStyle) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('default_font_style', fontStyle);
+    final key = selectedSettingsType == 'Billing'
+        ? 'default_font_style'
+        : 'kot_font_style';
+    await prefs.setString(key, fontStyle);
 
     if (mounted) {
       showScaffold(
         context: context,
         message: "Default font style saved",
+      );
+    }
+  }
+
+  Future<void> _saveReceiptTheme(String theme) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = selectedSettingsType == 'Billing'
+        ? 'billing_receipt_theme'
+        : 'kot_receipt_theme';
+    await prefs.setString(key, theme.toLowerCase());
+
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "Receipt theme saved",
       );
     }
   }
@@ -812,10 +890,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               height: textSizeSmall));
 
       // Date and time
+      final now = DateHelper.now();
       bytes += generator.row([
         PosColumn(
             text:
-                '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                '${now.day}/${now.month}/${now.year}',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,
@@ -824,7 +903,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 height: textSizeSmall)),
         PosColumn(
             text:
-                '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+                '${now.hour}:${now.minute.toString().padLeft(2, '0')}',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,
@@ -900,17 +979,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       bytes += generator.cut();
 
       // Print
-      PrinterType type = printer.typePrinter == PrinterType.usb.toString()
-          ? PrinterType.usb
-          : PrinterType.bluetooth;
-      await printerManager.send(type: type, bytes: bytes);
+      await printerManager.send(type: printer.typePrinter, bytes: bytes);
     } finally {
       await _disconnectPrinter(printer);
     }
   }
 
   Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
-    if (selectedPrinter.typePrinter == PrinterType.usb.toString()) {
+    if (selectedPrinter.typePrinter == PrinterType.usb) {
       await printerManager.connect(
         type: PrinterType.usb,
         model: UsbPrinterInput(
@@ -919,8 +995,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           vendorId: selectedPrinter.vendorId,
         ),
       );
-    } else if (selectedPrinter.typePrinter ==
-        PrinterType.bluetooth.toString()) {
+    } else if (selectedPrinter.typePrinter == PrinterType.bluetooth) {
       if (selectedPrinter.address == null) {
         throw Exception('Bluetooth printer address is null');
       }
@@ -937,11 +1012,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _disconnectPrinter(BluetoothPrinter selectedPrinter) async {
     try {
-      PrinterType type =
-          selectedPrinter.typePrinter == PrinterType.usb.toString()
-              ? PrinterType.usb
-              : PrinterType.bluetooth;
-      await printerManager.disconnect(type: type);
+      await printerManager.disconnect(type: selectedPrinter.typePrinter);
     } catch (e) {
       debugPrint('Error disconnecting printer: $e');
     }
@@ -961,6 +1032,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       }
       if (Hive.isBoxOpen('confirmed_orders')) {
         await Hive.box<HiveSavedOrder>('confirmed_orders').close();
+      }
+      if (Hive.isBoxOpen('categories')) {
+        await Hive.box<HiveCategory>('categories').close();
       }
 
       // Delete all Hive files
@@ -1019,7 +1093,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                color:
+                                    ColorManager.kPrimaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
@@ -1056,12 +1131,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                               fct: () => {clearDefaultPrinter()},
                               title: 'Clear Default Printer',
                               height: 44,
-                              width: 200,
+                              width: 180,
                               fontSize: 14,
                               borderColor: ColorManager.kButtonRed,
                               boxColor: ColorManager.kButtonRed,
                               textColor: Colors.white,
                             ),
+                            const SizedBox(width: 16),
                           ],
                         ),
                       ],
@@ -1177,6 +1253,77 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
                   // if (selectedPrinter != null) const SizedBox(height: 24),
 
+                  // Settings Type Toggle
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedSettingsType = 'Billing';
+                              });
+                              _loadSettings();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: selectedSettingsType == 'Billing'
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                'Billing Printer',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: selectedSettingsType == 'Billing'
+                                      ? Colors.white
+                                      : ColorManager.kTitleTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedSettingsType = 'Kitchen';
+                              });
+                              _loadSettings();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: selectedSettingsType == 'Kitchen'
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                'Kitchen Printer',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: selectedSettingsType == 'Kitchen'
+                                      ? Colors.white
+                                      : ColorManager.kTitleTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Settings Grid
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1208,8 +1355,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: ColorManager.kPrimaryColor
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
                                           Icons.description_rounded,
@@ -1248,16 +1397,19 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                         const SizedBox(width: 16),
                                         Expanded(
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16),
                                             decoration: BoxDecoration(
                                               color: Colors.white,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: DropdownButton<String>(
                                               value: selectedPaperSize,
                                               isExpanded: true,
                                               underline: const SizedBox(),
-                                              items: paperSizes.map((String size) {
+                                              items:
+                                                  paperSizes.map((String size) {
                                                 return DropdownMenuItem<String>(
                                                   value: size,
                                                   child: Text(size),
@@ -1266,9 +1418,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               onChanged: (String? newValue) {
                                                 if (newValue != null) {
                                                   setState(() {
-                                                    selectedPaperSize = newValue;
+                                                    selectedPaperSize =
+                                                        newValue;
                                                   });
-                                                  _saveDefaultPaperSize(newValue);
+                                                  _saveDefaultPaperSize(
+                                                      newValue);
                                                 }
                                               },
                                             ),
@@ -1281,6 +1435,125 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                               ),
                             ),
                             const SizedBox(height: 24),
+
+                            // Receipt Theme Selection (only for Billing)
+                            if (selectedSettingsType == 'Billing')
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.03),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: ColorManager.kPrimaryColor
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                            Icons.palette_outlined,
+                                            color: ColorManager.kPrimaryColor,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          'Receipt Theme',
+                                          style: TextStyle(
+                                            color: ColorManager.kPrimaryColor,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Text(
+                                            'Theme:',
+                                            style: TextStyle(
+                                              color:
+                                                  ColorManager.kTitleTextColor,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: DropdownButton<String>(
+                                                value: selectedReceiptTheme,
+                                                isExpanded: true,
+                                                underline: const SizedBox(),
+                                                items: receiptThemes.map(
+                                                    (Map<String, String>
+                                                        theme) {
+                                                  return DropdownMenuItem<
+                                                      String>(
+                                                    value: theme['id'],
+                                                    child: Text(theme['name']!),
+                                                  );
+                                                }).toList(),
+                                                onChanged: (String? newValue) {
+                                                  if (newValue != null) {
+                                                    setState(() {
+                                                      selectedReceiptTheme =
+                                                          newValue;
+                                                    });
+                                                    _saveReceiptTheme(newValue);
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      selectedReceiptTheme == 'classic'
+                                          ? 'Traditional receipt layout with standard formatting'
+                                          : 'Modern & clean design with enhanced spacing',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (selectedSettingsType == 'Billing')
+                              const SizedBox(height: 24),
 
                             // Font Style Selection
                             // Container(
@@ -1428,15 +1701,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: ColorManager.kPrimaryColor
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
                                           Icons.devices_rounded,
@@ -1456,8 +1732,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     ],
                                   ),
                                   CustomRoundButton(
-                                    fct: () => _isScanning ? null : _checkPermissions(),
-                                    title: _isScanning ? 'Scanning...' : 'Scan for Printers',
+                                    fct: () => _isScanning
+                                        ? null
+                                        : _checkPermissions(),
+                                    title: _isScanning
+                                        ? 'Scanning...'
+                                        : 'Scan for Printers',
                                     height: 44,
                                     width: 160,
                                     fontSize: 14,
@@ -1532,7 +1812,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     )
                                   : ListView.separated(
                                       shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
                                       itemCount: devices.length,
                                       separatorBuilder: (context, index) =>
                                           const SizedBox(height: 12),
@@ -1547,12 +1828,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                         return Container(
                                           decoration: BoxDecoration(
                                             color: isSelected
-                                                ? ColorManager.kPrimaryColor.withOpacity(0.04)
+                                                ? ColorManager.kPrimaryColor
+                                                    .withOpacity(0.04)
                                                 : Colors.grey[50],
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
                                           child: ListTile(
-                                            contentPadding: const EdgeInsets.symmetric(
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
                                               horizontal: 20,
                                               vertical: 8,
                                             ),
@@ -1560,9 +1844,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               padding: const EdgeInsets.all(12),
                                               decoration: BoxDecoration(
                                                 color: isSelected
-                                                    ? ColorManager.kPrimaryColor.withOpacity(0.1)
+                                                    ? ColorManager.kPrimaryColor
+                                                        .withOpacity(0.1)
                                                     : Colors.white,
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Icon(
                                                 Icons.print,
@@ -1573,9 +1859,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               ),
                                             ),
                                             title: Text(
-                                              printer.deviceName ?? 'Unknown device',
+                                              printer.deviceName ??
+                                                  'Unknown device',
                                               style: TextStyle(
-                                                color: ColorManager.kTitleTextColor,
+                                                color: ColorManager
+                                                    .kTitleTextColor,
                                                 fontWeight: isSelected
                                                     ? FontWeight.bold
                                                     : FontWeight.w500,
@@ -1583,9 +1871,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               ),
                                             ),
                                             subtitle: Padding(
-                                              padding: const EdgeInsets.only(top: 4),
+                                              padding:
+                                                  const EdgeInsets.only(top: 4),
                                               child: Text(
-                                                printer.address ?? printer.typePrinter,
+                                                printer.address ??
+                                                    printer.typePrinter.name,
                                                 style: TextStyle(
                                                   color: Colors.grey[600],
                                                   fontSize: 14,
@@ -1594,7 +1884,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                             ),
                                             trailing: CustomRoundButton(
                                               fct: () => selectPrinter(printer),
-                                              title: isSelected ? 'Selected' : 'Select',
+                                              title: isSelected
+                                                  ? 'Selected'
+                                                  : 'Select',
                                               height: 36,
                                               width: 100,
                                               fontSize: 14,

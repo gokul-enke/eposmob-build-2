@@ -362,6 +362,188 @@ class DashboardProvider {
       rethrow;
     } finally {}
   }
+
+  // Supplier Dashboard API Methods
+
+  Future<SuppliersOverview> fetchSuppliersOverview(
+      String accessToken, String startDate, String endDate) async {
+    final url = Uri.parse(
+        '${APPUrl.suppliersOverview}?start_date=$startDate&end_date=$endDate');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching suppliers overview from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint('Suppliers overview response status: ${response.statusCode}');
+    debugPrint('Suppliers overview response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Suppliers overview data: $data');
+        return SuppliersOverview.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load suppliers overview. Status code: ${response.statusCode}');
+    }
+  }
+
+  Future<SuppliersPurchaseGraph> fetchSuppliersPurchaseGraph(
+      String accessToken, String startDate, String endDate) async {
+    final url = Uri.parse(
+        '${APPUrl.suppliersPurchaseGraph}?start_date=$startDate&end_date=$endDate');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching suppliers purchase graph from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint(
+        'Suppliers purchase graph response status: ${response.statusCode}');
+    debugPrint('Suppliers purchase graph response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Suppliers purchase graph data: $data');
+        return SuppliersPurchaseGraph.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load suppliers purchase graph. Status code: ${response.statusCode}');
+    }
+  }
+
+  Future<SupplierTransactionsGraph> fetchSupplierTransactionsGraph(
+      String accessToken, String startDate, String endDate) async {
+    final url = Uri.parse(
+        '${APPUrl.supplierTransactionsGraph}?start_date=$startDate&end_date=$endDate');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching supplier transactions graph from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint(
+        'Supplier transactions graph response status: ${response.statusCode}');
+    debugPrint('Supplier transactions graph response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Supplier transactions graph data: $data');
+        return SupplierTransactionsGraph.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load supplier transactions graph. Status code: ${response.statusCode}');
+    }
+  }
+
+  Future<SupplierCreditBalanceGraph> fetchSupplierCreditBalance(
+      String accessToken, String startDate, String endDate) async {
+    final url = Uri.parse(
+        '${APPUrl.supplierCreditBalance}?start_date=$startDate&end_date=$endDate');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching supplier credit balance from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint(
+        'Supplier credit balance response status: ${response.statusCode}');
+    debugPrint('Supplier credit balance response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Supplier credit balance data: $data');
+        return SupplierCreditBalanceGraph.fromJson(
+            data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load supplier credit balance. Status code: ${response.statusCode}');
+    }
+  }
 }
 
 class GraphData {

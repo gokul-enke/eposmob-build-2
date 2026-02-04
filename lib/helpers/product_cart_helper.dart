@@ -104,13 +104,12 @@ class ProductCartHelper {
             "📦 Multiple stock entries detected, filtering available stocks...");
         debugPrint("  - Total stock entries: ${product.stock!.length}");
 
-        // Filter available stock options (quantity > 0)
-        List<Stock> availableStocks = product.stock!
-            .where((stock) => stock.quantity != null && stock.quantity! > 0)
-            .toList();
+        // Get all stock options (don't filter by quantity - physical stock may be available)
+        // Physical stock at shop matters more than digital count
+        List<Stock> availableStocks = List.from(product.stock!);
 
         debugPrint(
-            "📦 Available stocks after filtering: ${availableStocks.length}");
+            "📦 Available stocks: ${availableStocks.length}");
         for (int i = 0; i < availableStocks.length; i++) {
           Stock stock = availableStocks[i];
           debugPrint(
@@ -156,9 +155,9 @@ class ProductCartHelper {
             return;
           }
         } else if (availableStocks.isNotEmpty) {
-          debugPrint("📦 Single available stock found, auto-selecting...");
+          debugPrint("📦 Single stock entry found, auto-selecting...");
 
-          // Single stock option available, use it
+          // Single stock option available, use it (regardless of quantity)
           selectedStock = availableStocks.first;
 
           debugPrint("📦 Auto-selected stock details:");
@@ -177,13 +176,14 @@ class ProductCartHelper {
           debugPrint("  - Final Price: $finalPrice");
           debugPrint("  - Final MRP: $finalMrp");
         } else {
-          debugPrint("❌ No available stock found (all stocks have 0 quantity)");
-          showScaffold(
-            context: context,
-            message: "No stock available for this product.",
-          );
-          debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-          return;
+          debugPrint("📦 Product has no stock entries, using basic product info...");
+          finalPrice =
+              finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
+          finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
+
+          debugPrint("💰 Product base pricing (No Stock):");
+          debugPrint("  - Final Price: $finalPrice");
+          debugPrint("  - Final MRP: $finalMrp");
         }
       } else {
         debugPrint(

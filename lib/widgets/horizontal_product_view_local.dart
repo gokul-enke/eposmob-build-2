@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/widgets/price_selection_modal.dart';
 import 'package:pos_machine/widgets/product_card_widget.dart';
@@ -60,6 +61,12 @@ class _HorizontalProductViewLocalState
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
+    // Get currency from app settings
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'INR';
+
     debugPrint("🎯 HORIZONTAL PRODUCT SELECTION:");
     debugPrint("  - Product: ${product.productName ?? ''}");
     debugPrint("  - Product ID: ${product.productId}");
@@ -80,17 +87,18 @@ class _HorizontalProductViewLocalState
         productName: product.productName ?? 'Unknown Product',
         prices: customPrices,
         onPriceSelected: (double price) {
-          debugPrint("🎯 HORIZONTAL MODAL: Price selected: ₹$price");
+          debugPrint("🎯 HORIZONTAL MODAL: Price selected: $currency$price");
         },
       ),
     );
 
     debugPrint(
-        "🎯 HORIZONTAL: Price modal result: ${selectedPrice != null ? '₹$selectedPrice' : 'cancelled'}");
+        "🎯 HORIZONTAL: Price modal result: ${selectedPrice != null ? '$currency$selectedPrice' : 'cancelled'}");
 
     // If user selected a price, proceed with adding to cart
     if (selectedPrice != null) {
-      debugPrint("  - Adding to cart with selected price: ₹$selectedPrice");
+      debugPrint(
+          "  - Adding to cart with selected price: $currency$selectedPrice");
       await ProductCartHelper.handleProductSelection(
         context: context,
         product: product,

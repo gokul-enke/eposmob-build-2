@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -97,6 +98,183 @@ class InvoiceProvider extends ChangeNotifier {
     if (page < 1 || page > _totalPages) return;
 
     applyFiltersLocally(filterName: _filterName, page: page);
+  }
+
+  //          *********************** CUSTOMER TRANSACTIONS API ***************************************************
+  Future<dynamic> listCustomerTransactions({
+    required String accessToken,
+    String? customerId,
+    String? dateFrom,
+    String? dateTo,
+    String? transactionType, // invoice, voucher, receipt, sales return
+    String? type, // credit | debit
+    int? perPage,
+    int? page,
+  }) async {
+    // Build query parameters
+    final queryParams = <String, String>{
+      if (customerId != null && customerId.isNotEmpty)
+        'customer_id': customerId,
+      if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+      if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
+      if (transactionType != null && transactionType.isNotEmpty)
+        'transaction_type': transactionType,
+      if (type != null && type.isNotEmpty) 'type': type,
+      'per_page': (perPage ?? 20).toString(),
+      'page': (page ?? 1).toString(),
+    };
+
+    final uri = Uri.parse(APPUrl.customerTransactions)
+        .replace(queryParameters: queryParams);
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        // Parse into existing model for UI consumption
+        try {
+          final listModel = ListTransactionModel.fromJson(jsonData);
+          transactionListDetails = listModel.data?.transactions;
+          notifyListeners();
+        } catch (e) {
+          debugPrint('Error parsing customer transactions: $e');
+        }
+        return jsonData;
+      } else {
+        throw Exception(
+            'Failed to load customer transactions: ${response.statusCode}');
+      }
+    } on TimeoutException {
+      throw Exception('Request timed out');
+    }
+  }
+
+  //          *********************** ZATCA PHASE 2 INVOICE RESYNC ***************************************************
+  Future<dynamic> zatcaPhase2InvoiceResync({
+    required int id,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(APPUrl.zatcaPhase2InvoiceResync);
+
+    debugPrint('[ZATCA][Provider] Phase2 Resync URL: $uri');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final maskedHeaders = {
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
+        'X-Tenant': apiKey,
+      };
+      debugPrint('[ZATCA][Provider] Headers: $maskedHeaders');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return response.body;
+        }
+      } else {
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        return {
+          'status': 'error',
+          'message': 'Failed with status ${response.statusCode}'
+        };
+      }
+    } on TimeoutException catch (_) {
+      debugPrint('[ZATCA][Provider] ERROR: Request timed out');
+      return {'status': 'error', 'message': 'Request timed out'};
+    } catch (e) {
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
+  //          *********************** ZATCA PHASE 2 INVOICE PRINT ***************************************************
+  Future<dynamic> zatcaPhase2InvoicePrint({
+    required int id,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(APPUrl.zatcaPhase2InvoicePrint);
+
+    debugPrint('[ZATCA][Provider] Phase2 Print URL: $uri');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final headers = {
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
+        'X-Tenant': apiKey,
+      };
+      debugPrint('[ZATCA][Provider] Headers: $headers');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return response.body;
+        }
+      } else {
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        return {
+          'status': 'error',
+          'message': 'Failed with status ${response.statusCode}'
+        };
+      }
+    } on TimeoutException catch (_) {
+      debugPrint('[ZATCA][Provider] ERROR: Request timed out');
+      return {'status': 'error', 'message': 'Request timed out'};
+    } catch (e) {
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
+      return {'status': 'error', 'message': e.toString()};
+    }
   }
 
   // Receipt navigation methods
@@ -522,12 +700,79 @@ class InvoiceProvider extends ChangeNotifier {
 
   InvoiceProvider();
 
+  // Update a single invoice's ZATCA status locally (both paginated view and cache)
+  void updateInvoiceZatcaStatus(int id, String status) {
+    // Helper to clone invoice with new status
+    Invoice _cloneWithStatus(Invoice inv, String s) {
+      return Invoice(
+        id: inv.id,
+        userId: inv.userId,
+        customerId: inv.customerId,
+        invoiceNumber: inv.invoiceNumber,
+        type: inv.type,
+        companyId: inv.companyId,
+        amount: inv.amount,
+        invoiceDate: inv.invoiceDate,
+        dueDate: inv.dueDate,
+        status: inv.status,
+        createdBy: inv.createdBy,
+        createdAt: inv.createdAt,
+        updatedAt: inv.updatedAt,
+        customer: inv.customer,
+        zatcaStatus: s,
+      );
+    }
+
+    bool updated = false;
+
+    if (invoiceListDetails != null && invoiceListDetails!.isNotEmpty) {
+      for (var i = 0; i < invoiceListDetails!.length; i++) {
+        if (invoiceListDetails![i].id == id) {
+          invoiceListDetails![i] =
+              _cloneWithStatus(invoiceListDetails![i], status);
+          updated = true;
+          break;
+        }
+      }
+    }
+
+    if (_allInvoices != null && _allInvoices!.isNotEmpty) {
+      for (var i = 0; i < _allInvoices!.length; i++) {
+        if (_allInvoices![i].id == id) {
+          _allInvoices![i] = _cloneWithStatus(_allInvoices![i], status);
+          updated = true;
+          break;
+        }
+      }
+    }
+
+    if (updated) {
+      notifyListeners();
+    }
+  }
+
+  // Re-apply current filters and page using in-memory cache only.
+  // This triggers UI update without fetching from network or resetting pagination.
+  void reapplyCurrentFilters() {
+    applyFiltersLocally(
+      filterName: _filterName,
+      filterInvoiceNumber: _filterInvoiceNumber,
+      filterFromDate: _filterFromDate,
+      filterToDate: _filterToDate,
+      filterStatus: _filterStatus,
+      filterOrderNumber: _filterOrderNumber,
+      filterPhone: _filterPhone,
+      filterEmail: _filterEmail,
+      page: _currentPage,
+    );
+  }
+
   //          *********************** LIST ALL PAYMENT LIST  API ***************************************************
 
   Future<void> listAllPaymentList(
     String accessToken,
   ) async {
-    // debugPrint("LIST ALL listAllPaymentList ");
+    debugPrint("[InvoiceProvider] listAllPaymentList called");
 
     final url = Uri.parse(APPUrl.listTransactionType);
     // Get API key from SharedPreferences
@@ -535,32 +780,99 @@ class InvoiceProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
+      debugPrint("[InvoiceProvider] API key not found");
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
+      debugPrint("[InvoiceProvider] Fetching payment methods from: $url");
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      debugPrint(
+          "[InvoiceProvider] Payment methods response: ${response.statusCode}");
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
+        debugPrint("[InvoiceProvider] Payment methods data: $jsonData");
         GetPaymentMethodsModel getPaymentMethodsModel =
             GetPaymentMethodsModel.fromJson(jsonData);
 
-        paymentList = getPaymentMethodsModel.paymentList;
+        // Use paymentListAsMap for backwards compatibility with Map<String, String>
+        paymentList = getPaymentMethodsModel.paymentListAsMap;
+        debugPrint("[InvoiceProvider] Payment list parsed: $paymentList");
 
         notifyListeners();
-      } else {}
-    } finally {}
+      } else {
+        debugPrint("[InvoiceProvider] Payment methods error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("[InvoiceProvider] Payment methods exception: $e");
+    }
+  }
+
+  //          *********************** ZATCA PHASE 1 INVOICE PRINT ***************************************************
+  Future<dynamic> zatcaPhase1InvoicePrint({
+    required int id,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(APPUrl.zatcaPhase1InvoicePrint);
+
+    debugPrint('[ZATCA][Provider] Phase1 Print URL: $uri');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final headers = {
+        'Authorization':
+            'Bearer ${accessToken.length > 10 ? accessToken.substring(0, 6) + '...' : '***'}',
+        'X-Tenant': apiKey,
+      };
+      debugPrint('[ZATCA][Provider] Headers: $headers');
+      debugPrint('[ZATCA][Provider] Body: {id: $id} (POST)');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: {'id': id.toString()},
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return response.body;
+        }
+      } else {
+        debugPrint(
+            '[ZATCA][Provider] HTTP ${response.statusCode}: ${response.body}');
+        return {
+          'status': 'error',
+          'message': 'Failed with status ${response.statusCode}'
+        };
+      }
+    } on TimeoutException catch (_) {
+      debugPrint('[ZATCA][Provider] ERROR: Request timed out');
+      return {'status': 'error', 'message': 'Request timed out'};
+    } catch (e) {
+      debugPrint('[ZATCA][Provider] EXCEPTION: $e');
+      return {'status': 'error', 'message': e.toString()};
+    }
   }
   //          *********************** LIST ALL INVOICE ACCOUNT TYPES  API ***************************************************
 
   Future<void> listAllInvoiceAccountTypes(
     String accessToken,
   ) async {
-    // debugPrint("LIST ALL listAllInvoiceAccountTypes ");
+    debugPrint("[InvoiceProvider] listAllInvoiceAccountTypes called");
 
     final url = Uri.parse(APPUrl.listInvoiceAccountType);
     // Get API key from SharedPreferences
@@ -568,27 +880,36 @@ class InvoiceProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
+      debugPrint("[InvoiceProvider] API key not found");
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
+      debugPrint("[InvoiceProvider] Fetching account types from: $url");
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      debugPrint(
+          "[InvoiceProvider] Account types response: ${response.statusCode}");
       if (response.statusCode == 200) {
-        // debugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
+        debugPrint("[InvoiceProvider] Account types data: $jsonData");
         GetInvoiceAccountTypesModel getInvoiceAccountTypesModel =
             GetInvoiceAccountTypesModel.fromJson(jsonData);
 
         getInvoiceAccountTypesModelData =
             getInvoiceAccountTypesModel.getInvoiceAccountTypesModelData;
+        debugPrint(
+            "[InvoiceProvider] Account types parsed: $getInvoiceAccountTypesModelData");
 
         notifyListeners();
-      } else {}
-    } finally {}
+      } else {
+        debugPrint("[InvoiceProvider] Account types error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("[InvoiceProvider] Account types exception: $e");
+    }
   }
   //          *********************** LIST VOUCHER ACCOUNT TYPE  API ***************************************************
 
@@ -717,21 +1038,122 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
+  //          *********************** CREATE INVOICE API ***************************************************
+
+  Future<dynamic> createInvoice({
+    required int customerId,
+    required String type,
+    required String dueDate,
+    required String invoiceDate,
+    required double amount,
+    required String status,
+    required int paymentMethod,
+    required List<Map<String, dynamic>> invoiceItems,
+    required String accessToken,
+    // Discount fields
+    String? couponId,
+    double? flatDiscount,
+    double? percentageDiscount,
+    double? discountAmount,
+  }) async {
+    // Build request body
+    final Map<String, dynamic> apiBodyData = {
+      "customer_id": customerId,
+      "type": type,
+      "due_date": dueDate,
+      "invoice_date": invoiceDate,
+      "amount": amount,
+      "status": status,
+      "payment_method": paymentMethod,
+      "invoice_items": invoiceItems,
+      // Discount data
+      if (couponId != null) "coupon_id": couponId,
+      if (flatDiscount != null && flatDiscount > 0)
+        "flat_discount": flatDiscount,
+      if (percentageDiscount != null && percentageDiscount > 0)
+        "percentage_discount": percentageDiscount,
+      if (discountAmount != null && discountAmount > 0)
+        "discount_amount": discountAmount,
+    };
+
+    debugPrint(
+        "[InvoiceProvider] createInvoice called with body: $apiBodyData");
+
+    final url = Uri.parse(APPUrl.createInvoice);
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint(
+          "[InvoiceProvider] createInvoice response: ${response.statusCode}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseBody = json.decode(response.body);
+        debugPrint("[InvoiceProvider] createInvoice success: $responseBody");
+        return responseBody;
+      } else {
+        debugPrint("[InvoiceProvider] createInvoice error: ${response.body}");
+        try {
+          return json.decode(response.body);
+        } catch (_) {
+          return {
+            'status': 'error',
+            'message': 'Failed with status ${response.statusCode}'
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint("[InvoiceProvider] createInvoice exception: $e");
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
   //          *********************** LIST ALL TRANSACTION API ***************************************************
 
   Future<dynamic> listAllTransaction({
     String? type,
     required String accessToken,
+    String? customerId,
+    String? customerName,
+    String? transactionType,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
   }) async {
-    final Map<String, dynamic> apiBodyData = {
-      'type': type,
-    };
-    // debugPrint(apiBodyData.toString());
-    final url = type == null
-        ? Uri.parse(APPUrl.listAllTransaction)
-        : type == "Cr"
-            ? Uri.parse("${APPUrl.listAllTransaction}?type=Cr")
-            : Uri.parse("${APPUrl.listAllTransaction}?type=Dr");
+    // Build query parameters
+    Map<String, String> queryParams = {};
+
+    if (type != null) queryParams['type'] = type;
+    if (customerId != null) queryParams['customer_id'] = customerId;
+    if (customerName != null) queryParams['customer_name'] = customerName;
+    if (transactionType != null)
+      queryParams['transaction_type'] = transactionType;
+    if (dateFrom != null) queryParams['date_from'] = dateFrom;
+    if (dateTo != null) queryParams['date_to'] = dateTo;
+    if (page != null) queryParams['page'] = page.toString();
+
+    // Build URL with query parameters
+    Uri url = Uri.parse(APPUrl.listAllTransaction);
+    if (queryParams.isNotEmpty) {
+      url = Uri.parse(APPUrl.listAllTransaction)
+          .replace(queryParameters: queryParams);
+    }
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -747,14 +1169,32 @@ class InvoiceProvider extends ChangeNotifier {
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
+
+        // Detect new grouped structure: data.data is a List of customer groups each having 'transactions'
+        try {
+          final data = jsonData['data'];
+          if (data is Map &&
+              data['data'] is List &&
+              (data['data'] as List).isNotEmpty &&
+              (data['data'][0] is Map) &&
+              (data['data'][0] as Map).containsKey('transactions')) {
+            // New grouped response detected. Do not parse into old model here.
+            // Optionally, we could flatten transactions if needed by legacy callers.
+            // For safety, leave transactionListDetails unchanged and just return json.
+            notifyListeners();
+            return jsonData;
+          }
+        } catch (_) {
+          // Fallback to old behavior
+        }
+
+        // Old flat transactions response: parse into model for backward compatibility
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(jsonData);
-
         transactionListDetails = listTransactionModel.data?.transactions;
         notifyListeners();
-        return json.decode(response.body);
+        return jsonData;
       } else {}
     } finally {
       // _isLoading = false;
@@ -905,7 +1345,92 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
+  // Refresh a single invoice from server using the list-all-invoices API,
+  // but only merge the updated invoice into the in-memory lists without
+  // changing filters, pagination or loading flags.
+  Future<void> refreshSingleInvoiceFromServer({
+    required String accessToken,
+    required int invoiceId,
+  }) async {
+    try {
+      final queryParams = {
+        'page': '1',
+        'per_page': '1000',
+      };
+
+      final uri = Uri.parse(APPUrl.listAllInvoices)
+          .replace(queryParameters: queryParams);
+      debugPrint(
+          'refreshSingleInvoiceFromServer: fetching invoices for merge from: $uri');
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        debugPrint(
+            'refreshSingleInvoiceFromServer: API key missing, skipping merge');
+        return;
+      }
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint(
+            'refreshSingleInvoiceFromServer: HTTP ${response.statusCode}, skipping merge');
+        return;
+      }
+
+      final jsonData = json.decode(response.body);
+      ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
+      final List<Invoice> fetchedInvoices = listInvoiceModel.data.invoices;
+
+      final updated = fetchedInvoices
+          .where((inv) => inv.id == invoiceId)
+          .cast<Invoice?>()
+          .toList();
+
+      if (updated.isEmpty) {
+        debugPrint(
+            'refreshSingleInvoiceFromServer: invoice $invoiceId not found in response');
+        return;
+      }
+
+      final Invoice updatedInvoice = updated.first!;
+
+      // Merge into _allInvoices
+      if (_allInvoices != null && _allInvoices!.isNotEmpty) {
+        for (var i = 0; i < _allInvoices!.length; i++) {
+          if (_allInvoices![i].id == invoiceId) {
+            _allInvoices![i] = updatedInvoice;
+            break;
+          }
+        }
+      }
+
+      // Merge into paginated view
+      if (invoiceListDetails != null && invoiceListDetails!.isNotEmpty) {
+        for (var i = 0; i < invoiceListDetails!.length; i++) {
+          if (invoiceListDetails![i].id == invoiceId) {
+            invoiceListDetails![i] = updatedInvoice;
+            break;
+          }
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('refreshSingleInvoiceFromServer: exception $e');
+    }
+  }
+
   //          *********************** LIST ALL RECEIPT API ***************************************************
+
   Future<dynamic> listAllReceipts({
     required String accessToken,
     int page = 1,
@@ -1031,6 +1556,63 @@ class InvoiceProvider extends ChangeNotifier {
     } catch (e) {
       // debugPrint("Exception occurred: $e");
       // Handle exceptions accordingly
+    }
+  }
+
+  //          *********************** ADD RECEIPT API ***************************************************
+  Future<dynamic> addReceipt({
+    required String customerId,
+    required String receiptStatus,
+    required List<Map<String, dynamic>> receiptItems,
+    required String accessToken,
+    String? paymentReference,
+  }) async {
+    final Map<String, dynamic> apiBodyData = {
+      'customer_id': customerId,
+      'receipt_status': receiptStatus,
+      'receipt_items': receiptItems,
+    };
+
+    // Add payment_reference if provided
+    if (paymentReference != null && paymentReference.isNotEmpty) {
+      apiBodyData['payment_reference'] = paymentReference;
+    }
+
+    final url = Uri.parse(APPUrl.createReceipt);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      debugPrint(
+          '📨 [InvoiceProvider] Sending receipt request to ${url.toString()}');
+      debugPrint(
+          '📨 [InvoiceProvider] Request body: ${json.encode(apiBodyData)}');
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint(
+          '📥 [InvoiceProvider] Response status: ${response.statusCode}');
+      debugPrint('📥 [InvoiceProvider] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to create receipt: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error creating receipt: $e');
     }
   }
 

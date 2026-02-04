@@ -64,6 +64,8 @@ class CustomerListModelData {
 
   // Financial fields
   final double? balance;
+  final String? paymentType;
+  final String? customerType;
 
   // Address fields
   final String? address;
@@ -73,9 +75,15 @@ class CustomerListModelData {
   final String? country;
   final String? district;
 
+  // Additional fields from API
+  final int? companyId;
+  final String? storeName;
+  final List<Kyc>? kyc;
+
   // Related data
   final List<CustomerTransaction>? transactions;
   final List<CustomerOrder>? orders;
+  final List<Address>? addresses;
 
   CustomerListModelData({
     this.id,
@@ -101,14 +109,20 @@ class CustomerListModelData {
     this.minRedeemablePoints,
     this.pricePerPoint,
     this.balance,
+    this.paymentType,
+    this.customerType,
     this.address,
     this.pincode,
     this.city,
     this.state,
     this.country,
     this.district,
+    this.companyId,
+    this.storeName,
+    this.kyc,
     this.transactions,
     this.orders,
+    this.addresses,
   });
 
   factory CustomerListModelData.fromJson(Map<String, dynamic> json) =>
@@ -141,13 +155,22 @@ class CustomerListModelData {
         membershipCode: json["membership_code"]?.toString(),
         minRedeemablePoints: json["min_redeemable_points"],
         pricePerPoint: json["price_per_point"]?.toDouble(),
-        balance: json["balance"]?.toDouble(),
+        balance: json["balance"] != null
+            ? double.tryParse(json["balance"].toString())
+            : null,
+        paymentType: json["payment_type"],
+        customerType: json["customer_type"],
         address: json["address"],
         pincode: json["pin_code"] ?? json["pincode"],
         city: json["city"],
         state: json["state"],
         country: json["country"],
         district: json["district"],
+        companyId: json["company_id"],
+        storeName: json["store_name"],
+        kyc: json["kyc"] == null
+            ? []
+            : List<Kyc>.from(json["kyc"].map((x) => Kyc.fromJson(x))),
         transactions: json["transactions"] == null
             ? []
             : List<CustomerTransaction>.from(json["transactions"]
@@ -156,6 +179,10 @@ class CustomerListModelData {
             ? []
             : List<CustomerOrder>.from(
                 json["orders"].map((x) => CustomerOrder.fromJson(x))),
+        addresses: json["addresses"] == null
+            ? []
+            : List<Address>.from(
+                json["addresses"].map((x) => Address.fromJson(x))),
       );
 
   Map<String, dynamic> toJson() => {
@@ -182,18 +209,27 @@ class CustomerListModelData {
         "min_redeemable_points": minRedeemablePoints,
         "price_per_point": pricePerPoint,
         "balance": balance,
+        "payment_type": paymentType,
+        "customer_type": customerType,
         "address": address,
         "pin_code": pincode,
         "city": city,
         "state": state,
         "country": country,
         "district": district,
+        "company_id": companyId,
+        "store_name": storeName,
+        "kyc":
+            kyc == null ? [] : List<dynamic>.from(kyc!.map((x) => x.toJson())),
         "transactions": transactions == null
             ? []
             : List<dynamic>.from(transactions!.map((x) => x.toJson())),
         "orders": orders == null
             ? []
             : List<dynamic>.from(orders!.map((x) => x.toJson())),
+        "addresses": addresses == null
+            ? []
+            : List<dynamic>.from(addresses!.map((x) => x.toJson())),
       };
 }
 
@@ -355,6 +391,50 @@ class CustomerOrder {
       };
 }
 
+class Kyc {
+  final int? id;
+  final int? userId;
+  final String? key;
+  final String? value;
+  final String? expiryDate;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  Kyc({
+    this.id,
+    this.userId,
+    this.key,
+    this.value,
+    this.expiryDate,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory Kyc.fromJson(Map<String, dynamic> json) => Kyc(
+        id: json["id"],
+        userId: json["user_id"],
+        key: json["key"],
+        value: json["value"],
+        expiryDate: json["expiry_date"]?.toString(),
+        createdAt: json["created_at"] == null
+            ? null
+            : DateTime.parse(json["created_at"]),
+        updatedAt: json["updated_at"] == null
+            ? null
+            : DateTime.parse(json["updated_at"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "user_id": userId,
+        "key": key,
+        "value": value,
+        "expiry_date": expiryDate,
+        "created_at": createdAt?.toIso8601String(),
+        "updated_at": updatedAt?.toIso8601String(),
+      };
+}
+
 class OrderItem {
   final int? id;
   final int? cartId;
@@ -472,3 +552,73 @@ class OrderItem {
 //         "updated_at": updatedAt?.toIso8601String(),
 //       };
 // }
+
+class Address {
+  final int? id;
+  final int? customerId;
+  final String? name;
+  final String? address;
+  final String? city;
+  final int? stateId;
+  final int? districtId;
+  final int? pincodeId;
+  final String? phone;
+  final String? type;
+  final String? landmark;
+  final int? companyId;
+
+  Address({
+    this.id,
+    this.customerId,
+    this.name,
+    this.address,
+    this.city,
+    this.stateId,
+    this.districtId,
+    this.pincodeId,
+    this.phone,
+    this.type,
+    this.landmark,
+    this.companyId,
+  });
+
+  factory Address.fromJson(Map<String, dynamic> json) => Address(
+        id: json["id"] is int
+            ? json["id"]
+            : int.tryParse(json["id"].toString()),
+        customerId: json["customer_id"] is int
+            ? json["customer_id"]
+            : int.tryParse(json["customer_id"].toString()),
+        name: json["name"],
+        address: json["address"],
+        city: json["city"]?.toString(),
+        stateId: json["state_id"] is int
+            ? json["state_id"]
+            : int.tryParse(json["state_id"].toString()),
+        districtId: json["district_id"] is int
+            ? json["district_id"]
+            : int.tryParse(json["district_id"].toString()),
+        pincodeId: json["pincode_id"] is int
+            ? json["pincode_id"]
+            : int.tryParse(json["pincode_id"].toString()),
+        phone: json["phone"],
+        type: json["type"],
+        landmark: json["landmark"],
+        companyId: json["company_id"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "customer_id": customerId,
+        "name": name,
+        "address": address,
+        "city": city,
+        "state_id": stateId,
+        "district_id": districtId,
+        "pincode_id": pincodeId,
+        "phone": phone,
+        "type": type,
+        "landmark": landmark,
+        "company_id": companyId,
+      };
+}

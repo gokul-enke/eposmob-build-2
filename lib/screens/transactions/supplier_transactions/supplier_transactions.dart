@@ -23,6 +23,7 @@ class TransactionScreen extends StatefulWidget {
 class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController searchController = TextEditingController();
   final TextEditingController typeController = TextEditingController();
+  final TextEditingController transactionTypeController = TextEditingController();
   final TextEditingController statusController = TextEditingController();
   final TextEditingController paymentModeController = TextEditingController();
   final TextEditingController supplierController = TextEditingController();
@@ -36,14 +37,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('TransactionScreen:initState');
     final accessToken =
         Provider.of<AuthModel>(context, listen: false).token ?? '';
+    debugPrint(
+        'TransactionScreen:obtainedToken length=${accessToken.length} isEmpty=${accessToken.isEmpty}');
     Provider.of<TransactionProvider>(context, listen: false)
         .setAccessToken(accessToken);
     loadInitData();
 
     // Initialize controllers with default values
     typeController.text = "All Types";
+    transactionTypeController.text = "All";
     statusController.text = "All Status";
     paymentModeController.text = "All Payment Modes";
     supplierController.text = "All Suppliers";
@@ -51,39 +56,42 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   void loadInitData() async {
     try {
+      debugPrint('TransactionScreen:loadInitData start');
       setState(() => initLoading = true);
+      // Initial server-side fetch (no filters)
       await Provider.of<TransactionProvider>(context, listen: false)
-          .fetchAllTransactionsBatch();
+          .fetchTransactionsFromServerV2(page: 1, perPage: 50);
       setState(() {
         isInitialized = true;
         initLoading = false;
       });
+      debugPrint('TransactionScreen:loadInitData success');
     } catch (error) {
       debugPrint("Error loading transactions: $error");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error loading transactions: $error")),
       );
       setState(() => initLoading = false);
+      debugPrint('TransactionScreen:loadInitData error=$error');
     }
   }
 
   void searchTransactions() {
-    final supplierFilter = supplierSearchController.text.isEmpty
-        ? null
-        : supplierSearchController.text;
+    final txProvider = Provider.of<TransactionProvider>(context, listen: false);
+    String? supplierId;
+    if (supplierSearchController.text.isNotEmpty) {
+      supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
+    }
 
-    Provider.of<TransactionProvider>(context, listen: false)
-        .applyTransactionFiltersLocally(
-      filterName: searchController.text,
-      filterType:
-          typeController.text == "All Types" ? null : typeController.text,
-      filterStatus:
-          statusController.text == "All Status" ? null : statusController.text,
-      filterPaymentMode: paymentModeController.text == "All Payment Modes"
+    txProvider.fetchTransactionsFromServerV2(
+      supplierId: supplierId,
+      transactionType: transactionTypeController.text == "All"
           ? null
-          : paymentModeController.text,
-      filterSupplier: supplierFilter,
+          : transactionTypeController.text,
+      type: typeController.text == "All Types" ? null : typeController.text,
+      // date filters not present in this UI
       page: 1,
+      perPage: 50,
     );
   }
 
@@ -91,17 +99,31 @@ class _TransactionScreenState extends State<TransactionScreen> {
     setState(() {
       searchController.clear();
       typeController.text = "All Types";
+      transactionTypeController.text = "All";
       statusController.text = "All Status";
       paymentModeController.text = "All Payment Modes";
-      supplierSearchController.clear(); // Clear the supplier search
+      supplierSearchController.clear();
     });
+    // Refetch from server with defaults
     Provider.of<TransactionProvider>(context, listen: false)
-        .resetTransactionFilters();
+        .fetchTransactionsFromServerV2(page: 1, perPage: 50);
   }
 
   Future<void> _onRefresh() async {
-    await Provider.of<TransactionProvider>(context, listen: false)
-        .refreshAllTransactions();
+    final txProvider = Provider.of<TransactionProvider>(context, listen: false);
+    String? supplierId;
+    if (supplierSearchController.text.isNotEmpty) {
+      supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
+    }
+    await txProvider.fetchTransactionsFromServerV2(
+      supplierId: supplierId,
+      transactionType: transactionTypeController.text == "All"
+          ? null
+          : transactionTypeController.text,
+      type: typeController.text == "All Types" ? null : typeController.text,
+      page: txProvider.transactionCurrentPage,
+      perPage: 50,
+    );
   }
 
   Widget _buildDetailRow(String label, String value) {
@@ -399,7 +421,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('TransactionScreen:build start');
     final transactionProvider = Provider.of<TransactionProvider>(context);
+    debugPrint('TransactionScreen:build transactionProvider=not-null isLoading=${transactionProvider.transactionIsLoading}');
     Size size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
 
@@ -475,15 +499,31 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: _buildSearchField(
-                        title: "Supplier",
-                        child: SupplierAutocomplete(
-                          size: size,
-                          onSelected: (_) => searchTransactions(),
-                          supplierList:
-                              transactionProvider.getSupplierOptions(),
-                          controller: supplierSearchController,
-                        ),
+                      child: Builder(
+                        builder: (ctx) {
+                          debugPrint('TransactionScreen:building SupplierAutocomplete');
+                          final supplierOptions = transactionProvider.getSupplierOptions();
+                          debugPrint('TransactionScreen:supplierOptions length=${supplierOptions.length}');
+                          return _buildSearchField(
+                            title: "Supplier",
+                            child: SupplierAutocomplete(
+                              size: size,
+                              onSelected: (_) => searchTransactions(),
+                              supplierList: supplierOptions,
+                              controller: supplierSearchController,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildFilterDropdown(
+                        title: "Trans. Type",
+                        controller: transactionTypeController,
+                        options: const ["All", "Invoice", "Voucher"],
+                        width: size.width,
+                        isSmallScreen: isSmallScreen,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -491,7 +531,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       child: _buildFilterDropdown(
                         title: "Type",
                         controller: typeController,
-                        options: transactionProvider.getTypeOptions(),
+                        options: const ["All Types", "Credit", "Debit"],
                         width: size.width,
                         isSmallScreen: isSmallScreen,
                       ),
@@ -563,7 +603,20 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         currentPage: transactionProvider.transactionCurrentPage,
                         totalPages: transactionProvider.transactionTotalPages,
                         onPageChanged: (int page) {
-                          transactionProvider.goToTransactionPage(page);
+                          final txProvider = Provider.of<TransactionProvider>(context, listen: false);
+                          String? supplierId;
+                          if (supplierSearchController.text.isNotEmpty) {
+                            supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
+                          }
+                          txProvider.fetchTransactionsFromServerV2(
+                            supplierId: supplierId,
+                            transactionType: transactionTypeController.text == "All"
+                                ? null
+                                : transactionTypeController.text,
+                            type: typeController.text == "All Types" ? null : typeController.text,
+                            page: page,
+                            perPage: 50,
+                          );
                         },
                       ),
                     ],

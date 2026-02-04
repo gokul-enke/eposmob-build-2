@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:pos_machine/models/add_to_cart.dart';
+import 'package:pos_machine/models/get_product.dart';
 
 ListCartModel listCartModelFromJson(String str) =>
     ListCartModel.fromJson(json.decode(str));
@@ -108,6 +109,7 @@ class ListCartModelDataCartItem {
   final DateTime? updatedAt;
   final ProductAttachment?
       productAttachment; // Changed from List to single object
+  final Names? names; // Add bilingual names support
 
   ListCartModelDataCartItem({
     this.id,
@@ -125,6 +127,7 @@ class ListCartModelDataCartItem {
     this.currency,
     this.createdAt,
     this.updatedAt,
+    this.names, // Add to constructor
   });
 
   factory ListCartModelDataCartItem.fromJson(Map<String, dynamic> json) =>
@@ -151,6 +154,9 @@ class ListCartModelDataCartItem {
         updatedAt: json["updated_at"] == null
             ? null
             : DateTime.parse(json["updated_at"]),
+        names: json["names"] == null // Add names parsing
+            ? null
+            : Names.fromJson(json["names"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -169,6 +175,7 @@ class ListCartModelDataCartItem {
         "currency": currency,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
+        "names": names?.toJson(), // Add names to serialization
       };
 }
 

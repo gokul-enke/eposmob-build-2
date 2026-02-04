@@ -7,6 +7,7 @@ import '../providers/cart_provider.dart';
 import '../providers/auth_model.dart';
 import '../models/get_product.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class HorizontalProductView extends StatefulWidget {
   final int? cartId;
@@ -97,15 +98,31 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      Text(
-                        '${product.currency ?? ''} ${product.price?.price ?? ''}/${product.unit ?? ''}',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black.withOpacity(0.5),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Consumer<AppSettingsProvider>(
+                        builder: (context, appSettingsProvider, _) {
+                          final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+                          final raw = product.price?.price; // can be String or num
+                          String price;
+                          if (raw is num) {
+                            price = raw.toStringAsFixed(2);
+                          } else if (raw is String) {
+                            final parsed = double.tryParse(raw);
+                            price = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                          } else {
+                            price = '0.00';
+                          }
+                          final unit = product.unit ?? '';
+                          return Text(
+                            '$currency $price/$unit',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black.withOpacity(0.5),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
                       ),
                       const SizedBox(height: 5),
                       SizedBox(

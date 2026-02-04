@@ -1,4 +1,4 @@
-package com.example.pos_machine
+package com.enke.cloudpos
 
 import io.flutter.embedding.android.FlutterActivity
 

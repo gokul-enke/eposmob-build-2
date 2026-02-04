@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,8 +15,13 @@ class SharedPreferenceProvider extends ChangeNotifier {
     String accessToken,
     int customerId,
     String customerName,
-    String userRole,
-  ) async {
+    String userRole, {
+    String? tokenType,
+    int? companyId,
+    String? companyName,
+    String? storesJson,
+    String? timeZone,
+  }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
 
@@ -23,6 +29,23 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.setInt('customerId', customerId);
     prefs.setString('customerName', customerName);
     prefs.setString('userRole', userRole);
+
+    // Save new fields
+    if (tokenType != null) {
+      prefs.setString('token_type', tokenType);
+    }
+    if (companyId != null) {
+      prefs.setInt('company_id', companyId);
+    }
+    if (companyName != null) {
+      prefs.setString('company_name', companyName);
+    }
+    if (storesJson != null) {
+      prefs.setString('stores', storesJson);
+    }
+    if (timeZone != null) {
+      prefs.setString('time_zone', timeZone);
+    }
     // debugPrint('inside shared ,$customerName');
   }
 
@@ -41,6 +64,18 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('customerId');
     prefs.remove('customerName');
     prefs.remove('userRole');
+
+    // Remove new fields
+    prefs.remove('token_type');
+    prefs.remove('company_id');
+    prefs.remove('company_name');
+    prefs.remove('stores');
+    prefs.remove('active_store_id');
+    prefs.remove('time_zone');
+
+    // Remove ZATCA fields
+    prefs.remove('zatca_vat_number');
+    prefs.remove('zatca_company_name');
   }
 
   Future<String?> getToken() async {
@@ -93,5 +128,137 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<void> removeApiKey() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('api_key');
+  }
+
+  // Getter methods for new fields
+  Future<String?> getTokenType() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token_type');
+  }
+
+  Future<int?> getCompanyId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('company_id');
+  }
+
+  Future<String?> getCompanyName() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('company_name');
+  }
+
+  Future<String?> getStoresJson() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('stores');
+  }
+
+  Future<String?> getTimeZone() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('time_zone');
+  }
+
+  Future<List<dynamic>?> getStores() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storesJson = prefs.getString('stores');
+    if (storesJson != null && storesJson.isNotEmpty) {
+      try {
+        return json.decode(storesJson) as List<dynamic>;
+      } catch (e) {
+        debugPrint('Error decoding stores: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // Active store management
+  Future<void> saveActiveStoreId(int storeId) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('active_store_id', storeId);
+  }
+
+  Future<int?> getActiveStoreId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('active_store_id');
+  }
+
+  Future<void> removeActiveStoreId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('active_store_id');
+  }
+
+  // Printer settings management
+  Future<void> clearPrinterSettings() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('default_printer');
+    await prefs.remove('default_paper_size');
+    await prefs.remove('default_font_style');
+  }
+
+  Future<void> saveServerTimeOffset(int offsetMilliseconds) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('server_time_offset', offsetMilliseconds);
+  }
+
+  Future<int?> getServerTimeOffset() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('server_time_offset');
+  }
+
+  // ==================== ZATCA METHODS ====================
+
+  /// Save ZATCA VAT number for Saudi Arabia e-invoicing
+  Future<void> saveZatcaVatNumber(String vatNumber) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zatca_vat_number', vatNumber);
+  }
+
+  /// Get ZATCA VAT number
+  Future<String?> getZatcaVatNumber() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('zatca_vat_number');
+  }
+
+  /// Save ZATCA company name for Saudi Arabia e-invoicing
+  Future<void> saveZatcaCompanyName(String companyName) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zatca_company_name', companyName);
+  }
+
+  /// Get ZATCA company name
+  Future<String?> getZatcaCompanyName() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('zatca_company_name');
+  }
+
+  /// Save both ZATCA credentials at once
+  Future<void> saveZatcaCredentials({
+    String? vatNumber,
+    String? companyName,
+  }) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (vatNumber != null && vatNumber.isNotEmpty) {
+      await prefs.setString('zatca_vat_number', vatNumber);
+    }
+    if (companyName != null && companyName.isNotEmpty) {
+      await prefs.setString('zatca_company_name', companyName);
+    }
+  }
+
+  /// Check if ZATCA credentials are available
+  Future<bool> hasZatcaCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final vatNumber = prefs.getString('zatca_vat_number');
+    final companyName = prefs.getString('zatca_company_name');
+    return vatNumber != null &&
+        vatNumber.isNotEmpty &&
+        companyName != null &&
+        companyName.isNotEmpty;
+  }
+
+  /// Remove ZATCA credentials
+  Future<void> removeZatcaCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('zatca_vat_number');
+    await prefs.remove('zatca_company_name');
   }
 }

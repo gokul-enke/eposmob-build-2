@@ -2,7 +2,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
+
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -41,18 +44,18 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
 
   // Dummy data for demonstration
   final List<String> recentTransactions = [
-    "Transaction #12345 - ₹2,450.00",
-    "Transaction #12346 - ₹1,200.50",
-    "Transaction #12347 - ₹890.75",
-    "Transaction #12348 - ₹3,100.00",
-    "Transaction #12349 - ₹567.25",
+    "Transaction #12345 - 2,450.00",
+    "Transaction #12346 - 1,200.50",
+    "Transaction #12347 - 890.75",
+    "Transaction #12348 - 3,100.00",
+    "Transaction #12349 - 567.25",
   ];
 
   final List<Map<String, dynamic>> topProducts = [
-    {"name": "Smartphone", "sales": 245, "revenue": "₹2,45,000"},
-    {"name": "Laptop", "sales": 123, "revenue": "₹6,15,000"},
-    {"name": "Headphones", "sales": 567, "revenue": "₹1,13,400"},
-    {"name": "Tablet", "sales": 89, "revenue": "₹2,67,000"},
+    {"name": "Smartphone", "sales": 245, "revenue": "2,45,000"},
+    {"name": "Laptop", "sales": 123, "revenue": "6,15,000"},
+    {"name": "Headphones", "sales": 567, "revenue": "1,13,400"},
+    {"name": "Tablet", "sales": 89, "revenue": "2,67,000"},
   ];
 
   final List<Map<String, dynamic>> lowStockItems = [
@@ -117,10 +120,71 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     } catch (error) {
       // In case of error, we'll continue with existing dummy data
       debugPrint('Error fetching new dashboard data: $error');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to load dashboard data: $error',
+        );
+      }
     }
   }
 
+  Future<void> fetchGraphDataForPeriod(String period) async {
+    debugPrint('=== FETCHING GRAPH DATA FOR PERIOD: $period ===');
+    try {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      if (accessToken == null) return;
+
+      // Get date range based on the period
+      final DateTime now = DateTime.now();
+      String startDate;
+      String endDate = DateFormat('yyyy-MM-dd').format(now);
+
+      switch (period) {
+        case "today":
+          startDate = DateFormat('yyyy-MM-dd').format(now);
+          break;
+        case "week":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7)));
+          break;
+        case "month":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(DateTime(now.year, now.month, 1));
+          break;
+        default:
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7))); // Default to week
+      }
+
+      // Map UI period to API period parameter
+      String apiPeriod = 'week';
+      if (period == 'today') apiPeriod = 'day';
+      if (period == 'week') apiPeriod = 'week';
+      if (period == 'month') apiPeriod = 'month';
+
+      final dashboardProvider = DashboardProvider();
+      final executiveSalesGraph = await dashboardProvider
+          .fetchExecutiveSalesGraph(accessToken, apiPeriod, startDate, endDate);
+
+      setState(() {
+        this.executiveSalesGraph = executiveSalesGraph;
+      });
+    } catch (error) {
+      debugPrint('Error fetching graph data: $error');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to load graph data: $error',
+        );
+      }
+    }
+  }
+
+
   Future<void> fetchGraphData() async {
+
     setState(() {
       isLoading = true;
     });
@@ -301,19 +365,19 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
           ),
           Row(
             children: [
-              CustomRoundButtonWithIcon(
-                title: "Export",
-                fct: () {},
-                fontSize: 12,
-                height: 40,
-                width: 120,
-                size: size,
-                icon: const Icon(
-                  Icons.download_outlined,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ),
+              // CustomRoundButtonWithIcon(
+              //   title: "Export",
+              //   fct: () {},
+              //   fontSize: 12,
+              //   height: 40,
+              //   width: 120,
+              //   size: size,
+              //   icon: const Icon(
+              //     Icons.download_outlined,
+              //     size: 16,
+              //     color: Colors.white,
+              //   ),
+              // ),
               const SizedBox(width: 12),
               BuildBoxShadowContainer(
                 padding: const EdgeInsets.all(12),
@@ -328,7 +392,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      DateFormat('d MMMM y').format(DateTime.now()),
+                      DateHelper.formatDate(DateHelper.now()),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -508,24 +572,24 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                           "Bank Accounts",
                           "Total Bank Balance",
                           dashboardOverview != null
-                              ? "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}"
+                              : "0",
                           ColorManager.kPrimaryColor,
                           Icons.account_balance),
                       _buildCompanyAccountCard(
                           "Cash Accounts",
                           "Total Cash Balance",
                           dashboardOverview != null
-                              ? "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}"
+                              : "0",
                           ColorManager.kMagentha,
                           Icons.account_balance_wallet),
                       _buildCompanyAccountCard(
                           "Total Revenue",
                           "Overall Revenue",
                           dashboardOverview != null
-                              ? "₹${NumberFormat('#,##,###.##').format(dashboardOverview!.revenue.totalSales)}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.revenue.totalSales)}"
+                              : "0",
                           ColorManager.kOrange,
                           Icons.trending_up),
                       _buildCompanyAccountCard(
@@ -673,8 +737,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                           "Total Sales",
                           "Overall Performance",
                           executivesOverview != null
-                              ? "₹${NumberFormat('#,##,###').format(executivesOverview!.salesExecutivesGraph.fold(0, (sum, executive) => sum + executive.sales.fold(0, (saleSum, sale) => saleSum + sale.amount)))}"
-                              : "₹0",
+                              ? "${NumberFormat('#,##,###').format(executivesOverview!.salesExecutivesGraph.fold(0, (sum, executive) => sum + executive.sales.fold(0, (saleSum, sale) => saleSum + sale.amount)))}"
+                              : "0",
                           ColorManager.kMagentha,
                           Icons.check_circle),
                     ],
@@ -1310,26 +1374,26 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     List<SalesExecutiveGraph> executivesData =
         executivesOverview?.salesExecutivesGraph ??
             [
-              SalesExecutiveGraph(
-                  executiveId: 1,
-                  executiveName: 'John Doe',
-                  sales: [SalesData(date: '2023-01-01', amount: 125000)]),
-              SalesExecutiveGraph(
-                  executiveId: 2,
-                  executiveName: 'Jane Smith',
-                  sales: [SalesData(date: '2023-01-01', amount: 98000)]),
-              SalesExecutiveGraph(
-                  executiveId: 3,
-                  executiveName: 'Robert Johnson',
-                  sales: [SalesData(date: '2023-01-01', amount: 87500)]),
-              SalesExecutiveGraph(
-                  executiveId: 4,
-                  executiveName: 'Emily Davis',
-                  sales: [SalesData(date: '2023-01-01', amount: 76200)]),
-              SalesExecutiveGraph(
-                  executiveId: 5,
-                  executiveName: 'Michael Wilson',
-                  sales: [SalesData(date: '2023-01-01', amount: 65800)]),
+              // SalesExecutiveGraph(
+              //     executiveId: 1,
+              //     executiveName: 'John Doe',
+              //     sales: [SalesData(date: '2023-01-01', amount: 125000)]),
+              // SalesExecutiveGraph(
+              //     executiveId: 2,
+              //     executiveName: 'Jane Smith',
+              //     sales: [SalesData(date: '2023-01-01', amount: 98000)]),
+              // SalesExecutiveGraph(
+              //     executiveId: 3,
+              //     executiveName: 'Robert Johnson',
+              //     sales: [SalesData(date: '2023-01-01', amount: 87500)]),
+              // SalesExecutiveGraph(
+              //     executiveId: 4,
+              //     executiveName: 'Emily Davis',
+              //     sales: [SalesData(date: '2023-01-01', amount: 76200)]),
+              // SalesExecutiveGraph(
+              //     executiveId: 5,
+              //     executiveName: 'Michael Wilson',
+              //     sales: [SalesData(date: '2023-01-01', amount: 65800)]),
             ];
 
     // Find the maximum sales for Y-axis scaling
@@ -1367,7 +1431,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                       .sales
                       .fold(0, (sum, sale) => sum + sale.amount);
                   return BarTooltipItem(
-                    '₹${NumberFormat('#,##,###').format(totalSales)}',
+                    '${NumberFormat('#,##,###').format(totalSales)}',
                     const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1406,7 +1470,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                   reservedSize: 40,
                   getTitlesWidget: (double value, TitleMeta meta) {
                     return Text(
-                      '₹${NumberFormat('#,##').format(value.toInt())}',
+                      '${NumberFormat('#,##').format(value.toInt())}',
                       style: TextStyle(
                         color: ColorManager.textColor,
                         fontWeight: FontWeight.bold,
@@ -1772,16 +1836,17 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       case "Count":
         return periodStats.totalSales?.toString() ?? "0";
       case "Amount":
-        return "₹${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
+        return "${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       case "Products":
-        return Provider.of<LocalProductProvider>(context, listen: false)
+        return Provider.of<LocalProductProvider>(context, listen: true)
             .products
             .length
             .toString();
+
       case "Revenue":
-        return "₹${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
+        return "${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
       case "Orders":
         return "${(periodStats.totalSales ?? 0) + 15}";
       default:

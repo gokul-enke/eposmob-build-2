@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/get_product.dart';
@@ -17,14 +19,18 @@ class LocalCartItem {
   final GetProduct product;
   double? price;
   double? mrp;
+  double? taxRate; // Percentage (sum of all taxes)
+  double? taxAmount; // Calculated amount per unit
   num quantity;
   final Stock? selectedStock;
 
   LocalCartItem({
     required this.product,
-    this.quantity = 1,
     this.price,
     this.mrp,
+    this.taxRate,
+    this.taxAmount,
+    this.quantity = 1,
     this.selectedStock,
   });
 }
@@ -57,6 +63,10 @@ class SavedOrder {
   final double? percentageDiscount;
   final bool? toCustomerCredit;
 
+  final String? tableId;
+  final String? alternatePhone;
+  final String? address;
+
   SavedOrder({
     required this.id,
     required this.orderNumber,
@@ -82,6 +92,9 @@ class SavedOrder {
     this.flatDiscount,
     this.percentageDiscount,
     this.toCustomerCredit,
+    this.tableId,
+    this.alternatePhone,
+    this.address,
   });
 }
 
@@ -134,6 +147,14 @@ class LocalProductProvider extends ChangeNotifier {
   // Getter for the filtered product list.
   List<GetProduct> get filteredProducts => _filteredProducts;
 
+  /// Returns only sellable products from filtered list (for billing screens)
+  List<GetProduct> get sellableFilteredProducts =>
+      _filteredProducts.where((p) => p.sellable == true).toList();
+
+  /// Returns only sellable products from complete list (for billing screens)
+  List<GetProduct> get sellableProducts =>
+      _products.where((p) => p.sellable == true).toList();
+
   // Currently selected product (for showing product details).
   GetProduct? _selectedProduct;
   GetProduct? get selectedProduct => _selectedProduct;
@@ -160,6 +181,69 @@ class LocalProductProvider extends ChangeNotifier {
   SavedOrder? get currentOrder => _currentOrder;
 
   PriceSummary? priceSummary;
+
+  // 📊 Tax Breakdown Logic (for TAX-INCLUSIVE pricing)
+  // Returns Map with "TaxName @ Rate%" as key and amount as value
+  Map<String, double> get taxBreakdown {
+    final breakdown = <String, double>{};
+
+    for (var item in _cartItems) {
+      final double itemTotal = (item.price ?? 0.0) * item.quantity;
+      final double currentTaxRate = item.taxRate ?? 0.0;
+
+      if (currentTaxRate <= 0 || itemTotal <= 0) continue;
+
+      // Extract total tax from tax-inclusive price
+      // Formula: Tax = Price × TaxRate / (100 + TaxRate)
+      final double totalTaxAmount =
+          itemTotal * currentTaxRate / (100 + currentTaxRate);
+
+      final double productTotalTaxRate = item.product.totalTaxRate;
+
+      // Check if the current rate matches the product's defined tax structure
+      // We use a small epsilon for float comparison
+      if ((currentTaxRate - productTotalTaxRate).abs() < 0.01 &&
+          (item.product.taxes?.isNotEmpty ?? false)) {
+        // Distribute proportional to distinct taxes
+        for (var tax in (item.product.taxes ?? [])) {
+          if (productTotalTaxRate > 0) {
+            // Parse rate from string to double
+            final double taxRateVal = double.tryParse(tax.rate ?? "0") ?? 0.0;
+            // Calculate share: (Individual Rate / Total Rate) * Total Tax Amount
+            final double share =
+                (taxRateVal / productTotalTaxRate) * totalTaxAmount;
+
+            // Create key with rate: "GST @ 18%"
+            final String taxName = tax.name ?? "Tax";
+            final String rateStr = taxRateVal % 1 == 0
+                ? taxRateVal.toInt().toString()
+                : taxRateVal.toStringAsFixed(1);
+            final String key = "$taxName @$rateStr%";
+            breakdown[key] = (breakdown[key] ?? 0.0) + share;
+          }
+        }
+      } else {
+        // Fallback: Rate doesn't match or no breakdown available
+        // Assign to generic "Tax" or specific label if only 1 tax exists
+        String key = "Tax @ ${currentTaxRate.toStringAsFixed(0)}%";
+        if ((item.product.taxes?.isNotEmpty ?? false) &&
+            item.product.taxes!.length == 1) {
+          final tax = item.product.taxes!.first;
+          final taxName = tax.name ?? "Tax";
+          final taxRateVal = double.tryParse(tax.rate ?? "0") ?? currentTaxRate;
+          final String rateStr = taxRateVal % 1 == 0
+              ? taxRateVal.toInt().toString()
+              : taxRateVal.toStringAsFixed(1);
+          key = "$taxName @ $rateStr%";
+        }
+
+        // If it was manually edited to a custom rate, we just show it as "Tax"
+        // unless it happens to match the single tax name.
+        breakdown[key] = (breakdown[key] ?? 0.0) + totalTaxAmount;
+      }
+    }
+    return breakdown;
+  }
 
   // Add pagination properties
   int _currentPage = 1;
@@ -237,8 +321,9 @@ class LocalProductProvider extends ChangeNotifier {
             product: product,
             quantity: hiveCartItem.quantity,
             price: hiveCartItem.price,
-            mrp: hiveCartItem
-                .mrp, // 🔧 FIX: Include MRP when loading confirmed orders from Hive
+            mrp: hiveCartItem.mrp,
+            taxAmount: hiveCartItem.taxAmount,
+            taxRate: hiveCartItem.taxRate,
             selectedStock: selectedStock,
           );
         }).toList();
@@ -267,7 +352,11 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
           flatDiscount: hiveSavedOrder.flatDiscount,
           percentageDiscount: hiveSavedOrder.percentageDiscount,
+
           toCustomerCredit: hiveSavedOrder.toCustomerCredit,
+          alternatePhone: hiveSavedOrder.alternatePhone,
+          tableId: hiveSavedOrder.tableId,
+          address: hiveSavedOrder.address,
         ));
       }
       notifyListeners();
@@ -300,8 +389,9 @@ class LocalProductProvider extends ChangeNotifier {
             productId: item.product.productId!,
             quantity: item.quantity,
             price: item.price,
-            mrp: item
-                .mrp, // 🔧 FIX: Include MRP when saving confirmed orders to Hive
+            mrp: item.mrp,
+            taxAmount: item.taxAmount,
+            taxRate: item.taxRate,
             serializedProduct:
                 HiveStringValue(json.encode(item.product.toJson())),
             serializedSelectedStock: serializedStock,
@@ -332,7 +422,11 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryTime: order.deliveryTime,
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
+
           toCustomerCredit: order.toCustomerCredit,
+          tableId: order.tableId,
+          alternatePhone: order.alternatePhone,
+          address: order.address,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -346,13 +440,15 @@ class LocalProductProvider extends ChangeNotifier {
   void _loadProductsFromHive() {
     try {
       final boxLen = _productsBox.length;
-      debugPrint("📦 [Hive] Loading products from box 'products' (len=$boxLen)...");
+      debugPrint(
+          "📦 [Hive] Loading products from box 'products' (len=$boxLen)...");
       _products = _productsBox.values.map((hiveProduct) {
         final jsonData = json.decode(hiveProduct.serializedData.value);
         return GetProduct.fromJson(jsonData);
       }).toList();
       _filteredProducts = List.from(_products);
-      debugPrint("✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}");
+      debugPrint(
+          "✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}");
       notifyListeners();
     } catch (e) {
       debugPrint("❌ [Hive] Error loading products from box: $e");
@@ -378,8 +474,9 @@ class LocalProductProvider extends ChangeNotifier {
         product: product,
         quantity: hiveCartItem.quantity,
         price: hiveCartItem.price,
-        mrp:
-            hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading cart from Hive
+        mrp: hiveCartItem.mrp,
+        taxAmount: hiveCartItem.taxAmount,
+        taxRate: hiveCartItem.taxRate,
         selectedStock: selectedStock,
       ));
     }
@@ -389,7 +486,11 @@ class LocalProductProvider extends ChangeNotifier {
   // Load saved orders from Hive
   void _loadSavedOrdersFromHive() {
     _savedOrders.clear();
+    debugPrint(
+        "📥 [Hive] Loading saved orders from 'saved_orders' box (len=${_savedOrdersBox.length})...");
+    int idx = 0;
     for (var hiveSavedOrder in _savedOrdersBox.values) {
+      idx++;
       List<LocalCartItem> orderItems = hiveSavedOrder.items.map((hiveCartItem) {
         final productJson = json.decode(hiveCartItem.serializedProduct.value);
         final product = GetProduct.fromJson(productJson);
@@ -406,13 +507,14 @@ class LocalProductProvider extends ChangeNotifier {
           product: product,
           quantity: hiveCartItem.quantity,
           price: hiveCartItem.price,
-          mrp: hiveCartItem
-              .mrp, // 🔧 FIX: Include MRP when loading saved orders from Hive
+          mrp: hiveCartItem.mrp,
+          taxAmount: hiveCartItem.taxAmount,
+          taxRate: hiveCartItem.taxRate,
           selectedStock: selectedStock,
         );
       }).toList();
 
-      _savedOrders.add(SavedOrder(
+      final savedOrder = SavedOrder(
         id: hiveSavedOrder.id,
         orderNumber: hiveSavedOrder.orderNumber,
         items: orderItems,
@@ -437,7 +539,14 @@ class LocalProductProvider extends ChangeNotifier {
         flatDiscount: hiveSavedOrder.flatDiscount,
         percentageDiscount: hiveSavedOrder.percentageDiscount,
         toCustomerCredit: hiveSavedOrder.toCustomerCredit,
-      ));
+
+        tableId: hiveSavedOrder.tableId,
+        alternatePhone: hiveSavedOrder.alternatePhone,
+        address: hiveSavedOrder.address,
+      );
+      _savedOrders.add(savedOrder);
+      debugPrint(
+          "  #$idx ↪️ Loaded SavedOrder id=${savedOrder.id}, num=${savedOrder.orderNumber}, status=${savedOrder.status}, tableId=${savedOrder.tableId}, items=${savedOrder.items.length}");
     }
     notifyListeners();
   }
@@ -446,7 +555,8 @@ class LocalProductProvider extends ChangeNotifier {
   void _saveProductsToHive() {
     final sw = Stopwatch()..start();
     final beforeLen = _productsBox.length;
-    debugPrint("📝 [Hive] Saving products to box 'products' (beforeLen=$beforeLen)...");
+    debugPrint(
+        "📝 [Hive] Saving products to box 'products' (beforeLen=$beforeLen)...");
     _productsBox.clear();
     int saved = 0;
     for (var product in _products) {
@@ -461,11 +571,13 @@ class LocalProductProvider extends ChangeNotifier {
         _productsBox.add(hiveProduct);
         saved++;
       } catch (e) {
-        debugPrint("❌ [Hive] Failed to serialize/save productId=${product.productId}: $e");
+        debugPrint(
+            "❌ [Hive] Failed to serialize/save productId=${product.productId}: $e");
       }
     }
     sw.stop();
-    debugPrint("✅ [Hive] Saved $saved/${_products.length} products (afterLen=${_productsBox.length}) in ${sw.elapsedMilliseconds}ms");
+    debugPrint(
+        "✅ [Hive] Saved $saved/${_products.length} products (afterLen=${_productsBox.length}) in ${sw.elapsedMilliseconds}ms");
   }
 
   // Save cart items to Hive
@@ -483,7 +595,9 @@ class LocalProductProvider extends ChangeNotifier {
         productId: cartItem.product.productId!,
         quantity: cartItem.quantity,
         price: cartItem.price,
-        mrp: cartItem.mrp, // 🔧 FIX: Include MRP when saving cart to Hive
+        mrp: cartItem.mrp,
+        taxAmount: cartItem.taxAmount,
+        taxRate: cartItem.taxRate,
         serializedProduct:
             HiveStringValue(json.encode(cartItem.product.toJson())),
         serializedSelectedStock: serializedStock,
@@ -494,8 +608,12 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save orders to Hive
   void _saveSavedOrdersToHive() {
+    debugPrint(
+        "💾 [Hive] Persisting ${_savedOrders.length} saved orders to 'saved_orders' box...");
     _savedOrdersBox.clear();
+    int idx = 0;
     for (var order in _savedOrders) {
+      idx++;
       List<HiveLocalCartItem> hiveItems = order.items.map((item) {
         // Serialize selected stock if it exists
         HiveStringValue? serializedStock;
@@ -508,7 +626,9 @@ class LocalProductProvider extends ChangeNotifier {
           productId: item.product.productId!,
           quantity: item.quantity,
           price: item.price,
-          mrp: item.mrp, // 🔧 FIX: Include MRP when saving saved orders to Hive
+          mrp: item.mrp,
+          taxAmount: item.taxAmount,
+          taxRate: item.taxRate,
           serializedProduct:
               HiveStringValue(json.encode(item.product.toJson())),
           serializedSelectedStock: serializedStock,
@@ -540,19 +660,42 @@ class LocalProductProvider extends ChangeNotifier {
         flatDiscount: order.flatDiscount,
         percentageDiscount: order.percentageDiscount,
         toCustomerCredit: order.toCustomerCredit,
+        tableId: order.tableId,
+        alternatePhone: order.alternatePhone,
+        address: order.address,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
+      debugPrint(
+          "  #$idx ✅ Saved order id=${order.id}, num=${order.orderNumber}, status=${order.status}, tableId=${order.tableId}, items=${order.items.length}");
     }
+  }
+
+  double get subTotalBeforeDiscount {
+    double total = 0.0;
+    for (var item in _cartItems) {
+      total += (item.price ?? 0) * item.quantity;
+    }
+    return total;
   }
 
   double get cartTotal {
     double subTotal = 0.0;
-    double totalTax = 0.0; // Assuming you have a way to calculate tax
+    double totalTax = 0.0;
 
-    // Calculate subtotal from all cart items
+    // Calculate subtotal and extract tax from cart items
+    // NOTE: Prices are TAX-INCLUSIVE, so tax is extracted for display purposes only
     for (var item in _cartItems) {
-      subTotal += (item.price ?? 0) * item.quantity;
+      final itemTotal = (item.price ?? 0) * item.quantity;
+      subTotal += itemTotal;
+
+      // Extract tax from the tax-inclusive price for display purposes
+      // Formula: Tax = Price × TaxRate / (100 + TaxRate)
+      final taxRate = item.taxRate ?? 0.0;
+      if (taxRate > 0) {
+        final extractedTax = itemTotal * taxRate / (100 + taxRate);
+        totalTax += extractedTax;
+      }
     }
 
     // Calculate discount amounts
@@ -563,24 +706,37 @@ class LocalProductProvider extends ChangeNotifier {
     // Ensure discount doesn't exceed subtotal
     if (totalDiscount > subTotal) {
       totalDiscount = subTotal;
+
+      // Update the stored discount values to reflect the capped amount
+      // Prioritize flat discount first, then percentage
+      if (flatDiscountAmount > 0) {
+        _flatDiscount = subTotal;
+        _percentageDiscount = 0.0;
+      } else {
+        // Adjust percentage to match the capped discount
+        _percentageDiscount = (totalDiscount / subTotal) * 100;
+      }
     }
 
+    // Net Payable = SubTotal - Discount (tax is already included in prices)
     double netPayable = subTotal - totalDiscount;
-    double netTotal = netPayable + totalTax;
+
+    // For tax-inclusive pricing: Total = Net Payable (NOT adding tax again)
+    double netTotal = netPayable;
 
     // Create a PriceSummary instance with discount details
     priceSummary = PriceSummary(
       discount: totalDiscount,
       netPayable: netPayable,
       subTotal: subTotal,
-      totalTax: totalTax,
+      totalTax: totalTax, // This is the extracted tax for display only
       netTotal: netTotal,
       flatDiscount: flatDiscountAmount,
       percentageDiscount: percentageDiscountAmount,
       originalSubTotal: subTotal,
     );
 
-    return netTotal; // Return the final total after discount
+    return netTotal; // Return the final total (tax already included)
   }
 
   /// Sets the selected product and optionally the selected stock for product details.
@@ -611,9 +767,12 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetches products from the API with batched concurrent requests (10 pages at a time).
-  Future<void> fetchProductsFromAPI(
-      {int? categoryId, String? filterName}) async {
+  /// Fetch products from API with pagination
+  Future<void> fetchProductsFromAPI({
+    bool refresh = false,
+    Function(int total, int current)? onProgress,
+    bool sellableOnly = false,
+  }) async {
     List<GetProduct> allProducts = [];
     int currentPage = 1;
     const int batchSize = 10; // Fetch 10 pages concurrently
@@ -623,15 +782,15 @@ class LocalProductProvider extends ChangeNotifier {
 
     try {
       final swTotal = Stopwatch()..start();
-      debugPrint("🌐 [API] Starting batched product fetch (batch size: $batchSize)...");
-      
+      debugPrint(
+          "🌐 [API] Starting batched product fetch (batch size: $batchSize)...");
+
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
 
       if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException(
-            "API key not found. Please restart the app.");
+        throw const HttpException("API key not found. Please restart the app.");
       }
 
       bool hasMorePages = true;
@@ -640,8 +799,9 @@ class LocalProductProvider extends ChangeNotifier {
         // Create batch of page requests
         final batchStartPage = currentPage;
         final batchEndPage = currentPage + batchSize - 1;
-        
-        debugPrint("🚀 [API] Fetching batch: pages $batchStartPage-$batchEndPage concurrently...");
+
+        debugPrint(
+            "🚀 [API] Fetching batch: pages $batchStartPage-$batchEndPage concurrently...");
         final swBatch = Stopwatch()..start();
 
         // Create list of futures for concurrent requests
@@ -651,8 +811,17 @@ class LocalProductProvider extends ChangeNotifier {
             'page': page.toString(),
           };
 
-          final url = Uri.parse(APPUrl.getProductUrl)
-              .replace(queryParameters: queryParams);
+          // Choose URL based on sellableOnly flag
+          final urlString = sellableOnly
+              ? '${APPUrl.getSellableProductUrl}?type=sellable'
+              : APPUrl.getRawProductUrl;
+
+          final baseUri = Uri.parse(urlString);
+          final finalQueryParams =
+              Map<String, dynamic>.from(baseUri.queryParameters)
+                ..addAll(queryParams);
+
+          final url = baseUri.replace(queryParameters: finalQueryParams);
 
           futures.add(http.get(url, headers: {
             'Content-Type': 'application/json',
@@ -663,7 +832,8 @@ class LocalProductProvider extends ChangeNotifier {
         // Wait for all requests in batch to complete
         final responses = await Future.wait(futures);
         swBatch.stop();
-        debugPrint("📦 [API] Batch completed in ${swBatch.elapsedMilliseconds}ms");
+        debugPrint(
+            "📦 [API] Batch completed in ${swBatch.elapsedMilliseconds}ms");
 
         // Process responses
         int emptyPageCount = 0;
@@ -673,6 +843,7 @@ class LocalProductProvider extends ChangeNotifier {
 
           if (response.statusCode == 200) {
             dynamic jsonData;
+            log(response.body);
             try {
               jsonData = json.decode(response.body);
             } catch (e) {
@@ -680,7 +851,10 @@ class LocalProductProvider extends ChangeNotifier {
               continue;
             }
 
-            GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+            GetProductModel getProductModel =
+                GetProductModel.fromJson(jsonData);
+
+            final productsFetched = getProductModel.product?.length ?? 0;
 
             if (getProductModel.product == null ||
                 getProductModel.product!.isEmpty) {
@@ -691,9 +865,14 @@ class LocalProductProvider extends ChangeNotifier {
 
             allProducts.addAll(getProductModel.product!);
             debugPrint(
-                '✅ [API] Page $pageNum: ${getProductModel.product!.length} products (Total: ${allProducts.length})');
+                '✅ [API] Page $pageNum: $productsFetched products (Total: ${allProducts.length})');
+
+            if (onProgress != null && productsFetched > 0) {
+              await onProgress(allProducts.length, productsFetched);
+            }
           } else {
-            debugPrint('❌ [API] Page $pageNum failed: Status ${response.statusCode}');
+            debugPrint(
+                '❌ [API] Page $pageNum failed: Status ${response.statusCode}');
             emptyPageCount++;
           }
         }
@@ -723,7 +902,8 @@ class LocalProductProvider extends ChangeNotifier {
     } finally {
       isLoading = false;
       notifyListeners();
-      debugPrint("ℹ️ [Provider] Product fetch complete. provider.products=${_products.length}, filtered=${_filteredProducts.length}");
+      debugPrint(
+          "ℹ️ [Provider] Product fetch complete. provider.products=${_products.length}, filtered=${_filteredProducts.length}");
     }
   }
 
@@ -781,6 +961,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? filterStore,
     String? filterSupplier,
     int page = 1,
+    bool sellableOnly = true, // Added but currently unused for local filtering
   }) {
     List<GetProduct> result = List.from(_products);
 
@@ -869,7 +1050,7 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("  - Product MRP: ${product.mrp}");
     debugPrint("  - Product Sale Price: ${product.price?.price}");
     debugPrint("  - Product Stock Count: ${product.stock?.length ?? 0}");
-    
+
     if (product.stock != null && product.stock!.isNotEmpty) {
       debugPrint("  - Stock Details:");
       for (int i = 0; i < product.stock!.length; i++) {
@@ -900,7 +1081,7 @@ class LocalProductProvider extends ChangeNotifier {
       notifyListeners(); // Notify listeners about the change
       debugPrint("✅ Product updated in local storage successfully");
     }
-    
+
     debugPrint("📊 Total products in local storage: ${_products.length}");
   }
 
@@ -942,13 +1123,21 @@ class LocalProductProvider extends ChangeNotifier {
             }
 
             // Create a new Stock object with updated quantity (since Stock fields are final)
+            // 🔧 FIX: Preserve ALL stock fields including supplier, sku, unit, date, etc.
             product.stock![i] = Stock(
               id: currentStock.id,
               productId: currentStock.productId,
+              supplier: currentStock.supplier,
               quantity: newQuantity,
               price: currentStock.price,
+              sku: currentStock.sku,
               mrp: currentStock.mrp,
+              unit: currentStock.unit,
               purchasePrice: currentStock.purchasePrice,
+              date: currentStock.date,
+              expiryDate: currentStock.expiryDate,
+              rack: currentStock.rack,
+              hsnCode: currentStock.hsnCode,
             );
 
             debugPrint(
@@ -1098,6 +1287,16 @@ class LocalProductProvider extends ChangeNotifier {
         final cartItem = _cartItems.removeAt(index);
         _cartItems.insert(0, cartItem);
       }
+
+      // 🔧 FIX: Recalculate tax when price changes
+      if (price != null) {
+        final taxRate = product.totalTaxRate;
+        // If we moved it to 0, update at 0, otherwise update at index
+        final targetIndex =
+            !isIncreamentUsingCompactQuantityControl! ? 0 : index;
+        _cartItems[targetIndex].taxRate = taxRate;
+        _cartItems[targetIndex].taxAmount = (price * taxRate) / (100 + taxRate);
+      }
     } else {
       debugPrint("🆕 Adding new product to cart");
 
@@ -1125,6 +1324,10 @@ class LocalProductProvider extends ChangeNotifier {
         productMrp = double.tryParse(product.mrp!) ?? 0.0;
       }
 
+      // Calculate initial tax
+      final double taxRate = product.totalTaxRate;
+      final double calculatedTax = (productPrice * taxRate) / (100 + taxRate);
+
       // Insert at the beginning of the array instead of appending
       _cartItems.insert(
           0,
@@ -1133,6 +1336,8 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: cartQuantity,
             price: productPrice,
             mrp: productMrp,
+            taxRate: taxRate,
+            taxAmount: calculatedTax,
             selectedStock: selectedStock,
           ));
     }
@@ -1192,6 +1397,11 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (index != -1) {
       _cartItems[index].price = newPrice;
+
+      // 🔧 FIX: Recalculate taxAmount when price changes
+      final double taxRate = _cartItems[index].taxRate ?? 0.0;
+      _cartItems[index].taxAmount = (newPrice * taxRate) / (100 + taxRate);
+
       _saveCartToHive();
       notifyListeners();
     }
@@ -1207,6 +1417,58 @@ class LocalProductProvider extends ChangeNotifier {
     if (index != -1) {
       _cartItems[index].mrp = newMrp;
       _saveCartToHive();
+      notifyListeners();
+    }
+  }
+
+  void updateItemTax(int productId, Stock? selectedStock, double newTaxRate) {
+    // Update tax rate and recalculate amount
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+
+    if (index != -1) {
+      _cartItems[index].taxRate = newTaxRate;
+      _cartItems[index].taxAmount =
+          ((_cartItems[index].price ?? 0.0) * newTaxRate) / (100 + newTaxRate);
+      _saveCartToHive();
+      notifyListeners();
+    }
+  }
+
+  void updateProductPricingInCart(
+      int productId, double newPrice, double newMrp, double newTax) {
+    bool cartUpdated = false;
+    for (var item in _cartItems) {
+      if (item.product.productId == productId) {
+        item.price = newPrice;
+        item.mrp = newMrp;
+        item.taxRate = newTax; // Changed from item.tax to item.taxRate
+        // 🔧 FIX: Recalculate taxAmount
+        item.taxAmount = (newPrice * newTax) / (100 + newTax);
+        cartUpdated = true;
+      }
+    }
+
+    bool savedOrdersUpdated = false;
+    for (var order in _savedOrders) {
+      for (var orderItem in order.items) {
+        if (orderItem.product.productId == productId) {
+          orderItem.price = newPrice;
+          orderItem.mrp = newMrp;
+          savedOrdersUpdated = true;
+        }
+      }
+    }
+
+    if (cartUpdated) {
+      _saveCartToHive();
+    }
+    if (savedOrdersUpdated) {
+      _saveSavedOrdersToHive();
+    }
+    if (cartUpdated || savedOrdersUpdated) {
       notifyListeners();
     }
   }
@@ -1281,6 +1543,23 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("✅ CLEAR CART COMPLETED");
   }
 
+  /// Clears cart after order confirmation WITHOUT restoring stock.
+  /// This maintains the stock reduction from the cart so the sale is recorded.
+  /// Use this method when confirming/saving orders.
+  void clearCartAfterOrder() {
+    debugPrint("🧹 CLEAR CART AFTER ORDER STARTED");
+    debugPrint("Cart items count: ${_cartItems.length}");
+    debugPrint("📦 Stock quantities will NOT be restored (order confirmed)");
+
+    // Do NOT restore stock - the items are sold
+    _cartItems.clear();
+    _cartItemsBox.clear();
+    clearDiscount(); // Also clear discounts when cart is cleared
+    notifyListeners();
+
+    debugPrint("✅ CLEAR CART AFTER ORDER COMPLETED");
+  }
+
   /// Clears the current order being edited
   void clearCurrentOrder() {
     debugPrint("🧹 CLEARING CURRENT ORDER REFERENCE");
@@ -1347,17 +1626,23 @@ class LocalProductProvider extends ChangeNotifier {
       if (stockIndex != -1) {
         // Update existing stock entry
         Stock existingStock = updatedStock[stockIndex];
+        // 🔧 FIX: Preserve ALL stock fields including supplier, sku, unit, date, etc.
         updatedStock[stockIndex] = Stock(
           id: existingStock.id,
           productId: existingStock.productId,
+          supplier: existingStock.supplier,
           quantity: (existingStock.quantity ?? 0) +
               quantity, // Add to existing quantity
           price: price,
+          sku: existingStock.sku,
           mrp: mrp,
+          unit: existingStock.unit,
           purchasePrice: purchasePrice,
+          date: existingStock.date,
+          expiryDate: existingStock.expiryDate,
+          rack: existingStock.rack,
+          hsnCode: existingStock.hsnCode,
         );
-        debugPrint(
-            "📦 Updated existing stock entry - New quantity: ${updatedStock[stockIndex].quantity}");
       } else {
         // Add new stock entry
         Stock newStock = Stock(
@@ -1435,13 +1720,21 @@ class LocalProductProvider extends ChangeNotifier {
 
         if (stockIndex != -1) {
           Stock existingStock = updatedStock[stockIndex];
+          // 🔧 FIX: Preserve ALL stock fields including supplier, sku, unit, date, etc.
           updatedStock[stockIndex] = Stock(
             id: existingStock.id,
             productId: existingStock.productId,
+            supplier: existingStock.supplier,
             quantity: newQuantity,
             price: existingStock.price,
+            sku: existingStock.sku,
             mrp: existingStock.mrp,
+            unit: existingStock.unit,
             purchasePrice: existingStock.purchasePrice,
+            date: existingStock.date,
+            expiryDate: existingStock.expiryDate,
+            rack: existingStock.rack,
+            hsnCode: existingStock.hsnCode,
           );
 
           // Create new product instance with updated stock
@@ -1538,6 +1831,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
+    String? address,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -1555,7 +1849,9 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
-              mrp: item.mrp, // 🔧 FIX: Include MRP when saving confirmed order
+              mrp: item.mrp,
+              taxRate: item.taxRate,
+              taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
             ))
         .toList();
@@ -1571,7 +1867,7 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateTime.now().toIso8601String(),
+      createdAt: DateHelper.now().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -1589,6 +1885,7 @@ class LocalProductProvider extends ChangeNotifier {
       flatDiscount: _flatDiscount,
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
+      address: address,
     );
 
     // Add to confirmed orders list
@@ -1635,6 +1932,7 @@ class LocalProductProvider extends ChangeNotifier {
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
           toCustomerCredit: order.toCustomerCredit,
+          address: order.address,
         );
 
         // Add to confirmed orders
@@ -1713,11 +2011,15 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
+    String? tableId,
+    String? address,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
     debugPrint("  - Customer Name parameter: '$customerName'");
     debugPrint("  - Customer ID parameter: $customerId");
+    debugPrint("  - Requested status: ${status ?? 'saved'}");
+    debugPrint("  - TableId: $tableId");
 
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as order");
@@ -1735,7 +2037,9 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
-              mrp: item.mrp, // 🔧 FIX: Include MRP when saving order
+              mrp: item.mrp,
+              taxRate: item.taxRate,
+              taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
             ))
         .toList();
@@ -1751,7 +2055,7 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateTime.now().toIso8601String(),
+      createdAt: DateHelper.now().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -1769,6 +2073,10 @@ class LocalProductProvider extends ChangeNotifier {
       flatDiscount: _flatDiscount,
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
+      tableId: tableId,
+      alternatePhone: null, // Add if needed
+      address:
+          address, // Pass address if available, or update if passed as param
     );
 
     // Add to saved orders list
@@ -1780,6 +2088,8 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("  - Saved order phone: '${order.customerPhone}'");
     debugPrint("  - Saved order name: '${order.customerName}'");
     debugPrint("  - Saved order customer ID: ${order.customerId}");
+    debugPrint("  - Saved order status: ${order.status}");
+    debugPrint("  - Saved order tableId: ${order.tableId}");
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder completed");
 
     return order;
@@ -1832,7 +2142,9 @@ class LocalProductProvider extends ChangeNotifier {
           product: item.product,
           quantity: item.quantity,
           price: item.price,
-          mrp: item.mrp, // 🔧 FIX: Include MRP when loading order for editing
+          mrp: item.mrp,
+          taxAmount: item.taxAmount,
+          taxRate: item.taxRate,
           selectedStock: item.selectedStock,
         ));
       }
@@ -1867,12 +2179,16 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
+    String? tableId,
+    String? address,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
     debugPrint("  - Customer Name parameter: '$customerName'");
     debugPrint("  - Customer ID parameter: $customerId");
+    debugPrint("  - TableId parameter: $tableId");
+    debugPrint("  - Status parameter: $status");
 
     int index = _savedOrders.indexWhere((o) => o.id == orderId);
 
@@ -1889,7 +2205,9 @@ class LocalProductProvider extends ChangeNotifier {
                 product: item.product,
                 quantity: item.quantity,
                 price: item.price,
-                mrp: item.mrp, // 🔧 FIX: Include MRP when updating saved order
+                mrp: item.mrp,
+                taxRate: item.taxRate,
+                taxAmount: item.taxAmount,
                 selectedStock: item.selectedStock,
               ))
           .toList();
@@ -1903,7 +2221,7 @@ class LocalProductProvider extends ChangeNotifier {
         customerPhone: customerPhone ?? _savedOrders[index].customerPhone,
         comment: comment ?? _savedOrders[index].comment,
         createdAt:
-            DateTime.now().toIso8601String(), // Keep original creation date
+            DateHelper.now().toIso8601String(), // Keep original creation date
         total: total,
         deliveryMethod: deliveryMethod ?? _savedOrders[index].deliveryMethod,
         // Update or preserve API-compatible fields
@@ -1925,6 +2243,9 @@ class LocalProductProvider extends ChangeNotifier {
         percentageDiscount: _percentageDiscount,
         toCustomerCredit:
             toCustomerCredit ?? _savedOrders[index].toCustomerCredit,
+        tableId: tableId ?? _savedOrders[index].tableId,
+        alternatePhone: _savedOrders[index].alternatePhone,
+        address: address ?? _savedOrders[index].address,
       );
 
       // Update in list
@@ -1933,6 +2254,8 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("  - Updated order phone: '${updatedOrder.customerPhone}'");
       debugPrint("  - Updated order name: '${updatedOrder.customerName}'");
       debugPrint("  - Updated order customer ID: ${updatedOrder.customerId}");
+      debugPrint("  - Updated order status: ${updatedOrder.status}");
+      debugPrint("  - Updated order tableId: ${updatedOrder.tableId}");
 
       // Clear current order reference
       _currentOrder = null;
@@ -1948,7 +2271,11 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Deletes a saved order
   void deleteSavedOrder(String orderId) {
+    final before = _savedOrders.length;
     _savedOrders.removeWhere((o) => o.id == orderId);
+    final after = _savedOrders.length;
+    debugPrint(
+        "🗑️ LOCAL PROVIDER - deleteSavedOrder id=$orderId (before=$before, after=$after)");
 
     // If current order is deleted, clear reference
     if (_currentOrder != null && _currentOrder!.id == orderId) {
@@ -2158,6 +2485,53 @@ class LocalProductProvider extends ChangeNotifier {
       'flatDiscount': _flatDiscount,
       'percentageDiscount': _percentageDiscount,
     };
+  }
+
+  /// Clears ALL local data for multi-tenant isolation.
+  /// Call this during logout or when switching API keys (tenants)
+  /// to prevent data leakage between different tenants.
+  Future<void> clearAllLocalData() async {
+    debugPrint("🧹 CLEARING ALL LOCAL DATA FOR TENANT ISOLATION");
+
+    try {
+      // Clear Hive boxes
+      await _productsBox.clear();
+      debugPrint("  ✅ Cleared products box");
+
+      await _cartItemsBox.clear();
+      debugPrint("  ✅ Cleared cart_items box");
+
+      await _savedOrdersBox.clear();
+      debugPrint("  ✅ Cleared saved_orders box");
+
+      if (_isConfirmedBoxInitialized) {
+        await _confirmedOrdersBox.clear();
+        debugPrint("  ✅ Cleared confirmed_orders box");
+      }
+
+      // Clear in-memory lists
+      _products.clear();
+      _filteredProducts.clear();
+      _cartItems.clear();
+      _savedOrders.clear();
+      _confirmedOrders.clear();
+
+      // Reset state
+      _selectedProduct = null;
+      _selectedStock = null;
+      _currentOrder = null;
+      _flatDiscount = 0.0;
+      _percentageDiscount = 0.0;
+      priceSummary = null;
+      _currentPage = 1;
+      _totalPages = 1;
+
+      notifyListeners();
+      debugPrint("✅ ALL LOCAL DATA CLEARED SUCCESSFULLY");
+    } catch (e) {
+      debugPrint("❌ Error clearing local data: $e");
+      rethrow;
+    }
   }
 
   // End of LocalProductProvider

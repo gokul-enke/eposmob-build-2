@@ -10,27 +10,32 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
+import 'package:get/get.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/models/customer_list.dart';
 
 class DeliveryMethodModal extends StatefulWidget {
   final String initialDeliveryMethod;
   final String initialDeliveryMethodId;
   final String initialCarNumber;
   final String initialComment;
+  final String initialAddress;
   final String? initialDeliveryDate;
   final String? initialDeliveryTime;
-  final Function(String, String, String, String, String?, String?)
+  final Function(String, String, String, String, String?, String?, String)
       onDeliveryMethodSelected;
 
   const DeliveryMethodModal({
-    Key? key,
+    super.key,
     required this.initialDeliveryMethod,
     required this.initialDeliveryMethodId,
     required this.initialCarNumber,
     required this.initialComment,
+    this.initialAddress = '',
     this.initialDeliveryDate,
     this.initialDeliveryTime,
     required this.onDeliveryMethodSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<DeliveryMethodModal> createState() => _DeliveryMethodModalState();
@@ -41,6 +46,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
   late String deliveryMethodId;
   late TextEditingController carNumberController;
   late TextEditingController commentController;
+  late TextEditingController addressController;
   DateTime? selectedDeliveryDate;
   TimeOfDay? selectedDeliveryTime;
 
@@ -51,6 +57,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
     deliveryMethodId = widget.initialDeliveryMethodId;
     carNumberController = TextEditingController(text: widget.initialCarNumber);
     commentController = TextEditingController(text: widget.initialComment);
+    addressController = TextEditingController(text: widget.initialAddress);
     if (widget.initialDeliveryDate != null &&
         widget.initialDeliveryDate!.isNotEmpty) {
       selectedDeliveryDate = DateTime.tryParse(widget.initialDeliveryDate!);
@@ -69,7 +76,23 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
   void dispose() {
     carNumberController.dispose();
     commentController.dispose();
+    addressController.dispose();
     super.dispose();
+  }
+
+  String _getDeliveryMethodTranslation(String methodName) {
+    switch (methodName) {
+      case "Store Takeaway":
+        return 'common.store_takeaway'.tr;
+      case "Car Delivery":
+        return 'common.car_delivery'.tr;
+      case "Door Delivery":
+        return 'common.door_delivery'.tr;
+      case "Third Party Logistics":
+        return 'common.third_party_logistics'.tr;
+      default:
+        return methodName.tr;
+    }
   }
 
   @override
@@ -92,7 +115,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Delivery Method',
+                      'delivery.delivery_methods'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s16,
@@ -108,9 +131,10 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                 ),
                 const SizedBox(height: 20),
                 Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: provider.deliveryMethods.map((method) {
+                    final isSelected = deliveryMethod == method.name;
                     return GestureDetector(
                       onTap: () {
                         setState(() {
@@ -118,14 +142,25 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                           deliveryMethodId = method.id;
                         });
                       },
-                      child: BuildBoxShadowContainer(
-                        border: deliveryMethod == method.name
-                            ? Border.all(color: ColorManager.kPrimaryColor)
-                            : null,
-                        padding: const EdgeInsets.all(12),
-                        blurRadius: 4,
-                        circleRadius: 5,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 105,
+                        height: 90,
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? ColorManager.kPrimaryColor.withOpacity(0.05)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? ColorManager.kPrimaryColor
+                                : Colors.grey.shade200,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               method.name == "Store Takeaway"
@@ -135,17 +170,20 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                                       : method.name == "Door Delivery"
                                           ? Icons.doorbell_outlined
                                           : Icons.local_shipping,
-                              size: 20,
-                              color: Colors.black,
+                              size: 22,
+                              color: isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade700,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
-                              method.name,
+                              _getDeliveryMethodTranslation(method.name),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.12,
-                                Colors.black,
+                                isSelected ? FontWeightManager.semiBold : FontWeightManager.medium,
+                                FontSize.s11,
+                                0.0,
+                                isSelected ? ColorManager.kPrimaryColor : Colors.black87,
                               ),
                             ),
                           ],
@@ -159,7 +197,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     .askDeliveryDate) ...[
                   const SizedBox(height: 20),
                   // Delivery Date (optional)
-                  Text('Delivery Date (optional)',
+                  Text('billing.enter_car_number'.tr,
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s12, 0.12, Colors.black)),
                   CalendarPickerTableCell(
@@ -172,7 +210,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   ),
                   const SizedBox(height: 10),
                   // Delivery Time (optional)
-                  Text('Delivery Time (optional)',
+                  Text('common.select'.tr,
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s12, 0.12, Colors.black)),
                   TimePickerTableCell(
@@ -184,14 +222,15 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     },
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
                 if (deliveryMethod == "Car Delivery") ...[
                   buildColumnWidgetForTextFields(
                     controller: carNumberController,
                     size: size,
                     height: size.height * .06,
                     hintText: 'Car Number:',
-                    width: 600,
+                    width: double.infinity,
+                    margin: EdgeInsets.zero,
                     onTap: () {
                       Provider.of<KeyboardProvider>(context, listen: false)
                           .show('text', carNumberController,
@@ -205,16 +244,97 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   size: size,
                   height: size.height * .06,
                   hintText: 'Comment:',
-                  width: 600,
+                  width: double.infinity,
+                  margin: EdgeInsets.zero,
                   onTap: () {
                     Provider.of<KeyboardProvider>(context, listen: false).show(
                         'text', commentController,
                         replaceOnFirstInput: true);
                   },
                 ),
+                if (deliveryMethod == "Door Delivery") ...[
+                  const SizedBox(height: 10),
+                  Consumer<CustomerSelectionProvider>(
+                    builder: (context, customerProvider, child) {
+                      if (!customerProvider.hasSelectedCustomer ||
+                          customerProvider.selectedCustomer!.addresses ==
+                              null ||
+                          customerProvider
+                              .selectedCustomer!.addresses!.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Choose an address:',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.12,
+                              Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: customerProvider
+                                .selectedCustomer!.addresses!
+                                .map((Address address) {
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    String fullAddress =
+                                        "${address.address}, ${address.city}";
+                                    addressController.text = fullAddress;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    border:
+                                        Border.all(color: Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.grey.shade50,
+                                  ),
+                                  child: Text(
+                                    "${address.address}, ${address.city}",
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s12,
+                                      0.12,
+                                      Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  buildColumnWidgetForTextFields(
+                    controller: addressController,
+                    size: size,
+                    height: size.height * .06,
+                    hintText: 'Address:',
+                    width: double.infinity,
+                    margin: EdgeInsets.zero,
+                    onTap: () {
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .show('text', addressController,
+                              replaceOnFirstInput: true);
+                    },
+                  ),
+                ],
                 const SizedBox(height: 20),
                 CustomRoundButton(
-                  title: "Apply",
+                  title: 'common.select'.tr,
                   fct: () {
                     widget.onDeliveryMethodSelected(
                       deliveryMethod,
@@ -227,6 +347,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                       selectedDeliveryTime != null
                           ? selectedDeliveryTime!.format(context)
                           : '',
+                      addressController.text,
                     );
                     Navigator.of(context).pop();
                   },

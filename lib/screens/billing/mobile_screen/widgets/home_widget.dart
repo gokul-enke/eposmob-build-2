@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -30,20 +31,21 @@ class _HomeWidgetState extends State<HomeWidget> {
   @override
   void initState() {
     super.initState();
-    
+
     // Setup focus listeners through billing provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-      
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+
       // Setup focus change handlers
       billingProvider.quantityFocusNode.addListener(() {
         billingProvider.handleQuantityFocusChange();
       });
-      
+
       billingProvider.unitPriceFocusNode.addListener(() {
         billingProvider.handleUnitPriceFocusChange();
       });
-      
+
       // Load order if provided
       _loadOrderIfNeeded();
     });
@@ -84,13 +86,14 @@ class _HomeWidgetState extends State<HomeWidget> {
   }
 
   Future<void> processBarcode(String barcode) async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-    
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
     // Use billing provider's barcode processing with debounce
     billingProvider.processBarcodeWithDebounce(barcode, () async {
       String query = barcode;
       List<GetProduct> filteredProducts = [];
-      
+
       try {
         String? prefix;
         String? productCode;
@@ -161,18 +164,21 @@ class _HomeWidgetState extends State<HomeWidget> {
   }
 
   void _focusTextField() {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     billingProvider.selectedProductNameController.clear();
     Provider.of<LocalProductProvider>(context, listen: false)
         .resetSelectedProduct();
   }
 
   Future<void> _addItem() async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
-    
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
     billingProvider.setLoadingAddItem(true);
-    
+
     try {
       final selectedProduct = localProductProvider.selectedProduct;
 
@@ -188,7 +194,7 @@ class _HomeWidgetState extends State<HomeWidget> {
         // Clear fields using billing provider
         billingProvider.clearProductFieldsAndReset();
         _focusTextField();
-        
+
         showScaffold(
           context: context,
           message: "Item added to cart",
@@ -247,7 +253,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                             // Empty space if needed
                             if (localProvider.cartItems.length < 4)
                               SizedBox(
-                                  height: (4 - localProvider.cartItems.length) * 80),
+                                  height: (4 - localProvider.cartItems.length) *
+                                      80),
                           ],
                         ),
                       ),
@@ -264,7 +271,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                 color: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: _buildActionButtons(billingProvider, localProvider, isEditingOrder),
+                child: _buildActionButtons(
+                    billingProvider, localProvider, isEditingOrder),
               ),
             ),
           ],
@@ -316,11 +324,13 @@ class _HomeWidgetState extends State<HomeWidget> {
 
                   billingProvider.selectedProductIdController.text =
                       selectedProduct.productId.toString();
-                  billingProvider.unitPriceController.text = defaultPrice.toString();
+                  billingProvider.unitPriceController.text =
+                      defaultPrice.toString();
                   billingProvider.quantityController.text = '1';
                   billingProvider.selectedProductNameController.text =
                       selectedProduct.productName ?? '';
-                  billingProvider.barcodeController.text = selectedProduct.barcode ?? '';
+                  billingProvider.barcodeController.text =
+                      selectedProduct.barcode ?? '';
                 },
                 productList:
                     Provider.of<LocalProductProvider>(context, listen: false)
@@ -380,7 +390,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 focusNode: billingProvider.unitPriceFocusNode,
                 decoration: InputDecoration(
                   labelText: 'Price',
-                  prefixText: '₹ ',
+                  prefixText: ' ',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -458,7 +468,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('${item.quantity} ${item.product.unit ?? ''}'),
-                      Text('₹${item.price?.toStringAsFixed(2) ?? '0.00'}'),
+                      Text('${item.price?.toStringAsFixed(2) ?? '0.00'}'),
                     ],
                   ),
                   trailing: SizedBox(
@@ -468,7 +478,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '₹${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}',
+                          '${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14, // Slightly smaller font
@@ -507,7 +517,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 ),
               ),
               Text(
-                '₹${provider.cartTotal.toStringAsFixed(2)}',
+                '${provider.cartTotal.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -521,7 +531,8 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
   }
 
-  void _saveOrder(BillingProvider billingProvider, LocalProductProvider provider, bool isEditingOrder) async {
+  void _saveOrder(BillingProvider billingProvider,
+      LocalProductProvider provider, bool isEditingOrder) async {
     if (provider.cartItems.isEmpty) {
       showScaffoldError(
         context: context,
@@ -531,8 +542,8 @@ class _HomeWidgetState extends State<HomeWidget> {
     }
 
     // Validate that all items have valid pricing
-    bool hasInvalidPricing =
-        provider.cartItems.any((item) => item.price == null || (item.price ?? 0) < 0);
+    bool hasInvalidPricing = provider.cartItems
+        .any((item) => item.price == null || (item.price ?? 0) < 0);
 
     if (hasInvalidPricing) {
       showScaffoldError(
@@ -590,8 +601,8 @@ class _HomeWidgetState extends State<HomeWidget> {
     }
   }
 
-  Widget _buildActionButtons(
-      BillingProvider billingProvider, LocalProductProvider provider, bool isEditingOrder) {
+  Widget _buildActionButtons(BillingProvider billingProvider,
+      LocalProductProvider provider, bool isEditingOrder) {
     return Row(
       children: [
         Expanded(
@@ -622,7 +633,8 @@ class _HomeWidgetState extends State<HomeWidget> {
         const SizedBox(width: 12),
         Expanded(
           child: OutlinedButton(
-            onPressed: () => _saveOrder(billingProvider, provider, isEditingOrder),
+            onPressed: () =>
+                _saveOrder(billingProvider, provider, isEditingOrder),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: const BorderSide(color: Colors.orange),
@@ -636,25 +648,33 @@ class _HomeWidgetState extends State<HomeWidget> {
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              // Implement confirm functionality
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green[700],
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+        if (Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings
+                ?.showConfirmOrderButton ??
+            true)
+          const SizedBox(width: 12),
+        if (Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings
+                ?.showConfirmOrderButton ??
+            true)
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                // Implement confirm functionality
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'CONFIRM',
+                style: TextStyle(color: Colors.white),
               ),
             ),
-            child: const Text(
-              'CONFIRM',
-              style: TextStyle(color: Colors.white),
-            ),
           ),
-        ),
       ],
     );
   }

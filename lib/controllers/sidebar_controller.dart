@@ -13,7 +13,7 @@ import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
 import 'package:pos_machine/screens/dashboard/company_admin.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
-import 'package:pos_machine/screens/dashboard/dashboard_ui_only.dart';
+
 import 'package:pos_machine/screens/dashboard/sales_exicutive_dahsboard.dart';
 import 'package:pos_machine/screens/edit_order/edit_order.dart';
 import 'package:pos_machine/screens/homenew/home_new.dart';
@@ -44,6 +44,7 @@ import 'package:pos_machine/screens/reports/product_sales_report/product_sales_r
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
+import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/supplier_profile/open_supplier_profile.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
@@ -68,6 +69,10 @@ import 'package:pos_machine/screens/transactions/widgets/view_receipt_details.da
 import 'package:pos_machine/screens/transactions/widgets/view_transaction_details.dart';
 import 'package:pos_machine/screens/transactions/widgets/view_voucher_details.dart';
 import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_transactions.dart';
+import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
+import 'package:pos_machine/screens/transactions/widgets/create_customer_voucher.dart';
+import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
+import 'package:pos_machine/screens/transactions/widgets/create_supplier_voucher.dart';
 
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
@@ -75,6 +80,8 @@ import '../widgets/category_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_details.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
+import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
+import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 
 class SideBarController extends GetxController {
   RxInt index =
@@ -89,7 +96,7 @@ class SideBarController extends GetxController {
 
   var screens = const [
     HomeNew(), //0
-    DashboardUIScreen(), //1 - Using the role-based dashboard
+    DashboardScreen(), //1 - Using the role-based dashboard
     SalesScreen(), //2
     CartScreen(), //3
     TransactionScreen(), //4
@@ -158,5 +165,15 @@ class SideBarController extends GetxController {
     SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
     OpenSupplierProfileScreen(), // 69 Open Supplier Profile Screen
+    CustomerVoucherListScreen(), // 70 Customer Voucher List
+    CreateCustomerVoucherScreen(), // 71 Create Customer Voucher
+    SupplierVoucherListScreen(), // 72 Supplier Voucher List
+    CreateSupplierVoucherScreen(), // 73 Create Supplier Voucher
+    TransactionScreen(), // 74 Supplier Transactions (alias for Party Accounts)
+    SupplierVoucherListScreen(), // 75 Supplier Voucher List (alias for Transactions)
+    CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
+    NonStockReportScreen(), // 77 Non-Stock Report
+    DailySalesCloseListScreen(), // 78 Daily Sales Close List
+    DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
   ];
 }

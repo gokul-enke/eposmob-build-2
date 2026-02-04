@@ -40,14 +40,27 @@ class ExecutiveModelData {
   final String? tokenType;
   final int? userId;
   final String? userName;
+  final int? companyId;
+  final String? companyName;
   final String? userRole;
+  final List<Store>? stores;
+  // ZATCA fields for Saudi Arabia e-invoicing
+  final String? vatNumber;
+  final String? zatcaCompanyName;
+  final String? timeZone;
 
   ExecutiveModelData({
     this.accessToken,
     this.tokenType,
     this.userId,
     this.userName,
+    this.companyId,
+    this.companyName,
     this.userRole,
+    this.stores,
+    this.vatNumber,
+    this.zatcaCompanyName,
+    this.timeZone,
   });
 
   factory ExecutiveModelData.fromJson(Map<String, dynamic> json) =>
@@ -56,7 +69,15 @@ class ExecutiveModelData {
         tokenType: json["token_type"],
         userId: json["user_id"],
         userName: json["name"],
+        companyId: json["company_id"],
+        companyName: json["company_name"],
         userRole: json["user_role"],
+        stores: json["stores"] == null
+            ? null
+            : List<Store>.from(json["stores"].map((x) => Store.fromJson(x))),
+        vatNumber: json["vat_number"],
+        zatcaCompanyName: json["zatca_company_name"],
+        timeZone: json["time_zone"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -64,6 +85,38 @@ class ExecutiveModelData {
         "token_type": tokenType,
         "user_id": userId,
         "name": userName,
+        "company_id": companyId,
+        "company_name": companyName,
         "user_role": userRole,
+        "stores": stores == null
+            ? null
+            : List<dynamic>.from(stores!.map((x) => x.toJson())),
+        "vat_number": vatNumber,
+        "zatca_company_name": zatcaCompanyName,
+        "time_zone": timeZone,
+      };
+}
+
+class Store {
+  final int? storeId;
+  final String? storeName;
+  final String? location;
+
+  Store({
+    this.storeId,
+    this.storeName,
+    this.location,
+  });
+
+  factory Store.fromJson(Map<String, dynamic> json) => Store(
+        storeId: json["store_id"],
+        storeName: json["store_name"],
+        location: json["location"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "store_id": storeId,
+        "store_name": storeName,
+        "location": location,
       };
 }

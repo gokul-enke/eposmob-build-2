@@ -43,6 +43,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   final TextEditingController rackController = TextEditingController();
   final TextEditingController storeController = TextEditingController();
   final TextEditingController storeSearchController = TextEditingController();
+  final TextEditingController stockStatusController = TextEditingController();
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;
@@ -55,6 +56,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
     loadInitData();
     categoryController.text = "All Categories"; // Initialize with default value
     storeController.text = "All Stores"; // Initialize with default value
+    stockStatusController.text =
+        "All Statuses"; // Initialize with default value
   }
 
   void loadInitData() async {
@@ -157,6 +160,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
       filterRack: rackController.text.isEmpty ? null : rackController.text,
       filterStore:
           storeController.text == "All Stores" ? null : storeController.text,
+      filterStatus: stockStatusController.text == "All Statuses"
+          ? null
+          : stockStatusController.text,
       page: 1,
     );
   }
@@ -168,6 +174,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       barcodeController.clear();
       rackController.clear();
       storeController.text = "All Stores";
+      stockStatusController.text = "All Statuses";
     });
     Provider.of<StockProvider>(context, listen: false).resetStockFilters();
   }
@@ -315,8 +322,28 @@ class _AddStockScreenState extends State<AddStockScreen> {
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           if (data['status'] == 'success') {
-            racksData = Map<String, String>.from(data['data']);
-            debugPrint("Successfully loaded ${racksData.length} racks");
+            // Handle both new List structure and legacy Map structure
+            if (data['data'] is List) {
+              // New structure: List of objects with id, value, description
+              racksData = {};
+              for (var item in data['data']) {
+                final value = item['value']?.toString() ?? '';
+                final description = item['description']?.toString() ?? value;
+                if (value.isNotEmpty) {
+                  racksData[value] = description;
+                }
+              }
+              debugPrint(
+                  "Successfully loaded ${racksData.length} racks (from List)");
+            } else if (data['data'] is Map) {
+              // Legacy structure: Map<String, String>
+              racksData = Map<String, String>.from(data['data']);
+              debugPrint(
+                  "Successfully loaded ${racksData.length} racks (from Map)");
+            } else {
+              debugPrint("Unexpected data format: ${data['data'].runtimeType}");
+              racksData = {};
+            }
           } else {
             debugPrint("API returned error status: ${data['message']}");
           }
@@ -674,17 +701,26 @@ class _AddStockScreenState extends State<AddStockScreen> {
     );
   }
 
-  Widget _buildTableCell(String text) {
+  Widget _buildTableCell(String text, {Color? textColor, Color? bgColor}) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.13,
-          Colors.black,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: bgColor ?? Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.13,
+              textColor ?? Colors.black,
+            ),
+          ),
         ),
       ),
     );
@@ -697,7 +733,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     final bool isSmallScreen = size.width < 600;
     return SafeArea(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
@@ -710,7 +746,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
             ],
             color: Colors.white),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+          padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -733,7 +769,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
               Column(
                 children: [
                   // First row with 4 fields
@@ -744,16 +780,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Stock Name",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Stock Name",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
@@ -794,16 +830,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Category",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Category",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildDropDownWithSearch<String>(
                               title: null,
                               showName: false,
@@ -839,16 +875,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Barcode",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Barcode",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
@@ -889,16 +925,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Rack Search",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Rack Search",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
@@ -934,26 +970,27 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
                   // Second row with 4 fields
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       // Store Filter dropdown
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Store Filter",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // Text(
+                            //   "Store Filter",
+                            //   style: buildCustomStyle(
+                            //     FontWeightManager.regular,
+                            //     FontSize.s14,
+                            //     0.27,
+                            //     Colors.black.withOpacity(0.6),
+                            //   ),
+                            // ),
+                            // const SizedBox(height: 8),
                             BuildDropDownWithSearch<String>(
                               title: null,
                               showName: false,
@@ -983,63 +1020,66 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
                       const SizedBox(width: 15),
 
-                      // Empty space to maintain layout
-                      Expanded(child: Container()),
+                      // Stock Status Filter dropdown
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            BuildDropDownWithSearch<String>(
+                              title: null,
+                              showName: false,
+                              hintText: 'Stock Status',
+                              value:
+                                  stockStatusController.text == "All Statuses"
+                                      ? null
+                                      : stockStatusController.text,
+                              items: const [
+                                "Out of Stock",
+                                "Low Stock",
+                                "At Reorder Level"
+                              ],
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  stockStatusController.text =
+                                      newValue ?? "All Statuses";
+                                });
+                                searchStocks();
+                              },
+                              displayText: (status) => status,
+                              searchController: TextEditingController(),
+                              height: 45,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 0),
+                            ),
+                          ],
+                        ),
+                      ),
 
                       const SizedBox(width: 15),
 
                       // Empty space to maintain layout
                       Expanded(child: Container()),
-
-                      const SizedBox(width: 15), // // Search button
-                      // Expanded(
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: [
-                      //       const SizedBox(
-                      //           height: 35), // Space to align with other fields
-                      //       CustomRoundButton(
-                      //         title: "Search",
-                      //         fct: () => {searchStocks()},
-                      //         height: 45,
-                      //         width:
-                      //             double.infinity, // Take full available width
-                      //         fontSize: FontSize.s12,
-                      //         boxColor: ColorManager.kPrimaryColor,
-                      //         textColor: Colors.white,
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
 
                       const SizedBox(width: 15),
 
                       // Reset button
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(
-                                height: 35), // Space to align with other fields
-                            CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              borderColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width:
-                                  double.infinity, // Take full available width
-                              fontSize: FontSize.s12,
-                            ),
-                          ],
+                        child: CustomRoundButton(
+                          title: "Reset",
+                          boxColor: Colors.white,
+                          textColor: ColorManager.kPrimaryColor,
+                          borderColor: ColorManager.kPrimaryColor,
+                          fct: resetSearch,
+                          height: 45,
+                          width: double.infinity,
+                          fontSize: FontSize.s12,
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Expanded(
                 child: Column(
                   children: [
@@ -1190,7 +1230,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                               stock.barCode ??
                                                                   'N/A';
                                                           debugPrint(
-                                                              '🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
+                                                              '🔍 DISPLAY BARCODE: "$barcode" for product: ${stock.productName}');
                                                           return barcode;
                                                         }()), // Updated to show actual barcode
                                                         _buildTableCell(
@@ -1201,7 +1241,32 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                                 .purchaseRate ??
                                                             "N/A"),
                                                         _buildTableCell(
-                                                            '${stock.qty}'),
+                                                          '${stock.qty}',
+                                                          textColor: (stock
+                                                                          .stockStatus ==
+                                                                      'Out of Stock' ||
+                                                                  stock.stockStatus ==
+                                                                      'Low Stock' ||
+                                                                  stock.stockStatus ==
+                                                                      'At Reorder Level')
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                          bgColor: stock
+                                                                      .stockStatus ==
+                                                                  'Out of Stock'
+                                                              ? ColorManager
+                                                                  .kRed
+                                                              : stock.stockStatus ==
+                                                                      'Low Stock'
+                                                                  ? ColorManager
+                                                                      .kOrange
+                                                                  : stock.stockStatus ==
+                                                                          'At Reorder Level'
+                                                                      ? ColorManager
+                                                                          .kButtonYellow
+                                                                      : Colors
+                                                                          .transparent,
+                                                        ),
                                                         _buildTableCell(
                                                             '${stock.unit}'),
                                                         _buildTableCell(
@@ -1290,7 +1355,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                         ),
                                                       ],
                                                     );
-                                                  }).toList(),
+                                                  }),
                                                 ],
                                               ),
                                             ),

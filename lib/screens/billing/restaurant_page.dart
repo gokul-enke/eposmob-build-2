@@ -1,15 +1,19 @@
 import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 
@@ -24,7 +28,13 @@ import '../../screens/billing/widgets/payment_method_modal.dart';
 import '../../components/build_round_button.dart'; // Add button import
 import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
+import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
+import 'package:pos_machine/screens/print/print_kot.dart';
+import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/models/order_details.dart';
 
 class RestaurantPage extends StatefulWidget {
   const RestaurantPage({super.key});
@@ -32,6 +42,9 @@ class RestaurantPage extends StatefulWidget {
   @override
   State<RestaurantPage> createState() => _RestaurantPageState();
 }
+
+// Mobile view navigation enum
+enum MobileView { tables, orders }
 
 class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
@@ -43,6 +56,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
       GlobalKey<_OrderPanelState>(); // Key to access OrderPanel methods
   bool _isLoadingSendToKitchen =
       false; // Loading state for Send to Kitchen button
+  bool _isLoadingPrint = false; // Loading state for Print button
+
+  // Mobile navigation state
+  MobileView _currentMobileView = MobileView.tables;
+  String? _selectedTableName; // Store selected table name for header
 
   @override
   void initState() {
@@ -134,8 +152,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
           child: _TablesPanel(
             activeTableId: _activeTableId,
             onSelect: (id) {
+              _autoSaveCurrentTableBeforeSwitch();
+              // Get table name from provider for desktop mode
+              final tableProvider =
+                  Provider.of<TableProvider>(context, listen: false);
+              final selectedTable = tableProvider.tables.firstWhere(
+                (table) => table.id == id,
+                orElse: () => tableProvider.tables.first,
+              );
               setState(() {
                 _activeTableId = id;
+                _selectedTableName = selectedTable.name;
               });
             },
             screenSize: screenSize,
@@ -162,6 +189,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onSendToKitchen:
                 _sendOrderToKitchenWithLoading, // Use wrapper method
             onNewOrder: _handleNewOrder, // Pass the new callback
+            onPrintOrder: _printOrderWithLoading, // Pass the print callback
             onOrderSelected: (order) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
@@ -176,6 +204,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             refreshCounter: _refreshCounter, // Pass refresh counter
             isLoadingSendToKitchen:
                 _isLoadingSendToKitchen, // Pass loading state
+            isLoadingPrint: _isLoadingPrint, // Pass print loading state
           ),
         ),
       ],
@@ -183,69 +212,244 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Widget _buildMobileLayout(Size screenSize) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _currentMobileView == MobileView.tables
+            ? _buildTablesView(screenSize)
+            : _buildOrdersView(screenSize),
+      ),
+    );
+  }
+
+  // Full-page tables view for mobile
+  Widget _buildTablesView(Size screenSize) {
     return Column(
+      key: const ValueKey('tables_view'),
       children: [
-        // Top section with tables and order summary
-        SizedBox(
-          height: screenSize.height * 0.35, // 35% of screen height
+        // Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Row(
             children: [
-              // Tables panel - takes 60% of width
-              Expanded(
-                flex: 3,
-                child: _TablesPanel(
-                  activeTableId: _activeTableId,
-                  onSelect: (id) {
-                    setState(() {
-                      _activeTableId = id;
-                    });
-                  },
-                  isCompact: true,
-                  screenSize: screenSize,
+              Icon(
+                Icons.table_restaurant,
+                color: const Color(0xFF2563EB),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Select a Table',
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s20,
+                  0.30,
+                  const Color(0xFF1E293B),
                 ),
               ),
-              // Order panel - takes 40% of width
-              Expanded(
-                flex: 2,
-                child: _OrderPanel(
-                  key: _orderPanelKey, // Add key to access methods
-                  tableId: _activeTableId,
-                  isCompact: true,
-                  screenSize: screenSize,
-                  onSendToKitchen:
-                      _sendOrderToKitchenWithLoading, // Use wrapper method
-                  onNewOrder: _handleNewOrder, // Pass the new callback
-                  onOrderSelected: (order) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() {
-                          _selectedOrderFromOrderPanel = order;
-                        });
-                      }
-                    });
-                  },
-                  selectedOrderFromParent:
-                      _selectedOrderFromOrderPanel, // Pass the selected order
-                  refreshCounter: _refreshCounter, // Pass refresh counter
-                  isLoadingSendToKitchen:
-                      _isLoadingSendToKitchen, // Pass loading state
-                ),
+              const Spacer(),
+              // Menu button
+              IconButton(
+                icon:
+                    const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
+                onPressed: () => _showProductsBottomSheet(context),
+                tooltip: 'Menu',
               ),
             ],
           ),
         ),
-        // Menu panel takes remaining space
+        // Tables Panel - full page
         Expanded(
-          child: _MenuPanel(
-            onCategoryChanged: (cid) => setState(() => _activeCategoryId = cid),
-            activeCategoryId: _activeCategoryId,
-            onItemAdd: _handleItemAdd,
-            isCompact: true,
+          child: _TablesPanel(
+            activeTableId: _activeTableId,
+            onSelect: (id) {
+              _autoSaveCurrentTableBeforeSwitch();
+              // Get table name from provider
+              final tableProvider =
+                  Provider.of<TableProvider>(context, listen: false);
+              final selectedTable = tableProvider.tables.firstWhere(
+                (table) => table.id == id,
+                orElse: () => tableProvider.tables.first,
+              );
+              setState(() {
+                _activeTableId = id;
+                _selectedTableName = selectedTable.name;
+                _currentMobileView =
+                    MobileView.orders; // Navigate to orders view
+              });
+            },
             screenSize: screenSize,
-            selectedOrder: _selectedOrderFromOrderPanel, // Pass selected order
           ),
         ),
       ],
+    );
+  }
+
+  // Full-page orders view for mobile
+  Widget _buildOrdersView(Size screenSize) {
+    return Column(
+      key: const ValueKey('orders_view'),
+      children: [
+        // Header with back button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
+                onPressed: () {
+                  setState(() {
+                    _currentMobileView = MobileView.tables;
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.receipt_long,
+                color: const Color(0xFF2563EB),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _selectedTableName ?? 'Orders',
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s20,
+                    0.30,
+                    const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              // Menu button
+              IconButton(
+                icon:
+                    const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
+                onPressed: () => _showProductsBottomSheet(context),
+                tooltip: 'Menu',
+              ),
+            ],
+          ),
+        ),
+        // Orders Panel - full page
+        Expanded(
+          child: _OrderPanel(
+            key: _orderPanelKey,
+            tableId: _activeTableId,
+            screenSize: screenSize,
+            onSendToKitchen: _sendOrderToKitchenWithLoading,
+            onNewOrder: _handleNewOrder,
+            onPrintOrder: _printOrderWithLoading,
+            onOrderSelected: (order) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _selectedOrderFromOrderPanel = order;
+                  });
+                }
+              });
+            },
+            selectedOrderFromParent: _selectedOrderFromOrderPanel,
+            refreshCounter: _refreshCounter,
+            isLoadingSendToKitchen: _isLoadingSendToKitchen,
+            isLoadingPrint: _isLoadingPrint,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Show products as a bottom sheet
+  void _showProductsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  children: [
+                    // Drag handle
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    // Header with only close button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    // Products panel
+                    Expanded(
+                      child: _MenuPanel(
+                        onCategoryChanged: (cid) {
+                          // Update both parent and modal state
+                          setState(() => _activeCategoryId = cid);
+                          setModalState(() => _activeCategoryId = cid);
+                        },
+                        activeCategoryId: _activeCategoryId,
+                        onItemAdd: (product, quantity) async {
+                          await _handleItemAdd(product, quantity);
+                          // Optionally close the bottom sheet after adding
+                          // Navigator.pop(context);
+                        },
+                        screenSize: MediaQuery.of(context).size,
+                        selectedOrder: _selectedOrderFromOrderPanel,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -332,6 +536,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
         // New order: strictly local cart only (no API here)
         debugPrint(
             '🛒 Adding product to local cart via LocalProductProvider (new order)');
+        // Try to pass a specific stock reference when it's safe to infer
+        // 1) If provider's selectedProduct matches this product, use its selectedStock
+        // 2) Else if the product has exactly one stock entry, use that
+        final selectedStockToUse =
+            (localProductProvider.selectedProduct?.productId ==
+                    product.productId)
+                ? localProductProvider.selectedStock
+                : ((product.stock != null && product.stock!.length == 1)
+                    ? product.stock!.first
+                    : null);
+
         localProductProvider.addToCart(
           product: product,
           quantity: quantity,
@@ -339,6 +554,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               ? double.tryParse(product.price!.price!)
               : null,
           mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
+          selectedStock: selectedStockToUse,
         );
 
         if (mounted) {
@@ -396,8 +612,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         });
       }
 
-      // Get cart total from local provider
-      final total = localProductProvider.cartTotal;
+      // Get cart total from local provider (apply round-off when enabled)
+      final total = localProductProvider.getRoundedTotal(context);
 
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
@@ -418,7 +634,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         couponId: null, // Not applicable
         comment: currentComment.isNotEmpty
             ? currentComment
-            : "Order for Table $_activeTableId", // Add a comment for context
+            : "Order for ${_selectedTableName ?? _activeTableId}", // Use table name for clarity
         deliveryMethodId:
             Provider.of<DeliveryMethodsProvider>(context, listen: false)
                     .defaultDeliveryMethod
@@ -435,7 +651,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         showScaffold(
           context: context,
           message:
-              'Order for Table $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
+              'Order for $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
         );
 
         // Clear the local cart after successful submission
@@ -443,6 +659,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
           debugPrint('🗑️ Clearing local cart after successful kitchen order');
           localProductProvider.clearCart();
         }
+
+        // If a local draft was loaded, remove it after successful send
+        _orderPanelKey.currentState?.deleteLoadedDraftIfAny();
 
         // Refresh saved orders for the currently opened table
         if (mounted && _activeTableId != null) {
@@ -495,6 +714,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _activeTableId = null;
     });
 
+    // Reset payment modal flag in OrderPanel
+    _orderPanelKey.currentState?.resetPaymentModalFlag();
+
     showScaffold(
       context: context,
       message: 'New order started. Cart cleared and table deselected.',
@@ -514,6 +736,209 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _isLoadingSendToKitchen = false;
         });
       }
+    }
+  }
+
+  Future<void> _printOrderWithLoading() async {
+    if (_activeTableId == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a table first to print the order',
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoadingPrint = true;
+    });
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      // Get cart data BEFORE sending (it will be cleared after)
+      final cartItems = localProductProvider.getCartItems();
+
+      if (cartItems.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'No items in cart to print',
+        );
+        return;
+      }
+
+      // Capture data for printing BEFORE clearing
+      final tableName = _selectedTableName ?? 'Table $_activeTableId';
+      final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
+      final total = localProductProvider.getRoundedTotal(context);
+
+      // Build print items BEFORE clearing cart
+      List<Map<String, dynamic>> printItems = [];
+      for (var item in cartItems) {
+        printItems.add({
+          'productName': item.product.productName ?? '',
+          'quantity': item.quantity.toString(),
+          'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
+          'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+          'mrp': item.mrp?.toStringAsFixed(2) ??
+              item.price?.toStringAsFixed(2) ??
+              '0.00',
+        });
+      }
+
+      // Convert local cart items to API format
+      List<Map<String, dynamic>> items = [];
+      for (var item in cartItems) {
+        items.add({
+          'product_id': item.product.productId,
+          'quantity': item.quantity,
+          'price': item.price?.toString() ?? '0',
+          'mrp': item.mrp?.toString() ?? '0',
+          'stock_id': item.selectedStock?.id,
+        });
+      }
+
+      // Call the addToOrderAPI with status: "new"
+      debugPrint('➡️ Print: Calling CartProvider.addToOrderAPI');
+      final response = await cartProvider.addToOrderAPI(
+        items: items,
+        cartIds: 0,
+        accessToken: authModel.token ?? "",
+        transactionId: "",
+        totalPrice: total.toStringAsFixed(2),
+        customerId: authModel.userId ?? 1,
+        customerPhone: null,
+        paymentMethod: null,
+        paidAmount: null,
+        paymentMethods: [],
+        paidMethods: [],
+        balanceAmount: "0",
+        couponId: null,
+        comment: currentComment.isNotEmpty
+            ? currentComment
+            : "Order for ${_selectedTableName ?? _activeTableId}",
+        deliveryMethodId:
+            Provider.of<DeliveryMethodsProvider>(context, listen: false)
+                    .defaultDeliveryMethod
+                    ?.id ??
+                "11",
+        carNumber: null,
+        status: "new",
+        deliveryDate: null,
+        deliveryTime: null,
+        tableId: _activeTableId,
+      );
+
+      if (response["order_id"] != null) {
+        // Get order number from API response
+        final orderNumber = response["order_number"]?.toString() ??
+            'ORD-${response["order_id"]}';
+
+        showScaffold(
+          context: context,
+          message: 'Order sent to kitchen! Order: $orderNumber',
+        );
+
+        // Clear the local cart after successful submission
+        debugPrint('🗑️ Clearing local cart after successful kitchen order');
+        localProductProvider.clearCart();
+
+        // If a local draft was loaded, remove it after successful send
+        _orderPanelKey.currentState?.deleteLoadedDraftIfAny();
+
+        // Refresh saved orders
+        if (mounted && _activeTableId != null) {
+          _orderPanelKey.currentState?.refreshSavedOrders();
+        }
+
+          // Check if KOT print is enabled in app settings
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+          // Get current time for KOT (using DateHelper for timezone support)
+          final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
+
+          // Try auto-print with default printer first
+          if (mounted) {
+            KotPrintPage.autoPrint(
+              context,
+              orderNumber: orderNumber,
+              tableName: tableName,
+              orderTime: orderTime,
+              items: printItems,
+              comment: currentComment.isNotEmpty ? currentComment : null,
+            ).then((success) {
+              // Only show print page if auto-print failed
+              if (!success && mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => KotPrintPage(
+                      orderNumber: orderNumber,
+                      tableName: tableName,
+                      orderTime: orderTime,
+                      items: printItems,
+                      comment: currentComment.isNotEmpty ? currentComment : null,
+                    ),
+                  ),
+                );
+              }
+            });
+          }
+        }
+      } else {
+        showScaffoldError(
+          context: context,
+          message:
+              'Failed to send order: ${response["message"] ?? "Unknown error"}',
+        );
+      }
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Failed to print order: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingPrint = false;
+        });
+      }
+    }
+  }
+
+  // Auto-save current table's cart before switching to another table
+  void _autoSaveCurrentTableBeforeSwitch() {
+    if (_activeTableId == null) return;
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final cartItems = localProductProvider.cartItems;
+
+      if (cartItems.isEmpty) {
+        debugPrint(
+            '💾 No items in cart for table $_activeTableId, skipping auto-save');
+        return;
+      }
+
+      debugPrint(
+          '💾 Auto-saving cart for table $_activeTableId before switch (${cartItems.length} items)');
+
+      // Auto-save as pending draft with tableId
+      localProductProvider.saveCurrentCartAsOrder(
+        comment: 'TABLE:$_activeTableId',
+        status: 'pending',
+        context: context,
+        tableId: _activeTableId,
+      );
+
+      debugPrint('✅ Auto-saved pending draft for table $_activeTableId');
+      localProductProvider.clearCart();
+    } catch (e) {
+      debugPrint('❌ Error auto-saving cart: $e');
     }
   }
 }
@@ -1123,7 +1548,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                               ),
                               if (product.price?.price != null)
                                 Text(
-                                  '₹${product.price!.price}',
+                                  '${product.price!.price}',
                                   style: buildCustomStyle(
                                     FontWeightManager.bold,
                                     FontSize.s14,
@@ -1200,10 +1625,10 @@ class _MenuPanelState extends State<_MenuPanel> {
                               (product.sku ?? '').toString().isNotEmpty)
                             _buildKeyValueRow('SKU', product.sku!),
                           if (product.mrp != null)
-                            _buildKeyValueRow('MRP', '₹${product.mrp}'),
+                            _buildKeyValueRow('MRP', '${product.mrp}'),
                           if (product.price?.price != null)
                             _buildKeyValueRow(
-                                'Price', '₹${product.price!.price}'),
+                                'Price', '${product.price!.price}'),
 
                           if (product.barcode != null &&
                               (product.barcode ?? '').toString().isNotEmpty)
@@ -1372,21 +1797,18 @@ class _MenuPanelState extends State<_MenuPanel> {
         }
 
         final categories = categoryProvider.category ?? [];
-        final selectedCategoryId = widget.activeCategoryId ??
-            (categories.isNotEmpty ? categories.first.categoryId : null);
+        final selectedCategoryId = widget.activeCategoryId ?? 0;
 
-        // Get products for selected category
+        // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
-        if (selectedCategoryId != null) {
-          if (selectedCategoryId == 0) {
-            // "ALL" category - show all products
-            items = productProvider.filteredProducts;
-          } else {
-            // Specific category - filter products
-            items = productProvider.products
-                .where((product) => product.categoryId == selectedCategoryId)
-                .toList();
-          }
+        if (selectedCategoryId == 0) {
+          // "ALL" category - show all sellable products
+          items = productProvider.sellableFilteredProducts;
+        } else {
+          // Specific category - filter sellable products by category
+          items = productProvider.sellableProducts
+              .where((product) => product.categoryId == selectedCategoryId)
+              .toList();
         }
 
         // Apply search filter
@@ -1526,8 +1948,71 @@ class _MenuPanelState extends State<_MenuPanel> {
                         padding: EdgeInsets.symmetric(
                             horizontal: widget.isCompact ? 12 : 16),
                         scrollDirection: Axis.horizontal,
+                        itemCount: categories.length + 1,
                         itemBuilder: (_, idx) {
-                          final c = categories[idx];
+                          // Handle "All" category at index 0
+                          if (idx == 0) {
+                            final active = selectedCategoryId == 0;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    widget.onCategoryChanged(0);
+                                    // Update products for "All" category
+                                    productProvider.refreshProducts();
+                                  },
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: widget.isCompact ? 16 : 20,
+                                        vertical: widget.isCompact ? 8 : 10),
+                                    decoration: BoxDecoration(
+                                      color: active
+                                          ? const Color(0xFF2563EB)
+                                          : Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(
+                                        color: active
+                                            ? const Color(0xFF2563EB)
+                                            : Colors.grey.shade200,
+                                        width: 1,
+                                      ),
+                                      boxShadow: active
+                                          ? [
+                                              BoxShadow(
+                                                color: const Color(0xFF2563EB)
+                                                    .withOpacity(0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : [],
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'All',
+                                        style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s12
+                                                : FontSize.s13,
+                                            0.21,
+                                            active
+                                                ? Colors.white
+                                                : const Color(0xFF64748B)),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          // Handle regular categories (index offset by 1)
+                          final c = categories[idx - 1];
                           final active = c.categoryId == selectedCategoryId;
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
@@ -1538,7 +2023,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                                   widget.onCategoryChanged(c.categoryId);
                                   // Update products for selected category
                                   if (c.categoryId == 0) {
-                                    // "ALL" category
+                                    // Should not happen for regular categories but kept for safety
                                     productProvider.refreshProducts();
                                   } else {
                                     // Specific category
@@ -1594,7 +2079,6 @@ class _MenuPanelState extends State<_MenuPanel> {
                           );
                         },
                         separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemCount: categories.length,
                       ),
                     ),
                   ),
@@ -1828,7 +2312,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            '₹${item.price?.price ?? '0'}',
+                            '${item.price?.price ?? '0'}',
                             style: buildCustomStyle(
                               FontWeightManager.bold,
                               compact ? FontSize.s9 : FontSize.s11,
@@ -2027,12 +2511,15 @@ class _OrderPanel extends StatefulWidget {
   final Size screenSize;
   final VoidCallback onSendToKitchen; // New callback for send to kitchen
   final VoidCallback onNewOrder; // New callback for new order
+  final VoidCallback
+      onPrintOrder; // New callback for print order (send + print)
   final Function(dynamic)
       onOrderSelected; // New callback to update selected order
   final dynamic
       selectedOrderFromParent; // Add this to track parent's selected order
   final int? refreshCounter; // Add refresh counter
   final bool isLoadingSendToKitchen; // Loading state for Send to Kitchen button
+  final bool isLoadingPrint; // Loading state for Print button
 
   const _OrderPanel({
     super.key, // Add key parameter
@@ -2041,10 +2528,12 @@ class _OrderPanel extends StatefulWidget {
     required this.screenSize,
     required this.onSendToKitchen, // Make it required
     required this.onNewOrder, // Make it required
+    required this.onPrintOrder, // Make it required
     required this.onOrderSelected, // Make it required
     this.selectedOrderFromParent, // Add this parameter
     this.refreshCounter, // Add refresh counter parameter
     this.isLoadingSendToKitchen = false, // Add loading state parameter
+    this.isLoadingPrint = false, // Add loading state parameter for print
   });
 
   @override
@@ -2054,27 +2543,32 @@ class _OrderPanel extends StatefulWidget {
 class _OrderPanelState extends State<_OrderPanel> {
   dynamic _selectedOrder;
   List<dynamic> _savedOrders = [];
+  List<SavedOrder> _localDrafts = [];
   bool _isLoadingOrders = false;
   bool _isLoadingOrderDetails = false;
   String? _error;
   final Set<String> _loadingCartItems =
       {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
+  String? _loadedLocalDraftId; // track currently loaded local draft
 
   // Payment Method Variables
   bool _isCashSelected = false;
   bool _isCardSelected = false;
   bool _isUpiSelected = false;
+  bool _isCodSelected = false;
   bool _isDebitSelected = false;
   String _cashAmount = "";
   String _cardAmount = "";
   String _upiAmount = "";
+  String _codAmount = "";
   String _debitAmount = "";
   String _transactionNumber = "";
   double _balanceAmount = 0.0;
   bool _toCustomerCreditEnabled = false;
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
   String _orderComment = "";
+  bool _hasOpenedPaymentModalOnce = false;
 
   // Expose current comment to parent (RestaurantPage) for new order flow
   String get orderComment => _orderComment;
@@ -2084,6 +2578,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   int? _selectedCustomerID;
   String? _selectedCustomerPhone;
   List<CustomerListModelData> _customers = [];
+  bool _customersInitialized = false;
+  bool _isCustomerManuallySelected = false; // Flag to track manual override
 
   // Discount Variables
   bool _isCouponApplied = false;
@@ -2091,29 +2587,53 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _percentageDiscount = 0.0;
   String _couponCode = "";
 
+  // Cart Item Status Variables (for Mark Served functionality)
+  List<CartItemStatus> _availableStatuses = [];
+  bool _isMarkingServed = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Load saved orders and local drafts when the widget is first created with a tableId
+    if (widget.tableId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchSavedOrders();
+        _refreshLocalDrafts();
+      });
+    }
+    // Fetch cart item statuses for Mark Served functionality
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchCartItemStatuses();
+    });
+  }
 
   @override
   void didUpdateWidget(covariant _OrderPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Initialize customers when first loaded - defer to avoid setState during build
-    if (_customers.isEmpty) {
+    // Initialize customers only once
+    if (!_customersInitialized) {
+      _customersInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _fetchCustomers();
       });
     }
 
-    if (widget.tableId != oldWidget.tableId && widget.tableId != null) {
-      _fetchSavedOrders();
-    } else if (widget.tableId == null) {
-      setState(() {
-        _savedOrders = [];
-        _selectedOrder = null;
-        _error = null;
-      });
-      // Clear state when no table is selected
-      _clearOrderEditingState();
-      widget.onOrderSelected(null);
+    // Only react when tableId actually changes
+    if (widget.tableId != oldWidget.tableId) {
+      if (widget.tableId != null) {
+        _fetchSavedOrders();
+        _refreshLocalDrafts();
+      } else {
+        setState(() {
+          _savedOrders = [];
+          _localDrafts = [];
+          _selectedOrder = null;
+          _error = null;
+          // Clear state synchronously to avoid nested setState
+          _clearOrderEditingStateSync();
+        });
+        widget.onOrderSelected(null);
+      }
     }
 
     // Check if refresh counter has changed (indicating a refresh is needed)
@@ -2172,6 +2692,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint(
           '🔄 External refresh of saved orders triggered for table: ${widget.tableId}');
       _fetchSavedOrders();
+      _refreshLocalDrafts();
     }
   }
 
@@ -2181,28 +2702,243 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint(
           '🔄 External silent refresh of saved orders triggered for table: ${widget.tableId}');
       _refreshSavedOrdersSilently();
+      _refreshLocalDrafts();
     }
   }
 
   Future<void> _fetchCustomers() async {
+    debugPrint("🔍 [DEBUG] Restaurant: _fetchCustomers called");
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final customerProvider =
           Provider.of<CustomerProvider>(context, listen: false);
 
+      debugPrint("🔍 [DEBUG] Restaurant: Loading customers from provider...");
       await customerProvider.loadAllCustomers(
         authModel.token ?? '',
       );
 
       setState(() {
-        _customers = customerProvider.customerList ?? [];
+        _customers = customerProvider.allCustomers ?? [];
+        debugPrint(
+            "🔍 [DEBUG] Restaurant: Fetched ${_customers.length} total customers (incl. background load)");
       });
+
+      // Apply default customer logic after fetching
+      _applyDefaultCustomer();
     } catch (e) {
-      debugPrint('Error fetching customers: $e');
+      debugPrint('❌ [DEBUG] Error fetching customers: $e');
     }
   }
 
-  void _showPaymentMethodModal() {
+  /// Fetch cart item statuses for Mark Served functionality
+  Future<void> _fetchCartItemStatuses() async {
+    debugPrint('🚀 === FETCHING CART ITEM STATUSES (Restaurant) ===');
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      final response = await cartProvider.getCartItemStatuses(
+        accessToken: authModel.token ?? '',
+      );
+
+      if ((response['status'] as String?)?.toLowerCase() == 'success') {
+        final statusResponse = CartItemStatusResponse.fromJson(response);
+        setState(() {
+          _availableStatuses = statusResponse.data;
+        });
+
+        debugPrint('✅ Fetched ${_availableStatuses.length} cart item statuses');
+        for (var status in _availableStatuses) {
+          debugPrint('   📊 ID: ${status.id}, Value: "${status.value}"');
+        }
+      } else {
+        debugPrint('❌ Failed to fetch cart item statuses: ${response['message']}');
+      }
+    } catch (e) {
+      debugPrint('❌ Exception fetching cart item statuses: $e');
+    }
+  }
+
+  /// Helper method to find status ID by value
+  int? _findStatusIdByValue(String value) {
+    if (_availableStatuses.isEmpty) {
+      debugPrint('⚠️ No available statuses loaded yet');
+      return null;
+    }
+
+    final status = _availableStatuses.firstWhere(
+      (s) => s.value.toUpperCase() == value.toUpperCase(),
+      orElse: () => CartItemStatus(id: 0, value: '', description: ''),
+    );
+
+    if (status.id == 0) {
+      debugPrint('⚠️ Status value "$value" not found in available statuses');
+      return null;
+    }
+
+    debugPrint('🔍 Found status ID ${status.id} for value "$value"');
+    return status.id;
+  }
+
+  /// Mark all order items as SERVED
+  Future<void> _markAllOrderItemsServed() async {
+    if (_selectedOrder == null) return;
+
+    final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
+    final displayOrderId = _selectedOrder['order_number']?.toString() ?? 
+                           _selectedOrder['display_order_id']?.toString() ?? 
+                           orderId.toString();
+
+    debugPrint('🚀 === MARKING ALL ORDER ITEMS AS SERVED ===');
+    debugPrint('📦 Order ID: $orderId');
+
+    final statusId = _findStatusIdByValue('SERVED');
+    if (statusId == null) {
+      showScaffoldError(context: context, message: 'Status "SERVED" not found');
+      return;
+    }
+
+    setState(() {
+      _isMarkingServed = true;
+    });
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      final response = await cartProvider.updateAllOrderItemsStatus(
+        orderId: orderId,
+        statusId: statusId,
+        accessToken: authModel.token ?? '',
+      );
+
+      debugPrint('📥 API Response: $response');
+
+      if ((response['status'] as String?)?.toLowerCase() == 'success') {
+        debugPrint('✅ All order items updated to SERVED');
+        
+        // Refresh the saved orders to get updated statuses
+        await _refreshSavedOrdersSilently();
+        
+        // Re-select the order to refresh details
+        if (_selectedOrder != null) {
+          final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
+          final refreshedOrder = _savedOrders.firstWhere(
+            (o) => (o['order_id'] ?? o['id']) == orderId,
+            orElse: () => _selectedOrder,
+          );
+          setState(() {
+            _selectedOrder = refreshedOrder;
+          });
+          widget.onOrderSelected(refreshedOrder);
+        }
+
+        if (mounted) {
+          showScaffold(
+            context: context,
+            message: 'Order $displayOrderId items marked as SERVED',
+          );
+        }
+      } else {
+        debugPrint('❌ Failed to update all order items');
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Failed to mark items as served: ${response['message']}',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Exception updating all order items: $e');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error marking items as served: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isMarkingServed = false;
+        });
+      }
+      debugPrint('🏁 === MARK ALL SERVED COMPLETED ===');
+    }
+  }
+
+  /// Extracts and applies the default customer from app settings
+  void _applyDefaultCustomer() {
+    debugPrint("🔍 [DEBUG] Restaurant: _applyDefaultCustomer called");
+
+    // Safeguard: if customer was manually selected or already partially entered, don't reset to default
+    if (_isCustomerManuallySelected &&
+        (_selectedCustomerID != null ||
+            _selectedCustomerPhone?.isNotEmpty == true)) {
+      debugPrint(
+          "🛡️ [DEBUG] Restaurant: Customer manually selected (ID: $_selectedCustomerID, Phone: $_selectedCustomerPhone), skipping reset to default");
+      return;
+    }
+
+    try {
+      // Check if auto-assign is enabled in app settings
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final bool autoAssignEnabled =
+          appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? false;
+
+      debugPrint(
+          "🔧 [DEBUG] Restaurant: Auto-assign enabled in settings: $autoAssignEnabled");
+
+      if (!autoAssignEnabled) {
+        debugPrint(
+            "🔧 [DEBUG] APP SETTINGS: Auto-assign default customer is DISABLED for Restaurant");
+        return;
+      }
+
+      if (_customers.isNotEmpty) {
+        // Get the default customer phone from app settings
+        final defaultPhone =
+            appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ??
+                "";
+
+        debugPrint(
+            "🔧 [DEBUG] Restaurant: Default customer phone from settings: '$defaultPhone'");
+
+        if (defaultPhone.isNotEmpty) {
+          try {
+            final defaultCustomer = _customers.firstWhere(
+              (customer) => customer.phone == defaultPhone,
+            );
+            debugPrint(
+                "✅ [DEBUG] Found default customer for restaurant: ${defaultCustomer.name} (ID: ${defaultCustomer.id})");
+
+            setState(() {
+              _selectedCustomer = defaultCustomer;
+              _selectedCustomerID = defaultCustomer.id;
+              _selectedCustomerPhone = defaultCustomer.phone;
+            });
+
+            // Also update the global provider
+            debugPrint("🔄 [DEBUG] Syncing with CustomerSelectionProvider...");
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .setSelectedCustomer(defaultCustomer, isDefault: true);
+          } catch (e) {
+            debugPrint(
+                "⚠️ [DEBUG] No customer found in list of ${_customers.length} with phone '$defaultPhone' for restaurant");
+          }
+        } else {
+          debugPrint("⚠️ [DEBUG] Default phone number is empty in AppSettings");
+        }
+      } else {
+        debugPrint("⚠️ [DEBUG] Customer list is empty, cannot auto-assign");
+      }
+    } catch (e) {
+      debugPrint('❌ [DEBUG] Error applying default customer: $e');
+    }
+  }
+
+  void _showPaymentMethodModal({VoidCallback? onAfterApply}) {
     if (_selectedOrder == null) return;
 
     // Calculate current total from cart items (dynamic calculation)
@@ -2245,8 +2981,13 @@ class _OrderPanelState extends State<_OrderPanel> {
               0.0;
     }
 
+    // Apply discounts if any
+    double totalDiscountAmount =
+        _flatDiscount + (orderTotal * _percentageDiscount / 100);
+    orderTotal = orderTotal - totalDiscountAmount;
+
     debugPrint(
-        '💰 Payment Modal - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+        '💰 Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
 
@@ -2254,46 +2995,118 @@ class _OrderPanelState extends State<_OrderPanel> {
     String autoFillCashAmount = _cashAmount;
     bool autoSelectCash = _isCashSelected;
 
-    if (!_isCashSelected &&
-        !_isCardSelected &&
-        !_isUpiSelected &&
-        !_isDebitSelected) {
-      // No payment method selected, auto-fill cash with order total
-      autoFillCashAmount = orderTotal.toStringAsFixed(2);
+    // Check if any payment method is already selected
+    bool hasSelection = _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected;
+
+    // If no selection, check for default payment method from AppSettings
+    if (!hasSelection) {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final defaultPayment =
+          appSettingsProvider.appSettings?.defaultPaymentMethod;
+
+      if (defaultPayment != null && defaultPayment.isNotEmpty) {
+        debugPrint(
+            '💰 Applying default payment method from AppSettings: $defaultPayment');
+        switch (defaultPayment.toUpperCase()) {
+          case 'CASH':
+            _isCashSelected = true;
+            break;
+          case 'CARD':
+            _isCardSelected = true;
+            break;
+          case 'UPI':
+            _isUpiSelected = true;
+            break;
+          case 'COD':
+            _isCodSelected = true;
+            break;
+        }
+        hasSelection = true; // Now we have a selection
+      }
+    }
+
+    // If still no selection (no default set), fallback to Cash
+    if (!hasSelection) {
+      _isCashSelected = true;
       autoSelectCash = true;
-      debugPrint(
-          '🔧 Auto-fill triggered: Cash amount set to ₹${autoFillCashAmount}, Cash selected: $autoSelectCash');
-    } else {
-      debugPrint('🔧 Auto-fill skipped: Payment methods already selected');
+    }
+
+    // Auto-fill amount logic:
+    // If the selected method has no amount entered (is empty or 0), fill it with the total
+    if (_isCashSelected &&
+        (_cashAmount.isEmpty || double.tryParse(_cashAmount) == 0)) {
+      autoFillCashAmount = orderTotal.toStringAsFixed(2);
+      _cashAmount = autoFillCashAmount; // Update state immediately
+      debugPrint('🔧 Auto-fill triggered for CASH: $autoFillCashAmount');
+    } else if (_isCardSelected &&
+        (_cardAmount.isEmpty || double.tryParse(_cardAmount) == 0)) {
+      _cardAmount = orderTotal.toStringAsFixed(2);
+      debugPrint('🔧 Auto-fill triggered for CARD: $_cardAmount');
+    } else if (_isUpiSelected &&
+        (_upiAmount.isEmpty || double.tryParse(_upiAmount) == 0)) {
+      _upiAmount = orderTotal.toStringAsFixed(2);
+      debugPrint('🔧 Auto-fill triggered for UPI: $_upiAmount');
+    } else if (_isCodSelected &&
+        (_codAmount.isEmpty || double.tryParse(_codAmount) == 0)) {
+      _codAmount = orderTotal.toStringAsFixed(2);
+      debugPrint('🔧 Auto-fill triggered for COD: $_codAmount');
     }
 
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
-        initialIsCashSelected: autoSelectCash,
+        initialIsCashSelected: _isCashSelected,
         initialIsCardSelected: _isCardSelected,
         initialIsUpiSelected: _isUpiSelected,
+        initialIsCodSelected: _isCodSelected,
         initialIsDebitSelected: _isDebitSelected,
-        initialCashAmount: autoFillCashAmount,
+        initialCashAmount: _cashAmount,
         initialCardAmount: _cardAmount,
         initialUpiAmount: _upiAmount,
+        initialCodAmount: _codAmount,
         initialDebitAmount: _debitAmount,
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cash, card,
-            upi, debit, transaction, toCustomerCredit) {
+        isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
+        onAfterApply: onAfterApply,
+        onPaymentMethodSelected: (
+          isCash,
+          isCard,
+          isUpi,
+          isCod,
+          isDebit,
+          cash,
+          card,
+          upi,
+          cod,
+          debit,
+          transaction,
+          toCustomerCredit, {
+          String? cashMethodId,
+          String? cardMethodId,
+          String? upiMethodId,
+          String? codMethodId,
+        }) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
+            _isCodSelected = isCod;
             _isDebitSelected = isDebit;
             _cashAmount = cash;
             _cardAmount = card;
             _upiAmount = upi;
+            _codAmount = cod;
             _debitAmount = debit;
             _transactionNumber = transaction;
             _toCustomerCreditEnabled = toCustomerCredit;
+            _hasOpenedPaymentModalOnce = true;
             // Capture the actual customer credit amount from the debit parameter
             _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0;
 
@@ -2301,14 +3114,45 @@ class _OrderPanelState extends State<_OrderPanel> {
             debugPrint(
                 '  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
             debugPrint(
-                '  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+                '  - Customer Credit Amount: ${_toCustomerCreditAmount.toStringAsFixed(2)}');
+            if (cashMethodId != null)
+              debugPrint('  - Cash Method ID: $cashMethodId');
+            if (cardMethodId != null)
+              debugPrint('  - Card Method ID: $cardMethodId');
+            if (upiMethodId != null)
+              debugPrint('  - UPI Method ID: $upiMethodId');
+            if (codMethodId != null)
+              debugPrint('  - COD Method ID: $codMethodId');
 
             // Calculate balance
             final totalPaid = (double.tryParse(cash) ?? 0.0) +
                 (double.tryParse(card) ?? 0.0) +
-                (double.tryParse(upi) ?? 0.0);
+                (double.tryParse(upi) ?? 0.0) +
+                (double.tryParse(cod) ?? 0.0);
             _balanceAmount = totalPaid - orderTotal;
           });
+
+          // Store payment method IDs in BillingProvider for API use
+          final billingProvider =
+              Provider.of<BillingProvider>(context, listen: false);
+          billingProvider.updatePaymentFromModal(
+            isCash: isCash,
+            isCard: isCard,
+            isUpi: isUpi,
+            isCod: isCod,
+            isDebit: isDebit,
+            cashAmount: cash,
+            cardAmount: card,
+            upiAmount: upi,
+            codAmount: cod,
+            debitAmount: debit,
+            transactionNumber: transaction,
+            toCustomerCredit: toCustomerCredit,
+            cashMethodId: cashMethodId,
+            cardMethodId: cardMethodId,
+            upiMethodId: upiMethodId,
+            codMethodId: codMethodId,
+          );
         },
       ),
     );
@@ -2701,7 +3545,16 @@ class _OrderPanelState extends State<_OrderPanel> {
                                             _selectedCustomerID = customer.id;
                                             _selectedCustomerPhone =
                                                 customer.phone;
+                                            _isCustomerManuallySelected =
+                                                true; // Mark as manually selected
                                           });
+
+                                          // Also update the global provider
+                                          Provider.of<CustomerSelectionProvider>(
+                                                  context,
+                                                  listen: false)
+                                              .setSelectedCustomer(customer);
+
                                           Navigator.of(context).pop();
                                         },
                                         borderRadius: BorderRadius.circular(8),
@@ -2976,7 +3829,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Create a wrapper that provides the LocalProductProvider interface for CouponModal
     showDialog(
       context: context,
-      builder: (context) => _RestaurantCouponModalWrapper(
+      builder: (context) => RestaurantCouponModalWrapper(
         orderSubTotal: orderSubTotal,
         initialCouponCode: _couponCode,
         initialFlatDiscount: _flatDiscount,
@@ -3044,6 +3897,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
+              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data');
             } else {
               // Keep the current selection - don't clear it immediately
@@ -3106,6 +3960,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
+              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data (silent)');
             } else {
               debugPrint(
@@ -3165,10 +4020,12 @@ class _OrderPanelState extends State<_OrderPanel> {
       _isCashSelected = false;
       _isCardSelected = false;
       _isUpiSelected = false;
+      _isCodSelected = false;
       _isDebitSelected = false;
       _cashAmount = "";
       _cardAmount = "";
       _upiAmount = '';
+      _codAmount = "";
       _debitAmount = '';
       _orderComment = "";
       _transactionNumber = "";
@@ -3183,8 +4040,57 @@ class _OrderPanelState extends State<_OrderPanel> {
       _balanceAmount = 0.0;
       _toCustomerCreditEnabled = false;
       _toCustomerCreditAmount = 0.0;
+
+      // Reset payment modal flag
+      _hasOpenedPaymentModalOnce = false;
     });
     debugPrint('✅ Order editing state cleared');
+  }
+
+  // Sync variant without setState to avoid triggering extra rebuilds in lifecycle hooks
+  void _clearOrderEditingStateSync() {
+    debugPrint('🧹 Clearing previous order editing state...');
+    // Clear customer selection
+    _selectedCustomer = null;
+    _selectedCustomerID = null;
+    _selectedCustomerPhone = null;
+
+    // Clear payment methods
+    _isCashSelected = false;
+    _isCardSelected = false;
+    _isUpiSelected = false;
+    _isCodSelected = false;
+    _isDebitSelected = false;
+    _cashAmount = "";
+    _cardAmount = "";
+    _upiAmount = '';
+    _codAmount = "";
+    _debitAmount = '';
+    _orderComment = "";
+    _transactionNumber = "";
+
+    // Clear discount state
+    _isCouponApplied = false;
+    _flatDiscount = 0.0;
+    _percentageDiscount = 0.0;
+    _couponCode = "";
+
+    // Reset balance and credit state
+    _balanceAmount = 0.0;
+    _toCustomerCreditEnabled = false;
+    _toCustomerCreditAmount = 0.0;
+
+    // Reset payment modal flag
+    _hasOpenedPaymentModalOnce = false;
+
+    debugPrint('✅ Order editing state cleared');
+  }
+
+  // Public method to reset payment modal flag (called from parent)
+  void resetPaymentModalFlag() {
+    setState(() {
+      _hasOpenedPaymentModalOnce = false;
+    });
   }
 
   // Load order-specific data (customer, payment, etc.) from the selected order
@@ -3213,7 +4119,12 @@ class _OrderPanelState extends State<_OrderPanel> {
           _selectedCustomerPhone = customerPhone;
         });
 
-        debugPrint('✅ Loaded customer: ${customer.name} (${customer.phone})');
+        debugPrint(
+            '✅ Loaded customer from order: ${customer.name} (${customer.phone})');
+      } else {
+        debugPrint(
+            'ℹ️ No customer associated with this order. Applying default if applicable...');
+        _applyDefaultCustomer();
       }
 
       // Load payment method information if available
@@ -3230,10 +4141,12 @@ class _OrderPanelState extends State<_OrderPanel> {
           _isCashSelected = false;
           _isCardSelected = false;
           _isUpiSelected = false;
+          _isCodSelected = false;
           _isDebitSelected = false;
           _cashAmount = '';
           _cardAmount = '';
           _upiAmount = '';
+          _codAmount = '';
           _debitAmount = '';
 
           // Set the specific payment method
@@ -3250,6 +4163,10 @@ class _OrderPanelState extends State<_OrderPanel> {
               _isUpiSelected = true;
               _upiAmount = paidAmount;
               break;
+            case 'COD':
+              _isCodSelected = true;
+              _codAmount = paidAmount;
+              break;
             default:
               // Default to cash if payment method is unknown
               _isCashSelected = true;
@@ -3258,7 +4175,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         });
 
         debugPrint(
-            '✅ Loaded payment method: $paymentMethod, Amount: ₹$paidAmount');
+            '✅ Loaded payment method: $paymentMethod, Amount: $paidAmount');
       }
 
       // Load existing comment if available (supports multiple API shapes)
@@ -3279,7 +4196,9 @@ class _OrderPanelState extends State<_OrderPanel> {
         if (propsList is List) {
           try {
             final match = propsList.firstWhere(
-              (e) => (e is Map) && (e['code']?.toString()?.toUpperCase() == 'COMMENT'),
+              (e) =>
+                  (e is Map) &&
+                  (e['code']?.toString()?.toUpperCase() == 'COMMENT'),
               orElse: () => null,
             );
             if (match is Map && match['value'] != null) {
@@ -3293,7 +4212,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (loadedComment != null) {
         loadedComment = loadedComment!.trim();
         if (loadedComment!.startsWith('"') && loadedComment!.endsWith('"')) {
-          loadedComment = loadedComment!.substring(1, loadedComment!.length - 1);
+          loadedComment =
+              loadedComment!.substring(1, loadedComment!.length - 1);
         }
       }
 
@@ -3318,7 +4238,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       if (_isCouponApplied) {
         debugPrint('✅ Loaded discount data:');
-        debugPrint('   - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
+        debugPrint('   - Flat Discount: ${_flatDiscount.toStringAsFixed(2)}');
         debugPrint(
             '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
         debugPrint('   - Coupon Code: $_couponCode');
@@ -3330,8 +4250,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       final totalPaid = double.tryParse(paidAmount) ?? 0.0;
       _balanceAmount = totalPaid - orderTotal;
 
-      debugPrint(
-          '💰 Calculated balance: ₹${_balanceAmount.toStringAsFixed(2)}');
+      debugPrint('💰 Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
     } catch (e) {
       debugPrint('❌ Error loading order-specific data: $e');
     }
@@ -3340,10 +4259,18 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   bool _hasPaymentMethod() {
-    return _isCashSelected ||
-        _isCardSelected ||
-        _isUpiSelected ||
-        _isDebitSelected;
+    // Check if any payment method is selected AND has amount > 0
+    final cashAmount = double.tryParse(_cashAmount) ?? 0;
+    final cardAmount = double.tryParse(_cardAmount) ?? 0;
+    final upiAmount = double.tryParse(_upiAmount) ?? 0;
+    final codAmount = double.tryParse(_codAmount) ?? 0;
+    final debitAmount = double.tryParse(_debitAmount) ?? 0;
+
+    return (_isCashSelected && cashAmount > 0) ||
+        (_isCardSelected && cardAmount > 0) ||
+        (_isUpiSelected && upiAmount > 0) ||
+        (_isCodSelected && codAmount > 0) ||
+        (_isDebitSelected && debitAmount > 0);
   }
 
   // Comment editor dialog
@@ -3480,8 +4407,25 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Default Delivery Method (mirror of BillingPage)
   String _getDefaultDeliveryMethodId() {
     try {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+      // 1. Check AppSettings
+      final appSettingsDefault =
+          appSettingsProvider.appSettings?.defaultDeliveryMethod;
+      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
+        try {
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere((m) =>
+              m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+              m.id == appSettingsDefault);
+          return match.id;
+        } catch (e) {
+          // Not found
+        }
+      }
+
       final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
       return defaultMethod?.id ??
           "11"; // Fallback to Store Takeaway ID from API
@@ -3536,25 +4480,33 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     debugPrint(
-        '💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+        '💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerBalance = _selectedCustomer?.balance ?? 0.0;
     final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
     final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
     final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
-    final totalPaidAmount = cashAmount + cardAmount + upiAmount;
+    final codAmount = double.tryParse(_codAmount) ?? 0.0;
+    final totalPaidAmount = cashAmount + cardAmount + upiAmount + codAmount;
 
     debugPrint('\n🧮 === RESTAURANT PAGE BALANCE CALCULATION START ===');
     debugPrint('💰 Input Values:');
-    debugPrint('  - Order Total: ₹${orderTotal.toStringAsFixed(2)}');
-    debugPrint('  - Customer Balance: ₹${customerBalance.toStringAsFixed(2)}');
-    debugPrint('  - Cash Amount: ₹${cashAmount.toStringAsFixed(2)}');
-    debugPrint('  - Card Amount: ₹${cardAmount.toStringAsFixed(2)}');
-    debugPrint('  - UPI Amount: ₹${upiAmount.toStringAsFixed(2)}');
-    debugPrint('  - Total Paid Amount: ₹${totalPaidAmount.toStringAsFixed(2)}');
+    debugPrint('  - Order Total: ${orderTotal.toStringAsFixed(2)}');
+    debugPrint('  - Customer Balance: ${customerBalance.toStringAsFixed(2)}');
+    debugPrint('  - Cash Amount: ${cashAmount.toStringAsFixed(2)}');
+    debugPrint('  - Card Amount: ${cardAmount.toStringAsFixed(2)}');
+    debugPrint('  - UPI Amount: ${upiAmount.toStringAsFixed(2)}');
+    debugPrint('  - COD Amount: ${codAmount.toStringAsFixed(2)}');
+    debugPrint('  - Total Paid Amount: ${totalPaidAmount.toStringAsFixed(2)}');
     debugPrint('  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
     debugPrint(
-        '  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+        '  - Customer Credit Amount: ${_toCustomerCreditAmount.toStringAsFixed(2)}');
+
+    // Calculate discount amounts
+    final flatDiscountAmount = _flatDiscount;
+    final percentageDiscountAmount = (orderTotal * _percentageDiscount / 100);
+    final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
+    final finalOrderTotal = orderTotal - totalDiscountAmount;
 
     // Calculate balance using the same logic as billing_page.dart
     double cashBalance = 0.0;
@@ -3566,9 +4518,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (customerBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
         debugPrint('💳 Customer has debt - using transaction excess logic');
-        final transactionExcess = totalPaidAmount - orderTotal;
+        final transactionExcess = totalPaidAmount - finalOrderTotal;
         debugPrint(
-            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+            '💰 Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
 
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
@@ -3578,13 +4530,13 @@ class _OrderPanelState extends State<_OrderPanel> {
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
             debugPrint(
-                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to transaction excess: ${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = transaction excess - customer credit
           cashBalance = transactionExcess - actualCustomerCredit;
           debugPrint(
-              '  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+              '  - Balance = Transaction Excess (${transactionExcess.toStringAsFixed(2)}) - Customer Credit (${actualCustomerCredit.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
         } else {
           cashBalance = 0.0;
           debugPrint('  - No transaction excess, balance = 0');
@@ -3592,20 +4544,20 @@ class _OrderPanelState extends State<_OrderPanel> {
       } else {
         // Customer has positive/zero balance - use Net Due logic
         debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
-        // Net Due = Purchase Total - Customer Previous Balance
-        double netDue = orderTotal - customerBalance;
+        // Net Due = Final Order Total - Customer Previous Balance
+        double netDue = finalOrderTotal - customerBalance;
         debugPrint('💰 Net Due calculation:');
-        debugPrint('  - Purchase Total: ₹${orderTotal.toStringAsFixed(2)}');
+        debugPrint('  - Purchase Total: ${finalOrderTotal.toStringAsFixed(2)}');
         debugPrint(
-            '  - Customer Prev Balance: ₹${customerBalance.toStringAsFixed(2)}');
-        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+            '  - Customer Prev Balance: ${customerBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: ${netDue.toStringAsFixed(2)}');
 
         // Available balance = Total Collected - Net Due
         double availableBalance = totalPaidAmount - netDue;
         debugPrint(
-            '  - Total Collected: ₹${totalPaidAmount.toStringAsFixed(2)}');
+            '  - Total Collected: ${totalPaidAmount.toStringAsFixed(2)}');
         debugPrint(
-            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+            '  - Available Balance: ${availableBalance.toStringAsFixed(2)}');
 
         if (availableBalance > 0) {
           // Get the actual customer credit amount being allocated
@@ -3615,13 +4567,13 @@ class _OrderPanelState extends State<_OrderPanel> {
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
             debugPrint(
-                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to available balance: ${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = available balance - customer credit
           cashBalance = availableBalance - actualCustomerCredit;
           debugPrint(
-              '  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+              '  - Balance = Available Balance (${availableBalance.toStringAsFixed(2)}) - Customer Credit (${actualCustomerCredit.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
         } else {
           cashBalance = 0.0;
           debugPrint('  - No available balance, balance = 0');
@@ -3631,9 +4583,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint(
           '🔴 RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
-      cashBalance = totalPaidAmount - orderTotal;
+      cashBalance = totalPaidAmount - finalOrderTotal;
       debugPrint(
-          '  - Balance = Total Collected (₹${totalPaidAmount.toStringAsFixed(2)}) - Cart Total (₹${orderTotal.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+          '  - Balance = Total Collected (${totalPaidAmount.toStringAsFixed(2)}) - Final Order Total (${finalOrderTotal.toStringAsFixed(2)}) = ${cashBalance.toStringAsFixed(2)}');
     }
 
     // Store the raw balance before clamping for comparison
@@ -3643,20 +4595,14 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (cashBalance < 0) {
       debugPrint(
-          '🚫 RESTAURANT PAGE: Clamping negative cash balance (₹${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
+          '🚫 RESTAURANT PAGE: Clamping negative cash balance (${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
       cashBalance = 0.0;
     }
 
-    debugPrint('💵 Final cash balance: ₹${cashBalance.toStringAsFixed(2)}');
+    debugPrint('💵 Final cash balance: ${cashBalance.toStringAsFixed(2)}');
     debugPrint(
-        '💵 Raw balance (before clamping): ₹${rawBalance.toStringAsFixed(2)}');
+        '💵 Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
     debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
-
-    // Calculate discount amounts
-    final flatDiscountAmount = _flatDiscount;
-    final percentageDiscountAmount = (orderTotal * _percentageDiscount / 100);
-    final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-    final finalOrderTotal = orderTotal - totalDiscountAmount;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -3703,7 +4649,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           // Summary rows
           _buildSummaryRow(
             'Order Total',
-            '₹${orderTotal.toStringAsFixed(2)}',
+            '${orderTotal.toStringAsFixed(2)}',
             color: const Color(0xFF64748B),
           ),
 
@@ -3711,19 +4657,19 @@ class _OrderPanelState extends State<_OrderPanel> {
           if (_hasDiscount()) ...[
             _buildSummaryRow(
               'Discount',
-              '₹${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
+              '${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
               color: const Color(0xFFDC2626),
             ),
             _buildSummaryRow(
               'Final Total',
-              '₹${finalOrderTotal.toStringAsFixed(2)}',
+              '${finalOrderTotal.toStringAsFixed(2)}',
               color: const Color(0xFF059669),
               isBold: true,
             ),
           ] else ...[
             _buildSummaryRow(
               'Final Total',
-              '₹${orderTotal.toStringAsFixed(2)}',
+              '${orderTotal.toStringAsFixed(2)}',
               color: const Color(0xFF059669),
               isBold: true,
             ),
@@ -3733,18 +4679,20 @@ class _OrderPanelState extends State<_OrderPanel> {
           // if (_hasDiscount()) ...[
           //   _buildSummaryRow(
           //     'Discount',
-          //     '-₹${discountAmount.toStringAsFixed(2)}',
+          //     '-${discountAmount.toStringAsFixed(2)}',
           //     color: const Color(0xFFD97706),
           //   ),
           //   _buildSummaryRow(
           //     'Final Total',
-          //     '₹${finalOrderTotal.toStringAsFixed(2)}',
+          //     '${finalOrderTotal.toStringAsFixed(2)}',
           //     color: const Color(0xFF1E293B),
           //     isBold: true,
           //   ),
           // ],
 
-          if (_selectedCustomer != null) ...[
+          // Only show customer balance if a customer is selected AND it's NOT the default customer
+          if (_selectedCustomer != null && 
+              !Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer) ...[
             const SizedBox(height: 8),
             Container(
               height: 1,
@@ -3753,7 +4701,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             const SizedBox(height: 8),
             _buildSummaryRow(
               'Customer Balance',
-              '₹${customerBalance.toStringAsFixed(2)}',
+              '${customerBalance.toStringAsFixed(2)}',
               color: customerBalance >= 0
                   ? const Color(0xFF059669)
                   : const Color(0xFFDC2626),
@@ -3769,14 +4717,14 @@ class _OrderPanelState extends State<_OrderPanel> {
             const SizedBox(height: 8),
             _buildSummaryRow(
               'Paid Amount',
-              '₹${totalPaidAmount.toStringAsFixed(2)}',
+              '${totalPaidAmount.toStringAsFixed(2)}',
               color: const Color(0xFF059669),
             ),
             _buildSummaryRow(
               'Balance',
               rawBalance >= 0
-                  ? '₹${rawBalance.toStringAsFixed(2)}'
-                  : 'Short: ₹${(-rawBalance).toStringAsFixed(2)}',
+                  ? '${rawBalance.toStringAsFixed(2)}'
+                  : 'Short: ${(-rawBalance).toStringAsFixed(2)}',
               color: rawBalance >= 0
                   ? const Color(0xFF059669)
                   : const Color(0xFFDC2626),
@@ -4015,64 +4963,177 @@ class _OrderPanelState extends State<_OrderPanel> {
       ),
       child: Column(
         children: [
+          // Pending Orders Section (independent scroll)
+          _buildPanelHeader(
+              'Pending Orders', Icons.pending_actions, const Color(0xFFD97706),
+              itemCount: _localDrafts.length,
+              subtitle: widget.tableId?.toString()),
+          Flexible(
+            flex: 1,
+            child: RefreshIndicator(
+              onRefresh: () async {
+                _refreshLocalDrafts();
+              },
+              child: _localDrafts.isEmpty
+                  ? ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics()),
+                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                        children: [
+                          Center(
+                            child: Text(
+                              'No pending orders',
+                              style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  widget.isCompact
+                                      ? FontSize.s12
+                                      : FontSize.s13,
+                                  0.21,
+                                  const Color(0xFF64748B)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
+                        ),
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics()),
+                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                          itemCount: _localDrafts.length,
+                          separatorBuilder: (_, __) => Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey.shade100,
+                          ),
+                          itemBuilder: (_, index) =>
+                              _buildLocalDraftItem(_localDrafts[index]),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Saved Orders Section (independent scroll)
           _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
               itemCount: _savedOrders.length,
               subtitle: widget.tableId.toString()),
-          Expanded(
-            child: _savedOrders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF059669).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
+          Flexible(
+            flex: 2,
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await _fetchSavedOrders();
+                _refreshLocalDrafts();
+              },
+              child: _savedOrders.isEmpty
+                  ? ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics()),
+                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF059669).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.add_shopping_cart,
+                                  size: widget.isCompact ? 36 : 48,
+                                  color: const Color(0xFF059669),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'No orders found',
+                                textAlign: TextAlign.center,
+                                style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    widget.isCompact
+                                        ? FontSize.s16
+                                        : FontSize.s18,
+                                    0.21,
+                                    const Color(0xFF1E293B)),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Add products from the menu\nto start a new order',
+                                textAlign: TextAlign.center,
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    widget.isCompact
+                                        ? FontSize.s13
+                                        : FontSize.s14,
+                                    0.21,
+                                    const Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                           ),
-                          child: Icon(
-                            Icons.add_shopping_cart,
-                            size: widget.isCompact ? 48 : 64,
-                            color: const Color(0xFF059669),
+                        ],
+                      ),
+                    )
+                  : MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
+                        ),
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics()),
+                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                          itemCount: _savedOrders.length,
+                          separatorBuilder: (_, __) => Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey.shade100,
                           ),
+                          itemBuilder: (context, index) {
+                            final order = _savedOrders[index];
+                            return _buildOrderListItem(order);
+                          },
                         ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'No orders found',
-                          textAlign: TextAlign.center,
-                          style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              widget.isCompact ? FontSize.s16 : FontSize.s18,
-                              0.21,
-                              const Color(0xFF1E293B)),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Add products from the menu\nto start a new order',
-                          textAlign: TextAlign.center,
-                          style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              widget.isCompact ? FontSize.s13 : FontSize.s14,
-                              0.21,
-                              const Color(0xFF64748B)),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
+                      ),
                     ),
-                  )
-                : ListView.separated(
-                    padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-                    itemCount: _savedOrders.length,
-                    separatorBuilder: (_, __) => Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      color: Colors.grey.shade100,
-                    ),
-                    itemBuilder: (context, index) {
-                      final order = _savedOrders[index];
-                      return _buildOrderListItem(order);
-                    },
-                  ),
+            ),
           ),
         ],
       ),
@@ -4121,29 +5182,56 @@ class _OrderPanelState extends State<_OrderPanel> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${order['order_number']}',
-                    style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        widget.isCompact ? FontSize.s13 : FontSize.s15,
-                        0.21,
-                        const Color(0xFF1E293B)),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF059669).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  Expanded(
                     child: Text(
-                      '$servedItems/$totalItems',
+                      '${order['order_number']}',
                       style: buildCustomStyle(
                           FontWeightManager.semiBold,
-                          widget.isCompact ? FontSize.s11 : FontSize.s13,
+                          widget.isCompact ? FontSize.s13 : FontSize.s15,
                           0.21,
-                          const Color(0xFF059669)),
+                          const Color(0xFF1E293B)),
                     ),
+                  ),
+                  Row(
+                    children: [
+                      // Print KOT button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _printSavedOrderKot(order, cartItems),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.print,
+                              size: widget.isCompact ? 16 : 18,
+                              color: const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$servedItems/$totalItems',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s11 : FontSize.s13,
+                              0.21,
+                              const Color(0xFF059669)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -4193,16 +5281,295 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
-  Color _getOrderStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'init':
-        return Colors.orange;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
+  // Print KOT for ONLY new items (status == null)
+  void _printNewKOT() async {
+    debugPrint('🖨️ _printNewKOT() called');
+
+    if (_selectedOrder == null) {
+      debugPrint('❌ _printNewKOT: No order selected');
+      showScaffoldError(
+        context: context,
+        message: 'Please select an order first',
+      );
+      return;
+    }
+
+    debugPrint(
+        '📋 _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
+
+    // Get all cart items
+    List<dynamic> allCartItems = _getCartItemsFromOrder(_selectedOrder);
+    debugPrint('📦 _printNewKOT: Total cart items: ${allCartItems.length}');
+
+    // Filter for items where status is null
+    List<dynamic> newItems = allCartItems.where((item) {
+      if (item is Map<String, dynamic>) {
+        final status = item['status'];
+        debugPrint(
+            '🔍 Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
+        return status == null;
+      }
+      return false;
+    }).toList();
+
+    debugPrint('🆕 _printNewKOT: New items (status=null): ${newItems.length}');
+
+    if (newItems.isEmpty) {
+      debugPrint('⚠️ _printNewKOT: No new items to print');
+      showScaffoldError(
+        context: context,
+        message: 'No new items to print (all items already sent to kitchen)',
+      );
+      return;
+    }
+
+    // Call API to update status for null items BEFORE printing
+    debugPrint(
+        '📡 [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
+    debugPrint(
+        '📡 [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
+
+    try {
+      debugPrint('📡 [KOT STATUS UPDATE] Step 1: Getting providers...');
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      debugPrint('📡 [KOT STATUS UPDATE] Step 1: Providers obtained ✅');
+
+      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsing order ID...');
+      final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+      debugPrint(
+          '📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
+      final orderId = int.tryParse(orderIdValue.toString());
+      final accessToken = authModel.token ?? '';
+      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
+      debugPrint(
+          '📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
+
+      debugPrint('📡 [KOT STATUS UPDATE] Step 3: Checking orderId...');
+      if (orderId != null) {
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
+
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
+        final response = await cartProvider.updateNullOrderItemsStatus(
+          orderId: orderId,
+          accessToken: accessToken,
+        );
+
+        debugPrint('📡 [KOT STATUS UPDATE] Step 4: API call completed ✅');
+        debugPrint('📥 [KOT STATUS UPDATE] Full response: $response');
+        debugPrint(
+            '📥 [KOT STATUS UPDATE] Response status: ${response['status']}');
+        debugPrint(
+            '📥 [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
+
+        if (response['status'] == 'success') {
+          debugPrint(
+              '✅ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
+          debugPrint('🔄 [KOT STATUS UPDATE] Refreshing order details...');
+          await _refreshSelectedOrderAfterCartUpdate();
+          debugPrint('✅ [KOT STATUS UPDATE] Order refresh completed');
+        } else {
+          debugPrint(
+              '⚠️ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
+        }
+      } else {
+        debugPrint(
+            '❌ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ [KOT STATUS UPDATE] EXCEPTION: $e');
+      debugPrint('❌ [KOT STATUS UPDATE] Stack trace: $stackTrace');
+    }
+
+    debugPrint(
+        '📡 [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
+
+    // Reuse existing print logic with filtered items
+    debugPrint('🖨️ _printNewKOT: Now calling _printSavedOrderKot...');
+    _printSavedOrderKot(_selectedOrder, newItems);
+  }
+
+  // Print KOT for a saved order
+  void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
+    debugPrint(
+        '🖨️ _printSavedOrderKot() called with ${cartItems.length} items');
+
+    // Get order number
+    final orderNumber = order['order_number']?.toString() ?? 'Unknown';
+
+    // Get table name
+    String tableName = 'Unknown';
+    try {
+      if (order['orderProps'] != null && order['orderProps']['TABLE'] != null) {
+        tableName = order['orderProps']['TABLE'].toString().replaceAll('"', '');
+      } else if (order['table'] != null) {
+        final t = order['table'];
+        if (t is Map && t['name'] != null) {
+          tableName = t['name'].toString();
+        } else if (t is String) {
+          tableName = t;
+        }
+      }
+    } catch (_) {}
+
+    // Get current time
+    final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
+
+    // Build items list for KOT
+    List<Map<String, dynamic>> printItems = [];
+    for (var item in cartItems) {
+      String productName = 'Unknown';
+      String quantity = '1';
+      String unitPrice = '0.00';
+      String mrp = '0.00';
+      String? itemNotes;
+
+      if (item is Map<String, dynamic>) {
+        // Try different keys for product name
+        if (item['product'] != null &&
+            item['product']['product_name'] != null) {
+          productName = item['product']['product_name'].toString();
+        } else if (item['product_name'] != null) {
+          productName = item['product_name'].toString();
+        } else if (item['name'] != null) {
+          productName = item['name'].toString();
+        }
+
+        // Get quantity
+        quantity = (item['quantity'] ?? item['qty'] ?? 1).toString();
+
+        // Get Price and MRP
+        double priceVal = double.tryParse((item['unit_price'] ??
+                    item['price'] ??
+                    item['product_price'] ??
+                    0)
+                .toString()) ??
+            0.0;
+        unitPrice = priceVal.toStringAsFixed(2);
+
+        double mrpVal =
+            double.tryParse((item['mrp'] ?? priceVal).toString()) ?? priceVal;
+        mrp = mrpVal.toStringAsFixed(2);
+
+        // Extract item-level notes
+        itemNotes = item['notes']?.toString();
+        if (itemNotes == null || itemNotes.isEmpty) {
+          final props = item['order_item_props'];
+          if (props is List) {
+            try {
+              final noteProp = props.firstWhere(
+                (p) =>
+                    p is Map &&
+                    p['code'] != null &&
+                    p['code'].toString().toUpperCase() == 'NOTES',
+                orElse: () => null,
+              );
+              if (noteProp != null) {
+                itemNotes = noteProp['value']?.toString();
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      printItems.add({
+        'productName': productName,
+        'quantity': quantity,
+        'unitPrice': unitPrice,
+        'mrp': mrp,
+        'rate': unitPrice,
+        'notes': itemNotes, // Pass item notes
+      });
+    }
+
+    // Get comment using robust extraction logic
+    String? comment = order['comment']?.toString();
+    comment ??= order['order_comment']?.toString();
+
+    // From nested map: orderProps: { COMMENT: "..." }
+    if (comment == null || comment.isEmpty) {
+      final propsMap = order['orderProps'];
+      if (propsMap is Map && propsMap['COMMENT'] != null) {
+        comment = propsMap['COMMENT']?.toString();
+      }
+    }
+
+    // From array: order_props: [{ code: COMMENT, value: "..." }]
+    if (comment == null || comment.isEmpty) {
+      final propsList = order['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) =>
+                (e is Map) &&
+                (e['code'] != null &&
+                    e['code'].toString().toUpperCase() == 'COMMENT'),
+            orElse: () => null,
+          );
+          if (match is Map && match['value'] != null) {
+            comment = match['value']?.toString();
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Normalize: strip surrounding quotes
+    if (comment != null) {
+      comment = comment.trim();
+      if (comment.startsWith('"') && comment.endsWith('"')) {
+        comment = comment.substring(1, comment.length - 1);
+      }
+    }
+
+    // Check if KOT print is enabled in app settings
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final enableKOTPrint =
+        appSettingsProvider.appSettings?.enableKOTPrint ?? true;
+    debugPrint('⚙️ _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
+
+    if (enableKOTPrint) {
+      debugPrint('🖨️ _printSavedOrderKot: Trying auto-print first');
+      debugPrint(
+          '📋 Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
+
+      // Try auto-print with default printer first
+      KotPrintPage.autoPrint(
+        context,
+        orderNumber: orderNumber,
+        tableName: tableName,
+        orderTime: orderTime,
+        items: printItems,
+        comment: comment,
+      ).then((success) {
+        // Only show print page if auto-print failed
+        if (!success && mounted) {
+          debugPrint('🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => KotPrintPage(
+                orderNumber: orderNumber,
+                tableName: tableName,
+                orderTime: orderTime,
+                items: printItems,
+                comment: comment,
+              ),
+            ),
+          );
+        }
+      });
+    } else {
+      debugPrint(
+          '⚠️ _printSavedOrderKot: KOT printing is disabled in app settings');
+      showScaffoldError(
+        context: context,
+        message: 'KOT printing is disabled in settings',
+      );
     }
   }
 
@@ -4257,25 +5624,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Widget _buildOrderDetailsView() {
-    // Get cart items from the saved order - handle multiple possible structures
-    List<dynamic> cartItems = [];
-    if (_selectedOrder['cart_items'] != null) {
-      if (_selectedOrder['cart_items']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items']['cart_items'];
-      } else if (_selectedOrder['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items'];
-      }
-    } else if (_selectedOrder['cart'] != null) {
-      if (_selectedOrder['cart']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart']['cart_items'];
-      } else if (_selectedOrder['cart']['items'] is List) {
-        cartItems = _selectedOrder['cart']['items'];
-      }
-    } else if (_selectedOrder['items'] is List) {
-      cartItems = _selectedOrder['items'];
-    } else if (_selectedOrder['order_items'] is List) {
-      cartItems = _selectedOrder['order_items'];
-    }
+    // Get cart items from the saved order using helper
+    List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
 
     // Calculate current total from cart items (dynamic calculation)
     double total = 0.0;
@@ -4298,7 +5648,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     debugPrint(
-        '📊 Cart items count: ${cartItems.length}, Total: ₹${total.toStringAsFixed(2)}');
+        '📊 Cart items count: ${cartItems.length}, Total: ${total.toStringAsFixed(2)}');
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -4321,45 +5671,23 @@ class _OrderPanelState extends State<_OrderPanel> {
             const Color(0xFFD97706),
             showBackButton: true,
             onBackButtonPressed: () {
-              setState(() => _selectedOrder = null);
+              setState(() {
+                _selectedOrder = null;
+                // Re-apply default customer when returning to current cart
+                _applyDefaultCustomer();
+              });
               widget.onOrderSelected(null);
             },
             totalPrice: total,
             subtitle: '${_selectedOrder['order_number']}',
           ),
           Expanded(
-            child: cartItems.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF64748B).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            Icons.shopping_cart_outlined,
-                            size: widget.isCompact ? 36 : 48,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No items in this order',
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s14 : FontSize.s16,
-                              0.21,
-                              const Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  )
-                : MouseRegion(
-                    cursor: SystemMouseCursors.grab,
-                    child: ScrollConfiguration(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await _refreshSelectedOrderAfterCartUpdate();
+              },
+              child: cartItems.isEmpty
+                  ? ScrollConfiguration(
                       behavior: ScrollConfiguration.of(context).copyWith(
                         dragDevices: {
                           PointerDeviceKind.mouse,
@@ -4368,22 +5696,72 @@ class _OrderPanelState extends State<_OrderPanel> {
                           PointerDeviceKind.trackpad,
                         },
                       ),
-                      child: ListView.separated(
-                        physics: const BouncingScrollPhysics(),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics()),
                         padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-                        itemCount: cartItems.length,
-                        separatorBuilder: (_, __) => Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: Colors.grey.shade100,
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF64748B).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.shopping_cart_outlined,
+                                  size: widget.isCompact ? 36 : 48,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No items in this order',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    widget.isCompact
+                                        ? FontSize.s14
+                                        : FontSize.s16,
+                                    0.21,
+                                    const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  : MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
                         ),
-                        itemBuilder: (_, idx) {
-                          final item = cartItems[idx];
-                          return _buildSavedOrderItem(item, idx);
-                        },
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics()),
+                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                          itemCount: cartItems.length,
+                          separatorBuilder: (_, __) => Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey.shade100,
+                          ),
+                          itemBuilder: (_, idx) {
+                            final item = cartItems[idx];
+                            return _buildSavedOrderItem(item, idx);
+                          },
+                        ),
                       ),
                     ),
-                  ),
+            ),
           ),
           _buildSavedOrderActionButtons(cartItems),
         ],
@@ -4471,7 +5849,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '₹${totalPrice.toStringAsFixed(0)}',
+                '${totalPrice.toStringAsFixed(0)}',
                 style: buildCustomStyle(
                     FontWeightManager.bold,
                     widget.isCompact ? FontSize.s14 : FontSize.s16,
@@ -4523,256 +5901,18 @@ class _OrderPanelState extends State<_OrderPanel> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Payment Summary Section
-            _buildPaymentSummary(),
-            const SizedBox(height: 16),
-            // Payment Method, Customer Selection, and Discount buttons row
-            Row(
-              children: [
-                // Payment Method Button
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showPaymentMethodModal(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _hasPaymentMethod()
-                              ? const Color(0xFF2563EB).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          border: Border.all(
-                            color: _hasPaymentMethod()
-                                ? const Color(0xFF2563EB)
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.payment,
-                                color: _hasPaymentMethod()
-                                    ? const Color(0xFF2563EB)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  _hasPaymentMethod() ? 'Paid' : 'Payment',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s11
-                                          : FontSize.s12,
-                                      0.21,
-                                      _hasPaymentMethod()
-                                          ? const Color(0xFF2563EB)
-                                          : const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // Customer Selection Button
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCustomerSelectionModal(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _selectedCustomer != null
-                              ? const Color(0xFF059669).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          border: Border.all(
-                            color: _selectedCustomer != null
-                                ? const Color(0xFF059669)
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.person,
-                                color: _selectedCustomer != null
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  _selectedCustomer != null
-                                      ? (_selectedCustomer!.name
-                                              ?.split(' ')
-                                              .first ??
-                                          'Customer')
-                                      : 'Customer',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s11
-                                          : FontSize.s12,
-                                      0.21,
-                                      _selectedCustomer != null
-                                          ? const Color(0xFF059669)
-                                          : const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Discount Button
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCouponModal(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _hasDiscount()
-                              ? const Color(0xFFD97706).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          border: Border.all(
-                            color: _hasDiscount()
-                                ? const Color(0xFFD97706)
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.discount,
-                                color: _hasDiscount()
-                                    ? const Color(0xFFD97706)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  _hasDiscount() ? 'Applied' : 'Discount',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s11
-                                          : FontSize.s12,
-                                      0.21,
-                                      _hasDiscount()
-                                          ? const Color(0xFFD97706)
-                                          : const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // New Compact Summary
+            _buildCompactOneLineSummary(),
             const SizedBox(height: 12),
-            // First row: Confirm Order button - REMOVED (using bottom Confirm button instead)
-            // SizedBox(
-            //   width: double.infinity,
-            //   child: Material(
-            //     color: Colors.transparent,
-            //     child: InkWell(
-            //       onTap: allItemsReadyOrServed ? () => _confirmOrder() : null,
-            //       borderRadius: BorderRadius.circular(12),
-            //       child: AnimatedContainer(
-            //         duration: const Duration(milliseconds: 200),
-            //         height: widget.isCompact ? 44 : 48,
-            //         decoration: BoxDecoration(
-            //           color: !allItemsReadyOrServed
-            //               ? const Color(0xFF94A3B8)
-            //               : const Color(0xFF2563EB),
-            //           borderRadius: BorderRadius.circular(12),
-            //           boxShadow: allItemsReadyOrServed
-            //               ? [
-            //                   BoxShadow(
-            //                     color: const Color(0xFF2563EB).withOpacity(0.3),
-            //                     blurRadius: 8,
-            //                     offset: const Offset(0, 2),
-            //                   ),
-            //                 ]
-            //               : [],
-            //         ),
-            //         child: Center(
-            //           child: Row(
-            //             mainAxisAlignment: MainAxisAlignment.center,
-            //             children: [
-            //               Icon(
-            //                 Icons.check_circle,
-            //                 color: Colors.white,
-            //                 size: widget.isCompact ? 16 : 18,
-            //               ),
-            //               const SizedBox(width: 8),
-            //               Text(
-            //                 'Confirm Order',
-            //                 style: buildCustomStyle(
-            //                     FontWeightManager.semiBold,
-            //                     widget.isCompact ? FontSize.s13 : FontSize.s14,
-            //                     0.21,
-            //                     Colors.white),
-            //               ),
-            //             ],
-            //           ),
-            //         ),
-            //       ),
-            //     ),
-            //   ),
-            // ),
-            // const SizedBox(height: 12),
-            // Second row: Back and Update Order buttons
+            // Row: Print KOT and Confirm buttons
             Row(
               children: [
+                // 1. Print KOT Button (Left Side)
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () {
-                        setState(() => _selectedOrder = null);
-                        widget.onOrderSelected(null);
-                      },
+                      onTap: () => _printNewKOT(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -4780,39 +5920,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           border: Border.all(
-                            color: const Color(0xFF64748B),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Back',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                0.21,
-                                const Color(0xFF64748B)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCommentDialog(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          border: Border.all(
-                            color: Colors.grey.shade300,
+                            color: const Color(0xFFD97706),
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -4820,30 +5928,22 @@ class _OrderPanelState extends State<_OrderPanel> {
                         child: Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _orderComment.isNotEmpty
-                                    ? Icons.check_circle
-                                    : Icons.comment,
-                                color: _orderComment.isNotEmpty
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF64748B),
-                                size: widget.isCompact ? 14 : 16,
+                                Icons.receipt_long,
+                                color: const Color(0xFFD97706),
+                                size: widget.isCompact ? 16 : 18,
                               ),
                               const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Comment',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s13
-                                          : FontSize.s14,
-                                      0.21,
-                                      const Color(0xFF64748B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Text(
+                                'Print KOT',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    widget.isCompact
+                                        ? FontSize.s13
+                                        : FontSize.s14,
+                                    0.21,
+                                    const Color(0xFFD97706)),
                               ),
                             ],
                           ),
@@ -4853,32 +5953,37 @@ class _OrderPanelState extends State<_OrderPanel> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                // 2. Confirm or Mark Served Button (Right Side)
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: (cartItems.isEmpty ||
-                              !allItemsServed ||
-                              _isLoadingConfirm)
+                      onTap: cartItems.isEmpty
                           ? null
-                          : () => _confirmOrder(),
+                          : allItemsServed
+                              ? (_isLoadingConfirm ? null : () => _showCheckoutModal())
+                              : (_isMarkingServed ? null : () => _markAllOrderItemsServed()),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: (cartItems.isEmpty ||
-                                  !allItemsServed ||
-                                  _isLoadingConfirm)
+                          color: cartItems.isEmpty
                               ? const Color(0xFF94A3B8)
-                              : const Color(0xFF2563EB),
+                              : allItemsServed
+                                  ? (_isLoadingConfirm
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF2563EB))
+                                  : (_isMarkingServed
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF059669)), // Green for Mark Served
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: (cartItems.isNotEmpty &&
-                                  allItemsServed &&
-                                  !_isLoadingConfirm)
+                          boxShadow: cartItems.isNotEmpty && !_isLoadingConfirm && !_isMarkingServed
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF2563EB)
+                                    color: (allItemsServed
+                                            ? const Color(0xFF2563EB)
+                                            : const Color(0xFF059669))
                                         .withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
@@ -4887,7 +5992,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                               : [],
                         ),
                         child: Center(
-                          child: _isLoadingConfirm
+                          child: (_isLoadingConfirm || _isMarkingServed)
                               ? SizedBox(
                                   width: widget.isCompact ? 16 : 20,
                                   height: widget.isCompact ? 16 : 20,
@@ -4901,13 +6006,15 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.check_circle,
+                                      allItemsServed
+                                          ? Icons.check_circle
+                                          : Icons.room_service,
                                       color: Colors.white,
                                       size: widget.isCompact ? 16 : 18,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Confirm',
+                                      allItemsServed ? 'Confirm' : 'Mark Served',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
@@ -4930,6 +6037,308 @@ class _OrderPanelState extends State<_OrderPanel> {
       ),
     );
   }
+
+  Widget _buildCompactOneLineSummary() {
+    if (_selectedOrder == null) return const SizedBox.shrink();
+
+    // Calculate totals (reuse logic from _buildPaymentSummary logic or similar)
+    List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
+    double orderTotal = 0.0;
+    for (var item in cartItems) {
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
+      orderTotal += quantity * unitPrice;
+    }
+    if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
+      orderTotal =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
+    }
+
+    // Apply discounts
+    double totalDiscountAmount =
+        _flatDiscount + (orderTotal * _percentageDiscount / 100);
+    double finalOrderTotal = orderTotal - totalDiscountAmount;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Total: ',
+            style: buildCustomStyle(
+                FontWeightManager.semiBold, 16, 0.2, Colors.black87),
+          ),
+          Text(
+            finalOrderTotal.toStringAsFixed(2),
+            style: buildCustomStyle(
+                FontWeightManager.bold, 16, 0.2, const Color(0xFF2563EB)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCheckoutModal() {
+    // Mark that payment modal opportunity has been given (via checkout dialog)
+    setState(() {
+      _hasOpenedPaymentModalOnce = false;
+    });
+
+    // Sync LocalProductProvider cart with order items before showing checkout modal
+    _syncOrderItemsWithLocalCart();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return CheckoutModal(
+          cartTotal: _calculateOrderTotal(),
+          availableCustomers: _customers,
+          selectedCustomer: _selectedCustomer,
+          
+          // Payment State
+          isCashSelected: _isCashSelected,
+          isCardSelected: _isCardSelected,
+          isUpiSelected: _isUpiSelected,
+          isCodSelected: _isCodSelected,
+          isDebitSelected: _isDebitSelected,
+          cashAmount: _cashAmount,
+          cardAmount: _cardAmount,
+          upiAmount: _upiAmount,
+          codAmount: _codAmount,
+          debitAmount: _debitAmount,
+          transactionNumber: _transactionNumber,
+          toCustomerCreditEnabled: _toCustomerCreditEnabled,
+          toCustomerCreditAmount: _toCustomerCreditAmount,
+          
+          // Discount State
+          couponCode: _couponCode,
+          flatDiscount: _flatDiscount,
+          percentageDiscount: _percentageDiscount,
+          isCouponApplied: _isCouponApplied,
+          
+          onCustomerSelected: (customer) {
+            setState(() {
+              _selectedCustomer = customer;
+              _selectedCustomerID = customer.id;
+              _selectedCustomerPhone = customer.phone;
+              _isCustomerManuallySelected = true;
+            });
+            // Also update the global provider
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .setSelectedCustomer(customer);
+          },
+          onAddNewCustomer: (String searchQuery) async {
+            // NOTE: Do not close the checkout dialog here. We will return the result.
+            
+            // Check if search query is a 10-digit number
+            String phoneToPreFill = '';
+            if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+              phoneToPreFill = searchQuery;
+            }
+            final result = await showAddCustomerModal(
+              context, 
+              MediaQuery.of(context).size,
+              mobileNumber: phoneToPreFill
+            );
+            
+            if (result != null && result['status'] == 'success') {
+              await _fetchCustomers();
+              // Find and return the newly added customer
+              final addedPhone = result['phone'];
+              final matchingCustomer = _customers.firstWhere(
+                (customer) => customer.phone == addedPhone,
+                orElse: () => CustomerListModelData(),
+              );
+              
+              if (matchingCustomer.phone == addedPhone) {
+                // Also update parent state
+                setState(() {
+                  _selectedCustomer = matchingCustomer;
+                  _selectedCustomerID = matchingCustomer.id;
+                  _selectedCustomerPhone = matchingCustomer.phone;
+                });
+                return matchingCustomer;
+              }
+            }
+            return null;
+          },
+          onDiscountApplied: (code, isApplied, flat, percent) {
+            setState(() {
+              _couponCode = code;
+              _isCouponApplied = isApplied;
+              _flatDiscount = flat;
+              _percentageDiscount = percent;
+
+              if (!isApplied) {
+                _couponCode = "";
+                _flatDiscount = 0.0;
+                _percentageDiscount = 0.0;
+              }
+            });
+
+            // Also update LocalProductProvider so the summary reflects the discount
+            final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+            localProductProvider.applyDiscount(
+              flatDiscount: _flatDiscount,
+              percentageDiscount: _percentageDiscount,
+            );
+          },
+          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+            setState(() {
+              _isCashSelected = isCash;
+              _isCardSelected = isCard;
+              _isUpiSelected = isUpi;
+              _isCodSelected = isCod;
+              _isDebitSelected = isDebit;
+              _cashAmount = cash;
+              _cardAmount = card;
+              _upiAmount = upi;
+              _codAmount = cod;
+              _debitAmount = debit;
+              _transactionNumber = trans;
+              _toCustomerCreditEnabled = toCredit;
+              _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0; // Correctly update credit amount
+            });
+            
+            // Update provider
+            final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+            billingProvider.updatePaymentFromModal(
+              isCash: isCash, isCard: isCard, isUpi: isUpi, isCod: isCod, isDebit: isDebit,
+              cashAmount: cash, cardAmount: card, upiAmount: upi, codAmount: cod, debitAmount: debit,
+              transactionNumber: trans, toCustomerCredit: toCredit,
+              cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
+            );
+          },
+          onConfirmOrder: () async {
+            setState(() {
+              _hasOpenedPaymentModalOnce = true;
+            });
+            Navigator.of(dialogContext).pop();
+            await _confirmOrder();
+          },
+          onConfirmAndPrint: () async {
+            setState(() {
+              _hasOpenedPaymentModalOnce = true;
+            });
+            Navigator.of(dialogContext).pop();
+            await _confirmOrderAndPrintBill();
+          },
+        );
+      },
+    );
+  }
+
+  double _calculateOrderTotal() {
+    if (_selectedOrder == null) return 0.0;
+    List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
+    double total = 0.0;
+    for (var item in cartItems) {
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
+      total += quantity * unitPrice;
+    }
+    if (total == 0.0 && _selectedOrder['grand_total'] != null) {
+      total =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
+    }
+    return total;
+  }
+
+  /// Syncs the order items with LocalProductProvider's cart
+  /// This ensures the checkout modal shows correct totals based on order items
+  void _syncOrderItemsWithLocalCart() {
+    if (_selectedOrder == null) return;
+
+    try {
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
+
+      debugPrint('🔄 Syncing order items with LocalProductProvider cart...');
+      debugPrint('   Order items count: ${orderItems.length}');
+
+      // Clear the current cart first
+      localProductProvider.clearCart();
+
+      // Add each order item to the cart
+      for (var item in orderItems) {
+        final productId = int.tryParse(item['product_id']?.toString() ?? '0');
+        if (productId == null || productId == 0) continue;
+
+        // Find the product in the product list
+        GetProduct? product;
+        try {
+          product = localProductProvider.products.firstWhere(
+            (p) => p.productId == productId,
+          );
+        } catch (_) {
+          debugPrint('⚠️ Product $productId not found in product list');
+          continue;
+        }
+
+        if (product == null) continue;
+
+        final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(
+          item['unit_price']?.toString() ??
+          item['price']?.toString() ??
+          item['product_price']?.toString() ?? '0'
+        ) ?? 0.0;
+
+        // Find the stock entry if available
+        Stock? selectedStock;
+        if (item['stock_id'] != null) {
+          final stockId = int.tryParse(item['stock_id'].toString());
+          if (stockId != null && product.stock != null) {
+            try {
+              selectedStock = product.stock!.firstWhere((s) => s.id == stockId);
+            } catch (_) {
+              // Stock not found, use null
+            }
+          }
+        }
+
+        // Add to cart with the order's price and quantity
+        localProductProvider.addToCart(
+          product: product,
+          quantity: quantity.toInt(),
+          price: unitPrice > 0 ? unitPrice : null,
+          selectedStock: selectedStock,
+        );
+
+        debugPrint('   ✓ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
+      }
+
+      // Apply discounts from the order
+      localProductProvider.applyDiscount(
+        flatDiscount: _flatDiscount,
+        percentageDiscount: _percentageDiscount,
+      );
+
+      debugPrint('✅ Order items synced with LocalProductProvider cart');
+    } catch (e) {
+      debugPrint('❌ Error syncing order items with cart: $e');
+    }
+  }
+
 
   // Wrapper method for quantity updates with loading state
   Future<void> _updateCartItemQuantityWithLoading(
@@ -5275,6 +6684,228 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
+  List<dynamic> _getCartItemsFromOrder(dynamic order) {
+    debugPrint('📦 _getCartItemsFromOrder called');
+    if (order == null) {
+      debugPrint('❌ _getCartItemsFromOrder: Order is null');
+      return [];
+    }
+
+    debugPrint(
+        '🔍 _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
+
+    if (order['cart_items'] != null) {
+      debugPrint('✓ Found cart_items key');
+      if (order['cart_items']['cart_items'] is List) {
+        final items = order['cart_items']['cart_items'];
+        debugPrint(
+            '✓ Returning ${items.length} items from cart_items.cart_items');
+        return items;
+      } else if (order['cart_items'] is List) {
+        final items = order['cart_items'];
+        debugPrint('✓ Returning ${items.length} items from cart_items (List)');
+        return items;
+      }
+    } else if (order['cart'] != null) {
+      debugPrint('✓ Found cart key');
+      if (order['cart']['cart_items'] is List) {
+        final items = order['cart']['cart_items'];
+        debugPrint('✓ Returning ${items.length} items from cart.cart_items');
+        return items;
+      } else if (order['cart']['items'] is List) {
+        final items = order['cart']['items'];
+        debugPrint('✓ Returning ${items.length} items from cart.items');
+        return items;
+      }
+    } else if (order['items'] is List) {
+      final items = order['items'];
+      debugPrint('✓ Returning ${items.length} items from items');
+      return items;
+    } else if (order['order_items'] is List) {
+      final items = order['order_items'];
+      debugPrint('✓ Returning ${items.length} items from order_items');
+      return items;
+    }
+
+    debugPrint('❌ _getCartItemsFromOrder: No cart items found');
+    return [];
+  }
+
+  Future<void> _confirmOrderAndPrintBill() async {
+    if (_selectedOrder == null) return;
+
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: _confirmOrderAndPrintBill);
+      return;
+    }
+
+    // Capture order data before confirmation (in case it cleans up)
+    final capturedOrder = _selectedOrder;
+
+    // Confirm the order first, but don't close the view yet
+    final success = await _confirmOrder(closeOnSuccess: false);
+
+    if (success) {
+      try {
+        final orderNumber = capturedOrder['order_number']?.toString();
+        if (orderNumber == null) {
+          throw Exception("Order number not found");
+        }
+
+        final authModel = Provider.of<AuthModel>(context, listen: false);
+        final accessToken = authModel.token;
+
+        debugPrint(
+            "🔍 Fetching order details for bill print - Order $orderNumber");
+        final response = await SalesProvider().listOrderDetails(
+          context,
+          orderNumber,
+          accessToken ?? "",
+        );
+
+        if (response != null) {
+          OrderDetailsModel orderDetails = OrderDetailsModel.fromJson(response);
+
+          String? formattedTotal =
+              orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
+                  orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+          String? savedTotal =
+              orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
+
+          String storeName = orderDetails.data!.cart!.storeName ?? "";
+          String orderDate = orderDetails.data!.orderDate ?? "";
+
+          // Extract customer details
+          String? customerName = orderDetails.data?.customerDetails?.name;
+          String? customerPhone = orderDetails.data?.customerDetails?.phone;
+          String? customerEmail = orderDetails.data?.customerDetails?.email;
+          String? customerAddress =
+              orderDetails.data?.customerDetails?.address?.join(', ');
+
+          String? customerAlternatePhone =
+              orderDetails.data?.customerDetails?.alternatePhone;
+          String? paymentMethod =
+              orderDetails.data?.paymentDetails?.paymentMethod;
+
+          // Extract payment breakdown (method -> amount mapping from API)
+          Map<String, dynamic>? paymentBreakdown =
+              orderDetails.data?.payments;
+
+          String? orderComment;
+          if (orderDetails.data?.orderProps != null) {
+            try {
+              final commentProp = orderDetails.data!.orderProps!.firstWhere(
+                (prop) => prop.propsCode == "COMMENT",
+                orElse: () => OrderDetailsModelDataOrderProp(),
+              );
+              orderComment = commentProp.propsValue;
+            } catch (e) {
+              // ignore
+            }
+          }
+
+          // Calculate customer balance for print
+          double? oldBalance = _selectedCustomer?.balance;
+          double totalPaid = 0.0;
+          if (_isCashSelected) totalPaid += double.tryParse(_cashAmount) ?? 0.0;
+          if (_isCardSelected) totalPaid += double.tryParse(_cardAmount) ?? 0.0;
+          if (_isUpiSelected) totalPaid += double.tryParse(_upiAmount) ?? 0.0;
+
+          double? currentBalance;
+          if (oldBalance != null) {
+            double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
+            currentBalance = oldBalance - (cartTotal - totalPaid);
+          }
+
+          if (mounted) {
+            // Try auto-print with default printer first
+            debugPrint("🖨️ Attempting auto-print for order #$orderNumber");
+            final autoPrintSuccess = await PrintPage.autoPrint(
+              context,
+              storeName: storeName,
+              cartItems: orderDetails.data!.cart!.cartItems!,
+              formattedTotal: formattedTotal!,
+              savedTotal: savedTotal!,
+              discountAmount:
+                  orderDetails.data!.priceSummary?.discount?.toString() ??
+                      "0.00",
+              orderDate: DateHelper.formatInputToDisplay(orderDate),
+              orderNumber: orderDetails.data!.orderNumber ?? "",
+              customerName: customerName,
+              customerPhone: customerPhone,
+              customerEmail: customerEmail,
+              customerAddress: customerAddress,
+              customerOldBalance: oldBalance,
+              customerCurrentBalance: currentBalance,
+              paidAmount: totalPaid > 0 ? totalPaid : null,
+              customerAlternatePhone: customerAlternatePhone,
+              paymentMethod: paymentMethod,
+              paymentBreakdown: paymentBreakdown,
+              orderComment: orderComment,
+              isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                      context,
+                      listen: false)
+                  .isDefaultCustomer,
+              netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
+            );
+
+            // Only show print page if auto-print failed
+            if (!autoPrintSuccess) {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrintPage(
+                    storeName: storeName,
+                    cartItems: orderDetails.data!.cart!.cartItems!,
+                    formattedTotal: formattedTotal!,
+                    savedTotal: savedTotal!,
+                    discountAmount:
+                        orderDetails.data!.priceSummary?.discount?.toString() ??
+                            "0.00",
+                    orderDate: DateHelper.formatInputToDisplay(orderDate),
+                    orderNumber: orderDetails.data!.orderNumber ?? "",
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    customerEmail: customerEmail,
+                    customerAddress: customerAddress,
+                    customerOldBalance: oldBalance,
+                    customerCurrentBalance: currentBalance,
+                    paidAmount: totalPaid > 0 ? totalPaid : null,
+                    customerAlternatePhone: customerAlternatePhone,
+                    paymentMethod: paymentMethod,
+                    paymentBreakdown: paymentBreakdown,
+                    orderComment: orderComment,
+                    isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                            context,
+                            listen: false)
+                        .isDefaultCustomer,
+                    netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
+                  ),
+                ),
+              );
+            }
+
+            // After returning from print or successful auto-print, cleanup
+            if (mounted) {
+              setState(() => _selectedOrder = null);
+              widget.onOrderSelected(null);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("❌ Error printing bill: $e");
+        showScaffoldError(
+            context: context, message: "Failed to print bill: $e");
+
+        // Even if print fails, the order was confirmed, so cleanup
+        if (mounted) {
+          setState(() => _selectedOrder = null);
+          widget.onOrderSelected(null);
+        }
+      }
+    }
+  }
+
   Future<void> _refreshSelectedOrderAfterCartUpdate() async {
     if (_selectedOrder == null) return;
 
@@ -5332,13 +6963,18 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-  Future<void> _confirmOrder() async {
+  Future<bool> _confirmOrder({bool closeOnSuccess = true}) async {
     if (_selectedOrder == null) {
       showScaffoldError(
         context: context,
         message: 'No order selected to confirm',
       );
-      return;
+      return false;
+    }
+
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: () => _confirmOrder(closeOnSuccess: closeOnSuccess));
+      return false;
     }
 
     // Set loading state
@@ -5363,13 +6999,78 @@ class _OrderPanelState extends State<_OrderPanel> {
           1;
       final customerPhone =
           _selectedCustomer?.phone ?? _selectedOrder['customer_phone'] ?? '';
-      final totalPrice = _selectedOrder['grand_total']?.toString() ?? '0';
+      // Get order items to calculate subtotal
+      List<dynamic> cartItems = [];
+      if (_selectedOrder['cart_items'] != null) {
+        if (_selectedOrder['cart_items']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items']['cart_items'];
+        } else if (_selectedOrder['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items'];
+        }
+      } else if (_selectedOrder['cart'] != null) {
+        if (_selectedOrder['cart']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart']['cart_items'];
+        } else if (_selectedOrder['cart']['items'] is List) {
+          cartItems = _selectedOrder['cart']['items'];
+        }
+      } else if (_selectedOrder['items'] is List) {
+        cartItems = _selectedOrder['items'];
+      } else if (_selectedOrder['order_items'] is List) {
+        cartItems = _selectedOrder['order_items'];
+      }
+
+      double rawOrderTotal = 0.0;
+      for (var item in cartItems) {
+        final quantity =
+            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+                item['price']?.toString() ??
+                item['product_price']?.toString() ??
+                '0') ??
+            0.0;
+        rawOrderTotal += quantity * unitPrice;
+      }
+
+      // Fallback to grand_total if items calculation is 0
+      if (rawOrderTotal == 0.0) {
+        rawOrderTotal =
+            double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+                0.0;
+      }
+
+      final flatDiscountAmount = _flatDiscount;
+      final percentageDiscountAmount =
+          (rawOrderTotal * _percentageDiscount / 100);
+      final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
+      final finalOrderTotal = rawOrderTotal - totalDiscountAmount;
+
+      final totalPrice = finalOrderTotal.toString();
       final transactionId = _transactionNumber.isNotEmpty
           ? _transactionNumber
           : (_selectedOrder['transaction_number'] ?? '');
       final comment = _orderComment.isNotEmpty
           ? _orderComment
           : (_selectedOrder['comment'] ?? 'Order confirmed from restaurant');
+
+      // Validate customer selection (mandatory)
+      if ((_selectedCustomerID == null) &&
+          (_selectedCustomer == null) &&
+          (_selectedCustomerPhone == null ||
+              _selectedCustomerPhone!.toString().isEmpty)) {
+        showScaffoldError(
+          context: context,
+          message: 'Please select a customer',
+        );
+        if (mounted) {
+          setState(() {
+            _isLoadingConfirm = false;
+          });
+        }
+        return false;
+      }
+
+      // Payment method selection is optional - no validation required
+      // Just prepare the payment data if methods are selected
 
       // Prepare payment method data
       String? paymentMethod;
@@ -5378,61 +7079,79 @@ class _OrderPanelState extends State<_OrderPanel> {
       List<Map<String, dynamic>> paidMethods = [];
 
       if (_hasPaymentMethod()) {
-        // Multi-payment handling
+        // Get payment method IDs from BillingProvider
+        final billingProvider =
+            Provider.of<BillingProvider>(context, listen: false);
+        final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
+        final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
+        final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
+        final codId = billingProvider.codPaymentMethodId ?? 'COD';
+
+        // Multi-payment handling with dynamic IDs
         List<String> selectedMethods = [];
-        if (_isCashSelected) selectedMethods.add('CASH');
-        if (_isCardSelected) selectedMethods.add('CARD');
-        if (_isUpiSelected) selectedMethods.add('UPI');
+        final cashAmountVal = double.tryParse(_cashAmount) ?? 0;
+        final cardAmountVal = double.tryParse(_cardAmount) ?? 0;
+        final upiAmountVal = double.tryParse(_upiAmount) ?? 0;
+        final codAmountVal = double.tryParse(_codAmount) ?? 0;
+
+        if (_isCashSelected && cashAmountVal > 0) selectedMethods.add(cashId);
+        if (_isCardSelected && cardAmountVal > 0) selectedMethods.add(cardId);
+        if (_isUpiSelected && upiAmountVal > 0) selectedMethods.add(upiId);
+        if (_isCodSelected && codAmountVal > 0) selectedMethods.add(codId);
 
         if (selectedMethods.length > 1) {
-          // Multi-payment: store as JSON
+          // Multi-payment: store as JSON with IDs as keys
           Map<String, dynamic> multiPaymentData = {
             "methods": selectedMethods,
             "amounts": {
-              "CASH": _cashAmount.isNotEmpty ? _cashAmount : "0",
-              "CARD": _cardAmount.isNotEmpty ? _cardAmount : "0",
-              "UPI": _upiAmount.isNotEmpty ? _upiAmount : "0",
+              cashId: _cashAmount.isNotEmpty ? _cashAmount : "0",
+              cardId: _cardAmount.isNotEmpty ? _cardAmount : "0",
+              upiId: _upiAmount.isNotEmpty ? _upiAmount : "0",
+              codId: _codAmount.isNotEmpty ? _codAmount : "0",
             },
             "isMultiPayment": true
           };
           paymentMethod = json.encode(multiPaymentData);
 
-          // Calculate total paid amount
-          final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
-          final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
-          final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
-          paidAmount = (cashAmount + cardAmount + upiAmount).toString();
+          // Calculate total paid amount (using already-parsed values)
+          paidAmount =
+              (cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal)
+                  .toString();
 
-          // Prepare paidMethods array
-          if (_isCashSelected) {
-            paidMethods.add({
-              "method": "CASH",
-              "amount": double.tryParse(_cashAmount) ?? 0.0
-            });
+          // Prepare paidMethods array with IDs (only include methods with amount > 0)
+          if (_isCashSelected && cashAmountVal > 0) {
+            // Adjust cash amount by deducting balance (change returned to customer)
+            final totalPaid = cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
+            final orderAmount = double.tryParse(totalPrice) ?? 0.0;
+            final balanceAmountVal = totalPaid - orderAmount;
+            final netCashAmount = cashAmountVal - balanceAmountVal;
+            // Only add if net cash is positive (skip if balance equals or exceeds cash)
+            if (netCashAmount > 0) {
+              paidMethods.add({"method": cashId, "amount": netCashAmount});
+            }
           }
-          if (_isCardSelected) {
-            paidMethods.add({
-              "method": "CARD",
-              "amount": double.tryParse(_cardAmount) ?? 0.0
-            });
+          if (_isCardSelected && cardAmountVal > 0) {
+            paidMethods.add({"method": cardId, "amount": cardAmountVal});
           }
-          if (_isUpiSelected) {
-            paidMethods.add({
-              "method": "UPI",
-              "amount": double.tryParse(_upiAmount) ?? 0.0
-            });
+          if (_isUpiSelected && upiAmountVal > 0) {
+            paidMethods.add({"method": upiId, "amount": upiAmountVal});
+          }
+          if (_isCodSelected && codAmountVal > 0) {
+            paidMethods.add({"method": codId, "amount": codAmountVal});
           }
 
           paymentMethods = selectedMethods;
-        } else {
-          // Single payment method
+        } else if (selectedMethods.isNotEmpty) {
+          // Single payment method with ID
           paymentMethod = selectedMethods.first;
-          if (paymentMethod == "CASH") {
+          if (_isCashSelected && cashAmountVal > 0) {
             paidAmount = _cashAmount;
-          } else if (paymentMethod == "CARD") {
+          } else if (_isCardSelected && cardAmountVal > 0) {
             paidAmount = _cardAmount;
-          } else if (paymentMethod == "UPI") {
+          } else if (_isUpiSelected && upiAmountVal > 0) {
             paidAmount = _upiAmount;
+          } else if (_isCodSelected && codAmountVal > 0) {
+            paidAmount = _codAmount;
           }
         }
       }
@@ -5441,13 +7160,6 @@ class _OrderPanelState extends State<_OrderPanel> {
       final totalPaid = double.tryParse(paidAmount ?? '0') ?? 0.0;
       final orderAmount = double.tryParse(totalPrice) ?? 0.0;
       final balanceAmount = (totalPaid - orderAmount).toString();
-
-      // Calculate discount amount for API
-      final orderSubTotal = orderAmount; // Use order amount as subtotal base
-      final flatDiscountAmount = _flatDiscount;
-      final percentageDiscountAmount =
-          (orderSubTotal * _percentageDiscount / 100);
-      final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
 
       debugPrint('📦 Order details for confirmation:');
       debugPrint('   - Customer ID: $customerId');
@@ -5459,11 +7171,11 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('   - Balance Amount: $balanceAmount');
       debugPrint('🎫 Discount details for confirmation:');
       debugPrint(
-          '   - Flat Discount: ₹${flatDiscountAmount.toStringAsFixed(2)}');
+          '   - Flat Discount: ${flatDiscountAmount.toStringAsFixed(2)}');
       debugPrint(
           '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
       debugPrint(
-          '   - Total Discount Amount: ₹${totalDiscountAmount.toStringAsFixed(2)}');
+          '   - Total Discount Amount: ${totalDiscountAmount.toStringAsFixed(2)}');
       debugPrint('   - Coupon Code: $_couponCode');
       debugPrint('🔧 Payment Methods Details:');
       debugPrint('   - Payment Methods Array: $paymentMethods');
@@ -5517,6 +7229,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         percentageDiscount:
             _percentageDiscount > 0 ? _percentageDiscount : null,
         discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
+        toCustomerCredit: _toCustomerCreditEnabled,
       );
 
       debugPrint('\n📥 updateOrderAPI RESPONSE:');
@@ -5542,15 +7255,19 @@ class _OrderPanelState extends State<_OrderPanel> {
         await Future.delayed(const Duration(milliseconds: 500));
         await _fetchSavedOrders();
 
-        // Go back to orders list
-        setState(() => _selectedOrder = null);
-        widget.onOrderSelected(null);
+        if (closeOnSuccess) {
+          // Go back to orders list
+          setState(() => _selectedOrder = null);
+          widget.onOrderSelected(null);
+        }
+        return true;
       } else {
         showScaffoldError(
           context: context,
           message:
               'Failed to confirm order: ${response?['message'] ?? 'Unknown error'}',
         );
+        return false;
       }
     } catch (e) {
       debugPrint('❌ Error confirming order: ${e.toString()}');
@@ -5558,6 +7275,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         context: context,
         message: 'Failed to confirm order: ${e.toString()}',
       );
+      return false;
     } finally {
       // Clear loading state
       if (mounted) {
@@ -5635,7 +7353,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '₹${totalPrice.toStringAsFixed(0)}',
+                  '${totalPrice.toStringAsFixed(0)}',
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
                       0.21, const Color(0xFF059669)),
                 ),
@@ -5648,8 +7366,34 @@ class _OrderPanelState extends State<_OrderPanel> {
           // Unit price and quantity info
           Row(
             children: [
+              // Editable Price Trigger for Local Items (Blue Box style)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () =>
+                      _showEditItemPriceDialog(cartItem, isLocal: true),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.blue.withOpacity(0.05),
+                    ),
+                    child: Text(
+                      '${unitPrice.toStringAsFixed(2)}',
+                      style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          widget.isCompact ? FontSize.s11 : FontSize.s12,
+                          0.21,
+                          const Color(0xFF2563EB)),
+                    ),
+                  ),
+                ),
+              ),
               Text(
-                '₹${unitPrice.toStringAsFixed(0)} × ${quantity.toStringAsFixed(0)}',
+                ' × ${quantity.toStringAsFixed(0)}',
                 style: buildCustomStyle(
                     FontWeightManager.medium,
                     widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -5815,74 +7559,135 @@ class _OrderPanelState extends State<_OrderPanel> {
               ),
             ),
             const SizedBox(height: 12),
-            // Bottom row: New Order and Send to Kitchen
+            // Bottom row: Save, Send & Print
             Row(
               children: [
+                // New button - REMOVED
+                // Expanded(
+                //   child: Material(
+                //     color: Colors.transparent,
+                //     child: InkWell(
+                //       onTap: () => widget.onNewOrder(),
+                //       borderRadius: BorderRadius.circular(12),
+                //       child: AnimatedContainer(
+                //         duration: const Duration(milliseconds: 200),
+                //         height: widget.isCompact ? 44 : 48,
+                //         decoration: BoxDecoration(
+                //           color: Colors.white,
+                //           border: Border.all(
+                //             color: const Color(0xFF64748B),
+                //             width: 1.5,
+                //           ),
+                //           borderRadius: BorderRadius.circular(12),
+                //         ),
+                //         child: Center(
+                //           child: Text(
+                //             'New',
+                //             style: buildCustomStyle(
+                //                 FontWeightManager.semiBold,
+                //                 widget.isCompact ? FontSize.s12 : FontSize.s13,
+                //                 0.21,
+                //                 const Color(0xFF64748B)),
+                //           ),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                // const SizedBox(width: 8),
+                // Save button
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => widget.onNewOrder(),
+                      onTap: (cartItems.isEmpty || widget.tableId == null)
+                          ? null
+                          : () => _saveCurrentCartAsPending(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: const Color(0xFF64748B),
-                            width: 1.5,
-                          ),
+                          color: (cartItems.isEmpty || widget.tableId == null)
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF2563EB),
                           borderRadius: BorderRadius.circular(12),
+                          boxShadow:
+                              (cartItems.isNotEmpty && widget.tableId != null)
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF2563EB)
+                                            .withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : [],
                         ),
                         child: Center(
-                          child: Text(
-                            'New Order',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                0.21,
-                                const Color(0xFF64748B)),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.save,
+                                color: Colors.white,
+                                size: widget.isCompact ? 14 : 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'Save',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      widget.isCompact
+                                          ? FontSize.s12
+                                          : FontSize.s13,
+                                      0.21,
+                                      Colors.white),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                // Send & Print KOT button (Mixed)
                 Expanded(
-                  flex: 2,
+                  flex: 2, // Give it more space as it's the primary action
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap:
-                          (cartItems.isEmpty || widget.isLoadingSendToKitchen)
-                              ? null
-                              : () => widget.onSendToKitchen(),
+                      onTap: (cartItems.isEmpty || widget.isLoadingPrint)
+                          ? null
+                          : () => widget.onPrintOrder(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: (cartItems.isEmpty ||
-                                  widget.isLoadingSendToKitchen)
+                          color: (cartItems.isEmpty || widget.isLoadingPrint)
                               ? const Color(0xFF94A3B8)
                               : const Color(0xFF059669),
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: (cartItems.isNotEmpty &&
-                                  !widget.isLoadingSendToKitchen)
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF059669)
-                                        .withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : [],
+                          boxShadow:
+                              (cartItems.isNotEmpty && !widget.isLoadingPrint)
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF059669)
+                                            .withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : [],
                         ),
                         child: Center(
-                          child: widget.isLoadingSendToKitchen
+                          child: widget.isLoadingPrint
                               ? SizedBox(
                                   width: widget.isCompact ? 16 : 20,
                                   height: widget.isCompact ? 16 : 20,
@@ -5898,16 +7703,16 @@ class _OrderPanelState extends State<_OrderPanel> {
                                     Icon(
                                       Icons.send,
                                       color: Colors.white,
-                                      size: widget.isCompact ? 16 : 18,
+                                      size: widget.isCompact ? 14 : 16,
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      'Send to Kitchen',
+                                      'Send To Kitchen',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
+                                              ? FontSize.s12
+                                              : FontSize.s13,
                                           0.21,
                                           Colors.white),
                                     ),
@@ -6010,6 +7815,480 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
+  // Save current cart locally as a PENDING draft for the active table
+  Future<void> _saveCurrentCartAsPending() async {
+    if (widget.tableId == null) {
+      showScaffoldError(context: context, message: 'Select a table first');
+      return;
+    }
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      if (localProductProvider.cartItems.isEmpty) {
+        showScaffoldError(
+            context: context, message: 'No items in cart to save');
+        return;
+      }
+
+      // Prefix table tag into comment so we can filter drafts per table without Hive migration
+      final String taggedComment = 'TABLE:${widget.tableId}' +
+          (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
+
+      // If a local draft is loaded, update it instead of creating a new one
+      if (_loadedLocalDraftId != null) {
+        debugPrint('📝 Updating existing local draft $_loadedLocalDraftId');
+        localProductProvider.updateSavedOrder(
+          _loadedLocalDraftId!,
+          comment: taggedComment,
+          status: 'pending',
+          tableId: widget.tableId,
+        );
+        showScaffold(context: context, message: 'Updated local draft');
+      } else {
+        debugPrint('📝 Creating new local draft');
+        final saved = localProductProvider.saveCurrentCartAsOrder(
+          comment: taggedComment,
+          status: 'pending',
+          context: context,
+          tableId: widget.tableId,
+        );
+        showScaffold(
+            context: context,
+            message: 'Saved local draft ${saved.orderNumber}');
+      }
+
+      // Clear cart and refresh local drafts
+      localProductProvider.clearCart();
+      _loadedLocalDraftId = null;
+      _refreshLocalDrafts();
+    } catch (e) {
+      showScaffoldError(
+          context: context,
+          message: 'Failed to save local draft: ${e.toString()}');
+    }
+  }
+
+  // Refresh local drafts from Hive filtered by table tag and pending status
+  Future<void> _refreshLocalDrafts() async {
+    // Reset manual selection flag when table changes context or drafts are refreshed
+    _isCustomerManuallySelected = false;
+
+    // Apply default customer logic for the current table context
+    _applyDefaultCustomer();
+
+    try {
+      final localProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final drafts = localProvider.savedOrders.where((o) {
+        final st = (o.status ?? '').toLowerCase();
+        return st == 'pending' && o.tableId == widget.tableId;
+      }).toList();
+      setState(() {
+        _localDrafts = drafts;
+      });
+    } catch (_) {}
+  }
+
+  // Delete local draft
+  void _deleteLocalDraft(SavedOrder order) {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    localProductProvider.deleteSavedOrder(order.id);
+    _refreshLocalDrafts();
+  }
+
+  // Local draft item card
+  Widget _buildLocalDraftItem(SavedOrder order) {
+    final int totalItems = order.items.length;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          // Load back to current cart for editing
+          final localProductProvider =
+              Provider.of<LocalProductProvider>(context, listen: false);
+          _loadedLocalDraftId = order.id;
+          localProductProvider.loadOrderForEditing(order.id);
+          showCurrentOrderTab();
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200, width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    order.orderNumber,
+                    style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s13 : FontSize.s15,
+                        0.21,
+                        const Color(0xFF1E293B)),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: const Color(0xFFD97706).withOpacity(0.4)),
+                        ),
+                        child: Text(
+                          'PENDING',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s10 : FontSize.s11,
+                              0.21,
+                              const Color(0xFFD97706)),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$totalItems',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s11 : FontSize.s13,
+                              0.21,
+                              const Color(0xFF059669)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _deleteLocalDraft(order),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.delete_outline,
+                              size: widget.isCompact ? 16 : 18,
+                              color: const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _cleanDraftComment(order.comment),
+                    style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        widget.isCompact ? FontSize.s11 : FontSize.s13,
+                        0.21,
+                        const Color(0xFF64748B)),
+                  ),
+                  Text(
+                    'Items: $totalItems',
+                    style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        widget.isCompact ? FontSize.s11 : FontSize.s13,
+                        0.21,
+                        const Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Safe comment cleaner: strips TABLE:<id> prefix without regex
+  String _cleanDraftComment(String? comment) {
+    final c = (comment ?? '').trim();
+    if (c.startsWith('TABLE:')) {
+      final parts = c.split('|');
+      if (parts.length >= 2) {
+        return parts.sublist(1).join('|').trim();
+      } else {
+        return '';
+      }
+    }
+    return c;
+  }
+
+  // Public method called by parent after successful send
+  void deleteLoadedDraftIfAny() {
+    if (_loadedLocalDraftId == null) return;
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    localProductProvider.deleteSavedOrder(_loadedLocalDraftId!);
+    _loadedLocalDraftId = null;
+    _refreshLocalDrafts();
+  }
+
+  Future<void> _updateSavedItemPrice(
+      dynamic cartItem, String newPriceStr) async {
+    final newPrice = double.tryParse(newPriceStr);
+    if (newPrice == null || newPrice < 0) {
+      showScaffoldError(context: context, message: 'Invalid price');
+      return;
+    }
+
+    // Determine cartItemId
+    final cartItemId = cartItem['id'];
+    if (cartItemId == null) {
+      showScaffoldError(context: context, message: 'Item ID not found');
+      return;
+    }
+
+    setState(() {
+      _loadingCartItems.add('${cartItemId}_price');
+      // _isLoadingOrderDetails = true; // Removed full loader
+    });
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      debugPrint(
+          '🔄 Updating saved item price: Item $cartItemId to $newPriceStr');
+
+      final response = await cartProvider.updateCartItemPrice(
+        cartItemId: int.parse(cartItemId.toString()),
+        unitPrice: newPriceStr,
+        accessToken: authModel.token ?? '',
+        // Pass cartId and customerId if available/needed
+        cartId: _selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'],
+        customerId: _selectedOrder['customer_id'] ??
+            _selectedOrder['cart']?['customer_id'],
+      );
+
+      if (response != null &&
+          (response['status']?.toLowerCase() == 'success' ||
+              response['status']?.toLowerCase() == 'sucesss')) {
+        debugPrint('✅ Price updated successfully');
+        showScaffold(context: context, message: 'Price updated successfully');
+
+        // Refresh the order to show new price
+        await _refreshSelectedOrderAfterCartUpdate();
+      } else {
+        debugPrint('❌ Price update failed: ${response['message']}');
+        showScaffoldError(
+            context: context,
+            message: response['message'] ?? 'Failed to update price');
+      }
+    } catch (e) {
+      debugPrint('❌ Exception updating price: $e');
+      showScaffoldError(context: context, message: 'Error updating price: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingCartItems.remove('${cartItemId}_price');
+          // _isLoadingOrderDetails = false; // Removed full loader
+        });
+      }
+    }
+  }
+
+  void _showEditItemPriceDialog(dynamic cartItem, {bool isLocal = false}) {
+    final double price = isLocal
+        ? (cartItem as LocalCartItem).price ?? 0.0
+        : (double.tryParse((cartItem['unit_price'] ?? cartItem['price'] ?? 0)
+                .toString()) ??
+            0.0);
+
+    final String productName = isLocal
+        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
+        : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
+
+    final TextEditingController _priceController =
+        TextEditingController(text: price.toStringAsFixed(2));
+
+    // Auto-select all text when dialog opens
+    _priceController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _priceController.text.length,
+    );
+
+    void _handleUpdate() {
+      Navigator.pop(context);
+      final newPriceStr = _priceController.text;
+      final newPrice = double.tryParse(newPriceStr);
+
+      if (newPrice != null && newPrice >= 0) {
+        if (isLocal) {
+          // Update Local Item
+          final localItem = cartItem as LocalCartItem;
+          final localProductProvider =
+              Provider.of<LocalProductProvider>(context, listen: false);
+          localProductProvider.updateItemPrice(
+            localItem.product.productId!,
+            localItem.selectedStock,
+            newPrice,
+          );
+        } else {
+          // Update Saved Item
+          _updateSavedItemPrice(cartItem, newPriceStr);
+        }
+      } else {
+        showScaffoldError(context: context, message: 'Invalid price');
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    const Icon(Icons.edit, color: Color(0xFF2563EB), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Edit Price',
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
+                    0.21, const Color(0xFF1E293B)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                productName,
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.21, const Color(0xFF1E293B)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Current Price: ${price.toStringAsFixed(2)}',
+                style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                    0.21, const Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _priceController,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _handleUpdate(),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.21, const Color(0xFF1E293B)),
+                decoration: InputDecoration(
+                  labelText: 'New Unit Price',
+                  labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF2563EB), width: 2),
+                  ),
+                  prefixText: ' ',
+                  prefixStyle: const TextStyle(
+                      color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
+                ),
+                onTap: () {
+                  Provider.of<KeyboardProvider>(context, listen: false)
+                      .show('numeric', _priceController);
+                },
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s14, 0.21, const Color(0xFF64748B)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _handleUpdate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Update',
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          FontSize.s14, 0.21, Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSavedOrderItem(dynamic cartItem, int index) {
     final productName = cartItem['product']?['name'] ??
         cartItem['product_name'] ??
@@ -6073,7 +8352,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '₹${totalPrice.toStringAsFixed(0)}',
+                      '${totalPrice.toStringAsFixed(0)}',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s12 : FontSize.s14,
@@ -6111,8 +8390,47 @@ class _OrderPanelState extends State<_OrderPanel> {
           // Unit price and quantity info
           Row(
             children: [
+              // Editable Price for Saved Items (Tap to edit)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _loadingCartItems.contains('${cartItem['id']}_price')
+                      ? null
+                      : () =>
+                          _showEditItemPriceDialog(cartItem, isLocal: false),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.blue.withOpacity(0.05),
+                    ),
+                    child: _loadingCartItems.contains('${cartItem['id']}_price')
+                        ? SizedBox(
+                            width: widget.isCompact ? 16 : 18,
+                            height: widget.isCompact ? 16 : 18,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF2563EB),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            '${unitPrice.toStringAsFixed(2)}',
+                            style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                0.21,
+                                const Color(0xFF2563EB)),
+                          ),
+                  ),
+                ),
+              ),
               Text(
-                '₹${unitPrice.toStringAsFixed(0)} × ${quantity.toStringAsFixed(0)}',
+                ' × ${quantity.toStringAsFixed(0)}',
                 style: buildCustomStyle(
                     FontWeightManager.medium,
                     widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -6144,7 +8462,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: _loadingCartItems
-                                .contains('${cartItem['id']}_decrease')
+                                    .contains('${cartItem['id']}_decrease') ||
+                                !isRemovable
                             ? null
                             : () => _updateCartItemQuantityWithLoading(
                                 cartItem, quantity - 1, 'decrease'),
@@ -6166,7 +8485,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                               : Icon(
                                   Icons.remove,
                                   size: widget.isCompact ? 16 : 18,
-                                  color: const Color(0xFFDC2626),
+                                  color: isRemovable
+                                      ? const Color(0xFFDC2626)
+                                      : Colors.grey,
                                 ),
                         ),
                       ),
@@ -6270,103 +8591,4 @@ class _OrderPanelState extends State<_OrderPanel> {
     });
   }
 }
-
-// Wrapper class to make CouponModal work with restaurant page's discount system
-class _RestaurantCouponModalWrapper extends StatefulWidget {
-  final double orderSubTotal;
-  final String initialCouponCode;
-  final double initialFlatDiscount;
-  final double initialPercentageDiscount;
-  final bool isCouponApplied;
-  final Function(String, bool, {double? flatDiscount, double? percentageDiscount}) onCouponAction;
-
-  const _RestaurantCouponModalWrapper({
-    required this.orderSubTotal,
-    required this.initialCouponCode,
-    required this.initialFlatDiscount,
-    required this.initialPercentageDiscount,
-    required this.isCouponApplied,
-    required this.onCouponAction,
-  });
-
-  @override
-  State<_RestaurantCouponModalWrapper> createState() => _RestaurantCouponModalWrapperState();
-}
-
-class _RestaurantCouponModalWrapperState extends State<_RestaurantCouponModalWrapper> {
-  late MockLocalProductProvider _mockProvider;
-
-  @override
-  void initState() {
-    super.initState();
-    _mockProvider = MockLocalProductProvider(
-      orderSubTotal: widget.orderSubTotal,
-      initialFlatDiscount: widget.initialFlatDiscount,
-      initialPercentageDiscount: widget.initialPercentageDiscount,
-      initialCouponCode: widget.initialCouponCode,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider<LocalProductProvider>.value(
-      value: _mockProvider,
-      child: CouponModal(
-        initialCouponCode: widget.initialCouponCode,
-        isCouponApplied: widget.isCouponApplied,
-        onCouponAction: widget.onCouponAction,
-      ),
-    );
-  }
-}
-
-// Mock LocalProductProvider that provides the interface needed by CouponModal
-class MockLocalProductProvider extends LocalProductProvider {
-  final double _orderSubTotal;
-  double _flatDiscount;
-  double _percentageDiscount;
-  String _couponCode;
-
-  MockLocalProductProvider({
-    required double orderSubTotal,
-    required double initialFlatDiscount,
-    required double initialPercentageDiscount,
-    required String initialCouponCode,
-  }) : _orderSubTotal = orderSubTotal,
-       _flatDiscount = initialFlatDiscount,
-       _percentageDiscount = initialPercentageDiscount,
-       _couponCode = initialCouponCode;
-
-  @override
-  Map<String, double> getCurrentDiscount() {
-    return {
-      'flatDiscount': _flatDiscount,
-      'percentageDiscount': _percentageDiscount,
-    };
-  }
-
-  @override
-  PriceSummary? get priceSummary {
-    final discount = (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
-    return PriceSummary(
-      originalSubTotal: _orderSubTotal,
-      subTotal: _orderSubTotal,
-      discount: discount,
-      totalTax: 0.0,
-      netPayable: _orderSubTotal - discount,
-      netTotal: _orderSubTotal - discount,
-    );
-  }
-
-  @override
-  void applyDiscount({
-    required double flatDiscount,
-    required double percentageDiscount,
-  }) {
-    _flatDiscount = flatDiscount;
-    _percentageDiscount = percentageDiscount;
-    notifyListeners();
-  }
-}
-
 

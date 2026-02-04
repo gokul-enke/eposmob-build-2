@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
 DocumentConfigurationsModel documentConfigurationsModelFromJson(String str) =>
     DocumentConfigurationsModel.fromJson(json.decode(str));
@@ -64,6 +65,8 @@ class DocumentConfig {
   final dynamic updatedBy; // Can be null
   final dynamic createdAt; // Can be null
   final String? updatedAt;
+  final String? language; // Added language field
+  final String? activeTheme; // Theme identifier for layout selection (e.g., "classic", "modern", "minimal")
   final DisplayConfiguration? displayConfiguration; // Nested object
   final ResolvedLabels? resolvedLabels; // Nested object
 
@@ -91,6 +94,8 @@ class DocumentConfig {
     this.updatedBy,
     this.createdAt,
     this.updatedAt,
+    this.language, // Added to constructor
+    this.activeTheme, // Theme identifier
     this.displayConfiguration,
     this.resolvedLabels,
   });
@@ -121,9 +126,8 @@ class DocumentConfig {
       itemName: json["item_name"] == null
           ? null
           : ItemName.fromJson(json["item_name"]),
-      taxName: json["tax_name"] == null
-          ? null
-          : ItemName.fromJson(json["tax_name"]),
+      taxName:
+          json["tax_name"] == null ? null : ItemName.fromJson(json["tax_name"]),
       unitName: json["unit_name"] == null
           ? null
           : ItemName.fromJson(json["unit_name"]),
@@ -137,6 +141,8 @@ class DocumentConfig {
       updatedBy: json["updated_by"],
       createdAt: json["created_at"],
       updatedAt: json["updated_at"],
+      language: json["language"], // Parse language from JSON
+      activeTheme: json["active_theme"], // Parse active theme from JSON
       displayConfiguration: displayConfiguration,
       resolvedLabels: json["resolved_labels"] == null
           ? null
@@ -168,6 +174,8 @@ class DocumentConfig {
         "updated_by": updatedBy,
         "created_at": createdAt,
         "updated_at": updatedAt,
+        "language": language,
+        "active_theme": activeTheme,
         "display_configuration": displayConfiguration?.toJson(),
         "resolved_labels": resolvedLabels?.toJson(),
       };
@@ -203,14 +211,14 @@ class DisplayConfiguration {
     if (json.isEmpty) {
       return DisplayConfiguration(options: null);
     }
-    
+
     try {
       final options = Map.from(json).map((k, v) =>
           MapEntry<String, DisplayOption>(k, DisplayOption.fromJson(v)));
-      
+
       return DisplayConfiguration(options: options);
     } catch (e) {
-      print("❌ DisplayConfiguration.fromJson - error parsing: $e");
+      debugPrint("❌ DisplayConfiguration.fromJson - error parsing: $e");
       return DisplayConfiguration(options: null);
     }
   }
@@ -224,20 +232,24 @@ class DisplayConfiguration {
 class DisplayOption {
   final bool? visible;
   final dynamic value; // Can be String or null
+  final String? defaultValue;
 
   DisplayOption({
     this.visible,
     this.value,
+    this.defaultValue,
   });
 
   factory DisplayOption.fromJson(Map<String, dynamic> json) => DisplayOption(
         visible: json["visible"],
         value: json["value"],
+        defaultValue: json["default"],
       );
 
   Map<String, dynamic> toJson() => {
         "visible": visible,
         "value": value,
+        "default": defaultValue,
       };
 }
 
@@ -259,6 +271,26 @@ class ResolvedLabels {
   final String? tax;
   // Supplier Statement specific fields (aliased from 'item' in API)
   final String? item;
+  // Bill specific fields
+  final String? particulars;
+  final String? mrp;
+  final String? qty;
+  final String? rate;
+  final String? total;
+  // Sales Return Bill specific fields
+  final String? returnSlNumber;
+  final String? returnParticulars;
+  final String? returnMrp;
+  final String? returnQty;
+  final String? returnRate;
+  final String? returnTotal;
+  // Default values for bilingual support (English defaults)
+  final String? slNumberDefault;
+  final String? particularsDefault;
+  final String? qtyDefault;
+  final String? rateDefault;
+  final String? totalDefault;
+  final String? taxDefault;
 
   ResolvedLabels({
     this.itemName,
@@ -276,6 +308,23 @@ class ResolvedLabels {
     this.status,
     this.tax,
     this.item,
+    this.particulars,
+    this.mrp,
+    this.qty,
+    this.rate,
+    this.total,
+    this.returnSlNumber,
+    this.returnParticulars,
+    this.returnMrp,
+    this.returnQty,
+    this.returnRate,
+    this.returnTotal,
+    this.slNumberDefault,
+    this.particularsDefault,
+    this.qtyDefault,
+    this.rateDefault,
+    this.totalDefault,
+    this.taxDefault,
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
@@ -293,7 +342,25 @@ class ResolvedLabels {
         balance: json["balance"],
         status: json["status"],
         tax: json["tax"],
-        item: json["item"], // Supplier Statement uses 'item' instead of 'item_name'
+        item: json[
+            "item"], // Supplier Statement uses 'item' instead of 'item_name'
+        particulars: json["particulars"],
+        mrp: json["mrp"],
+        qty: json["qty"],
+        rate: json["rate"],
+        total: json["total"],
+        returnSlNumber: json["return_sl_number"],
+        returnParticulars: json["return_particulars"],
+        returnMrp: json["return_mrp"],
+        returnQty: json["return_qty"],
+        returnRate: json["return_rate"],
+        returnTotal: json["return_total"],
+        slNumberDefault: json["sl_number_default"],
+        particularsDefault: json["particulars_default"],
+        qtyDefault: json["qty_default"],
+        rateDefault: json["rate_default"],
+        totalDefault: json["total_default"],
+        taxDefault: json["tax_default"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -312,6 +379,23 @@ class ResolvedLabels {
         "status": status,
         "tax": tax,
         "item": item,
+        "particulars": particulars,
+        "mrp": mrp,
+        "qty": qty,
+        "rate": rate,
+        "total": total,
+        "return_sl_number": returnSlNumber,
+        "return_particulars": returnParticulars,
+        "return_mrp": returnMrp,
+        "return_qty": returnQty,
+        "return_rate": returnRate,
+        "return_total": returnTotal,
+        "sl_number_default": slNumberDefault,
+        "particulars_default": particularsDefault,
+        "qty_default": qtyDefault,
+        "rate_default": rateDefault,
+        "total_default": totalDefault,
+        "tax_default": taxDefault,
       };
 }
 

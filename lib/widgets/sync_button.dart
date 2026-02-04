@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import '../providers/sync_provider.dart';
 import '../resources/color_manager.dart';
@@ -110,18 +111,18 @@ class SyncButton extends StatelessWidget {
     if (syncProvider.isSyncing) {
       return syncProvider.syncMessage.isNotEmpty 
           ? syncProvider.syncMessage 
-          : 'Syncing data...';
+          : 'sync.syncing_data'.tr;
     }
     
     if (syncProvider.hasError) {
-      return 'Sync failed. Tap to retry.';
+      return 'sync.sync_failed_retry'.tr;
     }
     
     if (syncProvider.lastSyncTime != null) {
-      return 'Last sync: ${syncProvider.getFormattedLastSyncTime()}\nTap to sync again';
+      return '${'sync.last_sync'.tr}: ${syncProvider.getFormattedLastSyncTime()}\n${'sync.tap_to_sync_again'.tr}';
     }
     
-    return 'Sync all data';
+    return 'sync.sync_all_data'.tr;
   }
 
   void _handleSyncPress(BuildContext context, SyncProvider syncProvider) async {

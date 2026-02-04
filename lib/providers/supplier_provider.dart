@@ -13,6 +13,7 @@ class SupplierProvider with ChangeNotifier {
   bool _isLoading = false;
   Supplier? _selectedSupplier;
   String? _selectedSupplierName; // For supplier transaction report
+  String? _selectedSupplierId; // String id for report/details linkage
 
   // Pagination properties
   int _currentPage = 1;
@@ -28,6 +29,7 @@ class SupplierProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   Supplier? get selectedSupplier => _selectedSupplier;
   String? get selectedSupplierName => _selectedSupplierName;
+  String? get selectedSupplierId => _selectedSupplierId;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get itemsPerPage => _itemsPerPage;
@@ -59,6 +61,17 @@ class SupplierProvider with ChangeNotifier {
   // Clear selected supplier name
   void clearSelectedSupplierName() {
     _selectedSupplierName = null;
+    notifyListeners();
+  }
+
+  // Set selected supplier id for transaction report/details
+  void setSelectedSupplierId(String? supplierId) {
+    _selectedSupplierId = supplierId;
+    notifyListeners();
+  }
+
+  void clearSelectedSupplierId() {
+    _selectedSupplierId = null;
     notifyListeners();
   }
 
@@ -215,7 +228,6 @@ class SupplierProvider with ChangeNotifier {
       urlString += '?supplier_name=$supplierName';
     }
     final url = Uri.parse(urlString);
-    // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
@@ -258,6 +270,90 @@ class SupplierProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return [];
+    }
+  }
+
+  // Fetch filtered supplier transactions from API
+  Future<Map<String, dynamic>> fetchSupplierTransactions({
+    required String accessToken,
+    String? supplierName,
+    String? supplierId,
+    String? transactionType,
+    String? fromDate,
+    String? toDate,
+    bool listAll = true,
+    int? page,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    // Build URL with query parameters
+    String urlString = APPUrl.supplierTransactions;
+    List<String> queryParams = [];
+
+    if (supplierName != null && supplierName.isNotEmpty) {
+      queryParams.add('supplier_name=$supplierName');
+    }
+    if (supplierId != null && supplierId.isNotEmpty) {
+      queryParams.add('supplier_id=$supplierId');
+    }
+    if (transactionType != null && transactionType.isNotEmpty) {
+      queryParams.add('transaction_type=$transactionType');
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParams.add('from_date=$fromDate');
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParams.add('to_date=$toDate');
+    }
+    queryParams.add('list_all=${listAll.toString()}');
+    if (page != null && page > 0) {
+      queryParams.add('page=$page');
+    }
+
+    if (queryParams.isNotEmpty) {
+      urlString += '?${queryParams.join('&')}';
+    }
+
+    final url = Uri.parse(urlString);
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint('Supplier Transactions API Response status: ${response.statusCode}');
+      debugPrint('Supplier Transactions API URL: $url');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        _isLoading = false;
+        notifyListeners();
+        return jsonData;
+      } else {
+        debugPrint('Error fetching supplier transactions: ${response.body}');
+        _isLoading = false;
+        notifyListeners();
+        throw Exception('Failed to load supplier transactions');
+      }
+    } catch (e) {
+      debugPrint('Exception in fetchSupplierTransactions: $e');
+      _isLoading = false;
+      notifyListeners();
+      throw e;
     }
   }
 
@@ -353,6 +449,97 @@ class SupplierProvider with ChangeNotifier {
         'status': 'error',
         'message':
             'Network error: Please check your internet connection and try again.'
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> updateSupplier({
+    required int id,
+    required String name,
+    required String phone,
+    required String accessToken,
+    required double balance,
+    String? email,
+    String? address,
+    String? altPhone,
+    String? paymentStatus,
+    String? productCategories,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final Map<String, dynamic> apiBodyData = {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'balance': balance,
+      if (email != null) 'email': email,
+      if (address != null) 'address': address,
+      if (altPhone != null) 'alt_phone': altPhone,
+      if (paymentStatus != null) 'payment_type': paymentStatus,
+      if (productCategories != null) 'product_categories': productCategories,
+    };
+
+    final url = Uri.parse(APPUrl.updateSupplier);
+
+    debugPrint('Update Supplier API Body: ${json.encode(apiBodyData)}');
+    debugPrint('Update Supplier API URL: $url');
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      _isLoading = false;
+      notifyListeners();
+
+      debugPrint('Update Supplier API Response status: ${response.statusCode}');
+      debugPrint('Update Supplier API Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        await fetchSuppliers(accessToken: accessToken);
+        final jsonResponse = json.decode(response.body);
+        return Map<String, dynamic>.from(jsonResponse);
+      } else {
+        try {
+          final errorResponse = json.decode(response.body);
+          final safeErrorResponse = Map<String, dynamic>.from(errorResponse);
+          return {
+            'status': 'error',
+            'message': safeErrorResponse['message'] ?? 'Failed to update supplier',
+            'errors': safeErrorResponse['data'] ?? {},
+          };
+        } catch (jsonError) {
+          debugPrint('JSON parsing error: $jsonError');
+          return {
+            'status': 'error',
+            'message':
+                'Server error (Status: ${response.statusCode}). Please check your network connection and try again.',
+            'errors': {},
+          };
+        }
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Network/Exception error: $e');
+      return {
+        'status': 'error',
+        'message': 'Network error: Please check your internet connection and try again.'
       };
     }
   }

@@ -7,12 +7,15 @@ import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/sales_return/widgets/sales_return_detail_modal.dart';
+import 'package:pos_machine/screens/print/return_bill_print.dart';
+import 'package:pos_machine/models/order_details.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_container_box.dart';
 import '../../components/build_pagination_control.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class SalesReturnPage extends StatefulWidget {
   const SalesReturnPage({super.key});
@@ -43,10 +46,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
           Provider.of<SalesProvider>(context, listen: false);
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
       await salesProvider.fetchSalesReturn(
           accessToken: accessToken ?? "",
-          customerId: customerId!,
           page: currentPage);
       if (mounted) {
         setState(() {
@@ -64,9 +65,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
           Provider.of<SalesProvider>(context, listen: false);
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
       await salesProvider.fetchSalesReturn(
-          accessToken: accessToken ?? "", customerId: customerId!, page: page);
+          accessToken: accessToken ?? "", page: page);
 
       setState(() {
         currentPage = page;
@@ -125,7 +125,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         : _buildSalesReturnTable(salesProvider),
                   ),
                 ),
-                // _buildPaginationControls(salesProvider),
+                const SizedBox(height: 20),
+                _buildPaginationControls(salesProvider),
               ],
             ),
           ),
@@ -147,20 +148,20 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             ColorManager.textColor,
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            CustomRoundButton(
-              title: "Create Sales Return",
-              fct: () {
-                sideBarController.index.value = 49;
-              },
-              fontSize: 12,
-              height: 45,
-              width: 200,
-            ),
-          ],
-        ),
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.end,
+        //   children: [
+        //     CustomRoundButton(
+        //       title: "Create Sales Return",
+        //       fct: () {
+        //         sideBarController.index.value = 49;
+        //       },
+        //       fontSize: 12,
+        //       height: 45,
+        //       width: 200,
+        //     ),
+        //   ],
+        // ),
       ],
     );
   }
@@ -255,11 +256,42 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
   }
 
   TableRow _buildTableRow(SalesReturnOrder order, int index) {
+    // Calculate total quantity by summing all item quantities
+    int totalQuantity = order.items.fold<int>(
+      0,
+      (sum, item) => sum + (item.quantity is int ? item.quantity as int : (item.quantity as double).toInt()),
+    );
+    
     return TableRow(
       children: [
-        _buildTableCell(order.orderId.toString()),
-        _buildTableCell(order.items.length.toString()),
-        _buildTableCell(order.totalAmount),
+        _buildTableCell(order.order?.orderNumber ?? order.orderId.toString()),
+        _buildTableCell(totalQuantity.toString()),
+        // Total Return Amount with currency
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.all(15.0),
+            child: Center(
+              child: Consumer<AppSettingsProvider>(
+                builder: (context, settings, _) {
+                  final currency = settings.appSettings?.currency ?? 'INR';
+                  final raw = order.totalAmount; // string
+                  final parsed = double.tryParse(raw);
+                  final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                  return Text(
+                    '$currency $amount',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.13,
+                      Colors.black,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(order.status.toString(), isStatusCell: true),
         _buildTableCell(DateHelper.formatISODate(order.createdAt.toString())),
         TableCell(
@@ -267,26 +299,69 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             child: Padding(
               padding: const EdgeInsets.all(15.0),
               child: Center(
-                child: BuildBoxShadowContainer(
-                    margin: const EdgeInsets.only(left: 5, right: 5),
-                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                    circleRadius: 5,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.visibility,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
-                        // Show modal with sales return details
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return SalesReturnDetailModal(order: order);
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // View button
+                    BuildBoxShadowContainer(
+                        margin: const EdgeInsets.only(left: 5, right: 5),
+                        color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                        circleRadius: 5,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.visibility,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            // Show modal with sales return details
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return SalesReturnDetailModal(order: order);
+                              },
+                            );
                           },
-                        );
-                      },
-                    )),
+                        )),
+                    // Print button
+                    BuildBoxShadowContainer(
+                        margin: const EdgeInsets.only(left: 5, right: 5),
+                        color: Colors.green.withOpacity(0.9),
+                        circleRadius: 5,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.print,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            // Convert SalesReturnOrder items to OrderReturnItem list
+                            List<OrderReturnItem> returnItems = order.items.map((item) {
+                              return OrderReturnItem(
+                                id: item.id,
+                                productName: item.cartItem.product?.name ?? 'Unknown',
+                                quantity: item.quantity is int ? item.quantity as int : (item.quantity as double).toInt(),
+                                reason: item.reason,
+                              );
+                            }).toList();
+
+                            // Navigate to Return Bill Print Page
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReturnBillPrintPage(
+                                  returnItems: returnItems,
+                                  returnTotalAmount: order.totalAmount,
+                                  orderDate: order.createdAt.toString(),
+                                  orderNumber: order.order?.orderNumber ?? order.orderId.toString(),
+                                  customerName: order.order?.customer?.user?.name,
+                                ),
+                              ),
+                            );
+                          },
+                        )),
+                  ],
+                ),
               ),
             )),
       ],
@@ -299,17 +374,17 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       Color iconColor;
 
       if (text == '1') {
-        // Approved or success status
+        // Approved status
         iconData = Icons.check_circle;
         iconColor = Colors.green;
       } else if (text == '0') {
-        // Pending or failed status
+        // Pending status - show red X
         iconData = Icons.cancel;
         iconColor = Colors.red;
       } else {
-        // Default case
-        iconData = Icons.help_outline;
-        iconColor = Colors.grey;
+        // Default case (rejected or unknown)
+        iconData = Icons.cancel;
+        iconColor = Colors.red;
       }
 
       return TableCell(
@@ -349,8 +424,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
 
   Widget _buildPaginationControls(SalesProvider salesProvider) {
     return PaginationControl(
-      currentPage: salesProvider.currentPage,
-      totalPages: salesProvider.totalPages,
+      currentPage: salesProvider.salesReturnCurrentPage,
+      totalPages: salesProvider.salesReturnTotalPages,
       onPageChanged: (int page) {
         _searchSalesReturns(page);
       },

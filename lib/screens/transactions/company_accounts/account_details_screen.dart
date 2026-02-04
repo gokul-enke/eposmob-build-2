@@ -5,6 +5,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/company_accounts.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -376,7 +377,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                         Colors.black87,
                       )),
                   const SizedBox(height: 6),
-                  _amountText('₹${account.formattedReceived}', Colors.green),
+                  _amountText(
+                      '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${account.formattedReceived}',
+                      Colors.green),
                 ],
               ),
             ),
@@ -392,7 +395,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                         Colors.black87,
                       )),
                   const SizedBox(height: 6),
-                  _amountText('₹${account.formattedSent}', Colors.red),
+                  _amountText(
+                      '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${account.formattedSent}',
+                      Colors.red),
                 ],
               ),
             ),
@@ -408,7 +413,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                         Colors.black87,
                       )),
                   const SizedBox(height: 6),
-                  _amountText('₹${account.formattedBalance}', Colors.blueGrey),
+                  _amountText(
+                      '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${account.formattedBalance}',
+                      Colors.blueGrey),
                 ],
               ),
             ),
@@ -546,7 +553,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                         ),
                         // AMOUNT - formattedAmount
                         Expanded(
-                          child: Text('₹${tx.formattedAmount}',
+                          child: Text(
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${tx.formattedAmount}',
                               textAlign: TextAlign.center,
                               style: const TextStyle(fontSize: 12)),
                         ),

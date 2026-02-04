@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../providers/shared_preferences.dart';
 
 // Import the different dashboard widgets
+import 'admin_dashboard.dart';
 import 'company_admin.dart';
 import 'sales_exicutive_dahsboard.dart';
 
@@ -31,21 +32,52 @@ class _DashboardUiScreenState extends State<DashboardUIScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Show appropriate dashboard based on user role
-    if (userRole == 'sales_executive') {
-      return const SalesExecutiveDashboard();
-    } else if (userRole == 'company_admin') {
-      return const CompanyAdminDashboard();
-    } else if (userRole == 'admin') {
-      // For admin role, show company admin dashboard as default
-      return const CompanyAdminDashboard();
+  // @override
+  // Widget build(BuildContext context) {
+  //   // Show appropriate dashboard based on user role
+  //   if (userRole == 'sales_executive') {
+  //     return const SalesExecutiveDashboard();
+  //   } else if (userRole == 'company_admin') {
+  //     return const CompanyAdminDashboard();
+  //   } else if (userRole == 'admin') {
+  //     // For admin role, show admin dashboard
+  //     return const AdminDashboard();
+  //   }
+
+  //   // Default to company admin dashboard if no role is matched
+  //   return const CompanyAdminDashboard();
+  // }
+
+      @override
+    Widget build(BuildContext context) {
+      return DefaultTabController(
+        length: 3,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('All Dashboards'),
+            bottom: const TabBar(
+              tabs: [
+                Tab(text: 'Admin'),
+                Tab(text: 'Company Admin'),
+                Tab(text: 'Sales Executive'),
+              ],
+            ),
+          ),
+          body: const TabBarView(
+            children: [
+              AdminDashboard(),
+              CompanyAdminDashboard(),
+              SalesExecutiveDashboard(),
+            ],
+          ),
+        ),
+      );
     }
 
-    // Default to company admin dashboard if no role is matched
-    return const CompanyAdminDashboard();
-  }
+
+
+
+
 }
 
 class GraphData {

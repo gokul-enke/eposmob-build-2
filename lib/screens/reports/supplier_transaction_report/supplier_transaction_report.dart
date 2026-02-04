@@ -12,15 +12,12 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_pagination_control.dart';
 
 // Import the supplier autocomplete and date filtering components
-import 'package:pos_machine/screens/suppliers/widgets/supplier_auto_complete.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'dart:async';
-
-// Import the supplier transaction details screen
-import 'supplier_transaction_details_screen.dart';
 
 class SupplierTransactionReportScreen extends StatefulWidget {
   const SupplierTransactionReportScreen({super.key});
@@ -36,7 +33,10 @@ class _SupplierTransactionReportScreenState
   bool initLoading = false;
   List<Supplier>? allSuppliers = [];
 
-  // For grouping supplier transactions
+  // For storing API response data
+  List<dynamic>? _groupedData = [];
+  
+  // For grouping supplier transactions (keyed by supplierId)
   Map<String, SupplierTransactionSummary> supplierSummary = {};
 
   // Controllers for filters
@@ -46,12 +46,17 @@ class _SupplierTransactionReportScreenState
 
   // Filter variables
   String searchSupplier = '';
+  String? selectedSupplierId;
 
   // Supplier suggestions for autocomplete
   List<String> supplierSuggestions = [];
 
   // Timer for debouncing supplier search
   Timer? _supplierSearchTimer;
+
+  // Pagination
+  int _currentPage = 1;
+  int _lastPage = 1;
 
   @override
   void initState() {
@@ -72,16 +77,10 @@ class _SupplierTransactionReportScreenState
 
   // Set default date values: 1 month before current date for from_date, current date for to_date
   void _setInitialDateFilters() {
-    final now = DateTime.now();
-    final oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
-
-    final formatter = DateFormat('yyyy-MM-dd');
-    final fromDateStr = formatter.format(oneMonthAgo);
-    final toDateStr = formatter.format(now);
-
+    // Default to no date filter: leave both fields empty
     setState(() {
-      _fromDateController.text = fromDateStr;
-      _toDateController.text = toDateStr;
+      _fromDateController.text = '';
+      _toDateController.text = '';
     });
   }
 
@@ -96,25 +95,23 @@ class _SupplierTransactionReportScreenState
       SupplierProvider supplierProvider =
           Provider.of<SupplierProvider>(context, listen: false);
 
-      // Fetch all suppliers with their transaction data
+      // Fetch suppliers for autocomplete suggestions
       await supplierProvider.fetchSuppliers(
         accessToken: accessToken ?? "",
         supplierName: null,
       );
 
-      // Get all suppliers from the provider's allSuppliers list (not the paginated supplierList)
+      // Get all suppliers for suggestions
       allSuppliers = supplierProvider.allSuppliers ?? [];
-
-      // Populate supplier suggestions
       final suggestions = getSupplierSuggestions();
 
-      // Apply filters immediately
-      _applyFilters();
-
-      // Update the supplier suggestions and trigger a rebuild
       setState(() {
         supplierSuggestions = suggestions;
       });
+
+      // Load filtered transaction data from API
+      await _loadFilteredTransactionData();
+
     } catch (error) {
       debugPrint('Error loading supplier data: $error');
       if (mounted) {
@@ -148,128 +145,149 @@ class _SupplierTransactionReportScreenState
     return suggestions;
   }
 
-  void _applyFilters() {
-    if (allSuppliers == null || allSuppliers!.isEmpty) {
+  // Load filtered supplier grouped data from API
+  Future<void> _loadFilteredTransactionData({int? page}) async {
+    debugPrint('🔄 [SUPPLIER_TX_REPORT] Starting _loadFilteredTransactionData');
+    debugPrint('📋 [SUPPLIER_TX_REPORT] Search supplier: "${searchSupplier}"');
+    debugPrint('📅 [SUPPLIER_TX_REPORT] From date: "${_fromDateController.text}"');
+    debugPrint('📅 [SUPPLIER_TX_REPORT] To date: "${_toDateController.text}"');
+    debugPrint('👥 [SUPPLIER_TX_REPORT] Total suppliers available: ${allSuppliers?.length ?? 0}');
+    
+    try {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint('🔑 [SUPPLIER_TX_REPORT] Access token: ${accessToken != null ? "Present" : "NULL"}');
+      
+      SupplierProvider supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
+
+      // Use pre-selected supplierId if available (set on autocomplete selection)
+      String? supplierId = selectedSupplierId;
+      if (supplierId != null && supplierId.isNotEmpty) {
+        debugPrint('✅ [SUPPLIER_TX_REPORT] Using selected supplierId: $supplierId for fetch');
+      } else {
+        debugPrint('ℹ️ [SUPPLIER_TX_REPORT] No supplier selected, fetching for all suppliers');
+      }
+
+      // Call API with filters
+      debugPrint('🌐 [SUPPLIER_TX_REPORT] Calling fetchSupplierTransactions API');
+      debugPrint('📤 [SUPPLIER_TX_REPORT] API Parameters:');
+      debugPrint('   - supplierName: null (using supplierId when selected)');
+      debugPrint('   - supplierId: ${supplierId ?? "null"}');
+      debugPrint('   - fromDate: ${_fromDateController.text.isNotEmpty ? _fromDateController.text : "null"}');
+      debugPrint('   - toDate: ${_toDateController.text.isNotEmpty ? _toDateController.text : "null"}');
+      debugPrint('   - listAll: true');
+      
+      final response = await supplierProvider.fetchSupplierTransactions(
+        accessToken: accessToken ?? "",
+        supplierName: null, // Always prefer ID for accuracy
+        supplierId: supplierId,
+        transactionType: null, // Can be added later if needed
+        fromDate: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+        toDate: _toDateController.text.isNotEmpty ? _toDateController.text : null,
+        listAll: true,
+        page: page ?? _currentPage,
+      );
+      
+      debugPrint('📥 [SUPPLIER_TX_REPORT] API Response received');
+      debugPrint('📊 [SUPPLIER_TX_REPORT] Response keys: ${response.keys.toList()}');
+      final dataNode = response['data'];
+      debugPrint('🧪 [SUPPLIER_TX_REPORT] data node type: ${dataNode.runtimeType}');
+      // New grouped response: data is Map with pagination and data list
+      if (dataNode is Map && dataNode['data'] is List) {
+        // Update pagination
+        try {
+          _currentPage = (dataNode['current_page'] ?? 1) is num
+              ? (dataNode['current_page'] as num).toInt()
+              : int.tryParse((dataNode['current_page'] ?? '1').toString()) ?? 1;
+          _lastPage = (dataNode['last_page'] ?? 1) is num
+              ? (dataNode['last_page'] as num).toInt()
+              : int.tryParse((dataNode['last_page'] ?? '1').toString()) ?? 1;
+        } catch (_) {}
+
+        final groups = List<dynamic>.from(dataNode['data']);
+        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed groups from data["data"] (count=${groups.length})');
+        setState(() {
+          _groupedData = groups;
+        });
+        _processGroupedData();
+      } else if (dataNode is List) {
+        // Legacy/alternate response: data is a top-level list of groups
+        final groups = List<dynamic>.from(dataNode);
+        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed groups from top-level List (count=${groups.length})');
+        setState(() {
+          _groupedData = groups;
+          _currentPage = 1;
+          _lastPage = 1;
+        });
+        _processGroupedData();
+      } else {
+        // Fallback to empty
+        setState(() {
+          _groupedData = [];
+          supplierSummary.clear();
+        });
+      }
+      debugPrint('✅ [SUPPLIER_TX_REPORT] _loadFilteredTransactionData completed successfully');
+
+    } catch (error) {
+      debugPrint('💥 [SUPPLIER_TX_REPORT] ERROR in _loadFilteredTransactionData: $error');
+      debugPrint('📍 [SUPPLIER_TX_REPORT] Error stack trace: ${StackTrace.current}');
+      setState(() {
+        _groupedData = [];
+        supplierSummary.clear();
+      });
+    }
+  }
+
+  // Process grouped API data to create supplier summary
+  void _processGroupedData() {
+    debugPrint('⚙️ [SUPPLIER_TX_REPORT] Starting _processApiTransactionData');
+    
+    if (_groupedData == null || _groupedData!.isEmpty) {
+      debugPrint('📭 [SUPPLIER_TX_REPORT] No transaction data to process');
       setState(() {
         supplierSummary.clear();
       });
       return;
     }
+    
+    debugPrint('📊 [SUPPLIER_TX_REPORT] Processing ${_groupedData!.length} supplier groups');
 
-    // Apply filters
-    List<Supplier> filteredList = [...allSuppliers!];
+    // Keyed by supplierId
+    Map<String, SupplierTransactionSummary> processedSummary = {};
+    for (final g in _groupedData!) {
+      if (g is! Map) continue;
+      final String supplierIdKey = (g['supplier_id']?.toString() ?? '').trim();
+      final String displayName = (g['supplier_name'] ?? 'Unknown').toString();
+      final double totalDebit = (g['total_debit'] is num)
+          ? (g['total_debit'] as num).toDouble()
+          : double.tryParse((g['total_debit'] ?? '0').toString()) ?? 0.0;
+      final double totalCredit = (g['total_credit'] is num)
+          ? (g['total_credit'] as num).toDouble()
+          : double.tryParse((g['total_credit'] ?? '0').toString()) ?? 0.0;
+      final double balance = (g['balance'] is num)
+          ? (g['balance'] as num).toDouble()
+          : double.tryParse((g['balance'] ?? '0').toString()) ?? 0.0;
+      final int txnCount = (g['transactions'] is List) ? (g['transactions'] as List).length : 0;
 
-    // Supplier filter
-    if (searchSupplier.isNotEmpty) {
-      filteredList = filteredList
-          .where((supplier) => supplier.name
-              .toLowerCase()
-              .contains(searchSupplier.toLowerCase()))
-          .toList();
-    }
+      if (supplierIdKey.isEmpty) continue;
 
-    // Date range filter for transactions - similar to customer report logic
-    if (_fromDateController.text.isNotEmpty ||
-        _toDateController.text.isNotEmpty) {
-      try {
-        final formatter = DateFormat('yyyy-MM-dd');
-
-        filteredList = filteredList.map((supplier) {
-          // Filter transactions within date range
-          List<SupplierTransaction> filteredTransactions = supplier.transactions.where((transaction) {
-            if (transaction.date.isEmpty) return false;
-
-            try {
-              final transactionDate = formatter.parse(transaction.date);
-
-              // If from date is set, check that transaction date is not before it
-              if (_fromDateController.text.isNotEmpty) {
-                final fromDate = formatter.parse(_fromDateController.text);
-                if (transactionDate.isBefore(fromDate)) return false;
-              }
-
-              // If to date is set, check that transaction date is not after it
-              if (_toDateController.text.isNotEmpty) {
-                final toDate = formatter.parse(_toDateController.text);
-                // Include the to date by adding one day and checking if transaction date is before
-                if (transactionDate.isAfter(toDate)) return false;
-              }
-
-              return true;
-            } catch (e) {
-              debugPrint('Date parsing error for transaction: $e');
-              return false;
-            }
-          }).toList();
-
-          // Return supplier with filtered transactions
-          return Supplier(
-            id: supplier.id,
-            name: supplier.name,
-            email: supplier.email,
-            phone: supplier.phone,
-            altPhone: supplier.altPhone,
-            productCategories: supplier.productCategories,
-            address: supplier.address,
-            balance: supplier.balance,
-            paymentType: supplier.paymentType,
-            companyId: supplier.companyId,
-            currentBalance: supplier.currentBalance,
-            balanceStatus: supplier.balanceStatus,
-            createdAt: supplier.createdAt,
-            updatedAt: supplier.updatedAt,
-            userId: supplier.userId,
-            transactions: filteredTransactions,
-            purchases: supplier.purchases,
-          );
-        }).toList();
-      } catch (e) {
-        debugPrint('Date parsing error: $e');
-      }
-    }
-
-    // Recalculate supplier summary with filtered suppliers
-    _calculateSupplierSummaryFromFilteredList(filteredList);
-  }
-
-  void _calculateSupplierSummaryFromFilteredList(List<Supplier> filteredList) {
-    Map<String, SupplierTransactionSummary> filteredSupplierSummary = {};
-
-    for (var supplier in filteredList) {
-      String supplierName = supplier.name;
-      double totalDebit = 0.0;
-      double totalCredit = 0.0;
-
-      // Calculate totals from filtered transactions (similar to customer report logic)
-      for (var transaction in supplier.transactions) {
-        double amount = double.tryParse(transaction.amount) ?? 0.0;
-
-        // Assuming "Credit" type increases balance and "Debit" type decreases balance
-        if (transaction.type.toLowerCase() == 'credit') {
-          totalCredit += amount;
-        } else if (transaction.type.toLowerCase() == 'debit') {
-          totalDebit += amount;
-        }
-      }
-
-      // Calculate balance from transactions (similar to customer report)
-      double calculatedBalance = totalCredit - totalDebit;
-
-      // Only add suppliers that have transactions or non-zero balances
-      if (supplier.transactions.isNotEmpty || supplier.currentBalance != 0.0) {
-        filteredSupplierSummary[supplierName] = SupplierTransactionSummary(
-          supplierName: supplierName,
-          totalDebit: totalDebit,
-          totalCredit: totalCredit,
-          balance: calculatedBalance, // Use calculated balance from transactions
-          transactionCount: supplier.transactions.length,
-        );
-      }
+      processedSummary[supplierIdKey] = SupplierTransactionSummary(
+        supplierId: supplierIdKey,
+        displayName: displayName,
+        totalDebit: totalDebit,
+        totalCredit: totalCredit,
+        balance: balance,
+        transactionCount: txnCount,
+      );
     }
 
     setState(() {
-      supplierSummary = filteredSupplierSummary;
+      supplierSummary = processedSummary;
     });
+    
+    debugPrint('✅ [SUPPLIER_TX_REPORT] _processApiTransactionData completed. ${processedSummary.length} suppliers in summary');
   }
 
   void _resetFilters() {
@@ -284,6 +302,9 @@ class _SupplierTransactionReportScreenState
     // Reset the search variables
     setState(() {
       searchSupplier = '';
+      selectedSupplierId = null;
+      _groupedData = [];
+      supplierSummary.clear();
     });
 
     // Set default date values
@@ -299,7 +320,7 @@ class _SupplierTransactionReportScreenState
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: () async => loadInitData(),
+        onRefresh: () async => await _loadFilteredTransactionData(),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           padding: const EdgeInsets.all(8),
@@ -325,6 +346,8 @@ class _SupplierTransactionReportScreenState
                 _buildFilters(),
                 const SizedBox(height: 20),
                 _buildReportTable(),
+                const SizedBox(height: 10),
+                _buildPagination(),
               ],
             ),
           ),
@@ -354,53 +377,62 @@ class _SupplierTransactionReportScreenState
     return Column(
       children: [
         // First row of filters
-        SizedBox(
-          height: 90,
-          child: Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: _buildSupplierAutocompleteField(),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 1,
+              child: _buildSupplierAutocompleteField(),
+            ),
+            Expanded(
+              flex: 1,
+              child: _buildDateField(
+                "From Date",
+                _fromDateController,
+                true,
               ),
-              Expanded(
-                flex: 1,
-                child: _buildDateField(
-                  "From Date",
-                  _fromDateController,
-                  true,
+            ),
+            Expanded(
+              flex: 1,
+              child: _buildDateField(
+                "To Date",
+                _toDateController,
+                false,
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 45, left: 10),
+                child: CustomRoundButton(
+                  title: "Reset",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  fct: _resetFilters,
+                  height: 45,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
                 ),
               ),
-              Expanded(
-                flex: 1,
-                child: _buildDateField(
-                  "To Date",
-                  _toDateController,
-                  false,
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 45, left: 10),
-                  child: CustomRoundButton(
-                    title: "Reset",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    fct: _resetFilters,
-                    height: 45,
-                    width: double.infinity,
-                    fontSize: FontSize.s12,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildSupplierAutocompleteField() {
+    // Derive currently selected Supplier from selectedSupplierId to show in dropdown
+    Supplier? currentSelected;
+    if (selectedSupplierId != null && allSuppliers != null && allSuppliers!.isNotEmpty) {
+      try {
+        currentSelected = allSuppliers!
+            .firstWhere((s) => s.id.toString() == selectedSupplierId);
+      } catch (_) {
+        currentSelected = null;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -419,19 +451,25 @@ class _SupplierTransactionReportScreenState
             ),
           ),
           const SizedBox(height: 8),
-          SupplierAutocomplete(
-            size: MediaQuery.of(context).size,
-            supplierList: supplierSuggestions, // This will now update properly
-            controller: _supplierController,
-            onSelected: (String selectedSupplier) {
-              // Cancel any pending search
-              _supplierSearchTimer?.cancel();
-
+          BuildDropDownWithSearch<Supplier>(
+            title: null,
+            hintText: "Search Supplier",
+            value: currentSelected,
+            items: allSuppliers ?? const <Supplier>[],
+            displayText: (s) => s.name,
+            height: 45,
+            margin: EdgeInsets.zero,
+            onChanged: (Supplier? s) {
               setState(() {
-                searchSupplier = selectedSupplier;
+                selectedSupplierId = s?.id.toString();
+                searchSupplier = s?.name ?? '';
               });
-              _applyFilters();
+              debugPrint('🔗 [SUPPLIER_TX_REPORT] dropdown onChanged: name="${s?.name}", supplierId=${selectedSupplierId ?? 'null'}');
+              _loadFilteredTransactionData();
             },
+            searchHintText: 'Type to search supplier...',
+            // Ensure consistent padding/width like date fields
+            width: double.infinity,
           ),
         ],
       ),
@@ -473,7 +511,7 @@ class _SupplierTransactionReportScreenState
                     _toDateController.text = formattedDate;
                   }
                 });
-                _applyFilters();
+                _loadFilteredTransactionData();
               },
               initialDate: controller.text.isNotEmpty
                   ? DateFormat('yyyy-MM-dd').parse(controller.text)
@@ -643,14 +681,14 @@ class _SupplierTransactionReportScreenState
       SupplierTransactionSummary summary, BuildContext context) {
     // Alternate row colors for better readability
     final int index =
-        supplierSummary.keys.toList().indexOf(summary.supplierName);
+        supplierSummary.keys.toList().indexOf(summary.supplierId);
 
     return TableRow(
       decoration: BoxDecoration(
         color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
       ),
       children: [
-        _buildTableCell(summary.supplierName),
+        _buildTableCell(summary.displayName),
         _buildTableCell(
           summary.totalDebit.toStringAsFixed(2),
         ),
@@ -680,7 +718,9 @@ class _SupplierTransactionReportScreenState
                 onPressed: () {
                   // Set the selected supplier and navigate to details
                   Provider.of<SupplierProvider>(context, listen: false)
-                      .setSelectedSupplierName(summary.supplierName);
+                      ..setSelectedSupplierName(summary.displayName)
+                      ..setSelectedSupplierId(summary.supplierId);
+                  debugPrint('👁️ [SUPPLIER_TX_REPORT] View clicked for supplierId=${summary.supplierId}, name="${summary.displayName}"');
                   sideBarController.index.value =
                       68; // Navigate to SupplierTransactionDetailsScreen
                 },
@@ -718,17 +758,31 @@ class _SupplierTransactionReportScreenState
       ),
     );
   }
+
+  Widget _buildPagination() {
+    return PaginationControl(
+      currentPage: _currentPage,
+      totalPages: _lastPage,
+      onPageChanged: (int page) {
+        if (!initLoading && page >= 1 && page <= _lastPage) {
+          _loadFilteredTransactionData(page: page);
+        }
+      },
+    );
+  }
 }
 
 class SupplierTransactionSummary {
-  final String supplierName;
+  final String supplierId;
+  final String displayName;
   double totalDebit;
   double totalCredit;
   double balance;
   int transactionCount;
 
   SupplierTransactionSummary({
-    required this.supplierName,
+    required this.supplierId,
+    required this.displayName,
     required this.totalDebit,
     required this.totalCredit,
     required this.balance,

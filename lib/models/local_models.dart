@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:pos_machine/models/category_list.dart';
 import '../models/get_product.dart';
 
 part 'local_models.g.dart';
@@ -34,11 +35,19 @@ class HiveLocalCartItem {
   @HiveField(5)
   final HiveStringValue? serializedSelectedStock;
 
+  @HiveField(6)
+  double? taxAmount;
+
+  @HiveField(7)
+  double? taxRate;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
     this.price,
     this.mrp,
+    this.taxAmount,
+    this.taxRate,
     required this.serializedProduct,
     this.serializedSelectedStock,
   });
@@ -116,6 +125,16 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(22)
   final bool? toCustomerCredit;
 
+  // Table association for restaurant drafts (optional)
+  @HiveField(23)
+  final String? tableId;
+
+  @HiveField(24)
+  final String? alternatePhone;
+
+  @HiveField(25)
+  final String? address;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -141,6 +160,9 @@ class HiveSavedOrder extends HiveObject {
     this.flatDiscount,
     this.percentageDiscount,
     this.toCustomerCredit,
+    this.tableId,
+    this.alternatePhone,
+    this.address,
   });
 }
 
@@ -231,6 +253,12 @@ class HiveGetProduct extends HiveObject {
   @HiveField(18)
   final String? productLocation;
 
+  @HiveField(19)
+  final String? totalTaxRate; // Restore totalTaxRate field
+
+  @HiveField(20)
+  final List<HiveProductTax>? taxes;
+
   HiveGetProduct({
     this.productId,
     this.categoryId,
@@ -251,6 +279,8 @@ class HiveGetProduct extends HiveObject {
     this.isSelected = false,
     this.offerPrice,
     this.productLocation,
+    this.totalTaxRate,
+    this.taxes,
   });
 
   // Convert from app model to Hive model
@@ -281,6 +311,10 @@ class HiveGetProduct extends HiveObject {
       isSelected: product.isSelected,
       offerPrice: product.offerPrice?.toString(),
       productLocation: product.productLocation?.toString(),
+      totalTaxRate: product.totalTaxRate.toString(),
+      taxes: product.taxes != null && product.taxes!.isNotEmpty
+          ? product.taxes!.map((t) => HiveProductTax.fromProductTax(t)).toList()
+          : [],
     );
   }
 
@@ -301,11 +335,61 @@ class HiveGetProduct extends HiveObject {
       price: price?.toProductPrice(),
       mrp: mrp,
       purchasePrice: purchasePrice,
-      attachment: attachment?.map((e) => e.toAttachment()).toList(),
+      attachment: attachment?.map((att) => att.toAttachment()).toList(),
       sku: sku,
       offerPrice: offerPrice,
       productLocation: productLocation,
+      // Restore taxes!
+      taxes: taxes?.map((t) => t.toProductTax()).toList() ?? [],
     )..isSelected = isSelected;
+  }
+}
+
+// ... existing classes ...
+
+@HiveType(typeId: 10)
+class HiveProductTax {
+  @HiveField(0)
+  final int? id;
+
+  @HiveField(1)
+  final String? name;
+
+  @HiveField(2)
+  final String? code;
+
+  @HiveField(3)
+  final String? rate;
+
+  @HiveField(4)
+  final String? source;
+
+  HiveProductTax({
+    this.id,
+    this.name,
+    this.code,
+    this.rate,
+    this.source,
+  });
+
+  factory HiveProductTax.fromProductTax(ProductTax tax) {
+    return HiveProductTax(
+      id: tax.id,
+      name: tax.name,
+      code: tax.code,
+      rate: tax.rate,
+      source: tax.source,
+    );
+  }
+
+  ProductTax toProductTax() {
+    return ProductTax(
+      id: id,
+      name: name,
+      code: code,
+      rate: rate,
+      source: source,
+    );
   }
 }
 
@@ -467,6 +551,97 @@ class HiveAttachment extends HiveObject {
       createdAt: createdAt,
       updatedAt: updatedAt,
       file: file,
+    );
+  }
+}
+
+// Category Storage model for Hive
+@HiveType(typeId: 8)
+class HiveCategory extends HiveObject {
+  @HiveField(0)
+  final int? categoryId;
+
+  @HiveField(1)
+  final String? categoryName;
+
+  @HiveField(2)
+  final String? categorySlug;
+
+  @HiveField(3)
+  final int? productsCount;
+
+  @HiveField(4)
+  final String? categoryImage;
+
+  @HiveField(5)
+  final String? categoryIcon;
+
+  @HiveField(6)
+  final HiveParentCategory? parent;
+
+  HiveCategory({
+    this.categoryId,
+    this.categoryName,
+    this.categorySlug,
+    this.productsCount,
+    this.categoryImage,
+    this.categoryIcon,
+    this.parent,
+  });
+
+  // Convert from app model to Hive model
+  factory HiveCategory.fromCategory(Category category) {
+    return HiveCategory(
+      categoryId: category.categoryId,
+      categoryName: category.categoryName,
+      categorySlug: category.categorySlug,
+      productsCount: category.productsCount,
+      categoryImage: category.categoryImage,
+      categoryIcon: category.categoryIcon,
+      parent: category.parent != null
+          ? HiveParentCategory.fromParentCategory(category.parent!)
+          : null,
+    );
+  }
+
+  // Convert back to app model
+  Category toCategory() {
+    return Category(
+      categoryId: categoryId,
+      categoryName: categoryName,
+      categorySlug: categorySlug,
+      productsCount: productsCount,
+      categoryImage: categoryImage,
+      categoryIcon: categoryIcon,
+      parent: parent?.toParentCategory(),
+    );
+  }
+}
+
+@HiveType(typeId: 9)
+class HiveParentCategory extends HiveObject {
+  @HiveField(0)
+  final int? id;
+
+  @HiveField(1)
+  final String? name;
+
+  HiveParentCategory({
+    this.id,
+    this.name,
+  });
+
+  factory HiveParentCategory.fromParentCategory(ParentCategory parentCategory) {
+    return HiveParentCategory(
+      id: parentCategory.id,
+      name: parentCategory.name,
+    );
+  }
+
+  ParentCategory toParentCategory() {
+    return ParentCategory(
+      id: id,
+      name: name,
     );
   }
 }
