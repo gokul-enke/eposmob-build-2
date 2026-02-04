@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:pos_machine/screens/print/layouts/arabic_and_english_recipt_layput.dart';
 import 'receipt_layout.dart';
 import 'classic_receipt_layout.dart';
 import 'premium_receipt_layout.dart';
@@ -22,6 +23,7 @@ class ReceiptLayoutFactory {
     'classic': () => ClassicReceiptLayout(),
     'premium': () => PremiumReceiptLayout(),
     'standard': () => StandardReceiptLayout(),
+    'arabic_and_english': () => ArabicAndEnglishReceiptLayout(),
   };
 
   /// Get a layout instance based on the theme identifier.
