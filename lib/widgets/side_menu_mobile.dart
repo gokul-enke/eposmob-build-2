@@ -11,6 +11,7 @@ import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/widgets/drawer_list_tile_expandable.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -277,8 +278,11 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                               listen: false);
                       final categoryProvider =
                           Provider.of<CategoryProvider>(context, listen: false);
+                      final docConfigProvider =
+                          Provider.of<DocumentConfigProvider>(context, listen: false);
                       await localProductProvider.clearAllLocalData();
                       await categoryProvider.clearAllCategories();
+                      await docConfigProvider.clearCache();
 
                       authModel.logout();
                       SharedPreferenceProvider().removeTokenAndCustomerId();

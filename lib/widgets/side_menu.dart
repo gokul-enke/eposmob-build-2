@@ -24,6 +24,7 @@ import '../widgets/store_switcher.dart';
 import '../providers/role_provider.dart';
 import '../providers/local_product_provider.dart';
 import '../providers/category_providers.dart';
+import '../providers/document_config_provider.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -890,8 +891,11 @@ class _SideMenuState extends State<SideMenu> {
                       Provider.of<LocalProductProvider>(context, listen: false);
                   final categoryProvider =
                       Provider.of<CategoryProvider>(context, listen: false);
+                  final docConfigProvider =
+                      Provider.of<DocumentConfigProvider>(context, listen: false);
                   await localProductProvider.clearAllLocalData();
                   await categoryProvider.clearAllCategories();
+                  await docConfigProvider.clearCache();
 
                   authModel.logout();
                   SharedPreferenceProvider().removeTokenAndCustomerId();

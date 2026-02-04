@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:hive/hive.dart';
 import 'package:pos_machine/models/category_list.dart';
 import '../models/get_product.dart';
@@ -347,7 +349,29 @@ class HiveGetProduct extends HiveObject {
 
 // ... existing classes ...
 
+// Document Configuration Storage model for Hive
 @HiveType(typeId: 10)
+class HiveDocumentConfig {
+  @HiveField(0)
+  final String? serializedData;
+
+  HiveDocumentConfig(this.serializedData);
+
+  // Convert from app model to Hive model
+  factory HiveDocumentConfig.fromDocumentConfig(Map<String, dynamic> config) {
+    return HiveDocumentConfig(json.encode(config));
+  }
+
+  // Convert back to app model (raw Map, not DocumentConfig to avoid circular dependency)
+  Map<String, dynamic> toJson() {
+    if (serializedData == null || serializedData!.isEmpty) {
+      return {};
+    }
+    return json.decode(serializedData!) as Map<String, dynamic>;
+  }
+}
+
+@HiveType(typeId: 11)
 class HiveProductTax {
   @HiveField(0)
   final int? id;
@@ -618,7 +642,32 @@ class HiveCategory extends HiveObject {
   }
 }
 
-@HiveType(typeId: 9)
+@HiveType(typeId: 12)
+// Adapter for HiveDocumentConfig
+class HiveDocumentConfigAdapter extends TypeAdapter<HiveDocumentConfig> {
+  @override
+  final int typeId = 10;
+
+  @override
+  HiveDocumentConfig read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = {
+      0: (String? v) => HiveDocumentConfig(v),
+    };
+    return fields[0]!(
+      reader.read()?['serializedData'] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, HiveDocumentConfig obj) {
+    writer
+      ..writeByte(1)
+      ..writeByte(0)
+      ..write(obj.serializedData);
+  }
+}
+
 class HiveParentCategory extends HiveObject {
   @HiveField(0)
   final int? id;

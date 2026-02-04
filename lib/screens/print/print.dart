@@ -122,9 +122,8 @@ class PrintPage extends StatefulWidget {
 
       debugPrint('[PrintPage] Auto-printing with default printer: ${selectedPrinter.deviceName}');
 
-      // Load document config
+      // Load document config from cache (NO API CALL - instant!)
       final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
-      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
       final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
 
@@ -137,29 +136,24 @@ class PrintPage extends StatefulWidget {
       final hasReturns = orderReturns != null &&
           orderReturns.returnItems != null &&
           orderReturns.returnItems!.isNotEmpty;
-      final type = hasReturns ? 'sales_and_return_bill' : 'bill';
 
       DocumentConfig? billDocumentConfig;
-      if (accessToken != null) {
-        billDocumentConfig = await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
-          accessToken: accessToken,
-          type: type,
-        );
-        if (billDocumentConfig == null) {
-          billDocumentConfig = hasReturns
-              ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
-              : docConfigProvider.getDocumentConfig("Bill");
-        }
+
+      // Try multiple config name patterns to find cached config
+      if (hasReturns) {
+        billDocumentConfig = docConfigProvider.getCachedConfig("Sales and Return Bill") ??
+                               docConfigProvider.getCachedConfig("sales_and_return_bill");
       } else {
-        billDocumentConfig = hasReturns
-            ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
-            : docConfigProvider.getDocumentConfig("Bill");
+        billDocumentConfig = docConfigProvider.getCachedConfig("Bill") ??
+                               docConfigProvider.getCachedConfig("bill");
       }
 
       if (billDocumentConfig == null) {
-        debugPrint('[PrintPage] Document config not loaded');
+        debugPrint('[PrintPage] Document config not found in cache. Printing not possible.');
         return false;
       }
+
+      debugPrint('[PrintPage] Using cached config: ${billDocumentConfig.type}');
 
       // Get paper size
       String paperSize = prefs.getString('default_paper_size') ?? '80mm';
@@ -527,35 +521,23 @@ class _PrintPageState extends State<PrintPage> {
           widget.orderReturns!.returnItems != null &&
           widget.orderReturns!.returnItems!.isNotEmpty;
 
-      final type = hasReturns ? 'sales_and_return_bill' : 'bill';
-
-      // debugPrint("Loading document config: type=$type, language=$language");
-
-      if (accessToken != null) {
-        // Use new language-aware API
-        _billDocumentConfig =
-            await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
-          accessToken: accessToken,
-          type: type,
-          // language: language,
-        );
-
-        if (_billDocumentConfig != null) {
-          // debugPrint(
-          //     "SUCCESS: Document configuration loaded with language=$language");
-        } else {
-          debugPrint(
-              "WARNING: Could not load document config, falling back to cached");
-          // Fallback to cached config
-          _billDocumentConfig = hasReturns
-              ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
-              : docConfigProvider.getDocumentConfig("Bill");
-        }
+      // Use cached config directly (NO API CALL - instant!)
+      if (hasReturns) {
+        _billDocumentConfig = docConfigProvider.getCachedConfig("Sales and Return Bill") ??
+                               docConfigProvider.getCachedConfig("sales_and_return_bill");
       } else {
-        debugPrint("No access token, using cached config");
+        _billDocumentConfig = docConfigProvider.getCachedConfig("Bill") ??
+                               docConfigProvider.getCachedConfig("bill");
+      }
+
+      if (_billDocumentConfig == null) {
+        debugPrint("WARNING: Document config not found in cache");
+        // Try fallback names
         _billDocumentConfig = hasReturns
             ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
             : docConfigProvider.getDocumentConfig("Bill");
+      } else {
+        debugPrint("✅ Document config loaded from cache: ${_billDocumentConfig?.type}");
       }
 
       setState(() {

@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import '../models/document_configurations.dart';
+import '../models/local_models.dart';
 import '../resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,9 +13,101 @@ class DocumentConfigProvider extends ChangeNotifier {
   DocumentConfigurationsModel? _documentConfigurations;
   String? _errorMessage;
 
+  // Hive box for persistent caching
+  Box<HiveDocumentConfig>? _docConfigBox;
+
+  DocumentConfigProvider() {
+    // Initialize Hive box when provider is created (fire and forget)
+    initHive();
+  }
+
   DocumentConfigurationsModel? get documentConfigurations =>
       _documentConfigurations;
   String? get errorMessage => _errorMessage;
+
+  /// Initialize Hive box for document configs
+  Future<void> initHive() async {
+    try {
+      if (!Hive.isBoxOpen('document_configs')) {
+        _docConfigBox =
+            await Hive.openBox<HiveDocumentConfig>('document_configs');
+        debugPrint(
+            '✅ [DocConfig] Hive box opened: ${_docConfigBox?.length} configs cached');
+      } else {
+        _docConfigBox = Hive.box<HiveDocumentConfig>('document_configs');
+        debugPrint(
+            '✅ [DocConfig] Hive box already open: ${_docConfigBox?.length} configs cached');
+      }
+
+      // Load configs from Hive into memory on init
+      await _loadFromHive();
+    } catch (e) {
+      debugPrint('❌ [DocConfig] Error opening Hive box: $e');
+    }
+  }
+
+  /// Clear all cached document configs (call on logout/tenant switch)
+  Future<void> clearCache() async {
+    try {
+      await _docConfigBox?.clear();
+      _documentConfigurations = null;
+      debugPrint('🗑️ [DocConfig] Cache cleared');
+    } catch (e) {
+      debugPrint('❌ [DocConfig] Error clearing cache: $e');
+    }
+  }
+
+  /// Load configs from Hive into memory
+  Future<void> _loadFromHive() async {
+    try {
+      if (_docConfigBox == null || _docConfigBox!.isEmpty) {
+        debugPrint('📭 [DocConfig] No cached configs in Hive');
+        return;
+      }
+
+      final Map<String, DocumentConfig> configsMap = {};
+      for (var key in _docConfigBox!.keys) {
+        final hiveConfig = _docConfigBox!.get(key);
+        if (hiveConfig != null && hiveConfig.serializedData != null) {
+          try {
+            final configData = json.decode(hiveConfig.serializedData!)
+                as Map<String, dynamic>;
+            configsMap[key] = DocumentConfig.fromJson(configData);
+            debugPrint('📦 [DocConfig] Loaded config: $key');
+          } catch (e) {
+            debugPrint('❌ [DocConfig] Error decoding config $key: $e');
+          }
+        }
+      }
+
+      if (configsMap.isNotEmpty) {
+        _documentConfigurations = DocumentConfigurationsModel(
+          status: 'cached',
+          documentConfigurations: configsMap,
+        );
+        debugPrint('✅ [DocConfig] Loaded ${configsMap.length} configs from Hive');
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('❌ [DocConfig] Error loading from Hive: $e');
+    }
+  }
+
+  /// Save a config to Hive
+  Future<void> _saveToHive(String key, Map<String, dynamic> configData) async {
+    try {
+      if (_docConfigBox == null) {
+        debugPrint('⚠️ [DocConfig] Hive box not initialized, skipping save');
+        return;
+      }
+
+      final hiveConfig = HiveDocumentConfig.fromDocumentConfig(configData);
+      await _docConfigBox!.put(key, hiveConfig);
+      debugPrint('💾 [DocConfig] Saved config to Hive: $key');
+    } catch (e) {
+      debugPrint('❌ [DocConfig] Error saving to Hive: $e');
+    }
+  }
 
   Future<void> fetchDocumentConfigurations(
       {required String accessToken}) async {
@@ -43,6 +137,15 @@ class DocumentConfigProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         _documentConfigurations =
             DocumentConfigurationsModel.fromJson(jsonData);
+
+        // Save each config to Hive for persistence
+        if (_documentConfigurations?.documentConfigurations != null) {
+          _documentConfigurations!.documentConfigurations!
+              .forEach((key, value) async {
+            await _saveToHive(key, value.toJson());
+          });
+        }
+
         isLoading = false;
         notifyListeners();
       } else {
@@ -110,6 +213,18 @@ class DocumentConfigProvider extends ChangeNotifier {
             final configJson = documentConfigs[firstKey];
             final config = DocumentConfig.fromJson(configJson);
             debugPrint("✅ Parsed config for: $firstKey");
+
+            // Save to Hive for persistence
+            await _saveToHive(firstKey, configJson);
+
+            // Update in-memory cache
+            _documentConfigurations ??= DocumentConfigurationsModel(
+              status: 'cached',
+              documentConfigurations: <String, DocumentConfig>{},
+            );
+            _documentConfigurations!.documentConfigurations![firstKey] = config;
+            notifyListeners();
+
             return config;
           }
         }
@@ -130,7 +245,49 @@ class DocumentConfigProvider extends ChangeNotifier {
   // You can add more helper getters or methods here
   // For example, a getter to easily access a specific document config
   DocumentConfig? getDocumentConfig(String type) {
-    return _documentConfigurations?.documentConfigurations?[type];
+    // First check in-memory cache
+    final config = _documentConfigurations?.documentConfigurations?[type];
+    if (config != null) {
+      return config;
+    }
+
+    // If not in memory, try to load from Hive directly
+    if (_docConfigBox != null) {
+      final hiveConfig = _docConfigBox!.get(type);
+      if (hiveConfig != null && hiveConfig.serializedData != null) {
+        try {
+          final configData = json.decode(hiveConfig.serializedData!)
+              as Map<String, dynamic>;
+          final config = DocumentConfig.fromJson(configData);
+          debugPrint('📦 [DocConfig] Retrieved $type from Hive cache');
+          return config;
+        } catch (e) {
+          debugPrint('❌ [DocConfig] Error decoding $type from Hive: $e');
+        }
+      }
+    }
+
+    debugPrint('⚠️ [DocConfig] Config not found: $type');
+    return null;
+  }
+
+  /// Fast getter - returns config from cache (Hive/memory) without API call
+  /// This is the preferred method for printing to avoid lag
+  DocumentConfig? getCachedConfig(String type) {
+    return getDocumentConfig(type);
+  }
+
+  /// Check if config exists in cache (Hive or memory)
+  bool hasCachedConfig(String type) {
+    // Check memory
+    if (_documentConfigurations?.documentConfigurations?.containsKey(type) ?? false) {
+      return true;
+    }
+    // Check Hive
+    if (_docConfigBox != null && _docConfigBox!.containsKey(type)) {
+      return true;
+    }
+    return false;
   }
 
   // Example: Getter to get template options

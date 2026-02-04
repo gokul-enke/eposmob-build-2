@@ -91,6 +91,8 @@ void main() async {
   // Register category adapters
   Hive.registerAdapter(HiveCategoryAdapter());
   Hive.registerAdapter(HiveParentCategoryAdapter());
+  // Register document config adapter
+  Hive.registerAdapter(HiveDocumentConfigAdapter());
 
   // Open boxes with error handling and retry logic
   await _initializeHiveBoxes();
@@ -169,7 +171,8 @@ Future<void> _initializeHiveBoxes() async {
     'cart_items',
     'saved_orders',
     'confirmed_orders',
-    'categories'
+    'categories',
+    'document_configs'
   ];
 
   for (String boxName in boxNames) {
@@ -203,6 +206,9 @@ Future<void> _initializeHiveBoxes() async {
             break;
           case 'categories':
             await Hive.openBox<HiveCategory>(boxName);
+            break;
+          case 'document_configs':
+            await Hive.openBox<HiveDocumentConfig>(boxName);
             break;
         }
 
