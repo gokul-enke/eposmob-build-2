@@ -74,24 +74,15 @@ class KotPrintPage extends StatefulWidget {
 
       debugPrint('[KotPrintPage] Auto-printing KOT with printer: ${selectedPrinter.deviceName}');
 
-      // Load document config
+      // Load document config from cache (NO API CALL - instant!)
       final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
       DocumentConfig? kotDocumentConfig;
-      const type = 'kitchen_order';
 
-      if (accessToken != null) {
-        kotDocumentConfig = await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
-          accessToken: accessToken,
-          type: type,
-        );
-        if (kotDocumentConfig == null) {
-          kotDocumentConfig = docConfigProvider.getDocumentConfig("Kitchen Order");
-        }
-      } else {
-        kotDocumentConfig = docConfigProvider.getDocumentConfig("Kitchen Order");
-      }
+      // Try multiple config name patterns to find cached config
+      kotDocumentConfig = docConfigProvider.getCachedConfig("Kitchen Order") ??
+                         docConfigProvider.getCachedConfig("kitchen_order");
 
       if (kotDocumentConfig == null) {
         debugPrint('[KotPrintPage] Document config not loaded');
@@ -397,29 +388,15 @@ class _KotPrintPageState extends State<KotPrintPage> {
     try {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
-      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
-      const type = 'kitchen_order';
+      // Use cached config directly (NO API CALL - instant!)
+      _kotDocumentConfig = docConfigProvider.getCachedConfig("Kitchen Order") ??
+                           docConfigProvider.getCachedConfig("kitchen_order");
 
-      if (accessToken != null) {
-        _kotDocumentConfig =
-            await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
-          accessToken: accessToken,
-          type: type,
-        );
-
-        if (_kotDocumentConfig != null) {
-          debugPrint("SUCCESS: KOT Document configuration loaded");
-        } else {
-          debugPrint(
-              "WARNING: Could not load KOT document config, falling back to cached");
-          _kotDocumentConfig =
-              docConfigProvider.getDocumentConfig("Kitchen Order");
-        }
+      if (_kotDocumentConfig != null) {
+        debugPrint("SUCCESS: KOT Document configuration loaded from cache");
       } else {
-        debugPrint("No access token, using cached config");
-        _kotDocumentConfig =
-            docConfigProvider.getDocumentConfig("Kitchen Order");
+        debugPrint("WARNING: KOT Document config not found in cache");
       }
 
       setState(() {
