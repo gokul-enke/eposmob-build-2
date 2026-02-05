@@ -58,6 +58,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'classic', 'name': 'Classic'},
     {'id': 'premium', 'name': 'Premium'},
     {'id': 'standard', 'name': 'Standard'},
+    {'id': 'arabic_and_english', 'name': 'Arabic&English'},
   ];
 
   @override
@@ -893,8 +894,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       final now = DateHelper.now();
       bytes += generator.row([
         PosColumn(
-            text:
-                '${now.day}/${now.month}/${now.year}',
+            text: '${now.day}/${now.month}/${now.year}',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,
@@ -902,8 +902,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 bold: true,
                 height: textSizeSmall)),
         PosColumn(
-            text:
-                '${now.hour}:${now.minute.toString().padLeft(2, '0')}',
+            text: '${now.hour}:${now.minute.toString().padLeft(2, '0')}',
             width: 6,
             styles: PosStyles(
                 fontType: fontType,
@@ -1543,7 +1542,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     Text(
                                       selectedReceiptTheme == 'classic'
                                           ? 'Traditional receipt layout with standard formatting'
-                                          : 'Modern & clean design with enhanced spacing',
+                                          : selectedReceiptTheme ==
+                                                  'arabic_and_english'
+                                              ? 'Bilingual layout optimized for Arabic and English'
+                                              : 'Modern & clean design with enhanced spacing',
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: 12,
