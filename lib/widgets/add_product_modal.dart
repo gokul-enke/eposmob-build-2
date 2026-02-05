@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/models/language.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -45,6 +47,9 @@ class _AddProductWithBarcodeModalState
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
+  final Map<int, TextEditingController> _languageNameControllers = {};
+  final Map<int, bool> _languageTranslating = {};
+  bool _languagesRequested = false;
 
   // Focus nodes for each text field
   final FocusNode _barcodeFocusNode = FocusNode();
@@ -69,6 +74,10 @@ class _AddProductWithBarcodeModalState
     // Set default quantity value to 0 when opening the modal
     _productQuantityController.text = '0';
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLanguages();
+    });
   }
 
   // Helper method to unfocus all text fields except the specified one
@@ -100,6 +109,14 @@ class _AddProductWithBarcodeModalState
     _unitSearchController.dispose();
     _categorySearchController.dispose();
 
+    for (final controller in _languageNameControllers.values) {
+      if (controller != _productNameController) {
+        controller.dispose();
+      }
+    }
+    _languageNameControllers.clear();
+    _languageTranslating.clear();
+
     // Dispose focus nodes
     _barcodeFocusNode.dispose();
     _productNameFocusNode.dispose();
@@ -113,6 +130,107 @@ class _AddProductWithBarcodeModalState
     selectedCategory = null;
     isValidatedOnce = false;
     super.dispose();
+  }
+
+  Future<void> _fetchLanguages() async {
+    if (_languagesRequested) return;
+    _languagesRequested = true;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+
+    await languageProvider.fetchLanguages(accessToken: accessToken);
+
+    if (!mounted) return;
+    if (languageProvider.error != null) {
+      showScaffoldError(
+        context: context,
+        message: languageProvider.error!,
+      );
+    }
+  }
+
+  void _retryFetchLanguages() {
+    _languagesRequested = false;
+    _fetchLanguages();
+  }
+
+  Language? _getBaseLanguage(List<Language> languages) {
+    if (languages.isEmpty) return null;
+
+    try {
+      return languages
+          .firstWhere((lang) => lang.code.toLowerCase() == 'en');
+    } catch (_) {
+      return languages.first;
+    }
+  }
+
+  void _syncLanguageControllers(
+    List<Language> languages,
+    Language? baseLanguage,
+  ) {
+    for (final language in languages) {
+      if (!_languageNameControllers.containsKey(language.id)) {
+        if (baseLanguage != null && language.id == baseLanguage.id) {
+          _languageNameControllers[language.id] = _productNameController;
+        } else {
+          _languageNameControllers[language.id] = TextEditingController();
+        }
+      }
+      _languageTranslating.putIfAbsent(language.id, () => false);
+    }
+  }
+
+  Future<void> _translateLanguage(Language language) async {
+    final baseText = _productNameController.text.trim();
+    if (baseText.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Please enter Product Name before translating.',
+      );
+      return;
+    }
+
+    if (_languageTranslating[language.id] == true) return;
+
+    setState(() {
+      _languageTranslating[language.id] = true;
+    });
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+
+    final translated = await languageProvider.translateText(
+      accessToken: accessToken,
+      targetLang: language.code,
+      text: baseText,
+    );
+
+    if (!mounted) return;
+
+    if (translated != null && translated.isNotEmpty) {
+      _languageNameControllers[language.id]?.text = translated;
+      showScaffold(
+        context: context,
+        message: 'Translated to ${language.name}',
+      );
+    } else {
+      showScaffoldError(
+        context: context,
+        message: 'Translation failed. Please try again.',
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _languageTranslating[language.id] = false;
+      });
+    }
   }
 
   Future<void> generateBarcode() async {
@@ -182,6 +300,8 @@ class _AddProductWithBarcodeModalState
       context,
     );
     List<Category>? categoryList = categoryProvider.category;
+
+    final languageProvider = Provider.of<LanguageProvider>(context);
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -262,6 +382,8 @@ class _AddProductWithBarcodeModalState
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                _buildLanguageFields(size, languageProvider),
                 const SizedBox(height: 12),
 
                 // Row 2: Unit, Category
@@ -591,6 +713,200 @@ class _AddProductWithBarcodeModalState
     );
   }
 
+  Widget _buildLanguageFields(
+    Size size,
+    LanguageProvider languageProvider,
+  ) {
+    if (languageProvider.isLoading && languageProvider.languages.isEmpty) {
+      return Row(
+        children: [
+          const SizedBox(
+            height: 16,
+            width: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Loading languages...',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (languageProvider.error != null &&
+        languageProvider.languages.isEmpty) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(
+              languageProvider.error!,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.27,
+                Colors.red[700]!,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _retryFetchLanguages,
+            child: const Text('Retry'),
+          ),
+        ],
+      );
+    }
+
+    final languages = languageProvider.languages
+        .where((lang) => lang.active)
+        .toList(growable: false);
+    if (languages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final baseLanguage = _getBaseLanguage(languages);
+    _syncLanguageControllers(languages, baseLanguage);
+
+    final List<Widget> fields = [];
+    for (final language in languages) {
+      if (baseLanguage != null && language.id == baseLanguage.id) {
+        continue;
+      }
+      fields.add(_buildLanguageField(size, language));
+      fields.add(const SizedBox(height: 12));
+    }
+
+    if (fields.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Other Language Names',
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.27,
+            ColorManager.textColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        ...fields,
+      ],
+    );
+  }
+
+  Widget _buildLanguageField(Size size, Language language) {
+    final controller = _languageNameControllers[language.id];
+    final isTranslating = _languageTranslating[language.id] ?? false;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Product Name (${language.name})',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: CustomBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.only(left: 12),
+                height: size.height * 0.048,
+                width: double.infinity,
+                child: TextFormField(
+                  controller: controller,
+                  textDirection:
+                      language.isRtl ? TextDirection.rtl : TextDirection.ltr,
+                  cursorColor: ColorManager.kPrimaryColor,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    ColorManager.textColor.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: size.height * 0.048,
+              width: size.height * 0.048,
+              child: Tooltip(
+                message: 'Translate',
+                child: ElevatedButton(
+                  onPressed: isTranslating
+                      ? null
+                      : () => _translateLanguage(language),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ColorManager.kPrimaryColor,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                  ),
+                  child: isTranslating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.translate,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> _buildProductNamesPayload(
+      List<Language> languages) {
+    final payload = <Map<String, dynamic>>[];
+
+    for (final language in languages) {
+      final controller = _languageNameControllers[language.id];
+      final text = controller?.text.trim() ?? '';
+      if (text.isNotEmpty) {
+        payload.add({
+          'language_id': language.id,
+          'name': text,
+        });
+      }
+    }
+
+    return payload;
+  }
+
   // Unit dropdown
   Widget _buildUnitDropdown(Size size, Map<String, String>? unitList) {
     return Column(
@@ -726,6 +1042,10 @@ class _AddProductWithBarcodeModalState
             Provider.of<AuthModel>(context, listen: false).token;
         GridSelectionProvider gridSelectionProvider =
             Provider.of<GridSelectionProvider>(context, listen: false);
+        final languageProvider =
+            Provider.of<LanguageProvider>(context, listen: false);
+        final productNames =
+            _buildProductNamesPayload(languageProvider.languages);
 
         final result = await gridSelectionProvider.createProductAPI(
           categoryId: selectedCategory!.categoryId.toString(),
@@ -737,6 +1057,7 @@ class _AddProductWithBarcodeModalState
           barcode: _productBarcodeController.text,
           accessToken: accessToken ?? "",
           purchasePrice: _productPurchasePriceController.text,
+          productNames: productNames.isNotEmpty ? productNames : null,
         );
 
         if (result is Map<String, dynamic> && result.containsKey('data')) {

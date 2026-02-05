@@ -557,6 +557,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String barcode,
     required String accessToken,
     required String purchasePrice,
+    List<Map<String, dynamic>>? productNames,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -568,6 +569,10 @@ class GridSelectionProvider extends ChangeNotifier {
       'unit': unit,
       'purchase_rate': double.parse(purchasePrice),
     };
+
+    if (productNames != null && productNames.isNotEmpty) {
+      apiBodyData['product_names'] = productNames;
+    }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
     debugPrint("accessToken ${accessToken.toString()}");
@@ -612,6 +617,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String barcode,
     required String accessToken,
     required String purchasePrice,
+    List<Map<String, dynamic>>? productNames,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -622,6 +628,10 @@ class GridSelectionProvider extends ChangeNotifier {
       'unit': unit,
       'purchase_rate': double.parse(purchasePrice),
     };
+
+    if (productNames != null && productNames.isNotEmpty) {
+      apiBodyData['product_names'] = productNames;
+    }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
     debugPrint("accessToken ${accessToken.toString()}");
