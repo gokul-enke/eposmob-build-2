@@ -1599,6 +1599,14 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
     }
 
+    // Token Number - Display right after invoice number in big font (same as store name)
+    // Only show if showTokenNumber is explicitly enabled (default: false)
+    if (displayConfig?['showTokenNumber']?.visible == true &&
+        params.tokenNumber != null && 
+        params.tokenNumber!.isNotEmpty) {
+      rows.add(TextRow(params.tokenNumber!, scale: 1.4, isBold: true));
+    }
+
     rows.add(SpacingRow(_itemGap));
 
     // Terms & Conditions

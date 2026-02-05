@@ -1254,6 +1254,15 @@ class ClassicReceiptLayout implements ReceiptLayout {
       rows.add(SpacingRow(5));
     }
 
+    // Token Number - Display right after invoice number in big font (same as store name)
+    // Only show if showTokenNumber is explicitly enabled (default: false)
+    if (displayConfig?['showTokenNumber']?.visible == true &&
+        params.tokenNumber != null && 
+        params.tokenNumber!.isNotEmpty) {
+      rows.add(TextRow(params.tokenNumber!, scale: 1.4, isBold: true));
+      rows.add(SpacingRow(5));
+    }
+
     // Terms & Conditions
     if (displayConfig?['showTermsConditions']?.visible == true) {
       String? terms = displayConfig?['showTermsConditions']?.value as String?;

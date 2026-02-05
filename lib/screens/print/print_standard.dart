@@ -566,11 +566,14 @@ class StandardPrinter {
                                     style: subheaderStyle),
                             ],
                     ),
-                    // Token Number - display right after invoice number
-                    if (tokenNumber != null && tokenNumber.isNotEmpty)
+                    // Token Number - display right after invoice number in big font (same as store name)
+                    // Only show if showTokenNumber is explicitly enabled (default: false)
+                    if (updatedSettings?['showTokenNumber']?.visible == true &&
+                        tokenNumber != null && 
+                        tokenNumber.isNotEmpty)
                       pw.Text(
-                        isRtl ? 'رقم التوكن: $tokenNumber' : 'TOKEN NO: $tokenNumber',
-                        style: subheaderStyle,
+                        tokenNumber,
+                        style: headerStyle,
                       ),
                   ],
                 ),
