@@ -54,14 +54,24 @@ jobs:
         run: |
           cp dependencies/*.dll build/windows/x64/runner/Release/
 
+      - name: Prepare MSIX Build Path
+        run: |
+          # Create the expected directory structure for msix package
+          New-Item -ItemType Directory -Force -Path "build/windows/runner/Release"
+          # Copy all files from x64 path to expected path
+          Copy-Item -Path "build/windows/x64/runner/Release/*" -Destination "build/windows/runner/Release/" -Recurse -Force
+          Write-Host "Copied build files to expected MSIX path"
+
       - name: Build MSIX Package
         run: flutter pub run msix:create --build-windows false
 
       - name: Rename MSIX for environment
         run: |
-          $msixFile = Get-ChildItem -Path "build/windows/x64/runner/Release/" -Filter "*.msix" | Select-Object -First 1
+          $msixFile = Get-ChildItem -Path "build/windows/runner/Release/" -Filter "*.msix" | Select-Object -First 1
           $newName = "cloudpos-${{ matrix.name }}.msix"
           Rename-Item -Path $msixFile.FullName -NewName $newName
+          # Also copy to x64 path for artifact upload consistency
+          Copy-Item -Path "build/windows/runner/Release/$newName" -Destination "build/windows/x64/runner/Release/"
           Write-Host "Renamed to: $newName"
 
       - name: Upload MSIX Artifact
