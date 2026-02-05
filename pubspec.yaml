@@ -98,6 +98,18 @@ dependencies:
   font_awesome_flutter: ^10.12.0
   convert: ^3.1.2  # For ZATCA Phase 1 QR code TLV encoding
 
+msix_config:
+  display_name: CLOUDPOS
+  publisher_display_name: ENKE
+  identity_name: ENKE.CLOUDPOS
+  msix_version: 1.0.0.3
+  logo_path: windows/runner/resources/app_icon.ico
+  capabilities:
+    - internetClient
+    - location
+    - bluetooth
+  output_name: cloudpos
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -110,6 +122,7 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   build_runner: ^2.4.13
   hive_generator: ^2.0.1
+  msix: ^3.16.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

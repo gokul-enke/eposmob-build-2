@@ -1,0 +1,106 @@
+name: MSIX Release
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Build environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+permissions:
+  contents: write
+
+jobs:
+  build-msix:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: eeezeeerp
+            url: "https://eeezeeerp.cloudposai.com"
+          - name: eposdemo
+            url: "https://eposdemo.yougoit.in"
+          - name: linetolinepos
+            url: "https://linetolinepos.yougoit.in"
+          - name: hypersouq
+            url: "https://epos.hypersouq.in"
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.12.0
+        with:
+          flutter-version: 3.35.1
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows app
+        run: flutter build windows --release --dart-define=BASE_URL=${{ matrix.url }}
+
+      - name: Copy DLLs to Release Folder
+        run: |
+          cp dependencies/*.dll build/windows/x64/runner/Release/
+
+      - name: Build MSIX Package
+        run: flutter pub run msix:create --build-windows false
+
+      - name: Rename MSIX for environment
+        run: |
+          $msixFile = Get-ChildItem -Path "build/windows/x64/runner/Release/" -Filter "*.msix" | Select-Object -First 1
+          $newName = "cloudpos-${{ matrix.name }}.msix"
+          Rename-Item -Path $msixFile.FullName -NewName $newName
+          Write-Host "Renamed to: $newName"
+
+      - name: Upload MSIX Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudpos-${{ matrix.name }}-msix
+          path: build/windows/x64/runner/Release/cloudpos-${{ matrix.name }}.msix
+          retention-days: 30
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/windows/x64/runner/Release/cloudpos-${{ matrix.name }}.msix
+          draft: true
+          prerelease: true
+          generate_release_notes: true
+
+  validate-msix:
+    needs: build-msix
+    runs-on: windows-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          pattern: cloudpos-*-msix
+
+      - name: Validate MSIX packages
+        run: |
+          Write-Host "Downloaded MSIX packages:"
+          Get-ChildItem -Path "./artifacts" -Recurse -Filter "*.msix" | ForEach-Object {
+            Write-Host "  - $($_.Name) [$([math]::Round($_.Length/1MB, 2)) MB]"
+          }
+
+      - name: Install MSIX for testing (Optional)
+        run: |
+          Write-Host "MSIX packages are ready for Microsoft Store submission"
+          Write-Host "Upload these packages to Partner Center:"
+          Get-ChildItem -Path "./artifacts" -Recurse -Filter "*.msix" | ForEach-Object {
+            Write-Host "  - $($_.FullName)"
+          }
