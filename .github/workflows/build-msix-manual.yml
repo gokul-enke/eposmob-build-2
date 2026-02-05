@@ -46,7 +46,11 @@ jobs:
       - name: Copy to MSIX expected path
         run: |
           New-Item -ItemType Directory -Force -Path "build/windows/runner/Release"
-          Copy-Item -Path "build/windows/x64/runner/Release/*" -Destination "build/windows/runner/Release/" -Recurse -Force
+          Get-ChildItem -Path "build/windows/x64/runner/Release" | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination "build/windows/runner/Release/" -Recurse -Force
+          }
+          Write-Host "Files copied:"
+          Get-ChildItem -Path "build/windows/runner/Release" | Select-Object -First 10
 
       - name: Build MSIX Package (using flutter_msix)
         timeout-minutes: 5
