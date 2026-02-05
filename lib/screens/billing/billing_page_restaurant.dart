@@ -4550,12 +4550,13 @@ class BillingPageState extends State<BillingPageRestaurant>
               storeName: storeName,
               cartItems: orderDetails.data!.cart!.cartItems!,
               formattedTotal: formattedTotal!,
-              savedTotal: savedTotal!,
+              savedTotal: savedTotal,
               discountAmount:
                   orderDetails.data!.priceSummary?.discount?.toString() ??
                       "0.00",
               orderDate: DateHelper.formatInputToDisplay(orderDate),
-              orderNumber: orderDetails.data!.orderNumber ?? "",
+              orderNumber: orderDetails.data!.orderNumber.toString(),
+              tokenNumber: orderDetails.data?.tokenNumber,
               customerName: customerName,
               customerPhone: customerPhone,
               customerEmail: customerEmail,
@@ -4584,12 +4585,13 @@ class BillingPageState extends State<BillingPageRestaurant>
                     storeName: storeName,
                     cartItems: orderDetails.data!.cart!.cartItems!,
                     formattedTotal: formattedTotal!,
-                    savedTotal: savedTotal!,
+                    savedTotal: savedTotal,
                     discountAmount:
                         orderDetails.data!.priceSummary?.discount?.toString() ??
                             "0.00",
                     orderDate: DateHelper.formatInputToDisplay(orderDate),
-                    orderNumber: orderDetails.data!.orderNumber ?? "",
+                    orderNumber: orderDetails.data!.orderNumber.toString(),
+                    tokenNumber: orderDetails.data?.tokenNumber,
                     customerName: customerName,
                     customerPhone: customerPhone,
                     customerEmail: customerEmail,

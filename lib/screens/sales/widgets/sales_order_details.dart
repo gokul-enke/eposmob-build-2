@@ -42,6 +42,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool isInitLoading = false;
   String orderNumber = "";
+  String? tokenNumber;
   OrderDetailsModelData? orderDetailsModelData;
   OrderDetailsModelDataCustomerDetails? customerDetails;
   OrderDetailsModelDataCart? cart;
@@ -79,7 +80,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               priceSummary = cart?.priceSummary;
               customerDetails = orderDetailsModelData?.customerDetails;
               cartItems = cart?.cartItems ?? [];
-              orderNumber = orderDetailsModelData?.orderNumber ?? "N/A";
+              orderNumber = orderDetailsModelData?.orderNumber ?? "";
+              tokenNumber = orderDetailsModelData?.tokenNumber;
 
               // Debug: Check payments data
               if (orderDetailsModelData?.payments != null) {
@@ -421,6 +423,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 discountAmount: discountAmount,
                 orderDate: orderDate,
                 orderNumber: orderNumber,
+                tokenNumber: tokenNumber,
                 customerName: customerName,
                 customerPhone: customerPhone,
                 customerEmail: customerEmail,
@@ -448,6 +451,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       discountAmount: discountAmount,
                       orderDate: orderDate,
                       orderNumber: orderNumber,
+                      tokenNumber: tokenNumber,
                       customerName: customerName,
                       customerPhone: customerPhone,
                       customerEmail: customerEmail,

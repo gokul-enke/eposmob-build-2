@@ -6867,12 +6867,13 @@ class _OrderPanelState extends State<_OrderPanel> {
               storeName: storeName,
               cartItems: orderDetails.data!.cart!.cartItems!,
               formattedTotal: formattedTotal!,
-              savedTotal: savedTotal!,
+              savedTotal: savedTotal,
               discountAmount:
                   orderDetails.data!.priceSummary?.discount?.toString() ??
                       "0.00",
               orderDate: DateHelper.formatInputToDisplay(orderDate),
               orderNumber: orderDetails.data!.orderNumber ?? "",
+              tokenNumber: orderDetails.data?.tokenNumber,
               customerName: customerName,
               customerPhone: customerPhone,
               customerEmail: customerEmail,
@@ -6900,12 +6901,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                     storeName: storeName,
                     cartItems: orderDetails.data!.cart!.cartItems!,
                     formattedTotal: formattedTotal!,
-                    savedTotal: savedTotal!,
+                    savedTotal: savedTotal,
                     discountAmount:
                         orderDetails.data!.priceSummary?.discount?.toString() ??
                             "0.00",
                     orderDate: DateHelper.formatInputToDisplay(orderDate),
                     orderNumber: orderDetails.data!.orderNumber ?? "",
+                    tokenNumber: orderDetails.data?.tokenNumber,
                     customerName: customerName,
                     customerPhone: customerPhone,
                     customerEmail: customerEmail,

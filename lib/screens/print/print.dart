@@ -29,6 +29,7 @@ class PrintPage extends StatefulWidget {
   final String? discountAmount;
   final String orderDate;
   final String orderNumber;
+  final String? tokenNumber;
   final bool isFromLocalStorage;
   final String? customerName;
   final String? customerPhone;
@@ -54,6 +55,7 @@ class PrintPage extends StatefulWidget {
     this.storeName,
     required this.orderDate,
     required this.orderNumber,
+    this.tokenNumber,
     this.isFromLocalStorage = false,
     this.customerName,
     this.customerPhone,
@@ -84,6 +86,7 @@ class PrintPage extends StatefulWidget {
     String? discountAmount,
     required String orderDate,
     required String orderNumber,
+    String? tokenNumber,
     bool isFromLocalStorage = false,
     String? customerName,
     String? customerPhone,
@@ -180,6 +183,7 @@ class PrintPage extends StatefulWidget {
         discountAmount: discountAmount,
         orderDate: orderDate,
         orderNumber: orderNumber,
+        tokenNumber: tokenNumber,
         isFromLocalStorage: isFromLocalStorage,
         selectedPaperSize: paperSize,
         billDocumentConfig: billDocumentConfig,
@@ -656,6 +660,7 @@ class _PrintPageState extends State<PrintPage> {
       discountAmount: widget.discountAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
+      tokenNumber: widget.tokenNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
       billDocumentConfig: _billDocumentConfig!,
@@ -729,6 +734,7 @@ class _PrintPageState extends State<PrintPage> {
       discountAmount: widget.discountAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
+      tokenNumber: widget.tokenNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
       billDocumentConfig: _billDocumentConfig,

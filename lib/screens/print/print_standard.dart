@@ -118,6 +118,7 @@ class StandardPrinter {
     String? discountAmount,
     required String orderDate,
     required String orderNumber,
+    String? tokenNumber,
     required bool isFromLocalStorage,
     required String selectedPaperSize,
     required DocumentConfig? billDocumentConfig,
@@ -504,63 +505,74 @@ class StandardPrinter {
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(
                     vertical: 0, horizontal: 8), // Reduced padding
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: isRtl
-                      ? [
-                          if (updatedSettings?['showInvoiceNumber']?.visible ==
-                              true)
-                            pw.Text(
-                                (billDocumentConfig.numberPrefix != null &&
-                                        billDocumentConfig
-                                            .numberPrefix!.isNotEmpty)
-                                    ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                    : (isRtl
-                                        ? 'رقم: $orderNumber'
-                                        : 'No: $orderNumber'),
-                                style: subheaderStyle),
-                          if (updatedSettings?['showInvoiceTitle']?.visible ==
-                              true)
-                            pw.Text(
-                                (updatedSettings?['showInvoiceTitle']?.value
-                                                as String?)
-                                            ?.isNotEmpty ==
-                                        true
-                                    ? updatedSettings!['showInvoiceTitle']!
-                                        .value as String
-                                    : (billDocumentConfig.header?.isNotEmpty ==
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: isRtl
+                          ? [
+                              if (updatedSettings?['showInvoiceNumber']?.visible ==
+                                  true)
+                                pw.Text(
+                                    (billDocumentConfig.numberPrefix != null &&
+                                            billDocumentConfig
+                                                .numberPrefix!.isNotEmpty)
+                                        ? '${billDocumentConfig.numberPrefix}$orderNumber'
+                                        : (isRtl
+                                            ? 'رقم: $orderNumber'
+                                            : 'No: $orderNumber'),
+                                    style: subheaderStyle),
+                              if (updatedSettings?['showInvoiceTitle']?.visible ==
+                                  true)
+                                pw.Text(
+                                    (updatedSettings?['showInvoiceTitle']?.value
+                                                    as String?)
+                                                ?.isNotEmpty ==
                                             true
-                                        ? billDocumentConfig.header!
-                                        : (isRtl ? 'فاتورة' : 'INVOICE')),
-                                style: subheaderStyle),
-                        ]
-                      : [
-                          if (updatedSettings?['showInvoiceTitle']?.visible ==
-                              true)
-                            pw.Text(
-                                (updatedSettings?['showInvoiceTitle']?.value
-                                                as String?)
-                                            ?.isNotEmpty ==
-                                        true
-                                    ? updatedSettings!['showInvoiceTitle']!
-                                        .value as String
-                                    : (billDocumentConfig.header?.isNotEmpty ==
+                                        ? updatedSettings!['showInvoiceTitle']!
+                                            .value as String
+                                        : (billDocumentConfig.header?.isNotEmpty ==
+                                                true
+                                            ? billDocumentConfig.header!
+                                            : (isRtl ? 'فاتورة' : 'INVOICE')),
+                                    style: subheaderStyle),
+                            ]
+                          : [
+                              if (updatedSettings?['showInvoiceTitle']?.visible ==
+                                  true)
+                                pw.Text(
+                                    (updatedSettings?['showInvoiceTitle']?.value
+                                                    as String?)
+                                                ?.isNotEmpty ==
                                             true
-                                        ? billDocumentConfig.header!
-                                        : (isRtl ? 'فاتورة' : 'INVOICE')),
-                                style: subheaderStyle),
-                          if (updatedSettings?['showInvoiceNumber']?.visible ==
-                              true)
-                            pw.Text(
-                                (billDocumentConfig.numberPrefix != null &&
-                                        billDocumentConfig
-                                            .numberPrefix!.isNotEmpty)
-                                    ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                    : (isRtl
-                                        ? 'رقم: $orderNumber'
-                                        : 'No: $orderNumber'),
-                                style: subheaderStyle),
-                        ],
+                                        ? updatedSettings!['showInvoiceTitle']!
+                                            .value as String
+                                        : (billDocumentConfig.header?.isNotEmpty ==
+                                                true
+                                            ? billDocumentConfig.header!
+                                            : (isRtl ? 'فاتورة' : 'INVOICE')),
+                                    style: subheaderStyle),
+                              if (updatedSettings?['showInvoiceNumber']?.visible ==
+                                  true)
+                                pw.Text(
+                                    (billDocumentConfig.numberPrefix != null &&
+                                            billDocumentConfig
+                                                .numberPrefix!.isNotEmpty)
+                                        ? '${billDocumentConfig.numberPrefix}$orderNumber'
+                                        : (isRtl
+                                            ? 'رقم: $orderNumber'
+                                            : 'No: $orderNumber'),
+                                    style: subheaderStyle),
+                            ],
+                    ),
+                    // Token Number - display right after invoice number
+                    if (tokenNumber != null && tokenNumber.isNotEmpty)
+                      pw.Text(
+                        isRtl ? 'رقم التوكن: $tokenNumber' : 'TOKEN NO: $tokenNumber',
+                        style: subheaderStyle,
+                      ),
+                  ],
                 ),
               ),
 
