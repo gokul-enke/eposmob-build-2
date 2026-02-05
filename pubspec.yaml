@@ -104,10 +104,7 @@ msix_config:
   identity_name: ENKE.CLOUDPOS
   msix_version: 1.0.0.3
   logo_path: windows/runner/resources/app_icon.ico
-  capabilities:
-    - internetClient
-    - location
-    - bluetooth
+  capabilities: internetClient, location, bluetooth
   output_name: cloudpos
 
 dev_dependencies:
