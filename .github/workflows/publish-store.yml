@@ -1,0 +1,88 @@
+name: Publish to Microsoft Store
+
+on:
+  push:
+    tags:
+      - msix*
+  workflow_dispatch:
+    inputs:
+      track:
+        required: true
+        description: Release track
+        type: choice
+        options:
+          - "production"
+          - "beta"
+        default: "production"
+
+jobs:
+  windows-store:
+    name: Publish to Microsoft Store
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: eeezeeerp
+            url: "https://eeezeeerp.cloudposai.com"
+          - name: eposdemo
+            url: "https://eposdemo.yougoit.in"
+          - name: linetolinepos
+            url: "https://linetolinepos.yougoit.in"
+          - name: hypersouq
+            url: "https://epos.hypersouq.in"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.12.0
+        with:
+          flutter-version: "3.35.1"
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows app
+        run: flutter build windows --release --dart-define=BASE_URL=${{ matrix.url }}
+
+      - name: Copy DLLs to Release Folder
+        run: |
+          cp dependencies/*.dll build/windows/x64/runner/Release/
+
+      - name: Upload build to workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudpos-${{ matrix.name }}-windows
+          path: build/windows/x64/runner/Release
+
+      - name: Setup MS Store Developer CLI
+        uses: microsoft/setup-msstore-cli@v1
+
+      - name: Configure MS Store credentials
+        run: |
+          msstore reconfigure --tenantId ${{ secrets.AZURE_AD_TENANT_ID }} --clientId ${{ secrets.AZURE_AD_CLIENT_ID }} --clientSecret ${{ secrets.AZURE_AD_CLIENT_SECRET }} --sellerId ${{ secrets.MS_STORE_SELLER_ID }}
+
+      - name: Create MSIX package
+        run: msstore package --input-directory build/windows/x64/runner/Release --output-directory build/store
+
+      - name: Upload MSIX to workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudpos-${{ matrix.name }}-msix
+          path: build/store/*.msix
+
+      - name: Publish MSIX to the Microsoft Store
+        if: github.event.inputs.track == 'production' || github.event_name == 'push'
+        run: msstore publish -v build/store
+
+      - name: Upload MSIX to GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/store/*.msix
+          draft: true
+          prerelease: true
+          generate_release_notes: true
