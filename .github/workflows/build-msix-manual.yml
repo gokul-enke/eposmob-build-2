@@ -52,9 +52,9 @@ jobs:
           Write-Host "Files copied:"
           Get-ChildItem -Path "build/windows/runner/Release" | Select-Object -First 10
 
-      - name: Build MSIX Package (using flutter_msix)
+      - name: Build MSIX Package
         timeout-minutes: 5
-        run: flutter pub run msix:create --build-windows false
+        run: dart run msix:create --build-windows false -v
 
       - name: Rename MSIX for environment
         run: |

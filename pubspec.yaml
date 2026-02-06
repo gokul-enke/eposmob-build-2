@@ -101,11 +101,14 @@ dependencies:
 msix_config:
   display_name: CLOUDPOS
   publisher_display_name: ENKE
+  publisher: CN=ENKE
   identity_name: ENKE.CLOUDPOS
   msix_version: 1.0.0.3
   logo_path: windows/runner/resources/app_icon.ico
   capabilities: internetClient, location, bluetooth
   output_name: cloudpos
+  sign_msix: false
+  install_certificate: false
 
 dev_dependencies:
   flutter_test:
