@@ -3,7 +3,7 @@ name: Build MSIX for Manual Store Upload
 on:
   push:
     tags:
-      - msix*
+      - v*
   workflow_dispatch:
 
 jobs:
