@@ -353,7 +353,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
       // For "ORD-000430", this extracts "430"
       final regex = RegExp(r'[1-9]\d*');
       final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber = match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber =
+          match != null ? match.group(0)! : params.orderNumber;
 
       // Get prefix from display configuration - use language-specific fallback
       final String lang = params.billDocumentConfig.language ?? 'en';
@@ -400,11 +401,21 @@ class PremiumReceiptLayout implements ReceiptLayout {
         isEnglish ? "Customer:" : "العميل:");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
         isEnglish ? "Phone:" : "الهاتف:");
-    final paymentLabel = _getLabel(displayConfig, 'showPaymentMethod', null,
+    final paymentLabel = _getLabel(
+        displayConfig,
+        displayConfig?.containsKey('showPaymentMethod') == true
+            ? 'showPaymentMethod'
+            : 'showPayment',
+        null,
         isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
         isEnglish ? "Address:" : "العنوان:");
-    final commentLabel = _getLabel(displayConfig, 'showOrderComment', null,
+    final commentLabel = _getLabel(
+        displayConfig,
+        displayConfig?.containsKey('showOrderComment') == true
+            ? 'showOrderComment'
+            : 'showComment',
+        null,
         isEnglish ? "Comment:" : "تعليق:");
 
     if (isEnglish) {
@@ -420,7 +431,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
       if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
         final bool maskPhone =
-            displayConfig?['maskCustomerPhone']?.visible ?? false;
+            displayConfig?['showCustomerPhoneMasked']?.visible ??
+                displayConfig?['maskCustomerPhone']?.visible ??
+                false;
         final String displayedPhone = maskPhone
             ? StringHelper.maskStringShowLast4(params.customerPhone!)
             : params.customerPhone!;
@@ -479,7 +492,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
       if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
         final bool maskPhone =
-            displayConfig?['maskCustomerPhone']?.visible ?? false;
+            displayConfig?['showCustomerPhoneMasked']?.visible ??
+                displayConfig?['maskCustomerPhone']?.visible ??
+                false;
         final String displayedPhone = maskPhone
             ? StringHelper.maskStringShowLast4(params.customerPhone!)
             : params.customerPhone!;
@@ -947,8 +962,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     // 5. Payment details (Separator + Payment Methods)
-    // Only show if paidAmount is provided (not null)
-    if (params.paidAmount != null) {
+    // Only show if paidAmount is provided (not null) and showPaymentBreaked is true or missing (default true)
+    final bool showPaymentBreaked =
+        displayConfig?['showPaymentBreaked']?.visible ?? true;
+
+    if (params.paidAmount != null && showPaymentBreaked) {
       boxedItems.add(BoxedLineItem(isSeparator: true));
 
       bool isMultiPayment = false;
@@ -1043,10 +1061,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
       String amountInWords;
 
       if (isDualLanguage) {
-        final arabicText = AmountHelper().convertNumberToWords(
-            total, currency: currency, language: 'ar');
-        final englishText = AmountHelper().convertNumberToWords(
-            total, currency: currency, language: 'en');
+        final arabicText = AmountHelper()
+            .convertNumberToWords(total, currency: currency, language: 'ar');
+        final englishText = AmountHelper()
+            .convertNumberToWords(total, currency: currency, language: 'en');
 
         amountInWords = '$arabicText فقط.\n$englishText Only.';
       } else {
@@ -1290,7 +1308,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
       final regex = RegExp(r'[1-9]\d*');
       final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber = match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber =
+          match != null ? match.group(0)! : params.orderNumber;
 
       // Get prefix from display configuration - use language-specific fallback
       final String lang = params.billDocumentConfig.language ?? 'en';
@@ -1310,6 +1329,25 @@ class PremiumReceiptLayout implements ReceiptLayout {
         params.tokenNumber != null && 
         params.tokenNumber!.isNotEmpty) {
       rows.add(TextRow(params.tokenNumber!, scale: 1.4, isBold: true));
+    // Order Number in Footer
+    if (displayConfig?['showOrderNumberInFooter']?.visible == true) {
+      final regex = RegExp(r'[1-9]\d*');
+      final match = regex.firstMatch(params.orderNumber);
+      final strippedNumber =
+          match != null ? match.group(0)! : params.orderNumber;
+
+      final String lang = params.billDocumentConfig.language ?? 'en';
+      final String invoicePrefix = _getDisplayValue(
+        displayConfig?['showInvoicePrefix']?.value,
+        displayConfig?['showInvoicePrefix']?.defaultValue,
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+      );
+
+      rows.add(SpacingRow(5));
+      rows.add(ThinDividerRow());
+      rows.add(SpacingRow(5));
+      rows.add(
+          TextRow('$invoicePrefix $strippedNumber', scale: 1.1, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));

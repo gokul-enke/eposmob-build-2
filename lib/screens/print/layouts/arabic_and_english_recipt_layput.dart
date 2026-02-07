@@ -595,9 +595,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         : _getLabel(displayConfig, 'showCustomerPhone', null,
             isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = isDualLanguage
-        ? _getBilingualLabelHorizontal(displayConfig, 'showPaymentMethod', null,
-            null, "الدفع:", "Payment:")
-        : _getLabel(displayConfig, 'showPaymentMethod', null,
+        ? _getBilingualLabelHorizontal(
+            displayConfig, 'showPayment', null, null, "الدفع:", "Payment:")
+        : _getLabel(displayConfig, 'showPayment', null,
             isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerAddress',
@@ -606,8 +606,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
             isEnglish ? "Address:" : "العنوان:");
     final commentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig, 'showOrderComment', null, null, "تعليق:", "Comment:")
-        : _getLabel(displayConfig, 'showOrderComment', null,
+            displayConfig, 'showComment', null, null, "تعليق:", "Comment:")
+        : _getLabel(displayConfig, 'showComment', null,
             isEnglish ? "Comment:" : "تعليق:");
 
     if (isEnglish) {
@@ -623,7 +623,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
       if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
         final bool maskPhone =
-            displayConfig?['maskCustomerPhone']?.visible ?? false;
+            displayConfig?['showCustomerPhoneMasked']?.visible ??
+                displayConfig?['maskCustomerPhone']?.visible ??
+                false;
         final String displayedPhone = maskPhone
             ? StringHelper.maskStringShowLast4(params.customerPhone!)
             : params.customerPhone!;
@@ -682,7 +684,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
       if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
         final bool maskPhone =
-            displayConfig?['maskCustomerPhone']?.visible ?? false;
+            displayConfig?['showCustomerPhoneMasked']?.visible ??
+                displayConfig?['maskCustomerPhone']?.visible ??
+                false;
         final String displayedPhone = maskPhone
             ? StringHelper.maskStringShowLast4(params.customerPhone!)
             : params.customerPhone!;
