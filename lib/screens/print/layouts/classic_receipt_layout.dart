@@ -291,6 +291,22 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
+    // Extra Heading 1 (e.g., CR NO)
+    if (displayConfig?['showExtraHeading1']?.visible == true) {
+      final extraHeading1 = displayConfig?['showExtraHeading1']?.value as String?;
+      if (extraHeading1 != null && extraHeading1.isNotEmpty) {
+        rows.add(TextRow(extraHeading1, scale: 0.9, isBold: true));
+      }
+    }
+
+    // Extra Heading 2 (e.g., VAT NO)
+    if (displayConfig?['showExtraHeading2']?.visible == true) {
+      final extraHeading2 = displayConfig?['showExtraHeading2']?.value as String?;
+      if (extraHeading2 != null && extraHeading2.isNotEmpty) {
+        rows.add(TextRow(extraHeading2, scale: 0.9, isBold: true));
+      }
+    }
+
     // Telephone
     if (displayConfig?['showTel']?.visible == true) {
       final telephone = _getDisplayValue(
@@ -340,9 +356,10 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
       // Get prefix from display configuration - use language-specific fallback
       final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
+      final String invoicePrefix = _getLabel(
+        displayConfig,
+        'showInvoiceNumber',
+        null,
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
@@ -1310,9 +1327,10 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
       // Get prefix from display configuration - use language-specific fallback
       final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
+      final String invoicePrefix = _getLabel(
+        displayConfig,
+        'showInvoiceNumber',
+        null,
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
@@ -1323,10 +1341,12 @@ class ClassicReceiptLayout implements ReceiptLayout {
     // Token Number - Display right after invoice number in big font (same as store name)
     // Only show if showTokenNumber is explicitly enabled (default: false)
     if (displayConfig?['showTokenNumber']?.visible == true &&
-        params.tokenNumber != null && 
+        params.tokenNumber != null &&
         params.tokenNumber!.isNotEmpty) {
       rows.add(TextRow(params.tokenNumber!, scale: 1.4, isBold: true));
       rows.add(SpacingRow(5));
+    }
+
     // Order Number in Footer
     if (displayConfig?['showOrderNumberInFooter']?.visible == true) {
       final regex = RegExp(r'[1-9]\d*');
@@ -1335,17 +1355,18 @@ class ClassicReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
+      final String invoicePrefix = _getLabel(
+        displayConfig,
+        'showInvoiceNumber',
+        null,
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
       rows.add(SpacingRow(5));
       rows.add(DividerRow());
       rows.add(SpacingRow(5));
-      rows.add(
-          TextRow('$invoicePrefix $strippedNumber', scale: 1.1, isBold: true));
+      rows.add(TextRow('$invoicePrefix $strippedNumber',
+          scale: 1.1, isBold: true));
     }
 
     // Terms & Conditions
@@ -1365,13 +1386,14 @@ class ClassicReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showThankYouMessage']?.visible == true) {
       final String defaultThankYou =
           isEnglish ? 'Thank You... Visit Again' : 'شكراً لزيارتكم!';
-      final message = (displayConfig?['showThankYouMessage']?.value as String?)
-                  ?.isNotEmpty ==
-              true
-          ? displayConfig!['showThankYouMessage']!.value as String
-          : (params.billDocumentConfig.footer?.isNotEmpty == true
-              ? params.billDocumentConfig.footer!
-              : defaultThankYou);
+      final message =
+          (displayConfig?['showThankYouMessage']?.value as String?)
+                      ?.isNotEmpty ==
+                  true
+              ? displayConfig!['showThankYouMessage']!.value as String
+              : (params.billDocumentConfig.footer?.isNotEmpty == true
+                  ? params.billDocumentConfig.footer!
+                  : defaultThankYou);
       rows.add(TextRow(message, isBold: true));
     }
 

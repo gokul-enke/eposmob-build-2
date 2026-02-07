@@ -543,9 +543,10 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
       // Get prefix from display configuration - use language-specific fallback
       final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
+      final String invoicePrefix = _getLabel(
+        displayConfig,
+        'showInvoiceNumber',
+        null,
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
