@@ -57,6 +57,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   final List<Map<String, String>> receiptThemes = [
     {'id': 'classic', 'name': 'Classic'},
     {'id': 'premium', 'name': 'Premium'},
+    {'id': 'premium1', 'name': 'Premium 1'},
     {'id': 'standard', 'name': 'Standard'},
     {'id': 'arabic_and_english', 'name': 'Arabic&English'},
   ];

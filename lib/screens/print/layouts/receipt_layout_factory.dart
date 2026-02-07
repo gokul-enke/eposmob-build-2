@@ -3,6 +3,7 @@ import 'package:pos_machine/screens/print/layouts/arabic_and_english_recipt_layp
 import 'receipt_layout.dart';
 import 'classic_receipt_layout.dart';
 import 'premium_receipt_layout.dart';
+import 'premium1_receipt_layout.dart';
 import 'standard_receipt_layout.dart';
 
 /// Factory class for creating receipt layouts based on theme.
@@ -22,6 +23,7 @@ class ReceiptLayoutFactory {
   static final Map<String, ReceiptLayout Function()> _layouts = {
     'classic': () => ClassicReceiptLayout(),
     'premium': () => PremiumReceiptLayout(),
+    'premium1': () => Premium1ReceiptLayout(),
     'standard': () => StandardReceiptLayout(),
     'arabic_and_english': () => ArabicAndEnglishReceiptLayout(),
   };
