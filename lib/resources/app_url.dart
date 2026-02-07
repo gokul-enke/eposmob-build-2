@@ -31,6 +31,8 @@ class APPUrl {
       '$baseURL/api/v1/product/executive/list-products';
   static String addToCartUrl = '$baseURL/api/v1/cart/add-to-cart';
   static String listRoles = '$baseURL/api/v1/roles/list';
+  static String listLanguages = '$baseURL/api/v1/languages';
+  static String translateText = '$baseURL/api/v1/translate';
   static String removeFromCartUrl = '$baseURL/api/v1/cart/remove-from-cart';
   static String listCartUrl = '$baseURL/api/v1/cart/executive/list-cart-items';
   static String updateCartItemPriceUrl =

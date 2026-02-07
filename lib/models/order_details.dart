@@ -39,6 +39,7 @@ class OrderDetailsModelData {
   final String? deliveryTime;
   final OrderDetailsModelDataCart? cart;
   final String? orderNumber;
+  final String? tokenNumber;
   final String? orderStatus;
   final OrderDetailsModelDataCustomerDetails? customerDetails;
   final OrderDetailsModelDataPriceSummary? priceSummary;
@@ -61,6 +62,7 @@ class OrderDetailsModelData {
     this.deliveryTime,
     this.cart,
     this.orderNumber,
+    this.tokenNumber,
     this.orderStatus,
     this.customerDetails,
     this.priceSummary,
@@ -89,6 +91,7 @@ class OrderDetailsModelData {
             ? null
             : OrderDetailsModelDataCart.fromJson(json["cart"]),
         orderNumber: json["order_number"],
+        tokenNumber: json["token_number"]?.toString(),
         orderStatus: json["order_status"],
         customerDetails: json["customer_details"] == null
             ? null
@@ -275,6 +278,7 @@ class OrderDetailsModelData {
         "delivery_time": deliveryTime,
         "cart": cart?.toJson(),
         "order_number": orderNumber,
+        "token_number": tokenNumber,
         "order_status": orderStatus,
         "customer_details": customerDetails?.toJson(),
         "order_price_summary": priceSummary?.toJson(),

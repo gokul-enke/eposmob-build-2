@@ -14,6 +14,7 @@ class ReceiptLayoutParams {
   final String? discountAmount;
   final String orderDate;
   final String orderNumber;
+  final String? tokenNumber;
   final bool isFromLocalStorage;
   final String selectedPaperSize;
   final DocumentConfig billDocumentConfig;
@@ -47,6 +48,7 @@ class ReceiptLayoutParams {
     this.discountAmount,
     required this.orderDate,
     required this.orderNumber,
+    this.tokenNumber,
     required this.isFromLocalStorage,
     required this.selectedPaperSize,
     required this.billDocumentConfig,

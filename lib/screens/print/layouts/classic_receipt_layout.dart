@@ -1320,6 +1320,13 @@ class ClassicReceiptLayout implements ReceiptLayout {
       rows.add(SpacingRow(5));
     }
 
+    // Token Number - Display right after invoice number in big font (same as store name)
+    // Only show if showTokenNumber is explicitly enabled (default: false)
+    if (displayConfig?['showTokenNumber']?.visible == true &&
+        params.tokenNumber != null && 
+        params.tokenNumber!.isNotEmpty) {
+      rows.add(TextRow(params.tokenNumber!, scale: 1.4, isBold: true));
+      rows.add(SpacingRow(5));
     // Order Number in Footer
     if (displayConfig?['showOrderNumberInFooter']?.visible == true) {
       final regex = RegExp(r'[1-9]\d*');

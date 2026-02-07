@@ -20,6 +20,7 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/restaurant/menu_provider.dart';
 import 'package:pos_machine/providers/restaurant/order_provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
@@ -322,6 +323,7 @@ class MyApp extends StatelessWidget {
           create: (_) => TransactionProvider(),
         ),
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
