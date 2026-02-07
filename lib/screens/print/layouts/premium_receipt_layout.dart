@@ -377,17 +377,23 @@ class PremiumReceiptLayout implements ReceiptLayout {
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
-      // Get prefix from display configuration - use language-specific fallback
-      final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getLabel(
-        displayConfig,
-        'showInvoiceNumber',
-        null,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
-      );
+      // Use number_prefix from document configuration as the invoice prefix
+      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
 
-      final invoiceNumberText = '$invoicePrefix $strippedNumber';
+      final invoiceNumberText = '$invoicePrefix$strippedNumber';
       rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
+    }
+
+    // Token Number - Display right after invoice number in big font (same as store name)
+    // Only show if showTokenNumber is explicitly enabled (default: false)
+    if (displayConfig?['showTokenNumber']?.visible == true &&
+        params.tokenNumber != null && 
+        params.tokenNumber!.isNotEmpty) {
+      final tokenPrefix = displayConfig?['showTokenNumber']?.value as String? ?? '';
+      final tokenText = tokenPrefix.isNotEmpty
+          ? '$tokenPrefix${params.tokenNumber!}'
+          : params.tokenNumber!;
+      rows.add(TextRow(tokenText, scale: 1.4, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -944,8 +950,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
         _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "VAT");
     final vatLabel = taxLabelBase;
 
-    final grandTotalLabelBase = isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي";
-    final grandTotalLabel = grandTotalLabelBase;
+    final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
+        isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
     final cashLabel =
         _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
@@ -1350,46 +1356,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
-      // Get prefix from display configuration - use language-specific fallback
-      final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
-      );
+      // Use number_prefix from document configuration as the invoice prefix
+      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(3));
-      rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
-    }
-
-    // Token Number - Display right after invoice number in big font (same as store name)
-    // Only show if showTokenNumber is explicitly enabled (default: false)
-    if (displayConfig?['showTokenNumber']?.visible == true &&
-        params.tokenNumber != null &&
-        params.tokenNumber!.isNotEmpty) {
-      rows.add(TextRow(params.tokenNumber!, scale: 1.4, isBold: true));
-    }
-
-    // Order Number in Footer
-    if (displayConfig?['showOrderNumberInFooter']?.visible == true) {
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
-
-      final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getLabel(
-        displayConfig,
-        'showInvoiceNumber',
-        null,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
-      );
-
-      rows.add(SpacingRow(5));
-      rows.add(ThinDividerRow());
-      rows.add(SpacingRow(5));
-      rows.add(
-          TextRow('$invoicePrefix $strippedNumber', scale: 1.1, isBold: true));
+      rows.add(TextRow('$invoicePrefix$strippedNumber', scale: 0.8));
     }
 
     rows.add(SpacingRow(_itemGap));
