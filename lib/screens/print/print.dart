@@ -220,6 +220,7 @@ class PrintPage extends StatefulWidget {
           discountAmount: discountAmount,
           orderDate: orderDate,
           orderNumber: orderNumber,
+          tokenNumber: tokenNumber,
           isFromLocalStorage: isFromLocalStorage,
           selectedPaperSize: paperSize,
           billDocumentConfig: billDocumentConfig,

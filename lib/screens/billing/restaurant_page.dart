@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 
 import '../../components/build_container_box.dart';
+import '../../components/build_confirmation_dialog.dart';
 import '../../components/build_dialog_box.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
@@ -686,6 +687,42 @@ class _RestaurantPageState extends State<RestaurantPage> {
     }
   }
 
+  String? _extractTokenNumber(dynamic order) {
+    if (order is! Map) return null;
+
+    String? tokenNumber = order['token_number']?.toString();
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsMap = order['orderProps'];
+      if (propsMap is Map && propsMap['ORDER_TOKEN_NUMBER'] != null) {
+        tokenNumber = propsMap['ORDER_TOKEN_NUMBER']?.toString();
+      }
+    }
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsList = order['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) => (e is Map) &&
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
+                    'ORDER_TOKEN_NUMBER',
+            orElse: () => null,
+          );
+          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+            tokenNumber = (match['value'] ?? match['props_value']).toString();
+          }
+        } catch (_) {}
+      }
+    }
+    if (tokenNumber != null) {
+      tokenNumber = tokenNumber.trim();
+      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
+        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
+      }
+    }
+
+    return tokenNumber;
+  }
+
   Future<void> _handleNewOrder() async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final localProductProvider =
@@ -835,6 +872,30 @@ class _RestaurantPageState extends State<RestaurantPage> {
         // Get order number from API response
         final orderNumber = response["order_number"]?.toString() ??
             'ORD-${response["order_id"]}';
+        String? tokenNumber = _extractTokenNumber(response);
+        if ((tokenNumber == null || tokenNumber.isEmpty) &&
+            _activeTableId != null) {
+          try {
+            await Future.delayed(const Duration(milliseconds: 500));
+            final savedResponse = await cartProvider.listSavedOrders(
+              accessToken: authModel.token ?? '',
+              tableId: _activeTableId,
+            );
+            if (savedResponse['status'] == 'success') {
+              final orders = savedResponse['orders'] as List<dynamic>;
+              final targetOrder = orders.firstWhere(
+                (o) =>
+                    o['order_id'] == response['order_id'] ||
+                    o['id'] == response['order_id'] ||
+                    o['order_number']?.toString() == orderNumber,
+                orElse: () => null,
+              );
+              if (targetOrder != null) {
+                tokenNumber = _extractTokenNumber(targetOrder);
+              }
+            }
+          } catch (_) {}
+        }
 
         showScaffold(
           context: context,
@@ -865,6 +926,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             KotPrintPage.autoPrint(
               context,
               orderNumber: orderNumber,
+              tokenNumber: tokenNumber,
               tableName: tableName,
               orderTime: orderTime,
               items: printItems,
@@ -877,6 +939,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   MaterialPageRoute(
                     builder: (context) => KotPrintPage(
                       orderNumber: orderNumber,
+                      tokenNumber: tokenNumber,
                       tableName: tableName,
                       orderTime: orderTime,
                       items: printItems,
@@ -5404,6 +5467,42 @@ class _OrderPanelState extends State<_OrderPanel> {
     _printSavedOrderKot(_selectedOrder, newItems);
   }
 
+  String? _extractTokenNumber(dynamic order) {
+    if (order is! Map) return null;
+
+    String? tokenNumber = order['token_number']?.toString();
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsMap = order['orderProps'];
+      if (propsMap is Map && propsMap['ORDER_TOKEN_NUMBER'] != null) {
+        tokenNumber = propsMap['ORDER_TOKEN_NUMBER']?.toString();
+      }
+    }
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsList = order['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) => (e is Map) &&
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
+                    'ORDER_TOKEN_NUMBER',
+            orElse: () => null,
+          );
+          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+            tokenNumber = (match['value'] ?? match['props_value']).toString();
+          }
+        } catch (_) {}
+      }
+    }
+    if (tokenNumber != null) {
+      tokenNumber = tokenNumber.trim();
+      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
+        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
+      }
+    }
+
+    return tokenNumber;
+  }
+
   // Print KOT for a saved order
   void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
     debugPrint(
@@ -5411,6 +5510,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     // Get order number
     final orderNumber = order['order_number']?.toString() ?? 'Unknown';
+    final tokenNumber = _extractTokenNumber(order);
 
     // Get table name
     String tableName = 'Unknown';
@@ -5552,6 +5652,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       KotPrintPage.autoPrint(
         context,
         orderNumber: orderNumber,
+        tokenNumber: tokenNumber,
         tableName: tableName,
         orderTime: orderTime,
         items: printItems,
@@ -5565,6 +5666,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             MaterialPageRoute(
               builder: (context) => KotPrintPage(
                 orderNumber: orderNumber,
+                tokenNumber: tokenNumber,
                 tableName: tableName,
                 orderTime: orderTime,
                 items: printItems,
@@ -6773,6 +6875,122 @@ class _OrderPanelState extends State<_OrderPanel> {
     return [];
   }
 
+  Future<bool> _confirmCustomerCopyPrint() async {
+    return (await ConfirmationDialog.show(
+          context: context,
+          title: 'Print customer copy?',
+          message: 'Do you want to print a customer copy now?',
+          confirmText: 'Yes, print',
+          cancelText: 'No',
+        )) ??
+        false;
+  }
+
+  Future<void> _maybePrintCustomerCopy({
+    required bool canPrompt,
+    required Future<bool> Function() printAction,
+  }) async {
+    if (!canPrompt || !mounted) return;
+
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final shouldDoublePrint =
+        appSettingsProvider.appSettings?.posPrintDoubleBill ?? false;
+    if (!shouldDoublePrint) return;
+
+    final shouldPrintCustomerCopy = await _confirmCustomerCopyPrint();
+    if (!shouldPrintCustomerCopy || !mounted) return;
+
+    await printAction();
+  }
+
+  Future<bool> _printOrderDetailsWithFallback({
+    required List<dynamic> cartItems,
+    required String formattedTotal,
+    String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    String? tokenNumber,
+    bool isFromLocalStorage = false,
+    String? storeName,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
+    String? customerAlternatePhone,
+    String? paymentMethod,
+    Map<String, dynamic>? paymentBreakdown,
+    String? orderComment,
+    bool isDefaultCustomer = false,
+    String? netExcTax,
+  }) async {
+    if (!mounted) return false;
+
+    final autoPrintSuccess = await PrintPage.autoPrint(
+      context,
+      storeName: storeName,
+      cartItems: cartItems,
+      formattedTotal: formattedTotal,
+      savedTotal: savedTotal,
+      discountAmount: discountAmount,
+      orderDate: orderDate,
+      orderNumber: orderNumber,
+      tokenNumber: tokenNumber,
+      isFromLocalStorage: isFromLocalStorage,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerEmail: customerEmail,
+      customerAddress: customerAddress,
+      customerOldBalance: customerOldBalance,
+      customerCurrentBalance: customerCurrentBalance,
+      paidAmount: paidAmount,
+      customerAlternatePhone: customerAlternatePhone,
+      paymentMethod: paymentMethod,
+      paymentBreakdown: paymentBreakdown,
+      orderComment: orderComment,
+      isDefaultCustomer: isDefaultCustomer,
+      netExcTax: netExcTax,
+    );
+
+    if (!autoPrintSuccess && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PrintPage(
+            storeName: storeName,
+            cartItems: cartItems,
+            formattedTotal: formattedTotal,
+            savedTotal: savedTotal,
+            discountAmount: discountAmount,
+            orderDate: orderDate,
+            orderNumber: orderNumber,
+            tokenNumber: tokenNumber,
+            isFromLocalStorage: isFromLocalStorage,
+            customerName: customerName,
+            customerPhone: customerPhone,
+            customerEmail: customerEmail,
+            customerAddress: customerAddress,
+            customerOldBalance: customerOldBalance,
+            customerCurrentBalance: customerCurrentBalance,
+            paidAmount: paidAmount,
+            customerAlternatePhone: customerAlternatePhone,
+            paymentMethod: paymentMethod,
+            paymentBreakdown: paymentBreakdown,
+            orderComment: orderComment,
+            isDefaultCustomer: isDefaultCustomer,
+            netExcTax: netExcTax,
+          ),
+        ),
+      );
+    }
+
+    return autoPrintSuccess;
+  }
+
   Future<void> _confirmOrderAndPrintBill() async {
     if (_selectedOrder == null) return;
 
@@ -6860,74 +7078,45 @@ class _OrderPanelState extends State<_OrderPanel> {
           }
 
           if (mounted) {
-            // Try auto-print with default printer first
             debugPrint("🖨️ Attempting auto-print for order #$orderNumber");
-            final autoPrintSuccess = await PrintPage.autoPrint(
-              context,
-              storeName: storeName,
-              cartItems: orderDetails.data!.cart!.cartItems!,
-              formattedTotal: formattedTotal!,
-              savedTotal: savedTotal,
-              discountAmount:
-                  orderDetails.data!.priceSummary?.discount?.toString() ??
-                      "0.00",
-              orderDate: DateHelper.formatInputToDisplay(orderDate),
-              orderNumber: orderDetails.data!.orderNumber ?? "",
-              tokenNumber: orderDetails.data?.tokenNumber,
-              customerName: customerName,
-              customerPhone: customerPhone,
-              customerEmail: customerEmail,
-              customerAddress: customerAddress,
-              customerOldBalance: oldBalance,
-              customerCurrentBalance: currentBalance,
-              paidAmount: totalPaid > 0 ? totalPaid : null,
-              customerAlternatePhone: customerAlternatePhone,
-              paymentMethod: paymentMethod,
-              paymentBreakdown: paymentBreakdown,
-              orderComment: orderComment,
-              isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                      context,
-                      listen: false)
-                  .isDefaultCustomer,
-              netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-            );
 
-            // Only show print page if auto-print failed
-            if (!autoPrintSuccess) {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PrintPage(
-                    storeName: storeName,
-                    cartItems: orderDetails.data!.cart!.cartItems!,
-                    formattedTotal: formattedTotal!,
-                    savedTotal: savedTotal,
-                    discountAmount:
-                        orderDetails.data!.priceSummary?.discount?.toString() ??
-                            "0.00",
-                    orderDate: DateHelper.formatInputToDisplay(orderDate),
-                    orderNumber: orderDetails.data!.orderNumber ?? "",
-                    tokenNumber: orderDetails.data?.tokenNumber,
-                    customerName: customerName,
-                    customerPhone: customerPhone,
-                    customerEmail: customerEmail,
-                    customerAddress: customerAddress,
-                    customerOldBalance: oldBalance,
-                    customerCurrentBalance: currentBalance,
-                    paidAmount: totalPaid > 0 ? totalPaid : null,
-                    customerAlternatePhone: customerAlternatePhone,
-                    paymentMethod: paymentMethod,
-                    paymentBreakdown: paymentBreakdown,
-                    orderComment: orderComment,
-                    isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                            context,
-                            listen: false)
-                        .isDefaultCustomer,
-                    netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-                  ),
-                ),
+            Future<bool> printOnce() {
+              return _printOrderDetailsWithFallback(
+                storeName: storeName,
+                cartItems: orderDetails.data!.cart!.cartItems!,
+                formattedTotal: formattedTotal!,
+                savedTotal: savedTotal,
+                discountAmount:
+                    orderDetails.data!.priceSummary?.discount?.toString() ??
+                        "0.00",
+                orderDate: DateHelper.formatInputToDisplay(orderDate),
+                orderNumber: orderDetails.data!.orderNumber ?? "",
+                tokenNumber: orderDetails.data?.tokenNumber,
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerEmail: customerEmail,
+                customerAddress: customerAddress,
+                customerOldBalance: oldBalance,
+                customerCurrentBalance: currentBalance,
+                paidAmount: totalPaid > 0 ? totalPaid : null,
+                customerAlternatePhone: customerAlternatePhone,
+                paymentMethod: paymentMethod,
+                paymentBreakdown: paymentBreakdown,
+                orderComment: orderComment,
+                isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                        context,
+                        listen: false)
+                    .isDefaultCustomer,
+                netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
+                    ?.toString(),
               );
             }
+
+            final autoPrintSuccess = await printOnce();
+            await _maybePrintCustomerCopy(
+              canPrompt: autoPrintSuccess,
+              printAction: printOnce,
+            );
 
             // After returning from print or successful auto-print, cleanup
             if (mounted) {

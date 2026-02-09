@@ -177,7 +177,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
     );
   }
 
-Widget _buildActionButtons(DailySalesCloseData data, BuildContext context) {
+  Widget _buildActionButtons(DailySalesCloseData data, BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -284,7 +284,10 @@ Widget _buildActionButtons(DailySalesCloseData data, BuildContext context) {
                     border: null,
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
-                      ...provider.dailySalesCloseList.asMap().entries.map((entry) {
+                      ...provider.dailySalesCloseList
+                          .asMap()
+                          .entries
+                          .map((entry) {
                         int index = entry.key;
                         DailySalesCloseData data = entry.value;
 
@@ -468,7 +471,8 @@ Widget _buildActionButtons(DailySalesCloseData data, BuildContext context) {
                         // Day Close Button
                         ElevatedButton.icon(
                           onPressed: () => _showDayCloseModal(context),
-                          icon: const Icon(Icons.access_time, size: 18, color: Colors.white),
+                          icon: const Icon(Icons.access_time,
+                              size: 18, color: Colors.white),
                           label: Text(
                             "Day Close",
                             style: buildCustomStyle(
@@ -480,7 +484,8 @@ Widget _buildActionButtons(DailySalesCloseData data, BuildContext context) {
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ColorManager.kSuccessColor,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -636,8 +641,8 @@ Widget _buildActionButtons(DailySalesCloseData data, BuildContext context) {
                                 ? ListView.builder(
                                     padding:
                                         const EdgeInsets.symmetric(vertical: 8),
-                                    itemCount:
-                                        salesProvider.dailySalesCloseList.length,
+                                    itemCount: salesProvider
+                                        .dailySalesCloseList.length,
                                     itemBuilder: (context, index) {
                                       // TODO: Create mobile card widget if needed
                                       return const SizedBox.shrink();
@@ -781,7 +786,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
     }
   }
 
-  Widget _buildSummaryCard(String label, String value, {Color? color, IconData? icon}) {
+  Widget _buildSummaryCard(String label, String value,
+      {Color? color, IconData? icon}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -837,13 +843,32 @@ class _DayCloseModalState extends State<DayCloseModal> {
     );
   }
 
-  Widget _buildSmallSummaryRow(String label1, String value1, String label2, String value2, {Color? color1, Color? color2}) {
-    return Row(
-      children: [
-        Expanded(child: _buildSmallSummaryItem(label1, value1, color: color1)),
-        const SizedBox(width: 12),
-        Expanded(child: _buildSmallSummaryItem(label2, value2, color: color2)),
-      ],
+  Widget _buildSmallSummaryRow(
+      String label1, String value1, String label2, String value2,
+      {Color? color1, Color? color2}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 420;
+        if (isNarrow) {
+          return Column(
+            children: [
+              _buildSmallSummaryItem(label1, value1, color: color1),
+              const SizedBox(height: 10),
+              _buildSmallSummaryItem(label2, value2, color: color2),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+                child: _buildSmallSummaryItem(label1, value1, color: color1)),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _buildSmallSummaryItem(label2, value2, color: color2)),
+          ],
+        );
+      },
     );
   }
 
@@ -912,7 +937,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -926,298 +950,432 @@ class _DayCloseModalState extends State<DayCloseModal> {
         circleRadius: 20,
         color: Colors.white,
         width: isMobile ? size.width * 0.95 : 520,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Day Close',
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s18,
-                        0.21,
-                        ColorManager.kTitleTextColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Summary of today\'s activities',
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s11,
-                        0.18,
-                        Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-                Material(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  child: IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                    constraints: const BoxConstraints(),
-                    padding: const EdgeInsets.all(8),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-
-            // Content
-            if (isLoadingSummary)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(40),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (errorMessage != null)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red.shade400, size: 48),
-                      const SizedBox(height: 16),
-                      Text(
-                        errorMessage!,
-                        style: TextStyle(color: Colors.red.shade600),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _fetchSummary,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              Consumer<AppSettingsProvider>(
-                builder: (context, appSettingsProvider, child) {
-                  final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-                  return Column(
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 420;
+            final maxHeight = size.height * 0.85;
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // User Name & Store Info Section
-                      Text(
-                        'Session Information',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s12,
-                          0.21,
-                          Colors.grey.shade800,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
+                      Expanded(
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildInfoRow(Icons.person_outline, 'User', summary?.userName ?? '-'),
-                            const SizedBox(height: 10),
-                            _buildInfoRow(Icons.calendar_today_outlined, 'Opening', '${summary?.openingDate ?? '-'} at ${summary?.openingTime ?? '-'}'),
-                            const SizedBox(height: 10),
-                            _buildInfoRow(Icons.event_available_outlined, 'Closing', '${summary?.closingDate ?? '-'} at ${summary?.closingTime ?? '-'}'),
+                            Text(
+                              'Day Close',
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s18,
+                                0.21,
+                                ColorManager.kTitleTextColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Summary of today\'s activities',
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s11,
+                                0.18,
+                                Colors.grey.shade500,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
-
-                      Text(
-                        'Transaction Overview',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s12,
-                          0.21,
-                          Colors.grey.shade800,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Total Orders and Total Sales
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildSummaryCard(
-                              'TOTAL ORDERS',
-                              summary?.totalOrders?.toString() ?? '0',
-                              icon: Icons.shopping_bag_outlined,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildSummaryCard(
-                              'TOTAL SALES',
-                              '$currency ${summary?.totalSales ?? '0.00'}',
-                              color: ColorManager.kPrimaryColor,
-                              icon: Icons.account_balance_wallet_outlined,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Payment Received and Collected On Sale
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildSummaryCard(
-                              'PAYMENT RECEIVED',
-                              '$currency ${summary?.paymentReceived ?? '0.00'}',
-                              icon: Icons.check_circle_outline,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildSummaryCard(
-                              'COLLECTED ON SALE',
-                              '$currency ${summary?.collectedOnSale ?? '0.00'}',
-                              icon: Icons.monetization_on_outlined,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Small summary rows
-                      _buildSmallSummaryRow(
-                        'CASH SALES',
-                        '$currency ${summary?.cashSales ?? '0.00'}',
-                        'ONLINE SALES',
-                        '$currency ${summary?.onlineSales ?? '0.00'}',
-                      ),
-                      const SizedBox(height: 10),
-                      _buildSmallSummaryRow(
-                        'CREDIT AMOUNT',
-                        '$currency ${summary?.creditAmount ?? '0.00'}',
-                        'CREDIT COLLECTED',
-                        '$currency ${summary?.creditCollected ?? '0.00'}',
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Returns & Refunds Section
-                      Text(
-                        'Returns & Refunds',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s12,
-                          0.21,
-                          Colors.grey.shade800,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSmallSummaryRow(
-                        'TOTAL RETURNS',
-                        '$currency ${summary?.totalReturns ?? '0.00'}',
-                        'TOTAL REFUNDS',
-                        '$currency ${summary?.totalRefunds ?? '0.00'}',
-                        color1: Colors.red.shade600,
-                        color2: Colors.red.shade600,
-                      ),
-
-                    ],
-                  );
-                },
-              ),
-            const SizedBox(height: 24),
-
-            // Footer buttons
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
+                      const SizedBox(width: 12),
+                      Material(
+                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(12),
+                        child: IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () => Navigator.of(context).pop(),
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(8),
+                        ),
                       ),
-                      backgroundColor: Colors.grey.shade100,
-                    ),
-                    child: Text(
-                      'Cancel',
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s13,
-                        0.18,
-                        Colors.grey.shade700,
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Scrollable content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (isLoadingSummary)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(40),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else if (errorMessage != null)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.error_outline,
+                                        color: Colors.red.shade400, size: 48),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      errorMessage!,
+                                      style:
+                                          TextStyle(color: Colors.red.shade600),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: _fetchSummary,
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            Consumer<AppSettingsProvider>(
+                              builder: (context, appSettingsProvider, child) {
+                                final currency =
+                                    appSettingsProvider.appSettings?.currency ??
+                                        'INR';
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // User Name & Store Info Section
+                                    Text(
+                                      'Session Information',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s12,
+                                        0.21,
+                                        Colors.grey.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF9FAFB),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: Colors.grey.shade200),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          _buildInfoRow(
+                                              Icons.person_outline,
+                                              'User',
+                                              summary?.userName ?? '-'),
+                                          const SizedBox(height: 10),
+                                          _buildInfoRow(
+                                              Icons.calendar_today_outlined,
+                                              'Opening',
+                                              '${summary?.openingDate ?? '-'} at ${summary?.openingTime ?? '-'}'),
+                                          const SizedBox(height: 10),
+                                          _buildInfoRow(
+                                              Icons.event_available_outlined,
+                                              'Closing',
+                                              '${summary?.closingDate ?? '-'} at ${summary?.closingTime ?? '-'}'),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+
+                                    Text(
+                                      'Transaction Overview',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s12,
+                                        0.21,
+                                        Colors.grey.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Total Orders and Total Sales
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: [
+                                        SizedBox(
+                                          width: isNarrow
+                                              ? double.infinity
+                                              : (constraints.maxWidth - 12) / 2,
+                                          child: _buildSummaryCard(
+                                            'TOTAL ORDERS',
+                                            summary?.totalOrders?.toString() ??
+                                                '0',
+                                            icon: Icons.shopping_bag_outlined,
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: isNarrow
+                                              ? double.infinity
+                                              : (constraints.maxWidth - 12) / 2,
+                                          child: _buildSummaryCard(
+                                            'TOTAL SALES',
+                                            '$currency ${summary?.totalSales ?? '0.00'}',
+                                            color: ColorManager.kPrimaryColor,
+                                            icon: Icons
+                                                .account_balance_wallet_outlined,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Payment Received and Collected On Sale
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: [
+                                        SizedBox(
+                                          width: isNarrow
+                                              ? double.infinity
+                                              : (constraints.maxWidth - 12) / 2,
+                                          child: _buildSummaryCard(
+                                            'PAYMENT RECEIVED',
+                                            '$currency ${summary?.paymentReceived ?? '0.00'}',
+                                            icon: Icons.check_circle_outline,
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: isNarrow
+                                              ? double.infinity
+                                              : (constraints.maxWidth - 12) / 2,
+                                          child: _buildSummaryCard(
+                                            'COLLECTED ON SALE',
+                                            '$currency ${summary?.collectedOnSale ?? '0.00'}',
+                                            icon: Icons.monetization_on_outlined,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Small summary rows
+                                    _buildSmallSummaryRow(
+                                      'CASH SALES',
+                                      '$currency ${summary?.cashSales ?? '0.00'}',
+                                      'ONLINE SALES',
+                                      '$currency ${summary?.onlineSales ?? '0.00'}',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildSmallSummaryRow(
+                                      'CREDIT AMOUNT',
+                                      '$currency ${summary?.creditAmount ?? '0.00'}',
+                                      'CREDIT COLLECTED',
+                                      '$currency ${summary?.creditCollected ?? '0.00'}',
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Returns & Refunds Section
+                                    Text(
+                                      'Returns & Refunds',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s12,
+                                        0.21,
+                                        Colors.grey.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildSmallSummaryRow(
+                                      'TOTAL RETURNS',
+                                      '$currency ${summary?.totalReturns ?? '0.00'}',
+                                      'TOTAL REFUNDS',
+                                      '$currency ${summary?.totalRefunds ?? '0.00'}',
+                                      color1: Colors.red.shade600,
+                                      color2: Colors.red.shade600,
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: ColorManager.kSuccessColor.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                  const SizedBox(height: 16),
+
+                  // Footer buttons
+                  if (isNarrow)
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: isSubmitting
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              backgroundColor: Colors.grey.shade100,
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s13,
+                                0.18,
+                                Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ColorManager.kSuccessColor
+                                      .withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: isSubmitting ||
+                                      isLoadingSummary ||
+                                      errorMessage != null
+                                  ? null
+                                  : _submitDayClose,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: ColorManager.kSuccessColor,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Close Day',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.bold,
+                                        FontSize.s13,
+                                        0.18,
+                                        Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: isSubmitting
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              backgroundColor: Colors.grey.shade100,
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s13,
+                                0.18,
+                                Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ColorManager.kSuccessColor
+                                      .withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: isSubmitting ||
+                                      isLoadingSummary ||
+                                      errorMessage != null
+                                  ? null
+                                  : _submitDayClose,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: ColorManager.kSuccessColor,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Close Day',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.bold,
+                                        FontSize.s13,
+                                        0.18,
+                                        Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    child: ElevatedButton(
-                      onPressed: isSubmitting || isLoadingSummary || errorMessage != null
-                          ? null
-                          : _submitDayClose,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorManager.kSuccessColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: isSubmitting
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Close Day',
-                              style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                FontSize.s13,
-                                0.18,
-                                Colors.white,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-          ],
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
-
-

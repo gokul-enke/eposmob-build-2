@@ -65,6 +65,7 @@ class KotStandardPrinter {
   /// Generate and print/open KOT PDF using document configuration
   Future<void> generateAndPrintKotPDF({
     required String orderNumber,
+    String? tokenNumber,
     required String tableName,
     required String orderTime,
     required List<Map<String, dynamic>> items,
@@ -175,6 +176,8 @@ class KotStandardPrinter {
           (displayConfig?['showDateTime']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showDateTime']!.value as String
               : 'Time';
+      final tokenLabel = 'Token';
+      final hasToken = tokenNumber != null && tokenNumber.trim().isNotEmpty;
 
       final slLabel =
           (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true
@@ -283,16 +286,33 @@ class KotStandardPrinter {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (showOrderNumber)
+                      if (showOrderNumber && hasToken)
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
                             pw.Text('$orderLabel: $orderNumber',
                                 style: subheaderStyle),
-                          if (showDateTime)
-                            pw.Text('$timeLabel: $orderTime', style: bodyStyle),
-                        ],
-                      ),
+                            pw.Text('$tokenLabel: ${tokenNumber!.trim()}',
+                                style: subheaderStyle),
+                          ],
+                        )
+                      else
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (showOrderNumber)
+                              pw.Text('$orderLabel: $orderNumber',
+                                  style: subheaderStyle),
+                          ],
+                        ),
+                      if (showDateTime) ...[
+                        pw.SizedBox(height: 2),
+                        pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: pw.Text('$timeLabel: $orderTime',
+                              style: bodyStyle),
+                        ),
+                      ],
                       if (showTableNumber) ...[
                         pw.SizedBox(height: 4),
                         pw.Text('$tableLabel: $tableName',

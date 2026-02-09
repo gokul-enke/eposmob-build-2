@@ -356,16 +356,23 @@ class Premium1ReceiptLayout implements ReceiptLayout {
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
-      // Get prefix from display configuration - use language-specific fallback
-      final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
-      );
+      // Use number_prefix from document configuration as the invoice prefix
+      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
 
-      final invoiceNumberText = '$invoicePrefix $strippedNumber';
+      final invoiceNumberText = '$invoicePrefix$strippedNumber';
       rows.add(TextRow(invoiceNumberText, scale: 1.3, isBold: true));
+    }
+
+    // Token Number - Display right after invoice number in big font (same as store name)
+    // Only show if showTokenNumber is explicitly enabled (default: false)
+    if (displayConfig?['showTokenNumber']?.visible == true &&
+        params.tokenNumber != null &&
+        params.tokenNumber!.isNotEmpty) {
+      final tokenPrefix = displayConfig?['showTokenNumber']?.value as String? ?? '';
+      final tokenText = tokenPrefix.isNotEmpty
+          ? '$tokenPrefix${params.tokenNumber!}'
+          : params.tokenNumber!;
+      rows.add(TextRow(tokenText, scale: 1.4, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -905,8 +912,8 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "VAT");
     final vatLabel = taxLabelBase;
 
-    final grandTotalLabelBase = isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي";
-    final grandTotalLabel = grandTotalLabelBase;
+    final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
+        isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
     final cashLabel =
         _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
@@ -1311,16 +1318,11 @@ class Premium1ReceiptLayout implements ReceiptLayout {
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
-      // Get prefix from display configuration - use language-specific fallback
-      final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
-      );
+      // Use number_prefix from document configuration as the invoice prefix
+      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(3));
-      rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
+      rows.add(TextRow('$invoicePrefix$strippedNumber', scale: 0.8));
     }
 
     // Order Number in Footer
@@ -1330,18 +1332,14 @@ class Premium1ReceiptLayout implements ReceiptLayout {
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
-      final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
-      );
+      // Use number_prefix from document configuration as the invoice prefix
+      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(5));
       rows.add(ThinDividerRow());
       rows.add(SpacingRow(5));
       rows.add(
-          TextRow('$invoicePrefix $strippedNumber', scale: 1.1, isBold: true));
+          TextRow('$invoicePrefix$strippedNumber', scale: 1.1, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));
