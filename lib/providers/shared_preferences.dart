@@ -204,6 +204,16 @@ class SharedPreferenceProvider extends ChangeNotifier {
     return prefs.getInt('server_time_offset');
   }
 
+  Future<void> saveLastProductSyncIso(String isoDateTime) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_product_sync_iso', isoDateTime);
+  }
+
+  Future<String?> getLastProductSyncIso() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('last_product_sync_iso');
+  }
+
   // ==================== ZATCA METHODS ====================
 
   /// Save ZATCA VAT number for Saudi Arabia e-invoicing

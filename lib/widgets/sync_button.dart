@@ -18,13 +18,13 @@ class SyncButton extends StatelessWidget {
   final VoidCallback? onSyncError;
 
   const SyncButton({
-    Key? key,
+    super.key,
     this.size,
     this.showTooltip = true,
     this.showText = false,
     this.onSyncComplete,
     this.onSyncError,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -9,6 +9,8 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -59,7 +61,7 @@ class SettingsScreen extends StatelessWidget {
                         crossAxisSpacing: 14,
                         childAspectRatio: 1.08,
                       ),
-                      itemCount: 3, // Added Language Settings
+                      itemCount: 4, // Added Language + Last Sync
                       itemBuilder: (context, index) {
                         switch (index) {
                           case 0:
@@ -89,6 +91,35 @@ class SettingsScreen extends StatelessWidget {
                               backgroundColor: const Color(0xFFE3F2FD),
                               iconColor: const Color(0xFF1565C0),
                               onTap: () => _showLanguagePicker(context),
+                            );
+                          case 3:
+                            return FutureBuilder<String?>(
+                              future: SharedPreferenceProvider()
+                                  .getLastProductSyncIso(),
+                              builder: (context, snapshot) {
+                                final isoTime = snapshot.data;
+                                final displayTime = snapshot.connectionState ==
+                                    ConnectionState.waiting
+                                  ? 'Loading...'
+                                  : (isoTime == null
+                                    ? 'Not synced yet'
+                                    : DateHelper.formatISODateToIST(
+                                      isoTime,
+                                      ));
+                                return _SettingsInfoCard(
+                                  title: 'Last Product Sync',
+                                  subtitle: displayTime,
+                                  icon: FontAwesomeIcons.clockRotateLeft,
+                                  backgroundColor: const Color(0xFFFFF3E0),
+                                  iconColor: const Color(0xFFEF6C00),
+                                  onTap: isoTime == null
+                                      ? null
+                                      : () => _showLastSyncDialog(
+                                          context,
+                                          displayTime,
+                                        ),
+                                );
+                              },
                             );
                           default:
                             return const SizedBox
@@ -159,6 +190,24 @@ class SettingsScreen extends StatelessWidget {
                 Get.updateLocale(newLocale);
                 Get.back();
               },
+              child: Text('general.ok'.tr),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLastSyncDialog(BuildContext context, String displayTime) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Last Product Sync'),
+          content: Text(displayTime),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
               child: Text('general.ok'.tr),
             ),
           ],
@@ -323,6 +372,98 @@ class _SettingsCardWithIconState extends State<_SettingsCardWithIcon> {
                 );
               },
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsInfoCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color backgroundColor;
+  final Color iconColor;
+  final VoidCallback? onTap;
+
+  const _SettingsInfoCard({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.backgroundColor,
+    required this.iconColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: BuildBoxShadowContainer(
+        circleRadius: 14,
+        offsetValue: const Offset(1, 1),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: iconColor.withOpacity(0.2),
+              width: 1.5,
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final side = constraints.biggest.shortestSide;
+              final iconSize = side * 0.35;
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    height: iconSize,
+                    width: iconSize,
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: FaIcon(
+                        icon,
+                        color: iconColor,
+                        size: iconSize * 0.6,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s14,
+                      0.21,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s10,
+                      0.15,
+                      ColorManager.textColor.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

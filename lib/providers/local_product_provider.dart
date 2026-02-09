@@ -12,6 +12,7 @@ import '../models/get_product.dart';
 import '../models/local_models.dart';
 import '../resources/app_url.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/shared_preferences.dart' as prefs_provider;
 
 /// A model representing a local cart item.
 /// It holds a product and its associated quantity in the offline cart.
@@ -778,6 +779,11 @@ class LocalProductProvider extends ChangeNotifier {
     List<GetProduct> allProducts = [];
     int currentPage = 1;
     const int batchSize = 10; // Fetch 10 pages concurrently
+    final prefsProvider = prefs_provider.SharedPreferenceProvider();
+    final lastSyncIso = refresh ? null : await prefsProvider.getLastProductSyncIso();
+    final syncEndIso = DateHelper.now().toUtc().toIso8601String();
+    final useDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
+    int successResponses = 0;
 
     isLoading = true;
     notifyListeners();
@@ -786,6 +792,10 @@ class LocalProductProvider extends ChangeNotifier {
       final swTotal = Stopwatch()..start();
       debugPrint(
           "🌐 [API] Starting batched product fetch (batch size: $batchSize)...");
+      if (useDelta) {
+        debugPrint(
+            "🕒 [API] Delta sync enabled: updated_at_range=$lastSyncIso,$syncEndIso");
+      }
 
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -809,9 +819,10 @@ class LocalProductProvider extends ChangeNotifier {
         // Create list of futures for concurrent requests
         final futures = <Future<http.Response>>[];
         for (int page = batchStartPage; page <= batchEndPage; page++) {
-          final queryParams = <String, String>{
-            'page': page.toString(),
-          };
+          final queryParams = <String, String>{'page': page.toString()};
+          if (useDelta) {
+            queryParams['updated_at_range'] = "$lastSyncIso,$syncEndIso";
+          }
 
           // Choose URL based on sellableOnly flag
           final urlString = sellableOnly
@@ -844,6 +855,7 @@ class LocalProductProvider extends ChangeNotifier {
           final pageNum = batchStartPage + i;
 
           if (response.statusCode == 200) {
+            successResponses++;
             dynamic jsonData;
             log(response.body);
             try {
@@ -888,10 +900,39 @@ class LocalProductProvider extends ChangeNotifier {
         }
       }
 
-      _products = allProducts;
+      if (useDelta) {
+        if (allProducts.isNotEmpty) {
+          final updatedProducts = List<GetProduct>.from(_products);
+          final indexById = <int, int>{};
+          for (int i = 0; i < updatedProducts.length; i++) {
+            final id = updatedProducts[i].productId;
+            if (id != null) {
+              indexById[id] = i;
+            }
+          }
+
+          final newProducts = <GetProduct>[];
+          for (final product in allProducts) {
+            final id = product.productId;
+            final existingIndex = id == null ? null : indexById[id];
+            if (existingIndex != null) {
+              updatedProducts[existingIndex] = product;
+            } else {
+              newProducts.add(product);
+            }
+          }
+
+          _products = [...newProducts, ...updatedProducts];
+        }
+      } else {
+        _products = allProducts;
+      }
       _filteredProducts = List.from(_products);
       _updatePagination();
       _saveProductsToHive();
+      if (successResponses > 0) {
+        await prefsProvider.saveLastProductSyncIso(syncEndIso);
+      }
       swTotal.stop();
       debugPrint(
           '✅ [API] All products loaded successfully. Total: ${_products.length} | Duration: ${swTotal.elapsedMilliseconds}ms');
