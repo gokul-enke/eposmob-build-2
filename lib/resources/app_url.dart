@@ -211,6 +211,7 @@ class APPUrl {
       '$baseURL/api/v1/zatca/phase2/invoice/print';
   static String zatcaPhase2InvoiceResync =
       '$baseURL/api/v1/zatca/phase2/invoice/resync';
+  static String zatcaBulkSend = '$baseURL/api/v1/zatca/bulk-send';
 
   // ZATCA Voucher endpoints
   static String zatcaPhase2VoucherPrint =

@@ -41,6 +41,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final TextEditingController dateFromController = TextEditingController();
   final TextEditingController dateToController = TextEditingController();
   String? selectedStatus; // For the status dropdown
+  final Set<int> selectedInvoiceIds = {};
+  bool isBulkSending = false;
 
   @override
   void initState() {
@@ -198,12 +200,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   Future<void> _showInvoiceActionsSheet(Invoice invoice) async {
     if (!mounted) return;
-    await showModalBottomSheet(
+    await showDialog(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (ctx) {
         final appSettings =
             Provider.of<AppSettingsProvider>(context, listen: false)
@@ -217,7 +215,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             invoice.zatcaRequestStatus?.toLowerCase();
 
         // Determine states
-        // Backend zatca_status values: PASS, WARNING, null
         final bool isZatcaPass = (zatcaStatus == 'pass');
         final bool isZatcaWarning = (zatcaStatus == 'warning');
         final bool isRequestFailed = (zatcaRequestStatus == 'failed');
@@ -245,9 +242,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           );
         }
 
-        // ===== SCENARIO 1: Already ZATCA compliant (zatca_status == 'PASS') =====
+        // ===== SCENARIO 1: Already ZATCA compliant =====
         if (isZatcaPass) {
-          // Only show Phase 2 Print button (download existing PDF)
           if (phase2) {
             dynamicItems.add(
               ListTile(
@@ -265,7 +261,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             );
           }
         }
-        // ===== SCENARIO 2: zatca_status == 'WARNING' (requires resync) =====
+        // ===== SCENARIO 2: Warning =====
         else if (isZatcaWarning) {
           if (phase2) {
             dynamicItems.add(
@@ -284,8 +280,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             );
           }
         }
-        // ===== SCENARIO 3: zatca_status == null & request_status == 'success' =====
-        // Invoice was sent successfully but final ZATCA status not set yet
+        // ===== SCENARIO 3: Sent but status not set =====
         else if (!isZatcaPass &&
             !isZatcaWarning &&
             zatcaRequestStatus == 'success') {
@@ -306,9 +301,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             );
           }
         }
-        // ===== SCENARIO 4: Request failed (zatca_request_status == 'failed') =====
+        // ===== SCENARIO 4: Failed =====
         else if (isRequestFailed) {
-          // Hide Phase 2 button, show Resync button
           if (phase2) {
             dynamicItems.add(
               ListTile(
@@ -326,9 +320,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             );
           }
         }
-        // ===== SCENARIO 5: Request pending/processing =====
+        // ===== SCENARIO 5: Pending =====
         else if (isRequestPending) {
-          // Hide Phase 2 button (already sent), show Resync button
           if (phase2) {
             dynamicItems.add(
               ListTile(
@@ -346,9 +339,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             );
           }
         }
-        // ===== SCENARIO 6: Never requested (zatca_request_status == null) =====
+        // ===== SCENARIO 6: Never requested =====
         else if (neverRequested) {
-          // Show Phase 2 button, hide Resync button
           if (phase2) {
             dynamicItems.add(
               ListTile(
@@ -368,27 +360,32 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           }
         }
 
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'More Options',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
                 ),
-                const Text(
-                  'More Options',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                const Divider(height: 1),
+                const Divider(),
                 ...dynamicItems,
               ],
             ),
@@ -721,7 +718,173 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             ],
           ),
         ),
+        _buildSelectionActions(),
+        const SizedBox(height: 10),
       ],
+    );
+  }
+
+  Widget _buildSelectionActions() {
+    if (selectedInvoiceIds.isEmpty) return const SizedBox.shrink();
+
+    final provider = Provider.of<InvoiceProvider>(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          CustomRoundButton(
+            title: "Send to ZATCA",
+            boxColor: Colors.lightBlue,
+            textColor: Colors.white,
+            isLoading: isBulkSending,
+            fct: isBulkSending
+                ? () {
+                    debugPrint(
+                        "[DEBUG][ZATCA] Button clicked while already sending. Ignoring.");
+                  }
+                : () async {
+                    debugPrint("[DEBUG][ZATCA] 'Send to ZATCA' button TAPPED.");
+                    final String? token =
+                        Provider.of<AuthModel>(context, listen: false).token;
+
+                    debugPrint(
+                        "[DEBUG][ZATCA] Token length: ${token?.length ?? 0}");
+                    debugPrint(
+                        "[DEBUG][ZATCA] Selected IDs: $selectedInvoiceIds");
+
+                    if (token == null || token.isEmpty) {
+                      debugPrint(
+                          "[DEBUG][ZATCA] ABORT: Token is null or empty.");
+                      showScaffold(
+                          context: context,
+                          message: "Authentication required.");
+                      return;
+                    }
+
+                    setState(() {
+                      isBulkSending = true;
+                    });
+
+                    final idsToSend = selectedInvoiceIds.toList();
+                    debugPrint(
+                        "[DEBUG][ZATCA] Initiating Bulk Send for ${idsToSend.length} invoices.");
+
+                    try {
+                      final result = await provider.zatcaBulkSend(
+                        ids: idsToSend,
+                        accessToken: token,
+                      );
+
+                      debugPrint("[DEBUG][ZATCA] API Result: $result");
+
+                      if (result != null && result['status'] == 'success') {
+                        showScaffold(
+                            context: context,
+                            message: result['message'] ??
+                                "ZATCA bulk send successful");
+                        setState(() {
+                          selectedInvoiceIds.clear();
+                        });
+                        // Refresh the list to reflect status changes
+                        await refreshData();
+                      } else {
+                        final errorMsg =
+                            result?['message'] ?? "ZATCA bulk send failed";
+                        debugPrint("[DEBUG][ZATCA] FAILED: $errorMsg");
+                        showScaffoldError(context: context, message: errorMsg);
+                      }
+                    } catch (e) {
+                      debugPrint("[DEBUG][ZATCA] EXCEPTION: $e");
+                      showScaffoldError(
+                          context: context, message: "An error occurred: $e");
+                    } finally {
+                      if (mounted) {
+                        setState(() {
+                          isBulkSending = false;
+                        });
+                        debugPrint(
+                            "[DEBUG][ZATCA] Process finished. isBulkSending set to false.");
+                      }
+                    }
+                  },
+            height: 40,
+            width: 130,
+            fontSize: FontSize.s10,
+          ),
+          const SizedBox(width: 10),
+          const Spacer(),
+          Text(
+            "${selectedInvoiceIds.length} records selected",
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s12,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
+          if (selectedInvoiceIds.length < provider.filteredInvoices.length ||
+              provider.filteredInvoices.isEmpty) ...[
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: () {
+                var allMatchingInvoices = provider.filteredInvoices;
+
+                // If filteredInvoices is empty but we have data, trigger a re-filter
+                if (allMatchingInvoices.isEmpty &&
+                    (provider.invoiceListDetails?.isNotEmpty ?? false)) {
+                  provider.reapplyCurrentFilters();
+                  allMatchingInvoices = provider.filteredInvoices;
+                }
+
+                if (allMatchingInvoices.isNotEmpty) {
+                  setState(() {
+                    for (final inv in allMatchingInvoices) {
+                      selectedInvoiceIds.add(inv.id);
+                    }
+                  });
+                } else if (provider.invoiceListDetails != null) {
+                  // Fallback to current page
+                  setState(() {
+                    for (final inv in provider.invoiceListDetails!) {
+                      selectedInvoiceIds.add(inv.id);
+                    }
+                  });
+                }
+
+                debugPrint(
+                    "[DEBUG] Bulk Select: Found ${allMatchingInvoices.length}, Selected ${selectedInvoiceIds.length}");
+              },
+              child: Text(
+                "Select All",
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s10,
+                  0.18,
+                  ColorManager.kPrimaryColor,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(width: 15),
+          InkWell(
+            onTap: () {
+              setState(() {
+                selectedInvoiceIds.clear();
+              });
+            },
+            child: Text(
+              "Unselect",
+              style: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s10,
+                0.18,
+                const Color.fromARGB(255, 198, 78, 78),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1279,20 +1442,19 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                             ),
                             child: Table(
                               columnWidths: {
-                                0: const FlexColumnWidth(1.4), // Invoice Number
-                                1: const FlexColumnWidth(0.9), // Amount
-                                2: const FlexColumnWidth(1.6), // Name (reduced)
-                                3: const FlexColumnWidth(
-                                    1.3), // Invoice Date (reduced)
-                                4: const FlexColumnWidth(0.9), // Type
-                                5: const FlexColumnWidth(
-                                    1.3), // Due Date (reduced)
-                                6: const FlexColumnWidth(0.9), // Status
-                                // Make action column wider on small screens
-                                7: FlexColumnWidth(
+                                0: const FixedColumnWidth(40), // Checkbox
+                                1: const FlexColumnWidth(1.2), // Invoice Number
+                                2: const FlexColumnWidth(0.8), // Amount
+                                3: const FlexColumnWidth(1.4), // Name
+                                4: const FlexColumnWidth(1.1), // Invoice Date
+                                5: const FlexColumnWidth(0.7), // Type
+                                6: const FlexColumnWidth(1.1), // Due Date
+                                7: const FlexColumnWidth(0.8), // Status
+                                8: const FlexColumnWidth(1.2), // ZATCA Status
+                                9: FlexColumnWidth(
                                     MediaQuery.of(context).size.width < 900
-                                        ? 2.2
-                                        : 1.5),
+                                        ? 1.8
+                                        : 1.4),
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -1300,6 +1462,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                               children: [
                                 TableRow(
                                   children: [
+                                    _buildTableHeader(""), // Selection Checkbox
                                     _buildTableHeader("Invoice Number"),
                                     _buildTableHeader("Amount"),
                                     _buildTableHeader("Name"),
@@ -1307,6 +1470,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                     _buildTableHeader("Type"),
                                     _buildTableHeader("Due Date"),
                                     _buildTableHeader("Status"),
+                                    _buildTableHeader("ZATCA Status"),
                                     _buildTableHeader("Action"),
                                   ],
                                 ),
@@ -1335,27 +1499,31 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                         scrollDirection: Axis.vertical,
                                         child: Table(
                                           columnWidths: {
-                                            0: const FlexColumnWidth(
-                                                1.4), // Invoice Number
+                                            0: const FixedColumnWidth(
+                                                40), // Checkbox
                                             1: const FlexColumnWidth(
-                                                0.9), // Amount
+                                                1.2), // Invoice Number
                                             2: const FlexColumnWidth(
-                                                1.6), // Name (reduced)
+                                                0.8), // Amount
                                             3: const FlexColumnWidth(
-                                                1.3), // Invoice Date (reduced)
+                                                1.4), // Name
                                             4: const FlexColumnWidth(
-                                                0.9), // Type
+                                                1.1), // Invoice Date
                                             5: const FlexColumnWidth(
-                                                1.3), // Due Date (reduced)
+                                                0.7), // Type
                                             6: const FlexColumnWidth(
-                                                0.9), // Status
-                                            7: FlexColumnWidth(
+                                                1.1), // Due Date
+                                            7: const FlexColumnWidth(
+                                                0.8), // Status
+                                            8: const FlexColumnWidth(
+                                                1.2), // ZATCA Status
+                                            9: FlexColumnWidth(
                                                 MediaQuery.of(context)
                                                             .size
                                                             .width <
                                                         900
-                                                    ? 2.2
-                                                    : 1.5),
+                                                    ? 1.8
+                                                    : 1.4),
                                           },
                                           border: null,
                                           defaultVerticalAlignment:
@@ -1366,6 +1534,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                               .map((entry) {
                                             final int index = entry.key;
                                             final invoice = entry.value;
+                                            final isSelected =
+                                                selectedInvoiceIds
+                                                    .contains(invoice.id);
                                             return TableRow(
                                               decoration: BoxDecoration(
                                                 color: index % 2 == 0
@@ -1374,6 +1545,28 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                         .withOpacity(0.1),
                                               ),
                                               children: [
+                                                TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Checkbox(
+                                                    value: isSelected,
+                                                    activeColor: ColorManager
+                                                        .kPrimaryColor,
+                                                    onChanged: (bool? value) {
+                                                      setState(() {
+                                                        if (value == true) {
+                                                          selectedInvoiceIds
+                                                              .add(invoice.id);
+                                                        } else {
+                                                          selectedInvoiceIds
+                                                              .remove(
+                                                                  invoice.id);
+                                                        }
+                                                      });
+                                                    },
+                                                  ),
+                                                ),
                                                 _buildTableCell(
                                                     invoice.invoiceNumber),
                                                 _buildTableCell(
@@ -1389,6 +1582,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                 Center(
                                                     child: _buildStatusChip(
                                                         invoice.status)),
+                                                Center(
+                                                    child:
+                                                        _buildZatcaStatusChip(
+                                                            invoice)),
                                                 Center(
                                                   child: Padding(
                                                     padding:
@@ -1632,6 +1829,53 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         style: TextStyle(
           color: textColor,
           fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZatcaStatusChip(Invoice invoice) {
+    String label = "NOT SENT";
+    Color backgroundColor = Colors.orange.withOpacity(0.12);
+    Color textColor = Colors.orange;
+
+    final String? zatcaStatus = invoice.zatcaStatus?.toLowerCase();
+    final String? zatcaRequestStatus =
+        invoice.zatcaRequestStatus?.toLowerCase();
+
+    // Determine states based on backend values
+    final bool isZatcaPass = (zatcaStatus == 'pass');
+    final bool isRequestFailed = (zatcaRequestStatus == 'failed');
+    final bool isRequestPending =
+        (zatcaRequestStatus == 'pending' || zatcaRequestStatus == 'processing');
+
+    if (isZatcaPass) {
+      label = "SUCCESS";
+      backgroundColor = Colors.green.withOpacity(0.12);
+      textColor = Colors.green;
+    } else if (isRequestFailed) {
+      label = "FAILED";
+      backgroundColor = Colors.red.withOpacity(0.12);
+      textColor = Colors.red;
+    } else if (isRequestPending) {
+      label = "PENDING";
+      backgroundColor = Colors.blue.withOpacity(0.12);
+      textColor = Colors.blue;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 9,
           fontWeight: FontWeight.bold,
         ),
       ),
