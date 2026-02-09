@@ -214,6 +214,11 @@ class SharedPreferenceProvider extends ChangeNotifier {
     return prefs.getString('last_product_sync_iso');
   }
 
+  Future<void> clearLastProductSyncIso() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('last_product_sync_iso');
+  }
+
   // ==================== ZATCA METHODS ====================
 
   /// Save ZATCA VAT number for Saudi Arabia e-invoicing

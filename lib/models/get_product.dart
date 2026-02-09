@@ -7,6 +7,17 @@ GetProductModel getProductModelFromJson(String str) =>
 String getProductModelToJson(GetProductModel data) =>
     json.encode(data.toJson());
 
+bool? _parseBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is int) return value == 1;
+  if (value is String) {
+    final lowered = value.toLowerCase();
+    return lowered == '1' || lowered == 'true';
+  }
+  return null;
+}
+
 class GetProductModel {
   final List<GetProduct>? product;
   final String? status; // this field seems to be missing in your JSON
@@ -197,8 +208,8 @@ class GetProduct {
           if (rl is String) return int.tryParse(rl);
           return null;
         })(),
-        sellable: json["sellable"],
-        purchasable: json["purchasable"],
+        sellable: _parseBool(json["sellable"]),
+        purchasable: _parseBool(json["purchasable"]),
       );
     } catch (e, stack) {
       debugPrint("❌ GetProduct.fromJson error: $e");
@@ -270,7 +281,7 @@ class WeightInfo {
             ? double.tryParse(
                 json["total_price"].toString()) // Convert to double safely
             : null,
-        isWeighted: json["is_weighted"], // No conversion needed for bool
+        isWeighted: _parseBool(json["is_weighted"]),
       );
 
   Map<String, dynamic> toJson() => {

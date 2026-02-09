@@ -142,7 +142,7 @@ Future<void> _initializeHiveBoxes() async {
   const maxRetries = 3;
   const retryDelay = Duration(seconds: 2);
 
-  const boxesToResetBeforeInit = ['products', 'categories'];
+  const boxesToResetBeforeInit = ['categories'];
 
   for (final boxName in boxesToResetBeforeInit) {
     try {

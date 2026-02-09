@@ -112,12 +112,11 @@ class SettingsScreen extends StatelessWidget {
                                   icon: FontAwesomeIcons.clockRotateLeft,
                                   backgroundColor: const Color(0xFFFFF3E0),
                                   iconColor: const Color(0xFFEF6C00),
-                                  onTap: isoTime == null
-                                      ? null
-                                      : () => _showLastSyncDialog(
-                                          context,
-                                          displayTime,
-                                        ),
+                                  onTap: () => _showLastSyncDialog(
+                                    context,
+                                    displayTime,
+                                    isoTime != null,
+                                  ),
                                 );
                               },
                             );
@@ -198,7 +197,11 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showLastSyncDialog(BuildContext context, String displayTime) {
+  void _showLastSyncDialog(
+    BuildContext context,
+    String displayTime,
+    bool hasSync,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -206,6 +209,19 @@ class SettingsScreen extends StatelessWidget {
           title: const Text('Last Product Sync'),
           content: Text(displayTime),
           actions: [
+            TextButton(
+              onPressed: hasSync
+                  ? () async {
+                      await SharedPreferenceProvider()
+                          .clearLastProductSyncIso();
+                      if (context.mounted) {
+                        (context as Element).markNeedsBuild();
+                      }
+                      Get.back();
+                    }
+                  : null,
+              child: const Text('Reset'),
+            ),
             TextButton(
               onPressed: () => Get.back(),
               child: Text('general.ok'.tr),

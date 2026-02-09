@@ -2538,8 +2538,8 @@ class LocalProductProvider extends ChangeNotifier {
 
     try {
       // Clear Hive boxes
-      await _productsBox.clear();
-      debugPrint("  ✅ Cleared products box");
+      // await _productsBox.clear();
+      // debugPrint("  ✅ Cleared products box");
 
       await _cartItemsBox.clear();
       debugPrint("  ✅ Cleared cart_items box");
@@ -2553,8 +2553,8 @@ class LocalProductProvider extends ChangeNotifier {
       }
 
       // Clear in-memory lists
-      _products.clear();
-      _filteredProducts.clear();
+      // _products.clear();
+      // _filteredProducts.clear();
       _cartItems.clear();
       _savedOrders.clear();
       _confirmedOrders.clear();
