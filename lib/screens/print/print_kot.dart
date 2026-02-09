@@ -22,6 +22,7 @@ import 'package:pos_machine/screens/print/kot_standard_printer.dart';
 /// Supports both thermal (58mm/80mm) and standard (A4/A5) printing
 class KotPrintPage extends StatefulWidget {
   final String orderNumber;
+  final String? tokenNumber;
   final String tableName;
   final String orderTime;
   final List<Map<String, dynamic>> items;
@@ -30,6 +31,7 @@ class KotPrintPage extends StatefulWidget {
   const KotPrintPage({
     super.key,
     required this.orderNumber,
+    this.tokenNumber,
     required this.tableName,
     required this.orderTime,
     required this.items,
@@ -43,6 +45,7 @@ class KotPrintPage extends StatefulWidget {
   /// Returns true if printing succeeded, false if no printer or failed
   static Future<bool> autoPrint(BuildContext context, {
     required String orderNumber,
+    String? tokenNumber,
     required String tableName,
     required String orderTime,
     required List<Map<String, dynamic>> items,
@@ -106,6 +109,7 @@ class KotPrintPage extends StatefulWidget {
         await kotPrinter.printKot(
           selectedPrinter: selectedPrinter,
           orderNumber: orderNumber,
+          tokenNumber: tokenNumber,
           tableName: tableName,
           orderTime: formattedTime,
           items: items,
@@ -119,6 +123,7 @@ class KotPrintPage extends StatefulWidget {
 
         await kotStandardPrinter.generateAndPrintKotPDF(
           orderNumber: orderNumber,
+          tokenNumber: tokenNumber,
           tableName: tableName,
           orderTime: formattedTime,
           items: items,
@@ -473,6 +478,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       await kotPrinter.printKot(
         selectedPrinter: selectedPrinter!,
         orderNumber: widget.orderNumber,
+        tokenNumber: widget.tokenNumber,
         tableName: widget.tableName,
         orderTime: formattedTime,
         items: widget.items,
@@ -508,6 +514,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
 
       await kotStandardPrinter.generateAndPrintKotPDF(
         orderNumber: widget.orderNumber,
+        tokenNumber: widget.tokenNumber,
         tableName: widget.tableName,
         orderTime: formattedTime,
         items: widget.items,

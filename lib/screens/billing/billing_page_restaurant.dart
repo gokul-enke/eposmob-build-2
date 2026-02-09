@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -4544,75 +4545,43 @@ class BillingPageState extends State<BillingPageRestaurant>
             debugPrint(
                 "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
 
-            // Try auto-print with default printer first
-            final autoPrintSuccess = await PrintPage.autoPrint(
-              context,
-              storeName: storeName,
-              cartItems: orderDetails.data!.cart!.cartItems!,
-              formattedTotal: formattedTotal!,
-              savedTotal: savedTotal,
-              discountAmount:
-                  orderDetails.data!.priceSummary?.discount?.toString() ??
-                      "0.00",
-              orderDate: DateHelper.formatInputToDisplay(orderDate),
-              orderNumber: orderDetails.data!.orderNumber.toString(),
-              tokenNumber: orderDetails.data?.tokenNumber,
-              customerName: customerName,
-              customerPhone: customerPhone,
-              customerEmail: customerEmail,
-              customerAddress: customerAddress,
-              customerOldBalance: oldBalance,
-              customerCurrentBalance: currentBalance,
-              paidAmount: totalPaid > 0 ? totalPaid : null,
-              customerAlternatePhone: customerAlternatePhone,
-              paymentMethod: paymentMethod,
-              paymentBreakdown: paymentBreakdown,
-              orderComment: orderComment,
-              isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                      context,
-                      listen: false)
-                  .isDefaultCustomer,
-              netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
-                  ?.toString(),
-            );
-
-            // Only show print page if auto-print failed
-            if (!autoPrintSuccess && mounted) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PrintPage(
-                    storeName: storeName,
-                    cartItems: orderDetails.data!.cart!.cartItems!,
-                    formattedTotal: formattedTotal!,
-                    savedTotal: savedTotal,
-                    discountAmount:
-                        orderDetails.data!.priceSummary?.discount?.toString() ??
-                            "0.00",
-                    orderDate: DateHelper.formatInputToDisplay(orderDate),
-                    orderNumber: orderDetails.data!.orderNumber.toString(),
-                    tokenNumber: orderDetails.data?.tokenNumber,
-                    customerName: customerName,
-                    customerPhone: customerPhone,
-                    customerEmail: customerEmail,
-                    customerAddress: customerAddress,
-                    customerOldBalance: oldBalance,
-                    customerCurrentBalance: currentBalance,
-                    paidAmount: totalPaid > 0 ? totalPaid : null,
-                    customerAlternatePhone: customerAlternatePhone,
-                    paymentMethod: paymentMethod,
-                    paymentBreakdown: paymentBreakdown,
-                    orderComment: orderComment,
-                    isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                            context,
-                            listen: false)
-                        .isDefaultCustomer,
-                    netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
-                        ?.toString(),
-                  ),
-                ),
+            Future<bool> printOnce() {
+              return _printOrderDetailsWithFallback(
+                storeName: storeName,
+                cartItems: orderDetails.data!.cart!.cartItems!,
+                formattedTotal: formattedTotal!,
+                savedTotal: savedTotal,
+                discountAmount:
+                    orderDetails.data!.priceSummary?.discount?.toString() ??
+                        "0.00",
+                orderDate: DateHelper.formatInputToDisplay(orderDate),
+                orderNumber: orderDetails.data!.orderNumber.toString(),
+                tokenNumber: orderDetails.data?.tokenNumber,
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerEmail: customerEmail,
+                customerAddress: customerAddress,
+                customerOldBalance: oldBalance,
+                customerCurrentBalance: currentBalance,
+                paidAmount: totalPaid > 0 ? totalPaid : null,
+                customerAlternatePhone: customerAlternatePhone,
+                paymentMethod: paymentMethod,
+                paymentBreakdown: paymentBreakdown,
+                orderComment: orderComment,
+                isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                        context,
+                        listen: false)
+                    .isDefaultCustomer,
+                netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
+                    ?.toString(),
               );
             }
+
+            final autoPrintSuccess = await printOnce();
+            await _maybePrintCustomerCopy(
+              canPrompt: autoPrintSuccess,
+              printAction: printOnce,
+            );
           } catch (error) {
             debugPrint("❌ Error fetching order details for print: $error");
           }
@@ -5847,6 +5816,122 @@ class BillingPageState extends State<BillingPageRestaurant>
         .resetSelectedProduct();
   }
 
+  Future<bool> _confirmCustomerCopyPrint() async {
+    return (await ConfirmationDialog.show(
+          context: context,
+          title: 'Print customer copy?',
+          message: 'Do you want to print a customer copy now?',
+          confirmText: 'Yes, print',
+          cancelText: 'No',
+        )) ??
+        false;
+  }
+
+  Future<void> _maybePrintCustomerCopy({
+    required bool canPrompt,
+    required Future<bool> Function() printAction,
+  }) async {
+    if (!canPrompt || !mounted) return;
+
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final shouldDoublePrint =
+        appSettingsProvider.appSettings?.posPrintDoubleBill ?? false;
+    if (!shouldDoublePrint) return;
+
+    final shouldPrintCustomerCopy = await _confirmCustomerCopyPrint();
+    if (!shouldPrintCustomerCopy || !mounted) return;
+
+    await printAction();
+  }
+
+  Future<bool> _printOrderDetailsWithFallback({
+    required List<dynamic> cartItems,
+    required String formattedTotal,
+    String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    String? tokenNumber,
+    bool isFromLocalStorage = false,
+    String? storeName,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
+    String? customerAlternatePhone,
+    String? paymentMethod,
+    Map<String, dynamic>? paymentBreakdown,
+    String? orderComment,
+    bool isDefaultCustomer = false,
+    String? netExcTax,
+  }) async {
+    if (!mounted) return false;
+
+    final autoPrintSuccess = await PrintPage.autoPrint(
+      context,
+      storeName: storeName,
+      cartItems: cartItems,
+      formattedTotal: formattedTotal,
+      savedTotal: savedTotal,
+      discountAmount: discountAmount,
+      orderDate: orderDate,
+      orderNumber: orderNumber,
+      tokenNumber: tokenNumber,
+      isFromLocalStorage: isFromLocalStorage,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerEmail: customerEmail,
+      customerAddress: customerAddress,
+      customerOldBalance: customerOldBalance,
+      customerCurrentBalance: customerCurrentBalance,
+      paidAmount: paidAmount,
+      customerAlternatePhone: customerAlternatePhone,
+      paymentMethod: paymentMethod,
+      paymentBreakdown: paymentBreakdown,
+      orderComment: orderComment,
+      isDefaultCustomer: isDefaultCustomer,
+      netExcTax: netExcTax,
+    );
+
+    if (!autoPrintSuccess && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PrintPage(
+            storeName: storeName,
+            cartItems: cartItems,
+            formattedTotal: formattedTotal,
+            savedTotal: savedTotal,
+            discountAmount: discountAmount,
+            orderDate: orderDate,
+            orderNumber: orderNumber,
+            tokenNumber: tokenNumber,
+            isFromLocalStorage: isFromLocalStorage,
+            customerName: customerName,
+            customerPhone: customerPhone,
+            customerEmail: customerEmail,
+            customerAddress: customerAddress,
+            customerOldBalance: customerOldBalance,
+            customerCurrentBalance: customerCurrentBalance,
+            paidAmount: paidAmount,
+            customerAlternatePhone: customerAlternatePhone,
+            paymentMethod: paymentMethod,
+            paymentBreakdown: paymentBreakdown,
+            orderComment: orderComment,
+            isDefaultCustomer: isDefaultCustomer,
+            netExcTax: netExcTax,
+          ),
+        ),
+      );
+    }
+
+    return autoPrintSuccess;
+  }
+
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(String? phone) {
     if (phone == null || phone.isEmpty) return false;
@@ -5914,83 +5999,44 @@ class BillingPageState extends State<BillingPageRestaurant>
           Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
-      // Try auto-print with default printer first
-      final autoPrintSuccess = await PrintPage.autoPrint(
-        context,
-        storeName: storeName,
-        cartItems: cartItems,
-        formattedTotal: netTotal.toString(), // Use calculated net total
-        savedTotal:
-            youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
-        discountAmount: savedOrder.flatDiscount != null ||
-                savedOrder.percentageDiscount != null
-            ? ((savedOrder.flatDiscount ?? 0.0) +
-                    ((savedOrder.percentageDiscount ?? 0.0) > 0
-                        ? (savedOrder.total *
-                            (savedOrder.percentageDiscount ?? 0.0) /
-                            100)
-                        : 0.0))
-                .toString()
-            : "0.00",
-        orderDate: savedOrder.createdAt,
-        orderNumber: savedOrder.orderNumber,
-        isFromLocalStorage: true,
-        customerName: savedOrder.customerName,
-        customerPhone: savedOrder.customerPhone,
-        paymentMethod: savedOrder.paymentMethod,
-        customerAlternatePhone: savedOrder.alternatePhone,
-        orderComment: savedOrder.comment,
-        paidAmount:
-            (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                : null,
-        // Balance info not available for offline saved orders
-        isDefaultCustomer:
-            _isDefaultCustomerPhone(savedOrder.customerPhone),
-        netExcTax: netExcTax.toString(),
-      );
-
-      // Only show print page if auto-print failed
-      if (!autoPrintSuccess && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PrintPage(
-              storeName: storeName,
-              cartItems: cartItems,
-              formattedTotal: netTotal.toString(), // Use calculated net total
-              savedTotal:
-                  youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
-              discountAmount: savedOrder.flatDiscount != null ||
-                      savedOrder.percentageDiscount != null
-                  ? ((savedOrder.flatDiscount ?? 0.0) +
-                          ((savedOrder.percentageDiscount ?? 0.0) > 0
-                              ? (savedOrder.total *
-                                  (savedOrder.percentageDiscount ?? 0.0) /
-                                  100)
-                              : 0.0))
-                      .toString()
-                  : "0.00",
-              orderDate: savedOrder.createdAt,
-              orderNumber: savedOrder.orderNumber,
-              isFromLocalStorage: true,
-              customerName: savedOrder.customerName,
-              customerPhone: savedOrder.customerPhone,
-              paymentMethod: savedOrder.paymentMethod,
-              customerAlternatePhone: savedOrder.alternatePhone,
-              orderComment: savedOrder.comment,
-              paidAmount:
-                  (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                      ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                      : null,
-              // Balance info not available for offline saved orders
-              isDefaultCustomer:
-                  _isDefaultCustomerPhone(savedOrder.customerPhone),
-              netExcTax: netExcTax.toString(),
-            ),
-          ),
+      Future<bool> printOnce() {
+        return _printOrderDetailsWithFallback(
+          storeName: storeName,
+          cartItems: cartItems,
+          formattedTotal: netTotal.toString(),
+          savedTotal: youSaved.toString(),
+          discountAmount: savedOrder.flatDiscount != null ||
+                  savedOrder.percentageDiscount != null
+              ? ((savedOrder.flatDiscount ?? 0.0) +
+                      ((savedOrder.percentageDiscount ?? 0.0) > 0
+                          ? (savedOrder.total *
+                              (savedOrder.percentageDiscount ?? 0.0) /
+                              100)
+                          : 0.0))
+                  .toString()
+              : "0.00",
+          orderDate: savedOrder.createdAt,
+          orderNumber: savedOrder.orderNumber,
+          isFromLocalStorage: true,
+          customerName: savedOrder.customerName,
+          customerPhone: savedOrder.customerPhone,
+          paymentMethod: savedOrder.paymentMethod,
+          customerAlternatePhone: savedOrder.alternatePhone,
+          orderComment: savedOrder.comment,
+          paidAmount:
+              (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+                  ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+                  : null,
+          isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
+          netExcTax: netExcTax.toString(),
         );
       }
+
+      final autoPrintSuccess = await printOnce();
+      await _maybePrintCustomerCopy(
+        canPrompt: autoPrintSuccess,
+        printAction: printOnce,
+      );
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
       showScaffoldError(

@@ -21,6 +21,7 @@ class AppSettings {
   final bool enableKOTPrint;
   final String defaultDeliveryMethod;
   final String defaultPaymentMethod;
+  final bool posPrintDoubleBill;
 
   AppSettings({
     required this.barcodeSales,
@@ -43,6 +44,7 @@ class AppSettings {
     required this.enableKOTPrint,
     required this.defaultDeliveryMethod,
     required this.defaultPaymentMethod,
+    required this.posPrintDoubleBill,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -114,6 +116,8 @@ class AppSettings {
           settingsMap['DEFAULT_DELIVERY_METHOD']?['value'] ?? "",
       defaultPaymentMethod:
           settingsMap['DEFAULT_PAYMENT_METHOD']?['value'] ?? "",
+        posPrintDoubleBill:
+          settingsMap['POS_PRINT_DOUBLE_BILL']?['status'] ?? false,
     );
   }
 
@@ -233,6 +237,12 @@ class AppSettings {
           "code": "DEFAULT_PAYMENT_METHOD",
           "value": defaultPaymentMethod.toString(),
           "status": defaultPaymentMethod.toString(),
+        },
+        {
+          "name": "Pos Print Double Bill",
+          "code": "POS_PRINT_DOUBLE_BILL",
+          "value": "",
+          "status": posPrintDoubleBill.toString(),
         },
       ],
     };

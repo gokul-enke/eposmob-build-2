@@ -834,7 +834,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (response["order_id"] != null) {
         // Get order number from API response
         final orderNumber = response["order_number"]?.toString() ??
-            'ORD-${response["order_id"]}';
+          'ORD-${response["order_id"]}';
+        final tokenNumber = response["token_number"]?.toString();
 
         showScaffold(
           context: context,
@@ -865,6 +866,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             KotPrintPage.autoPrint(
               context,
               orderNumber: orderNumber,
+              tokenNumber: tokenNumber,
               tableName: tableName,
               orderTime: orderTime,
               items: printItems,
@@ -877,6 +879,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   MaterialPageRoute(
                     builder: (context) => KotPrintPage(
                       orderNumber: orderNumber,
+                      tokenNumber: tokenNumber,
                       tableName: tableName,
                       orderTime: orderTime,
                       items: printItems,
@@ -5411,6 +5414,13 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     // Get order number
     final orderNumber = order['order_number']?.toString() ?? 'Unknown';
+    String? tokenNumber = order['token_number']?.toString();
+    if (tokenNumber != null) {
+      tokenNumber = tokenNumber.trim();
+      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
+        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
+      }
+    }
 
     // Get table name
     String tableName = 'Unknown';
@@ -5552,6 +5562,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       KotPrintPage.autoPrint(
         context,
         orderNumber: orderNumber,
+        tokenNumber: tokenNumber,
         tableName: tableName,
         orderTime: orderTime,
         items: printItems,
@@ -5565,6 +5576,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             MaterialPageRoute(
               builder: (context) => KotPrintPage(
                 orderNumber: orderNumber,
+                tokenNumber: tokenNumber,
                 tableName: tableName,
                 orderTime: orderTime,
                 items: printItems,

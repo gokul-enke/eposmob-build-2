@@ -131,6 +131,7 @@ class KotThermalPrinter {
   Future<void> printKot({
     required BluetoothPrinter selectedPrinter,
     required String orderNumber,
+    String? tokenNumber,
     required String tableName,
     required String orderTime,
     required List<Map<String, dynamic>> items,
@@ -207,6 +208,8 @@ class KotThermalPrinter {
           (displayConfig?['showDateTime']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showDateTime']!.value as String
               : 'Time';
+      final tokenLabel = 'Token';
+      final hasToken = tokenNumber != null && tokenNumber.trim().isNotEmpty;
 
       rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 0.5));
 
@@ -221,8 +224,26 @@ class KotThermalPrinter {
         ));
       }
 
-      // Order number - BIG and bold
-      if (showOrderNumber) {
+      // Order number and token in one row (two ends)
+      if (showOrderNumber && hasToken) {
+        rows.add(_KotTableRow(
+          [
+            _KotTableColumn(
+              '$orderLabel: ${_cleanOrderNumber(orderNumber)}',
+              flex: 1,
+              isBold: true,
+              align: TextAlign.left,
+            ),
+            _KotTableColumn(
+              '$tokenLabel: ${tokenNumber!.trim()}',
+              flex: 1,
+              isBold: true,
+              align: TextAlign.right,
+            ),
+          ],
+          scale: getOrderScale(is58mm),
+        ));
+      } else if (showOrderNumber) {
         rows.add(_KotTextRow(
           '$orderLabel: ${_cleanOrderNumber(orderNumber)}',
           isBold: true,
