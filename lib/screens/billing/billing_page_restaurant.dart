@@ -3609,8 +3609,9 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   /// Helper method to print KOT for delivery and takeaway
-  Future<void> _printKOT(
-      String orderNumber, List<LocalCartItem> cartItems) async {
+    Future<void> _printKOT(
+      String orderNumber, List<LocalCartItem> cartItems,
+      {String? tokenNumber}) async {
     debugPrint("🖨️ Printing KOT for $orderNumber");
 
     // Build print items
@@ -3637,6 +3638,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       final success = await KotPrintPage.autoPrint(
         context,
         orderNumber: orderNumber,
+        tokenNumber: tokenNumber,
         tableName: tableName,
         orderTime: orderTime,
         items: printItems,
@@ -3652,6 +3654,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           MaterialPageRoute(
             builder: (context) => KotPrintPage(
               orderNumber: orderNumber,
+              tokenNumber: tokenNumber,
               tableName: tableName,
               orderTime: orderTime,
               items: printItems,
@@ -4591,9 +4594,10 @@ class BillingPageState extends State<BillingPageRestaurant>
               Provider.of<AppSettingsProvider>(context, listen: false);
           if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
             _printKOT(
-                response["order_number"]?.toString() ??
-                    'ORD-${response["order_id"]}',
-                cartItems);
+              response["order_number"]?.toString() ??
+                'ORD-${response["order_id"]}',
+              cartItems,
+              tokenNumber: response["token_number"]?.toString());
           }
 
           // Clear the mobile number after successful save
