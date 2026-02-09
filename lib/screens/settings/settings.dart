@@ -12,9 +12,14 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -99,13 +104,13 @@ class SettingsScreen extends StatelessWidget {
                               builder: (context, snapshot) {
                                 final isoTime = snapshot.data;
                                 final displayTime = snapshot.connectionState ==
-                                    ConnectionState.waiting
-                                  ? 'Loading...'
-                                  : (isoTime == null
-                                    ? 'Not synced yet'
-                                    : DateHelper.formatISODateToIST(
-                                      isoTime,
-                                      ));
+                                        ConnectionState.waiting
+                                    ? 'Loading...'
+                                    : (isoTime == null
+                                        ? 'Not synced yet'
+                                        : DateHelper.formatISODateToIST(
+                                            isoTime,
+                                          ));
                                 return _SettingsInfoCard(
                                   title: 'Last Product Sync',
                                   subtitle: displayTime,
@@ -162,7 +167,7 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (v) => setState(() => selected = v!),
                   ),
                   RadioListTile<String>(
-                    title: const Text('മലയാളം'), 
+                    title: const Text('മലയാളം'),
                     value: 'ml',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),
@@ -214,8 +219,8 @@ class SettingsScreen extends StatelessWidget {
                   ? () async {
                       await SharedPreferenceProvider()
                           .clearLastProductSyncIso();
-                      if (context.mounted) {
-                        (context as Element).markNeedsBuild();
+                      if (mounted) {
+                        setState(() {});
                       }
                       Get.back();
                     }
