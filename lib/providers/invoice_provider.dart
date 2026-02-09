@@ -35,6 +35,10 @@ class InvoiceProvider extends ChangeNotifier {
   List<Invoice>? _allInvoices;
   List<Invoice>? get allInvoices => _allInvoices;
 
+  // Store current filtered invoices (pre-pagination)
+  List<Invoice> _filteredInvoices = [];
+  List<Invoice> get filteredInvoices => _filteredInvoices;
+
   // Store all receipts for local filtering and pagination
   List<receipt_list.Receipt>? _allReceipts;
   List<receipt_list.Receipt>? get allReceipts => _allReceipts;
@@ -97,7 +101,17 @@ class InvoiceProvider extends ChangeNotifier {
   void goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
 
-    applyFiltersLocally(filterName: _filterName, page: page);
+    applyFiltersLocally(
+      filterName: _filterName,
+      filterInvoiceNumber: _filterInvoiceNumber,
+      filterFromDate: _filterFromDate,
+      filterToDate: _filterToDate,
+      filterStatus: _filterStatus,
+      filterOrderNumber: _filterOrderNumber,
+      filterPhone: _filterPhone,
+      filterEmail: _filterEmail,
+      page: page,
+    );
   }
 
   //          *********************** CUSTOMER TRANSACTIONS API ***************************************************
@@ -277,6 +291,59 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
+  //          *********************** ZATCA BULK SEND ***************************************************
+  Future<dynamic> zatcaBulkSend({
+    required List<int> ids,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(APPUrl.zatcaBulkSend);
+
+    debugPrint('[ZATCA][Provider] Bulk Send URL: $uri (POST)');
+    debugPrint('[ZATCA][Provider] Sending IDs: ${ids.join(',')}');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: json.encode({'ids': ids}),
+          )
+          .timeout(const Duration(seconds: 40));
+
+      debugPrint(
+          '[ZATCA][Provider] Bulk Send Response Status: ${response.statusCode}');
+      debugPrint('[ZATCA][Provider] Bulk Send Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message':
+              'Failed with status ${response.statusCode}: ${response.body}'
+        };
+      }
+    } on TimeoutException catch (_) {
+      debugPrint('[ZATCA][Provider] Bulk Send ERROR: Request timed out');
+      return {'status': 'error', 'message': 'Request timed out'};
+    } catch (e) {
+      debugPrint('[ZATCA][Provider] Bulk Send EXCEPTION: $e');
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
   // Receipt navigation methods
   void goToReceiptPage(int page) {
     if (page < 1 || page > _receiptTotalPages) return;
@@ -379,11 +446,15 @@ class InvoiceProvider extends ChangeNotifier {
       String? filterPhone,
       String? filterEmail,
       int page = 1}) {
-    debugPrint("applyFiltersLocally: filterName=$filterName, page=$page");
-    debugPrint("_allInvoices: ${_allInvoices?.length ?? 0} invoices");
+    debugPrint("[DEBUG] applyFiltersLocally CALLED. Current Filter State:");
+    debugPrint(
+        " - Name: $filterName, Number: $filterInvoiceNumber, Status: $filterStatus");
+    debugPrint(
+        " - Total Invoices in Memory (_allInvoices): ${_allInvoices?.length ?? 0}");
 
     if (_allInvoices == null || _allInvoices!.isEmpty) {
-      debugPrint("No invoices available for filtering");
+      debugPrint("[DEBUG] No invoices in memory. Aborting filter.");
+      _filteredInvoices = [];
       invoiceListDetails = [];
       _currentPage = 1;
       _totalPages = 1;
@@ -471,6 +542,8 @@ class InvoiceProvider extends ChangeNotifier {
       debugPrint(
           "After email filter: ${filteredInvoices.length} invoices match '$filterEmail'");
     }
+
+    _filteredInvoices = filteredInvoices;
 
     // Update total pages
     _totalPages = (filteredInvoices.length / _itemsPerPage).ceil();
@@ -1278,16 +1351,28 @@ class InvoiceProvider extends ChangeNotifier {
 
         // Store all invoices for local filtering
         _allInvoices = listInvoiceModel.data.invoices;
-        debugPrint("Received ${_allInvoices?.length ?? 0} invoices from API");
+        debugPrint(
+            "[DEBUG][InvoiceProvider] API returned ${listInvoiceModel.data.total} total invoices.");
+        debugPrint(
+            "[DEBUG][InvoiceProvider] Received ${_allInvoices?.length ?? 0} invoices in the current batch.");
 
         // Set filter name if provided
         if (name != null) {
           _filterName = name;
-          debugPrint("Setting filter name to: $name");
         }
 
-        // Apply filters based on current state
-        applyFiltersLocally(filterName: _filterName, page: page ?? 1);
+        // Apply filters based on current state with all parameters
+        applyFiltersLocally(
+          filterName: _filterName,
+          filterInvoiceNumber: _filterInvoiceNumber,
+          filterFromDate: _filterFromDate,
+          filterToDate: _filterToDate,
+          filterStatus: _filterStatus,
+          filterOrderNumber: _filterOrderNumber,
+          filterPhone: _filterPhone,
+          filterEmail: _filterEmail,
+          page: page ?? 1,
+        );
 
         _isLoading = false;
         notifyListeners();
