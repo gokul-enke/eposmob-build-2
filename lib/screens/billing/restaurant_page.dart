@@ -687,6 +687,42 @@ class _RestaurantPageState extends State<RestaurantPage> {
     }
   }
 
+  String? _extractTokenNumber(dynamic order) {
+    if (order is! Map) return null;
+
+    String? tokenNumber = order['token_number']?.toString();
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsMap = order['orderProps'];
+      if (propsMap is Map && propsMap['ORDER_TOKEN_NUMBER'] != null) {
+        tokenNumber = propsMap['ORDER_TOKEN_NUMBER']?.toString();
+      }
+    }
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsList = order['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) => (e is Map) &&
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
+                    'ORDER_TOKEN_NUMBER',
+            orElse: () => null,
+          );
+          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+            tokenNumber = (match['value'] ?? match['props_value']).toString();
+          }
+        } catch (_) {}
+      }
+    }
+    if (tokenNumber != null) {
+      tokenNumber = tokenNumber.trim();
+      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
+        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
+      }
+    }
+
+    return tokenNumber;
+  }
+
   Future<void> _handleNewOrder() async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final localProductProvider =
@@ -835,8 +871,31 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (response["order_id"] != null) {
         // Get order number from API response
         final orderNumber = response["order_number"]?.toString() ??
-          'ORD-${response["order_id"]}';
-        final tokenNumber = response["token_number"]?.toString();
+            'ORD-${response["order_id"]}';
+        String? tokenNumber = _extractTokenNumber(response);
+        if ((tokenNumber == null || tokenNumber.isEmpty) &&
+            _activeTableId != null) {
+          try {
+            await Future.delayed(const Duration(milliseconds: 500));
+            final savedResponse = await cartProvider.listSavedOrders(
+              accessToken: authModel.token ?? '',
+              tableId: _activeTableId,
+            );
+            if (savedResponse['status'] == 'success') {
+              final orders = savedResponse['orders'] as List<dynamic>;
+              final targetOrder = orders.firstWhere(
+                (o) =>
+                    o['order_id'] == response['order_id'] ||
+                    o['id'] == response['order_id'] ||
+                    o['order_number']?.toString() == orderNumber,
+                orElse: () => null,
+              );
+              if (targetOrder != null) {
+                tokenNumber = _extractTokenNumber(targetOrder);
+              }
+            }
+          } catch (_) {}
+        }
 
         showScaffold(
           context: context,
@@ -5408,6 +5467,42 @@ class _OrderPanelState extends State<_OrderPanel> {
     _printSavedOrderKot(_selectedOrder, newItems);
   }
 
+  String? _extractTokenNumber(dynamic order) {
+    if (order is! Map) return null;
+
+    String? tokenNumber = order['token_number']?.toString();
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsMap = order['orderProps'];
+      if (propsMap is Map && propsMap['ORDER_TOKEN_NUMBER'] != null) {
+        tokenNumber = propsMap['ORDER_TOKEN_NUMBER']?.toString();
+      }
+    }
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsList = order['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) => (e is Map) &&
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
+                    'ORDER_TOKEN_NUMBER',
+            orElse: () => null,
+          );
+          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+            tokenNumber = (match['value'] ?? match['props_value']).toString();
+          }
+        } catch (_) {}
+      }
+    }
+    if (tokenNumber != null) {
+      tokenNumber = tokenNumber.trim();
+      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
+        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
+      }
+    }
+
+    return tokenNumber;
+  }
+
   // Print KOT for a saved order
   void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
     debugPrint(
@@ -5415,13 +5510,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     // Get order number
     final orderNumber = order['order_number']?.toString() ?? 'Unknown';
-    String? tokenNumber = order['token_number']?.toString();
-    if (tokenNumber != null) {
-      tokenNumber = tokenNumber.trim();
-      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
-        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
-      }
-    }
+    final tokenNumber = _extractTokenNumber(order);
 
     // Get table name
     String tableName = 'Unknown';
