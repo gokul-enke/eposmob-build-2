@@ -408,6 +408,21 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         return;
       }
 
+      // 1. Check if already successfully sent
+      if (invoice.zatcaStatus?.toLowerCase() == 'pass' ||
+          invoice.zatcaStatus?.toLowerCase() == 'success') {
+        showScaffold(
+          context: context,
+          message:
+              "This invoice #${invoice.invoiceNumber} has already been successfully sent to ZATCA.",
+        );
+        return;
+      }
+
+      // 2. Show stylized confirmation dialog
+      final shouldSend = await _showZatcaConfirmationDialog(1);
+      if (shouldSend != true) return;
+
       showScaffold(context: context, message: 'Sending to ZATCA...');
       showLoadingOverlay(context, message: 'Sending...');
 
@@ -744,39 +759,80 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                         "[DEBUG][ZATCA] Button clicked while already sending. Ignoring.");
                   }
                 : () async {
-                    debugPrint("[DEBUG][ZATCA] 'Send to ZATCA' button TAPPED.");
                     final String? token =
                         Provider.of<AuthModel>(context, listen: false).token;
 
-                    debugPrint(
-                        "[DEBUG][ZATCA] Token length: ${token?.length ?? 0}");
-                    debugPrint(
-                        "[DEBUG][ZATCA] Selected IDs: $selectedInvoiceIds");
-
                     if (token == null || token.isEmpty) {
-                      debugPrint(
-                          "[DEBUG][ZATCA] ABORT: Token is null or empty.");
                       showScaffold(
                           context: context,
                           message: "Authentication required.");
                       return;
                     }
 
+                    // 1. Check if any selected invoices are already successfully sent
+                    final selectedInvoices = provider.allInvoices?.where(
+                            (inv) => selectedInvoiceIds.contains(inv.id)) ??
+                        [];
+
+                    final alreadySentList = selectedInvoices.where((inv) =>
+                        inv.zatcaStatus?.toLowerCase() == 'pass' ||
+                        inv.zatcaStatus?.toLowerCase() == 'success');
+
+                    if (alreadySentList.isNotEmpty) {
+                      final confirmResend = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text("Already Sent"),
+                          content: Text(
+                              "${alreadySentList.length} of the selected invoices have already been successfully sent to ZATCA. Do you want to continue sending the rest?"),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Continue"),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmResend != true) return;
+                    }
+
+                    // Filter out already sent invoices to avoid redundant processing
+                    final idsToSend = selectedInvoices
+                        .where((inv) =>
+                            inv.zatcaStatus?.toLowerCase() != 'pass' &&
+                            inv.zatcaStatus?.toLowerCase() != 'success')
+                        .map((inv) => inv.id)
+                        .toList();
+
+                    if (idsToSend.isEmpty) {
+                      showScaffold(
+                        context: context,
+                        message:
+                            "All selected invoices are already successfully sent to ZATCA.",
+                      );
+                      return;
+                    }
+
+                    // 2. Show the stylized confirmation dialog
+                    final shouldSend =
+                        await _showZatcaConfirmationDialog(idsToSend.length);
+
+                    if (shouldSend != true) return;
+
                     setState(() {
                       isBulkSending = true;
                     });
-
-                    final idsToSend = selectedInvoiceIds.toList();
-                    debugPrint(
-                        "[DEBUG][ZATCA] Initiating Bulk Send for ${idsToSend.length} invoices.");
 
                     try {
                       final result = await provider.zatcaBulkSend(
                         ids: idsToSend,
                         accessToken: token,
                       );
-
-                      debugPrint("[DEBUG][ZATCA] API Result: $result");
 
                       if (result != null && result['status'] == 'success') {
                         showScaffold(
@@ -786,16 +842,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                         setState(() {
                           selectedInvoiceIds.clear();
                         });
-                        // Refresh the list to reflect status changes
                         await refreshData();
                       } else {
                         final errorMsg =
                             result?['message'] ?? "ZATCA bulk send failed";
-                        debugPrint("[DEBUG][ZATCA] FAILED: $errorMsg");
                         showScaffoldError(context: context, message: errorMsg);
                       }
                     } catch (e) {
-                      debugPrint("[DEBUG][ZATCA] EXCEPTION: $e");
                       showScaffoldError(
                           context: context, message: "An error occurred: $e");
                     } finally {
@@ -803,8 +856,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                         setState(() {
                           isBulkSending = false;
                         });
-                        debugPrint(
-                            "[DEBUG][ZATCA] Process finished. isBulkSending set to false.");
                       }
                     }
                   },
@@ -1880,6 +1931,126 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         ),
       ),
     );
+  }
+
+  Future<bool> _showZatcaConfirmationDialog(int count) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.blue,
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(context, false),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "Send Invoices to ZATCA",
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s18,
+                      0,
+                      Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "You are about to send $count invoice(s) to ZATCA. Do you want to continue?",
+                    textAlign: TextAlign.center,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s14,
+                      0,
+                      Colors.grey[600]!,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey[300]!),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: Text(
+                            "Cancel",
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0,
+                              Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            "Send to ZATCA",
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0,
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ) ??
+        false;
   }
 
   Widget _buildNoInvoicesFoundUI() {
