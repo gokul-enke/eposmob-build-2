@@ -82,6 +82,7 @@ class KitchenOrder {
   final List<KitchenOrderItem> items;
   final OrderStatus status;
   final String? notes;
+  final String? tokenNumber;
 
   KitchenOrder({
     required this.id,
@@ -91,6 +92,7 @@ class KitchenOrder {
     required this.items,
     required this.status,
     this.notes,
+    this.tokenNumber,
   });
 
   KitchenOrder copyWith({
@@ -101,6 +103,7 @@ class KitchenOrder {
     List<KitchenOrderItem>? items,
     OrderStatus? status,
     String? notes,
+    String? tokenNumber,
   }) {
     return KitchenOrder(
       id: id ?? this.id,
@@ -110,6 +113,7 @@ class KitchenOrder {
       items: items ?? this.items,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      tokenNumber: tokenNumber ?? this.tokenNumber,
     );
   }
 }
@@ -431,6 +435,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
       }
     }
 
+    final tokenNumber = _extractTokenNumber(order);
+
     return KitchenOrder(
       id: id.isNotEmpty ? id : 'ORD-${DateTime.now().millisecondsSinceEpoch}',
       internalId: _parseInt(order['id']) ?? 0,
@@ -439,6 +445,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       items: items,
       status: status,
       notes: notes,
+      tokenNumber: tokenNumber,
     );
   }
 
@@ -477,6 +484,42 @@ class _KitchenMasterState extends State<KitchenMaster> {
       }
     } catch (_) {}
     return '';
+  }
+
+  String? _extractTokenNumber(dynamic order) {
+    if (order == null || order is! Map) return null;
+
+    String? tokenNumber = order['token_number']?.toString();
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsMap = order['orderProps'];
+      if (propsMap is Map && propsMap['ORDER_TOKEN_NUMBER'] != null) {
+        tokenNumber = propsMap['ORDER_TOKEN_NUMBER']?.toString();
+      }
+    }
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsList = order['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) => (e is Map) &&
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
+                    'ORDER_TOKEN_NUMBER',
+            orElse: () => null,
+          );
+          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+            tokenNumber = (match['value'] ?? match['props_value']).toString();
+          }
+        } catch (_) {}
+      }
+    }
+    if (tokenNumber != null) {
+      tokenNumber = tokenNumber.trim();
+      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
+        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
+      }
+    }
+
+    return tokenNumber;
   }
 
   String _extractItemName(dynamic item) {
@@ -1386,6 +1429,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       KotPrintPage.autoPrint(
         context,
         orderNumber: order.id,
+        tokenNumber: order.tokenNumber,
         tableName: order.tableId,
         orderTime: orderTime,
         items: printItems,
@@ -1398,6 +1442,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
             MaterialPageRoute(
               builder: (context) => KotPrintPage(
                 orderNumber: order.id,
+                tokenNumber: order.tokenNumber,
                 tableName: order.tableId,
                 orderTime: orderTime,
                 items: printItems,
