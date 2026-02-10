@@ -7320,7 +7320,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
         final codId = billingProvider.codPaymentMethodId ?? 'COD';
 
-        // Multi-payment handling with dynamic IDs
+        // Multi-payment handling with dynamic IDs (always send in multi format)
         List<String> selectedMethods = [];
         final cashAmountVal = double.tryParse(_cashAmount) ?? 0;
         final cardAmountVal = double.tryParse(_cardAmount) ?? 0;
@@ -7332,33 +7332,19 @@ class _OrderPanelState extends State<_OrderPanel> {
         if (_isUpiSelected && upiAmountVal > 0) selectedMethods.add(upiId);
         if (_isCodSelected && codAmountVal > 0) selectedMethods.add(codId);
 
-        if (selectedMethods.length > 1) {
-          // Multi-payment: store as JSON with IDs as keys
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedMethods,
-            "amounts": {
-              cashId: _cashAmount.isNotEmpty ? _cashAmount : "0",
-              cardId: _cardAmount.isNotEmpty ? _cardAmount : "0",
-              upiId: _upiAmount.isNotEmpty ? _upiAmount : "0",
-              codId: _codAmount.isNotEmpty ? _codAmount : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
+        if (selectedMethods.isNotEmpty) {
+          paymentMethods = selectedMethods;
 
-          // Calculate total paid amount (using already-parsed values)
-          paidAmount =
-              (cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal)
-                  .toString();
+          final totalPaid =
+              cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
+          paidAmount = totalPaid.toString();
 
           // Prepare paidMethods array with IDs (only include methods with amount > 0)
           if (_isCashSelected && cashAmountVal > 0) {
             // Adjust cash amount by deducting balance (change returned to customer)
-            final totalPaid = cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
             final orderAmount = double.tryParse(totalPrice) ?? 0.0;
             final balanceAmountVal = totalPaid - orderAmount;
             final netCashAmount = cashAmountVal - balanceAmountVal;
-            // Only add if net cash is positive (skip if balance equals or exceeds cash)
             if (netCashAmount > 0) {
               paidMethods.add({"method": cashId, "amount": netCashAmount});
             }
@@ -7373,19 +7359,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             paidMethods.add({"method": codId, "amount": codAmountVal});
           }
 
-          paymentMethods = selectedMethods;
-        } else if (selectedMethods.isNotEmpty) {
-          // Single payment method with ID
-          paymentMethod = selectedMethods.first;
-          if (_isCashSelected && cashAmountVal > 0) {
-            paidAmount = _cashAmount;
-          } else if (_isCardSelected && cardAmountVal > 0) {
-            paidAmount = _cardAmount;
-          } else if (_isUpiSelected && upiAmountVal > 0) {
-            paidAmount = _upiAmount;
-          } else if (_isCodSelected && codAmountVal > 0) {
-            paidAmount = _codAmount;
-          }
+          // Keep for logs only; API will use paymentMethods/paidMethods format
+          paymentMethod = selectedMethods.length == 1 ? selectedMethods.first : null;
         }
       }
 
