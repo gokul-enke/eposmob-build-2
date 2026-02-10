@@ -151,6 +151,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   bool _isPrinting = false;
   bool _hasOpenedPaymentModalOnce =
       false; // Track if payment step has been visited
+  bool _isAddingCustomer = false;
 
   // Local state for Customer Search
   String _customerSearchQuery = '';
@@ -348,6 +349,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   void _goToStep(int step) {
+    if (_isAddingCustomer) return;
     if (!widget.enableDelivery && step == 1) return;
     if (step >= 0 && step <= 3) {
       setState(() {
@@ -408,6 +410,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   void _handleAddNewCustomer() async {
+    if (_isAddingCustomer) return;
+    setState(() {
+      _isAddingCustomer = true;
+    });
     final newCustomer = await widget.onAddNewCustomer(_customerSearchQuery);
     if (newCustomer != null) {
       if (mounted) {
@@ -423,6 +429,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
         // Also update parent
         widget.onCustomerSelected(newCustomer);
       }
+    }
+    if (mounted) {
+      setState(() {
+        _isAddingCustomer = false;
+      });
     }
   }
 
@@ -493,35 +504,51 @@ class _CheckoutModalState extends State<CheckoutModal> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
       elevation: 8,
-      child: Container(
-        width: 1300,
-        height: 850,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      child: Stack(
+        children: [
+          Container(
+            width: 1300,
+            height: 850,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header with Steps
-            _buildHeader(hasCustomer, hasDiscount, hasPayment, hasDelivery),
+            child: Column(
+              children: [
+                // Header with Steps
+                _buildHeader(
+                    hasCustomer, hasDiscount, hasPayment, hasDelivery),
 
-            // Content Area
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: _buildCurrentStepContent(),
+                // Content Area
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _buildCurrentStepContent(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_isAddingCustomer)
+            Positioned.fill(
+              child: AbsorbPointer(
+                child: Container(
+                  color: Colors.white.withOpacity(0.6),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -746,15 +773,27 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Add New Customer'),
+                          icon: _isAddingCustomer
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.grey),
+                                  ),
+                                )
+                              : const Icon(Icons.person_add),
+                          label: Text(
+                              _isAddingCustomer ? 'Adding...' : 'Add New Customer'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             backgroundColor: Colors.grey.shade100,
                             foregroundColor: Colors.grey.shade700,
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
-                          onPressed: _handleAddNewCustomer,
+                          onPressed:
+                              _isAddingCustomer ? null : _handleAddNewCustomer,
                         ),
                       ),
                     ],
