@@ -2614,6 +2614,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
   String? _loadedLocalDraftId; // track currently loaded local draft
+  bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
 
   // Payment Method Variables
   bool _isCashSelected = false;
@@ -3959,6 +3960,12 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           // If we had a selected order, try to find and update it with fresh data
           if (currentSelectedOrder != null) {
+            if (_blockReselectAfterPlace) {
+              _selectedOrder = null;
+              widget.onOrderSelected(null);
+              debugPrint('✅ Skipping reselect after order placed');
+              return;
+            }
             final currentOrderId =
                 currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
             final updatedOrder = newOrders.firstWhere(
@@ -4022,6 +4029,12 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           // If we had a selected order, try to find and update it with fresh data
           if (currentSelectedOrder != null) {
+            if (_blockReselectAfterPlace) {
+              _selectedOrder = null;
+              widget.onOrderSelected(null);
+              debugPrint('✅ Skipping reselect after order placed');
+              return;
+            }
             final currentOrderId =
                 currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
             final updatedOrder = newOrders.firstWhere(
@@ -4063,6 +4076,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       // Clear previous order's customer and payment state to prevent contamination
       _clearOrderEditingState();
 
+      _blockReselectAfterPlace = false;
       _selectedOrder = order; // Set the selected order directly
       widget.onOrderSelected(
           order); // Call the callback to update the parent widget
@@ -4080,6 +4094,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       });
     }
   }
+
 
   // Clear customer and payment state when switching orders
   void _clearOrderEditingState() {
@@ -6806,6 +6821,14 @@ class _OrderPanelState extends State<_OrderPanel> {
         );
 
         if (updatedOrder != null) {
+          if (_blockReselectAfterPlace) {
+            setState(() {
+              _selectedOrder = null;
+            });
+            widget.onOrderSelected(null);
+            debugPrint('✅ Skipping reselect after order placed');
+            return;
+          }
           setState(() {
             _selectedOrder = updatedOrder;
           });
@@ -7120,7 +7143,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
             // After returning from print or successful auto-print, cleanup
             if (mounted) {
-              setState(() => _selectedOrder = null);
+              setState(() {
+                _blockReselectAfterPlace = true;
+                _selectedOrder = null;
+              });
               widget.onOrderSelected(null);
             }
           }
@@ -7132,7 +7158,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         // Even if print fails, the order was confirmed, so cleanup
         if (mounted) {
-          setState(() => _selectedOrder = null);
+          setState(() {
+            _blockReselectAfterPlace = true;
+            _selectedOrder = null;
+          });
           widget.onOrderSelected(null);
         }
       }
@@ -7141,6 +7170,15 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   Future<void> _refreshSelectedOrderAfterCartUpdate() async {
     if (_selectedOrder == null) return;
+
+    if (_blockReselectAfterPlace) {
+      setState(() {
+        _selectedOrder = null;
+      });
+      widget.onOrderSelected(null);
+      debugPrint('✅ Skipping reselect after order placed');
+      return;
+    }
 
     debugPrint('🔄 Refreshing selected order after cart update...');
 
@@ -7465,7 +7503,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         if (closeOnSuccess) {
           // Go back to orders list
-          setState(() => _selectedOrder = null);
+          setState(() {
+            _blockReselectAfterPlace = true;
+            _selectedOrder = null;
+          });
           widget.onOrderSelected(null);
         }
         return true;
