@@ -27,6 +27,7 @@ class KotPrintPage extends StatefulWidget {
   final String orderTime;
   final List<Map<String, dynamic>> items;
   final String? comment;
+  final bool showTableLabel;
 
   const KotPrintPage({
     super.key,
@@ -36,6 +37,7 @@ class KotPrintPage extends StatefulWidget {
     required this.orderTime,
     required this.items,
     this.comment,
+    this.showTableLabel = true,
   });
 
   @override
@@ -50,6 +52,7 @@ class KotPrintPage extends StatefulWidget {
     required String orderTime,
     required List<Map<String, dynamic>> items,
     String? comment,
+    bool showTableLabel = true,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -111,6 +114,7 @@ class KotPrintPage extends StatefulWidget {
           orderNumber: orderNumber,
           tokenNumber: tokenNumber,
           tableName: tableName,
+          showTableLabel: showTableLabel,
           orderTime: formattedTime,
           items: items,
           comment: comment,
@@ -125,6 +129,7 @@ class KotPrintPage extends StatefulWidget {
           orderNumber: orderNumber,
           tokenNumber: tokenNumber,
           tableName: tableName,
+          showTableLabel: showTableLabel,
           orderTime: formattedTime,
           items: items,
           comment: comment,
@@ -480,6 +485,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         orderNumber: widget.orderNumber,
         tokenNumber: widget.tokenNumber,
         tableName: widget.tableName,
+        showTableLabel: widget.showTableLabel,
         orderTime: formattedTime,
         items: widget.items,
         comment: widget.comment,
@@ -516,6 +522,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         orderNumber: widget.orderNumber,
         tokenNumber: widget.tokenNumber,
         tableName: widget.tableName,
+        showTableLabel: widget.showTableLabel,
         orderTime: formattedTime,
         items: widget.items,
         comment: widget.comment,

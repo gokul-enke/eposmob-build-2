@@ -133,6 +133,7 @@ class KotThermalPrinter {
     required String orderNumber,
     String? tokenNumber,
     required String tableName,
+    bool showTableLabel = true,
     required String orderTime,
     required List<Map<String, dynamic>> items,
     String? comment,
@@ -215,9 +216,9 @@ class KotThermalPrinter {
 
       // Order info section without box
       // Table number - MOST PROMINENT (for kitchen staff to quickly identify)
-      if (showTableNumber) {
+      if (showTableNumber && tableName.trim().isNotEmpty) {
         rows.add(_KotTextRow(
-          '$tableLabel: $tableName',
+          showTableLabel ? '$tableLabel: $tableName' : tableName,
           isBold: true,
           scale: getTableScale(is58mm),
           center: true,
