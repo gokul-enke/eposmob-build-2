@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/newcomponents/custom_round_button.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -108,6 +109,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   double balanceAmount = 0;
   Timer? _debounceTimer;
 
+  late VoidCallback _cashAmountListener;
+  late VoidCallback _cardAmountListener;
+  late VoidCallback _upiAmountListener;
+  late VoidCallback _codAmountListener;
+  late VoidCallback _toCustomerCreditListener;
+
   // To Customer Credit toggle and controller
   bool toCustomerCreditEnabled = false;
   late TextEditingController toCustomerCreditController;
@@ -124,6 +131,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   // Credit option (visual only, for sales staff)
   bool isCreditSelected = false;
   late TextEditingController creditAmountController;
+  bool _isApplying = false;
 
   @override
   void initState() {
@@ -217,16 +225,22 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     });
 
     // Listen for text changes to capture virtual keyboard input
-    cashAmountController.addListener(
-        () => _handleAmountControllerChange('cash', cashAmountController));
-    cardAmountController.addListener(
-        () => _handleAmountControllerChange('card', cardAmountController));
-    upiAmountController.addListener(
-        () => _handleAmountControllerChange('upi', upiAmountController));
-    codAmountController.addListener(
-        () => _handleAmountControllerChange('cod', codAmountController));
-    toCustomerCreditController.addListener(() => _handleAmountControllerChange(
-        'toCustomerCredit', toCustomerCreditController));
+    _cashAmountListener =
+      () => _handleAmountControllerChange('cash', cashAmountController);
+    _cardAmountListener =
+      () => _handleAmountControllerChange('card', cardAmountController);
+    _upiAmountListener =
+      () => _handleAmountControllerChange('upi', upiAmountController);
+    _codAmountListener =
+      () => _handleAmountControllerChange('cod', codAmountController);
+    _toCustomerCreditListener = () => _handleAmountControllerChange(
+      'toCustomerCredit', toCustomerCreditController);
+
+    cashAmountController.addListener(_cashAmountListener);
+    cardAmountController.addListener(_cardAmountListener);
+    upiAmountController.addListener(_upiAmountListener);
+    codAmountController.addListener(_codAmountListener);
+    toCustomerCreditController.addListener(_toCustomerCreditListener);
 
     transactionNumberController.addListener(_debounceNotifyChanges);
 
@@ -259,6 +273,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _notifyChanges() {
+    if (!mounted) {
+      return;
+    }
     _debounceTimer?.cancel();
     final double mappedCredit =
         double.tryParse(toCustomerCreditController.text) ?? 0.0;
@@ -301,14 +318,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   void dispose() {
     _debounceTimer?.cancel();
     transactionNumberController.removeListener(_debounceNotifyChanges);
-    cashAmountController.removeListener(
-        () => _handleAmountControllerChange('cash', cashAmountController));
-    cardAmountController.removeListener(
-        () => _handleAmountControllerChange('card', cardAmountController));
-    upiAmountController.removeListener(
-        () => _handleAmountControllerChange('upi', upiAmountController));
-    codAmountController.removeListener(
-        () => _handleAmountControllerChange('cod', codAmountController));
+    cashAmountController.removeListener(_cashAmountListener);
+    cardAmountController.removeListener(_cardAmountListener);
+    upiAmountController.removeListener(_upiAmountListener);
+    codAmountController.removeListener(_codAmountListener);
     cashAmountController.dispose();
     cardAmountController.dispose();
     upiAmountController.dispose();
@@ -319,9 +332,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     upiAmountFocusNode.dispose();
     codAmountFocusNode.dispose();
     toCustomerCreditFocusNode.dispose();
-    toCustomerCreditController.removeListener(() =>
-        _handleAmountControllerChange(
-            'toCustomerCredit', toCustomerCreditController));
+    toCustomerCreditController.removeListener(_toCustomerCreditListener);
     toCustomerCreditController.dispose();
     creditAmountController.dispose();
     super.dispose();
@@ -588,9 +599,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     debugPrint('💵 Final cash balance: ${cashBal.toStringAsFixed(2)}');
 
-    setState(() {
-      balanceAmount = cashBal;
-    });
+    if (mounted) {
+      setState(() {
+        balanceAmount = cashBal;
+      });
+    }
 
     debugPrint('🧮 === CALCULATE BALANCE END ===\n');
   }
@@ -729,6 +742,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   // ---- Utility to handle text changes from any source (hardware or virtual keyboard) ----
   void _handleAmountControllerChange(
       String label, TextEditingController controller) {
+    if (!mounted) {
+      return;
+    }
     double amount = double.tryParse(controller.text) ?? 0;
 
     setState(() {
@@ -1158,24 +1174,38 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
                       const SizedBox(height: 20),
                       if (widget.showConfirmButton)
-                        CustomRoundButton(
+                        CustomRoundButtonAdvanced(
                           title: widget.customButtonTitle ??
                               'billing.apply_payment_methods'.tr,
                           fct: () {
+                            if (_isApplying) return;
+                            setState(() {
+                              _isApplying = true;
+                            });
                             _notifyChanges();
                             if (widget.closeOnApply) {
                               Navigator.of(context).pop();
-                            }
-
-                            if (widget.onAfterApply != null) {
-                              Future.delayed(const Duration(milliseconds: 100), () {
-                                widget.onAfterApply!();
-                              });
+                            } else {
+                              if (widget.onAfterApply != null) {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  widget.onAfterApply!();
+                                });
+                              }
+                              if (mounted) {
+                                setState(() {
+                                  _isApplying = false;
+                                });
+                              }
                             }
                           },
                           fontSize: FontSize.s14,
                           height: 45,
                           width: double.infinity,
+                          isLoading: _isApplying,
+                            boxColor:
+                              _isApplying ? Colors.grey.shade400 : null,
+                            borderColor:
+                              _isApplying ? Colors.grey.shade400 : null,
                         ),
                     ],
                   ),
