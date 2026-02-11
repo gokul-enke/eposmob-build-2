@@ -15,6 +15,7 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,9 @@ import '../../models/list_stock.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/adjust_stock_modal.dart';
+import 'widgets/move_stock_modal.dart';
+import 'widgets/withdraw_stock_modal.dart';
 
 class AddStockScreen extends StatefulWidget {
   const AddStockScreen({super.key});
@@ -61,6 +65,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   void loadInitData() async {
+    debugPrint('🎬 LOADING STOCK SCREEN INIT DATA');
     try {
       setState(() {
         initLoading = true;
@@ -91,6 +96,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
       // Load all stocks for local pagination
       await Provider.of<StockProvider>(context, listen: false)
           .loadAllStocks(accessToken);
+
+      // Load all stores for move stock modal
+      await Provider.of<PurchaseProvider>(context, listen: false)
+          .listAllStores(accessToken, null);
 
       // Extract categories from CategoryProvider and stores from stocks
       _extractCategoriesAndStores();
@@ -599,6 +608,39 @@ class _AddStockScreenState extends State<AddStockScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showAdjustStockModal(ListStockModelData stock) {
+    debugPrint(
+        '🛠️ SHOW ADJUST STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
+    showDialog(
+      context: context,
+      builder: (context) => AdjustStockModal(stock: stock),
+    );
+  }
+
+  void _showMoveStockModal(ListStockModelData stock) {
+    debugPrint(
+        '🚚 SHOW MOVE STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
+    final purchaseProvider =
+        Provider.of<PurchaseProvider>(context, listen: false);
+    debugPrint('   STORES AVAILABLE: ${purchaseProvider.storeList.length}');
+    showDialog(
+      context: context,
+      builder: (context) => MoveStockModal(
+        stock: stock,
+        stores: purchaseProvider.storeList,
+      ),
+    );
+  }
+
+  void _showWithdrawStockModal(ListStockModelData stock) {
+    debugPrint(
+        '💸 SHOW WITHDRAW STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
+    showDialog(
+      context: context,
+      builder: (context) => WithdrawStockModal(stock: stock),
     );
   }
 
@@ -1122,20 +1164,32 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                           ],
                                         ),
                                         child: Table(
-                                          columnWidths: const {
-                                            0: FlexColumnWidth(2.0), // Product
-                                            1: FlexColumnWidth(1.5), // Barcode
-                                            2: FlexColumnWidth(
-                                                1.2), // Retail Price
-                                            3: FlexColumnWidth(1.2), // MRP
-                                            4: FlexColumnWidth(
-                                                1.2), // Purchase Price
-                                            5: FlexColumnWidth(0.8), // Quantity
-                                            6: FlexColumnWidth(0.8), // Unit
-                                            7: FlexColumnWidth(1.0), // Rack
-                                            8: FlexColumnWidth(
-                                                1.5), // Order Date
-                                            9: FlexColumnWidth(1.5), // Action
+                                          columnWidths: {
+                                            0: const FlexColumnWidth(
+                                                1.7), // Product
+                                            1: const FlexColumnWidth(
+                                                1.1), // Barcode
+                                            2: const FlexColumnWidth(
+                                                1.0), // Retail Price
+                                            3: const FlexColumnWidth(
+                                                0.9), // MRP
+                                            4: const FlexColumnWidth(
+                                                0.9), // Purchase Price
+                                            5: const FlexColumnWidth(
+                                                0.7), // Quantity
+                                            6: const FlexColumnWidth(
+                                                0.8), // Unit
+                                            7: const FlexColumnWidth(
+                                                0.9), // Rack
+                                            8: const FlexColumnWidth(
+                                                1.2), // Order Date
+                                            9: FlexColumnWidth(
+                                                MediaQuery.of(context)
+                                                            .size
+                                                            .width <
+                                                        1200
+                                                    ? 2.5
+                                                    : 1.8), // Action
                                           },
                                           border: null,
                                           defaultVerticalAlignment:
@@ -1180,27 +1234,32 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                   const BouncingScrollPhysics(),
                                               scrollDirection: Axis.vertical,
                                               child: Table(
-                                                columnWidths: const {
-                                                  0: FlexColumnWidth(
-                                                      2.0), // Product
-                                                  1: FlexColumnWidth(
-                                                      1.5), // Barcode
-                                                  2: FlexColumnWidth(
-                                                      1.2), // Retail Price
-                                                  3: FlexColumnWidth(
-                                                      1.2), // MRP
-                                                  4: FlexColumnWidth(
-                                                      1.2), // Purchase Price
-                                                  5: FlexColumnWidth(
-                                                      0.8), // Quantity
-                                                  6: FlexColumnWidth(
+                                                columnWidths: {
+                                                  0: const FlexColumnWidth(
+                                                      1.7), // Product
+                                                  1: const FlexColumnWidth(
+                                                      1.1), // Barcode
+                                                  2: const FlexColumnWidth(
+                                                      1.0), // Retail Price
+                                                  3: const FlexColumnWidth(
+                                                      0.9), // MRP
+                                                  4: const FlexColumnWidth(
+                                                      0.9), // Purchase Price
+                                                  5: const FlexColumnWidth(
+                                                      0.7), // Quantity
+                                                  6: const FlexColumnWidth(
                                                       0.8), // Unit
-                                                  7: FlexColumnWidth(
-                                                      1.0), // Rack
-                                                  8: FlexColumnWidth(
-                                                      1.5), // Order Date
+                                                  7: const FlexColumnWidth(
+                                                      0.9), // Rack
+                                                  8: const FlexColumnWidth(
+                                                      1.2), // Order Date
                                                   9: FlexColumnWidth(
-                                                      1.5), // Action
+                                                      MediaQuery.of(context)
+                                                                  .size
+                                                                  .width <
+                                                              1200
+                                                          ? 2.5
+                                                          : 1.8), // Action
                                                 },
                                                 border: null,
                                                 defaultVerticalAlignment:
@@ -1278,15 +1337,18 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                                 "")), // Order Date
                                                         Center(
                                                           child: Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
                                                             children: [
                                                               BuildBoxShadowContainer(
                                                                   margin:
                                                                       const EdgeInsets
-                                                                          .only(
-                                                                          left:
-                                                                              5,
-                                                                          right:
-                                                                              5),
+                                                                          .all(
+                                                                          2),
                                                                   color: ColorManager
                                                                       .kPrimaryColor
                                                                       .withOpacity(
@@ -1306,37 +1368,64 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                                     onPressed: () =>
                                                                         _showEditStockModal(
                                                                             stock),
+                                                                    constraints: const BoxConstraints(
+                                                                        minWidth:
+                                                                            36,
+                                                                        minHeight:
+                                                                            36),
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .zero,
                                                                   )),
-                                                              Padding(
-                                                                padding:
+                                                              BuildBoxShadowContainer(
+                                                                margin:
                                                                     const EdgeInsets
-                                                                        .all(
-                                                                        8.0),
+                                                                        .all(2),
+                                                                circleRadius: 5,
                                                                 child:
-                                                                    BuildBoxShadowContainer(
+                                                                    IconButton(
+                                                                  icon: Icon(
+                                                                    Icons
+                                                                        .visibility,
+                                                                    size: 18,
+                                                                    color: ColorManager
+                                                                        .kPrimaryColor
+                                                                        .withOpacity(
+                                                                            0.9),
+                                                                  ),
+                                                                  onPressed: () =>
+                                                                      _showStockDetails(
+                                                                          stock),
+                                                                  constraints:
+                                                                      const BoxConstraints(
+                                                                    minWidth:
+                                                                        36,
+                                                                    minHeight:
+                                                                        36,
+                                                                  ),
+                                                                  padding:
+                                                                      EdgeInsets
+                                                                          .zero,
+                                                                ),
+                                                              ),
+                                                              BuildBoxShadowContainer(
                                                                   margin:
                                                                       const EdgeInsets
-                                                                          .only(
-                                                                          left:
-                                                                              5,
-                                                                          right:
-                                                                              5),
+                                                                          .all(
+                                                                          2),
                                                                   circleRadius:
                                                                       5,
                                                                   child:
-                                                                      IconButton(
-                                                                    icon: Icon(
-                                                                      Icons
-                                                                          .visibility,
-                                                                      size: 18,
-                                                                      color: ColorManager
-                                                                          .kPrimaryColor
-                                                                          .withOpacity(
-                                                                              0.9),
-                                                                    ),
-                                                                    onPressed: () =>
-                                                                        _showStockDetails(
-                                                                            stock),
+                                                                      PopupMenuButton<
+                                                                          String>(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    surfaceTintColor:
+                                                                        Colors
+                                                                            .white,
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .zero,
                                                                     constraints:
                                                                         const BoxConstraints(
                                                                       minWidth:
@@ -1344,12 +1433,81 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                                       minHeight:
                                                                           36,
                                                                     ),
-                                                                    padding:
-                                                                        EdgeInsets
-                                                                            .zero,
-                                                                  ),
-                                                                ),
-                                                              ),
+                                                                    icon:
+                                                                        const Icon(
+                                                                      Icons
+                                                                          .more_vert,
+                                                                      size: 16,
+                                                                      color: ColorManager
+                                                                          .kPrimaryColor,
+                                                                    ),
+                                                                    onSelected:
+                                                                        (value) {
+                                                                      if (value ==
+                                                                          'adjust') {
+                                                                        _showAdjustStockModal(
+                                                                            stock);
+                                                                      } else if (value ==
+                                                                          'move') {
+                                                                        _showMoveStockModal(
+                                                                            stock);
+                                                                      } else if (value ==
+                                                                          'withdraw') {
+                                                                        _showWithdrawStockModal(
+                                                                            stock);
+                                                                      }
+                                                                    },
+                                                                    itemBuilder:
+                                                                        (BuildContext
+                                                                                context) =>
+                                                                            [
+                                                                      const PopupMenuItem<
+                                                                          String>(
+                                                                        value:
+                                                                            'adjust',
+                                                                        child:
+                                                                            Row(
+                                                                          children: [
+                                                                            Icon(Icons.sync,
+                                                                                size: 18,
+                                                                                color: ColorManager.kPrimaryColor),
+                                                                            SizedBox(width: 8),
+                                                                            Text('Adjust Stock'),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                      const PopupMenuItem<
+                                                                          String>(
+                                                                        value:
+                                                                            'move',
+                                                                        child:
+                                                                            Row(
+                                                                          children: [
+                                                                            Icon(Icons.arrow_forward,
+                                                                                size: 18,
+                                                                                color: ColorManager.kPrimaryColor),
+                                                                            SizedBox(width: 8),
+                                                                            Text('Move Stock'),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                      const PopupMenuItem<
+                                                                          String>(
+                                                                        value:
+                                                                            'withdraw',
+                                                                        child:
+                                                                            Row(
+                                                                          children: [
+                                                                            Icon(Icons.arrow_downward,
+                                                                                size: 18,
+                                                                                color: ColorManager.kPrimaryColor),
+                                                                            SizedBox(width: 8),
+                                                                            Text('Withdraw Stock'),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  )),
                                                             ],
                                                           ),
                                                         ),
