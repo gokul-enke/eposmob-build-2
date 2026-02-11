@@ -67,6 +67,7 @@ class KotStandardPrinter {
     required String orderNumber,
     String? tokenNumber,
     required String tableName,
+    bool showTableLabel = true,
     required String orderTime,
     required List<Map<String, dynamic>> items,
     String? comment,
@@ -313,9 +314,12 @@ class KotStandardPrinter {
                               style: bodyStyle),
                         ),
                       ],
-                      if (showTableNumber) ...[
+                      if (showTableNumber && tableName.trim().isNotEmpty) ...[
                         pw.SizedBox(height: 4),
-                        pw.Text('$tableLabel: $tableName',
+                        pw.Text(
+                            showTableLabel
+                                ? '$tableLabel: $tableName'
+                                : tableName,
                             style: pw.TextStyle(
                               font: boldFont,
                               fontSize: isA5 ? 14.0 : 18.0,

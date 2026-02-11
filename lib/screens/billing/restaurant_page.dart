@@ -2614,6 +2614,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
   String? _loadedLocalDraftId; // track currently loaded local draft
+  bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
 
   // Payment Method Variables
   bool _isCashSelected = false;
@@ -3959,6 +3960,12 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           // If we had a selected order, try to find and update it with fresh data
           if (currentSelectedOrder != null) {
+            if (_blockReselectAfterPlace) {
+              _selectedOrder = null;
+              widget.onOrderSelected(null);
+              debugPrint('✅ Skipping reselect after order placed');
+              return;
+            }
             final currentOrderId =
                 currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
             final updatedOrder = newOrders.firstWhere(
@@ -4022,6 +4029,12 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           // If we had a selected order, try to find and update it with fresh data
           if (currentSelectedOrder != null) {
+            if (_blockReselectAfterPlace) {
+              _selectedOrder = null;
+              widget.onOrderSelected(null);
+              debugPrint('✅ Skipping reselect after order placed');
+              return;
+            }
             final currentOrderId =
                 currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
             final updatedOrder = newOrders.firstWhere(
@@ -4063,6 +4076,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       // Clear previous order's customer and payment state to prevent contamination
       _clearOrderEditingState();
 
+      _blockReselectAfterPlace = false;
       _selectedOrder = order; // Set the selected order directly
       widget.onOrderSelected(
           order); // Call the callback to update the parent widget
@@ -4080,6 +4094,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       });
     }
   }
+
 
   // Clear customer and payment state when switching orders
   void _clearOrderEditingState() {
@@ -6806,6 +6821,14 @@ class _OrderPanelState extends State<_OrderPanel> {
         );
 
         if (updatedOrder != null) {
+          if (_blockReselectAfterPlace) {
+            setState(() {
+              _selectedOrder = null;
+            });
+            widget.onOrderSelected(null);
+            debugPrint('✅ Skipping reselect after order placed');
+            return;
+          }
           setState(() {
             _selectedOrder = updatedOrder;
           });
@@ -7120,7 +7143,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
             // After returning from print or successful auto-print, cleanup
             if (mounted) {
-              setState(() => _selectedOrder = null);
+              setState(() {
+                _blockReselectAfterPlace = true;
+                _selectedOrder = null;
+              });
               widget.onOrderSelected(null);
             }
           }
@@ -7132,7 +7158,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         // Even if print fails, the order was confirmed, so cleanup
         if (mounted) {
-          setState(() => _selectedOrder = null);
+          setState(() {
+            _blockReselectAfterPlace = true;
+            _selectedOrder = null;
+          });
           widget.onOrderSelected(null);
         }
       }
@@ -7141,6 +7170,15 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   Future<void> _refreshSelectedOrderAfterCartUpdate() async {
     if (_selectedOrder == null) return;
+
+    if (_blockReselectAfterPlace) {
+      setState(() {
+        _selectedOrder = null;
+      });
+      widget.onOrderSelected(null);
+      debugPrint('✅ Skipping reselect after order placed');
+      return;
+    }
 
     debugPrint('🔄 Refreshing selected order after cart update...');
 
@@ -7320,7 +7358,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
         final codId = billingProvider.codPaymentMethodId ?? 'COD';
 
-        // Multi-payment handling with dynamic IDs
+        // Multi-payment handling with dynamic IDs (always send in multi format)
         List<String> selectedMethods = [];
         final cashAmountVal = double.tryParse(_cashAmount) ?? 0;
         final cardAmountVal = double.tryParse(_cardAmount) ?? 0;
@@ -7332,33 +7370,19 @@ class _OrderPanelState extends State<_OrderPanel> {
         if (_isUpiSelected && upiAmountVal > 0) selectedMethods.add(upiId);
         if (_isCodSelected && codAmountVal > 0) selectedMethods.add(codId);
 
-        if (selectedMethods.length > 1) {
-          // Multi-payment: store as JSON with IDs as keys
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedMethods,
-            "amounts": {
-              cashId: _cashAmount.isNotEmpty ? _cashAmount : "0",
-              cardId: _cardAmount.isNotEmpty ? _cardAmount : "0",
-              upiId: _upiAmount.isNotEmpty ? _upiAmount : "0",
-              codId: _codAmount.isNotEmpty ? _codAmount : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
+        if (selectedMethods.isNotEmpty) {
+          paymentMethods = selectedMethods;
 
-          // Calculate total paid amount (using already-parsed values)
-          paidAmount =
-              (cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal)
-                  .toString();
+          final totalPaid =
+              cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
+          paidAmount = totalPaid.toString();
 
           // Prepare paidMethods array with IDs (only include methods with amount > 0)
           if (_isCashSelected && cashAmountVal > 0) {
             // Adjust cash amount by deducting balance (change returned to customer)
-            final totalPaid = cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
             final orderAmount = double.tryParse(totalPrice) ?? 0.0;
             final balanceAmountVal = totalPaid - orderAmount;
             final netCashAmount = cashAmountVal - balanceAmountVal;
-            // Only add if net cash is positive (skip if balance equals or exceeds cash)
             if (netCashAmount > 0) {
               paidMethods.add({"method": cashId, "amount": netCashAmount});
             }
@@ -7373,19 +7397,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             paidMethods.add({"method": codId, "amount": codAmountVal});
           }
 
-          paymentMethods = selectedMethods;
-        } else if (selectedMethods.isNotEmpty) {
-          // Single payment method with ID
-          paymentMethod = selectedMethods.first;
-          if (_isCashSelected && cashAmountVal > 0) {
-            paidAmount = _cashAmount;
-          } else if (_isCardSelected && cardAmountVal > 0) {
-            paidAmount = _cardAmount;
-          } else if (_isUpiSelected && upiAmountVal > 0) {
-            paidAmount = _upiAmount;
-          } else if (_isCodSelected && codAmountVal > 0) {
-            paidAmount = _codAmount;
-          }
+          // Keep for logs only; API will use paymentMethods/paidMethods format
+          paymentMethod = selectedMethods.length == 1 ? selectedMethods.first : null;
         }
       }
 
@@ -7490,7 +7503,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         if (closeOnSuccess) {
           // Go back to orders list
-          setState(() => _selectedOrder = null);
+          setState(() {
+            _blockReselectAfterPlace = true;
+            _selectedOrder = null;
+          });
           widget.onOrderSelected(null);
         }
         return true;

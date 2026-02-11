@@ -151,6 +151,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   bool _isPrinting = false;
   bool _hasOpenedPaymentModalOnce =
       false; // Track if payment step has been visited
+  bool _isAddingCustomer = false;
 
   // Local state for Customer Search
   String _customerSearchQuery = '';
@@ -188,6 +189,49 @@ class _CheckoutModalState extends State<CheckoutModal> {
   late String _lTransactionNumber;
   late bool _lToCustomerCreditEnabled;
 
+  String _initialForName(String? name) {
+    final trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'U';
+    }
+    return trimmed[0].toUpperCase();
+  }
+
+  TimeOfDay? _parseDeliveryTime(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final twentyFourHour = RegExp(r'^(\d{1,2}):(\d{2})$');
+    final twelveHour = RegExp(r'^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$');
+
+    final twentyFourMatch = twentyFourHour.firstMatch(trimmed);
+    if (twentyFourMatch != null) {
+      final hour = int.tryParse(twentyFourMatch.group(1) ?? '');
+      final minute = int.tryParse(twentyFourMatch.group(2) ?? '');
+      if (hour != null && minute != null && hour >= 0 && hour <= 23) {
+        return TimeOfDay(hour: hour, minute: minute);
+      }
+    }
+
+    final twelveMatch = twelveHour.firstMatch(trimmed);
+    if (twelveMatch != null) {
+      final hourRaw = int.tryParse(twelveMatch.group(1) ?? '');
+      final minute = int.tryParse(twelveMatch.group(2) ?? '');
+      final meridian = (twelveMatch.group(3) ?? '').toUpperCase();
+      if (hourRaw != null && minute != null && hourRaw >= 1 && hourRaw <= 12) {
+        var hour = hourRaw % 12;
+        if (meridian == 'PM') {
+          hour += 12;
+        }
+        return TimeOfDay(hour: hour, minute: minute);
+      }
+    }
+
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -212,11 +256,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _lSelectedDeliveryDate = DateTime.tryParse(widget.deliveryDate!);
     }
     if (widget.deliveryTime != null && widget.deliveryTime!.isNotEmpty) {
-      final parts = widget.deliveryTime!.split(":");
-      if (parts.length >= 2) {
-        _lSelectedDeliveryTime =
-            TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-      }
+      _lSelectedDeliveryTime = _parseDeliveryTime(widget.deliveryTime!);
     }
 
     _lIsCashSelected = widget.isCashSelected;
@@ -309,6 +349,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   void _goToStep(int step) {
+    if (_isAddingCustomer) return;
     if (!widget.enableDelivery && step == 1) return;
     if (step >= 0 && step <= 3) {
       setState(() {
@@ -323,17 +364,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _handleDeliveryUpdate() {
     if (widget.onDeliveryUpdated != null) {
+      final dateValue = _lSelectedDeliveryDate != null
+          ? _lSelectedDeliveryDate!.toIso8601String()
+          : '';
+      final timeValue = _lSelectedDeliveryTime != null
+          ? '${_lSelectedDeliveryTime!.hour.toString().padLeft(2, '0')}:${_lSelectedDeliveryTime!.minute.toString().padLeft(2, '0')}'
+          : '';
       widget.onDeliveryUpdated!(
         _lDeliveryMethod,
         _lDeliveryMethodId,
         _lCarNumberController.text,
         _lCommentController.text,
-        _lSelectedDeliveryDate != null
-            ? _lSelectedDeliveryDate!.toIso8601String()
-            : '',
-        _lSelectedDeliveryTime != null
-            ? _lSelectedDeliveryTime!.format(context)
-            : '',
+        dateValue,
+        timeValue,
         _lAddressController.text,
       );
     }
@@ -367,6 +410,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   void _handleAddNewCustomer() async {
+    if (_isAddingCustomer) return;
+    setState(() {
+      _isAddingCustomer = true;
+    });
     final newCustomer = await widget.onAddNewCustomer(_customerSearchQuery);
     if (newCustomer != null) {
       if (mounted) {
@@ -382,6 +429,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
         // Also update parent
         widget.onCustomerSelected(newCustomer);
       }
+    }
+    if (mounted) {
+      setState(() {
+        _isAddingCustomer = false;
+      });
     }
   }
 
@@ -452,35 +504,51 @@ class _CheckoutModalState extends State<CheckoutModal> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
       elevation: 8,
-      child: Container(
-        width: 1300,
-        height: 850,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      child: Stack(
+        children: [
+          Container(
+            width: 1300,
+            height: 850,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header with Steps
-            _buildHeader(hasCustomer, hasDiscount, hasPayment, hasDelivery),
+            child: Column(
+              children: [
+                // Header with Steps
+                _buildHeader(
+                    hasCustomer, hasDiscount, hasPayment, hasDelivery),
 
-            // Content Area
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: _buildCurrentStepContent(),
+                // Content Area
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _buildCurrentStepContent(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_isAddingCustomer)
+            Positioned.fill(
+              child: AbsorbPointer(
+                child: Container(
+                  color: Colors.white.withOpacity(0.6),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -705,15 +773,27 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Add New Customer'),
+                          icon: _isAddingCustomer
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.grey),
+                                  ),
+                                )
+                              : const Icon(Icons.person_add),
+                          label: Text(
+                              _isAddingCustomer ? 'Adding...' : 'Add New Customer'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             backgroundColor: Colors.grey.shade100,
                             foregroundColor: Colors.grey.shade700,
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
-                          onPressed: _handleAddNewCustomer,
+                          onPressed:
+                              _isAddingCustomer ? null : _handleAddNewCustomer,
                         ),
                       ),
                     ],
@@ -733,6 +813,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ),
         _buildFooter(
           onPrint: () async {
+            if (_isPrinting) return;
             setState(() => _isPrinting = true);
             try {
               await widget.onConfirmAndPrint();
@@ -741,6 +822,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             }
           },
           onConfirm: () async {
+            if (_isConfirming) return;
             setState(() => _isConfirming = true);
             try {
               await widget.onConfirmOrder();
@@ -859,9 +941,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               }).toList(),
                             ),
                             if (Provider.of<AppSettingsProvider>(context,
-                                    listen: false)
-                                .appSettings!
-                                .askDeliveryDate) ...[
+                                  listen: false)
+                                .appSettings
+                                ?.askDeliveryDate ==
+                              true) ...[
                               const SizedBox(height: 20),
                               Text('billing.enter_car_number'.tr,
                                   style: buildCustomStyle(
@@ -1038,6 +1121,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _buildFooter(
           onBack: _previousStep,
           onPrint: () async {
+            if (_isPrinting) return;
             setState(() => _isPrinting = true);
             try {
               await widget.onConfirmAndPrint();
@@ -1046,6 +1130,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             }
           },
           onConfirm: () async {
+            if (_isConfirming) return;
             setState(() => _isConfirming = true);
             try {
               await widget.onConfirmOrder();
@@ -1113,7 +1198,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     ),
                     child: Center(
                       child: Text(
-                        (customer.name ?? 'U').substring(0, 1).toUpperCase(),
+                        _initialForName(customer.name),
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, color: Colors.white),
                       ),
@@ -1221,9 +1306,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ),
                 child: Center(
                   child: Text(
-                    (_localSelectedCustomer!.name ?? 'U')
-                        .substring(0, 1)
-                        .toUpperCase(),
+                    _initialForName(_localSelectedCustomer!.name),
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -1379,6 +1462,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _buildFooter(
           onBack: _previousStep,
           onPrint: () async {
+            if (_isPrinting) return;
             setState(() => _isPrinting = true);
             try {
               await widget.onConfirmAndPrint();
@@ -1387,6 +1471,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             }
           },
           onConfirm: () async {
+            if (_isConfirming) return;
             setState(() => _isConfirming = true);
             try {
               await widget.onConfirmOrder();
@@ -1509,6 +1594,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _buildFooter(
           onBack: _previousStep,
           onPrint: () async {
+            if (_isPrinting) return;
             setState(() => _isPrinting = true);
             try {
               await widget.onConfirmAndPrint();
@@ -1517,6 +1603,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             }
           },
           onConfirm: () async {
+            if (_isConfirming) return;
             setState(() => _isConfirming = true);
             try {
               await widget.onConfirmOrder();

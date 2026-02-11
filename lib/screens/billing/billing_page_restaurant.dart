@@ -3608,11 +3608,50 @@ class BillingPageState extends State<BillingPageRestaurant>
     );
   }
 
+  String? _extractTokenNumberFromOrderData(dynamic orderData) {
+    if (orderData is! Map) return null;
+
+    String? tokenNumber = orderData['token_number']?.toString();
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsMap = orderData['orderProps'];
+      if (propsMap is Map && propsMap['ORDER_TOKEN_NUMBER'] != null) {
+        tokenNumber = propsMap['ORDER_TOKEN_NUMBER']?.toString();
+      }
+    }
+    if (tokenNumber == null || tokenNumber.isEmpty) {
+      final propsList = orderData['order_props'];
+      if (propsList is List) {
+        try {
+          final match = propsList.firstWhere(
+            (e) => (e is Map) &&
+                (e['code'] ?? e['props_code'])
+                        ?.toString()
+                        .toUpperCase() ==
+                    'ORDER_TOKEN_NUMBER',
+            orElse: () => null,
+          );
+          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+            tokenNumber = (match['value'] ?? match['props_value']).toString();
+          }
+        } catch (_) {}
+      }
+    }
+    if (tokenNumber != null) {
+      tokenNumber = tokenNumber.trim();
+      if (tokenNumber.startsWith('"') && tokenNumber.endsWith('"')) {
+        tokenNumber = tokenNumber.substring(1, tokenNumber.length - 1);
+      }
+    }
+
+    return tokenNumber;
+  }
+
   /// Helper method to print KOT for delivery and takeaway
     Future<void> _printKOT(
       String orderNumber, List<LocalCartItem> cartItems,
-      {String? tokenNumber}) async {
+      {String? tokenNumber, bool showTableLabel = true}) async {
     debugPrint("🖨️ Printing KOT for $orderNumber");
+    debugPrint("🧾 KOT tokenNumber: ${tokenNumber ?? 'null'}");
 
     // Build print items
     List<Map<String, dynamic>> printItems = [];
@@ -3640,6 +3679,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         orderNumber: orderNumber,
         tokenNumber: tokenNumber,
         tableName: tableName,
+        showTableLabel: showTableLabel,
         orderTime: orderTime,
         items: printItems,
         comment: _commentController.text.isNotEmpty
@@ -3656,6 +3696,7 @@ class BillingPageState extends State<BillingPageRestaurant>
               orderNumber: orderNumber,
               tokenNumber: tokenNumber,
               tableName: tableName,
+              showTableLabel: showTableLabel,
               orderTime: orderTime,
               items: printItems,
               comment: _commentController.text.isNotEmpty
@@ -4248,7 +4289,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           Provider.of<AppSettingsProvider>(context, listen: false);
       if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
         List<LocalCartItem> kotCartItems = orderToUse.items;
-        await _printKOT(orderToUse.orderNumber, kotCartItems);
+        await _printKOT(orderToUse.orderNumber, kotCartItems,
+          showTableLabel: false);
       }
 
       resetAutocomplete();
@@ -4462,7 +4504,14 @@ class BillingPageState extends State<BillingPageRestaurant>
           .then((response) async {
         debugPrint(
             "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
-        if (response["order_id"] != null) {
+        final responseDataRaw = response["data"];
+        final Map<String, dynamic> responseData = responseDataRaw is Map
+            ? Map<String, dynamic>.from(responseDataRaw)
+            : Map<String, dynamic>.from(response);
+        final responseOrderId = responseData["order_id"] ??
+            responseData["orders_id"] ??
+            response["order_id"];
+        if (responseOrderId != null) {
           showScaffold(
             context: context,
             message: "billing.order_saved_successfully".tr,
@@ -4477,8 +4526,12 @@ class BillingPageState extends State<BillingPageRestaurant>
           // Clear cart without restoring stock (order is confirmed)
           localProductProvider.clearCartAfterOrder();
 
+          String? orderDetailsTokenNumber;
           try {
-            String ordersId = response["order_number"].toString();
+            String ordersId = (responseData["order_number"] ??
+                    response["order_number"] ??
+                    responseOrderId)
+                .toString();
             String? accessToken =
                 Provider.of<AuthModel>(context, listen: false).token;
 
@@ -4543,8 +4596,11 @@ class BillingPageState extends State<BillingPageRestaurant>
               currentBalance = oldBalance - (cartTotal - totalPaid);
             }
 
+            orderDetailsTokenNumber = orderDetails.data?.tokenNumber;
             debugPrint(
-                "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
+              "🧾 Order details token_number: ${orderDetailsTokenNumber ?? 'null'}");
+            debugPrint(
+              "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
             debugPrint(
                 "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
 
@@ -4593,11 +4649,26 @@ class BillingPageState extends State<BillingPageRestaurant>
           final appSettingsProvider =
               Provider.of<AppSettingsProvider>(context, listen: false);
           if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+            final responseTokenNumber =
+              _extractTokenNumberFromOrderData(responseData);
+            final tokenNumber =
+              orderDetailsTokenNumber ?? responseTokenNumber;
+            final orderNumberForKot = (responseData["order_number"] ??
+                response["order_number"] ??
+                'ORD-${responseOrderId}')
+              .toString();
+            debugPrint('🧾 KOT token from create order response: '
+              '${responseTokenNumber ?? 'null'}');
+            debugPrint('🧾 Raw response token_number: '
+              '${responseData["token_number"]?.toString() ?? 'null'}');
+            debugPrint(
+              '🧾 KOT token resolved (details/response): ${tokenNumber ?? 'null'}');
             _printKOT(
-              response["order_number"]?.toString() ??
-                'ORD-${response["order_id"]}',
+              orderNumberForKot,
               cartItems,
-              tokenNumber: response["token_number"]?.toString());
+              tokenNumber: tokenNumber,
+              showTableLabel: false,
+            );
           }
 
           // Clear the mobile number after successful save

@@ -9,6 +9,8 @@ import '../../resources/style_manager.dart';
 
 Future<dynamic> showAddCustomerModal(BuildContext context, Size size,
     {required String mobileNumber}) {
+  // Clear any focused field behind the dialog to avoid multiple cursors.
+  FocusManager.instance.primaryFocus?.unfocus();
   return showDialog(
     context: context,
     barrierDismissible: true,

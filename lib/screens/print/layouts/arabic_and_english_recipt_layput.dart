@@ -124,7 +124,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       }
 
       // ========== HEADER SECTION (Modern & Clean) ==========
-      _buildHeaderSection(part1Rows, params, displayConfig, appSettings);
+        _buildHeaderSection(
+          part1Rows, params, displayConfig, appSettings, isEnglish);
 
       // ========== CUSTOMER SECTION ==========
       _buildCustomerSection(part1Rows, params, displayConfig, isEnglish);
@@ -258,6 +259,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
     dynamic appSettings,
+    bool isEnglish,
   ) {
     final billDocumentConfig = params.billDocumentConfig;
     final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
@@ -532,8 +534,16 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice Number - Use API prefix with stripped zeros/prefixes
-    if (displayConfig?['showInvoiceNumber']?.visible == true) {
+    // Invoice/Token Number - Render on same row when both are visible
+    final bool showInvoiceNumber =
+        displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showTokenNumber =
+        displayConfig?['showTokenNumber']?.visible == true &&
+            params.tokenNumber != null &&
+            params.tokenNumber!.isNotEmpty;
+
+    String? invoiceNumberText;
+    if (showInvoiceNumber) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
       // For "ORD-000430", this extracts "430"
       final regex = RegExp(r'[1-9]\d*');
@@ -542,21 +552,37 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String invoicePrefix =
+          params.billDocumentConfig.numberPrefix ?? 'INV-';
 
-      final invoiceNumberText = '$invoicePrefix$strippedNumber';
-      rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
+      invoiceNumberText = '$invoicePrefix$strippedNumber';
     }
 
-    // Token Number - Display right after invoice number in big font (same as store name)
-    // Only show if showTokenNumber is explicitly enabled (default: false)
-    if (displayConfig?['showTokenNumber']?.visible == true &&
-        params.tokenNumber != null && 
-        params.tokenNumber!.isNotEmpty) {
-      final tokenPrefix = displayConfig?['showTokenNumber']?.value as String? ?? '';
-      final tokenText = tokenPrefix.isNotEmpty
+    String? tokenText;
+    if (showTokenNumber) {
+      final tokenPrefix =
+          displayConfig?['showTokenNumber']?.value as String? ?? '';
+      tokenText = tokenPrefix.isNotEmpty
           ? '$tokenPrefix${params.tokenNumber!}'
           : params.tokenNumber!;
+    }
+
+    if (invoiceNumberText != null && tokenText != null) {
+      final invoiceAlign = isEnglish ? TextAlign.left : TextAlign.right;
+      final tokenAlign = isEnglish ? TextAlign.right : TextAlign.left;
+      final invoiceCol = ReceiptTableColumn(invoiceNumberText,
+        weight: 0.58, align: invoiceAlign, isBold: true, scale: 0.9);
+      final tokenCol = ReceiptTableColumn(tokenText,
+        weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
+      final spacerCol =
+        ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
+
+      rows.add(ReceiptTableRow(isEnglish
+        ? [invoiceCol, spacerCol, tokenCol]
+        : [tokenCol, spacerCol, invoiceCol]));
+    } else if (invoiceNumberText != null) {
+      rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
+    } else if (tokenText != null) {
       rows.add(TextRow(tokenText, scale: 1.4, isBold: true));
     }
 
