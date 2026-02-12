@@ -1969,7 +1969,7 @@ class LocalProductProvider extends ChangeNotifier {
           couponId: order.couponId,
           deliveryMethodId: order.deliveryMethodId,
           carNumber: order.carNumber,
-          status: order.status ?? "confirmed",
+          status: "confirmed",
           deliveryDate: order.deliveryDate, // Store deliveryDate in Hive
           deliveryTime: order.deliveryTime, // Store deliveryTime in Hive
           flatDiscount: order.flatDiscount,

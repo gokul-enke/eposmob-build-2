@@ -49,3 +49,5 @@ app.*.map.json
 Todo.md
 .idx
 # .opencode
+enkepos/
+/enkepos

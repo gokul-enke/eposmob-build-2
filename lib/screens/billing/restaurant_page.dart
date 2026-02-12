@@ -16,6 +16,7 @@ import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
+import 'package:pos_machine/providers/master_data_provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_confirmation_dialog.dart';
@@ -6258,6 +6259,36 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Sync LocalProductProvider cart with order items before showing checkout modal
     _syncOrderItemsWithLocalCart();
 
+    // Reload payment methods and refresh BillingProvider method IDs
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+    masterDataProvider.clearPaymentMethodsCache();
+    final methods = await masterDataProvider.fetchPaymentMethods();
+
+    if (methods != null && mounted) {
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      String? cashId, cardId, upiId, codId;
+      for (var m in methods) {
+        final val = m.value.toUpperCase();
+        if (val == 'CASH') {
+          cashId = m.id.toString();
+        } else if (val == 'CARD') {
+          cardId = m.id.toString();
+        } else if (val == 'UPI') {
+          upiId = m.id.toString();
+        } else if (val == 'COD') {
+          codId = m.id.toString();
+        }
+      }
+      billingProvider.updatePaymentMethodIds(
+        cashId: cashId,
+        cardId: cardId,
+        upiId: upiId,
+        codId: codId,
+      );
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -6314,22 +6345,80 @@ class _OrderPanelState extends State<_OrderPanel> {
             );
             
             if (result != null && result['status'] == 'success') {
-              await _fetchCustomers();
-              // Find and return the newly added customer
-              final addedPhone = result['phone'];
-              final matchingCustomer = _customers.firstWhere(
-                (customer) => customer.phone == addedPhone,
-                orElse: () => CustomerListModelData(),
-              );
-              
-              if (matchingCustomer.phone == addedPhone) {
-                // Also update parent state
+              final responseData = result['response']?['data'];
+              final userData = responseData?['user'];
+              final customerData = responseData?['customer'];
+
+              final int? createdCustomerId =
+                  int.tryParse(customerData?['id']?.toString() ?? '');
+              final int? createdUserId =
+                  int.tryParse(userData?['id']?.toString() ?? '');
+              final int? createdCompanyId =
+                  int.tryParse(customerData?['company_id']?.toString() ?? '');
+              final int? createdStoreId =
+                  int.tryParse(customerData?['store_id']?.toString() ?? '');
+              final double? createdBalance =
+                  double.tryParse(customerData?['balance']?.toString() ?? '0');
+
+              // Fast path: construct customer from add API response without full refetch
+              if (createdCustomerId != null) {
+                final createdCustomer = CustomerListModelData(
+                  id: createdCustomerId,
+                  userId: createdUserId,
+                  companyId: createdCompanyId,
+                  storeId: createdStoreId,
+                  name: (userData?['name'] ?? result['name'] ?? '').toString(),
+                  email: userData?['email']?.toString(),
+                  phone:
+                      (userData?['phone'] ?? result['phone'] ?? '').toString(),
+                  altPhone: customerData?['alt_phone']?.toString(),
+                  gender: customerData?['gender']?.toString(),
+                  dob: customerData?['dob']?.toString(),
+                  balance: createdBalance,
+                  paymentType: customerData?['payment_type']?.toString(),
+                  customerType: customerData?['customer_type']?.toString(),
+                );
+
                 setState(() {
-                  _selectedCustomer = matchingCustomer;
-                  _selectedCustomerID = matchingCustomer.id;
-                  _selectedCustomerPhone = matchingCustomer.phone;
+                  _customers.removeWhere((customer) =>
+                      customer.id == createdCustomer.id ||
+                      (customer.phone != null &&
+                          customer.phone == createdCustomer.phone));
+                  _customers.insert(0, createdCustomer);
+                  _selectedCustomer = createdCustomer;
+                  _selectedCustomerID = createdCustomer.id;
+                  _selectedCustomerPhone = createdCustomer.phone;
                 });
-                return matchingCustomer;
+
+                return createdCustomer;
+              }
+
+              // Fallback: refresh and match by normalized phone
+              await _fetchCustomers();
+              final addedPhone = result['phone'];
+              final normalizedAddedPhone =
+                  addedPhone?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
+                      '';
+
+              if (normalizedAddedPhone.isNotEmpty) {
+                final matchingCustomer = _customers.firstWhere(
+                  (customer) {
+                    final customerPhone =
+                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ??
+                            '';
+                    return customerPhone == normalizedAddedPhone;
+                  },
+                  orElse: () => CustomerListModelData(),
+                );
+
+                if (matchingCustomer.id != null) {
+                  setState(() {
+                    _selectedCustomer = matchingCustomer;
+                    _selectedCustomerID = matchingCustomer.id;
+                    _selectedCustomerPhone = matchingCustomer.phone;
+                  });
+                  return matchingCustomer;
+                }
               }
             }
             return null;
@@ -6370,6 +6459,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               _transactionNumber = trans;
               _toCustomerCreditEnabled = toCredit;
               _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0; // Correctly update credit amount
+              _hasOpenedPaymentModalOnce = true;
             });
             
             // Update provider
