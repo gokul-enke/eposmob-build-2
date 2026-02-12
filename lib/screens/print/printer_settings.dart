@@ -22,6 +22,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/screens/print/print_thermal.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -43,6 +44,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   var devices = <BluetoothPrinter>[];
   StreamSubscription<PrinterDevice>? _subscription;
   bool _isScanning = false;
+  bool _isResyncingDocConfig = false;
 
   // List of available paper sizes
   final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
@@ -498,6 +500,49 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         context: context,
         message: "Receipt theme saved",
       );
+    }
+  }
+
+  Future<void> _resyncDocumentConfigurations() async {
+    if (_isResyncingDocConfig) return;
+
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Missing access token. Please login again.',
+      );
+      return;
+    }
+
+    setState(() {
+      _isResyncingDocConfig = true;
+    });
+
+    try {
+      final docProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+
+      await docProvider.clearAllCaches();
+      await docProvider.fetchDocumentConfigurations(accessToken: accessToken);
+
+      if (!mounted) return;
+      showScaffold(
+        context: context,
+        message: 'Document configuration resynced successfully',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync document configurations: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResyncingDocConfig = false;
+        });
+      }
     }
   }
 
@@ -1116,6 +1161,22 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                         ),
                         Row(
                           children: [
+                            CustomRoundButton(
+                              fct: _isResyncingDocConfig
+                                  ? () {}
+                                  : _resyncDocumentConfigurations,
+                              title: _isResyncingDocConfig
+                                  ? 'Resyncing...'
+                                  : 'Resync Doc Config',
+                              height: 44,
+                              width: 210,
+                              fontSize: 14,
+                              borderColor: ColorManager.kPrimaryColor,
+                              boxColor: ColorManager.kPrimaryColor,
+                              textColor: Colors.white,
+                              isLoading: _isResyncingDocConfig,
+                            ),
+                            const SizedBox(width: 16),
                             CustomRoundButton(
                               fct: () => {clearLocalStorageAndLogout()},
                               title: 'Clear Local Storage',

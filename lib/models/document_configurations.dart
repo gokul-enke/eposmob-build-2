@@ -108,6 +108,26 @@ class DocumentConfig {
       displayConfiguration = DisplayConfiguration.fromJson(displayConfigJson);
     }
 
+    ItemName? parseItemName(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is Map<String, dynamic>) {
+        return ItemName.fromJson(raw);
+      }
+      if (raw is List) {
+        // Some APIs send [] for these fields. Treat as not configured.
+        return null;
+      }
+      return null;
+    }
+
+    ResolvedLabels? parseResolvedLabels(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is Map<String, dynamic>) {
+        return ResolvedLabels.fromJson(raw);
+      }
+      return null;
+    }
+
     return DocumentConfig(
       id: json["id"],
       companyId: json["company_id"],
@@ -123,20 +143,11 @@ class DocumentConfig {
       accentColor: json["accent_color"],
       font: json["font"],
       template: json["template"],
-      itemName: json["item_name"] == null
-          ? null
-          : ItemName.fromJson(json["item_name"]),
-      taxName:
-          json["tax_name"] == null ? null : ItemName.fromJson(json["tax_name"]),
-      unitName: json["unit_name"] == null
-          ? null
-          : ItemName.fromJson(json["unit_name"]),
-      priceName: json["price_name"] == null
-          ? null
-          : ItemName.fromJson(json["price_name"]),
-      amountName: json["amount_name"] == null
-          ? null
-          : ItemName.fromJson(json["amount_name"]),
+        itemName: parseItemName(json["item_name"]),
+        taxName: parseItemName(json["tax_name"]),
+        unitName: parseItemName(json["unit_name"]),
+        priceName: parseItemName(json["price_name"]),
+        amountName: parseItemName(json["amount_name"]),
       createdBy: json["created_by"],
       updatedBy: json["updated_by"],
       createdAt: json["created_at"],
@@ -144,9 +155,7 @@ class DocumentConfig {
       language: json["language"], // Parse language from JSON
       activeTheme: json["active_theme"], // Parse active theme from JSON
       displayConfiguration: displayConfiguration,
-      resolvedLabels: json["resolved_labels"] == null
-          ? null
-          : ResolvedLabels.fromJson(json["resolved_labels"]),
+      resolvedLabels: parseResolvedLabels(json["resolved_labels"]),
     );
   }
 

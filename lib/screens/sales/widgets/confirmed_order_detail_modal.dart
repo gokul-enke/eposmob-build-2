@@ -504,6 +504,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
           : null;
 
+        final double finalTotal = order.total;
+
       // Try auto-print with default printer first
       debugPrint(
           "🖨️ Attempting auto-print for confirmed order #${order.orderNumber}");
@@ -511,7 +513,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         context,
         storeName: storeName,
         cartItems: cartItems,
-        formattedTotal: netTotal.toString(), // Use calculated net total
+        formattedTotal: finalTotal.toString(),
         savedTotal: youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
         discountAmount: discountAmount.toString(),
         orderDate: order.createdAt,
@@ -535,7 +537,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             builder: (context) => PrintPage(
               storeName: storeName,
               cartItems: cartItems,
-              formattedTotal: netTotal.toString(), // Use calculated net total
+              formattedTotal: finalTotal.toString(),
               savedTotal:
                   youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
               discountAmount: discountAmount.toString(),
