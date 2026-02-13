@@ -239,4 +239,5 @@ class APPUrl {
   static String adjustStock = '$baseURL/api/v1/stocks/adjust';
   static String moveStock = '$baseURL/api/v1/stocks/move';
   static String withdrawStock = '$baseURL/api/v1/stocks/withdraw';
+  static String consumedStocksReport = '$baseURL/api/v1/consumed-stocks-report';
 }

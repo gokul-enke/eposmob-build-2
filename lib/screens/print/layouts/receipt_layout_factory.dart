@@ -5,6 +5,7 @@ import 'classic_receipt_layout.dart';
 import 'premium_receipt_layout.dart';
 import 'premium1_receipt_layout.dart';
 import 'standard_receipt_layout.dart';
+import 'templmet_1_layout.dart';
 
 /// Factory class for creating receipt layouts based on theme.
 ///
@@ -26,6 +27,7 @@ class ReceiptLayoutFactory {
     'premium1': () => Premium1ReceiptLayout(),
     'standard': () => StandardReceiptLayout(),
     'arabic_and_english': () => ArabicAndEnglishReceiptLayout(),
+    'supermarket': () => SupermarketLayout(),
   };
 
   /// Get a layout instance based on the theme identifier.

@@ -277,12 +277,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       return;
     }
     _debounceTimer?.cancel();
+    final double creditAmount =
+      double.tryParse(creditAmountController.text) ?? 0.0;
     final double mappedCredit =
         double.tryParse(toCustomerCreditController.text) ?? 0.0;
     final bool mappedIsDebitSelected =
-        toCustomerCreditEnabled && mappedCredit > 0;
+      (toCustomerCreditEnabled && mappedCredit > 0) ||
+        (isCreditSelected && creditAmount > 0);
     final String mappedDebitAmount = mappedIsDebitSelected
-        ? mappedCredit.toStringAsFixed(2)
+      ? (isCreditSelected && creditAmount > 0
+        ? creditAmount.toStringAsFixed(2)
+        : mappedCredit.toStringAsFixed(2))
         : '';
 
     widget.onPaymentMethodSelected(
@@ -617,6 +622,71 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     return cashAmount + cardAmount + upiAmount + codAmount;
   }
 
+  void _autoFillSelectedMethodAmount(String paymentType) {
+    TextEditingController? targetController;
+
+    switch (paymentType) {
+      case 'cash':
+        targetController = cashAmountController;
+        break;
+      case 'card':
+        targetController = cardAmountController;
+        break;
+      case 'upi':
+        targetController = upiAmountController;
+        break;
+      case 'cod':
+        targetController = codAmountController;
+        break;
+      default:
+        return;
+    }
+
+    if (targetController.text.isNotEmpty) {
+      return;
+    }
+
+    final cashAmount = paymentType == 'cash'
+        ? 0.0
+        : (double.tryParse(cashAmountController.text) ?? 0.0);
+    final cardAmount = paymentType == 'card'
+        ? 0.0
+        : (double.tryParse(cardAmountController.text) ?? 0.0);
+    final upiAmount = paymentType == 'upi'
+        ? 0.0
+        : (double.tryParse(upiAmountController.text) ?? 0.0);
+    final codAmount = paymentType == 'cod'
+        ? 0.0
+        : (double.tryParse(codAmountController.text) ?? 0.0);
+
+    final totalOtherCollected = cashAmount + cardAmount + upiAmount + codAmount;
+    final remainingAmount = widget.cartTotal - totalOtherCollected;
+
+    if (remainingAmount > 0) {
+      targetController.text = remainingAmount.toStringAsFixed(2);
+    }
+  }
+
+  void _syncCreditAmountWithRemaining() {
+    if (!isCreditSelected) {
+      return;
+    }
+
+    final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+    final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+    final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    final codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+
+    final totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
+    final remainingAmount = widget.cartTotal - totalCollected;
+
+    if (remainingAmount > 0) {
+      creditAmountController.text = remainingAmount.toStringAsFixed(2);
+    } else {
+      creditAmountController.clear();
+    }
+  }
+
   void _togglePaymentMethod(String paymentType) {
     setState(() {
       bool targetSelected;
@@ -656,39 +726,31 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           isCreditSelected = !isCreditSelected;
           targetSelected = isCreditSelected;
           targetController = creditAmountController;
+          targetFocusNode = null;
           if (!isCreditSelected) {
             creditAmountController.clear();
           } else {
-            // Auto-fill with remaining amount to reach cart total
-            double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-            double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-            double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-            double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-            double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
-            double remainingAmount = widget.cartTotal - totalCollected;
-            if (remainingAmount > 0) {
-              creditAmountController.text = remainingAmount.toStringAsFixed(2);
-            } else {
-              creditAmountController.clear();
-            }
+            _syncCreditAmountWithRemaining();
           }
-          // Credit is visual only, don't add to auto-fill logic
-          return;
+          break;
         default:
           return;
       }
 
       // Handle selection (Toggle ON)
       if (targetSelected) {
+        _autoFillSelectedMethodAmount(paymentType);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             targetFocusNode?.requestFocus();
             // Also trigger the keyboard immediately
-            Provider.of<KeyboardProvider>(context, listen: false).show(
-              'number',
-              targetController!,
-              replaceOnFirstInput: true,
-            );
+            if (paymentType != 'credit' && targetController != null) {
+              Provider.of<KeyboardProvider>(context, listen: false).show(
+                'number',
+                targetController,
+                replaceOnFirstInput: true,
+              );
+            }
           }
         });
       }
@@ -734,6 +796,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         }
       }
 
+      _syncCreditAmountWithRemaining();
+
       _calculateBalance();
       _notifyChanges();
     });
@@ -778,6 +842,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         }
       }
     });
+
+    if (label == 'cash' || label == 'card' || label == 'upi' || label == 'cod') {
+      _syncCreditAmountWithRemaining();
+    }
 
     // Don't recalculate if this is the balance field being updated by calculation
     if (label != 'balance') {
@@ -1305,6 +1373,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           else if (type == 'upi')
                             isUpiSelected = true;
                           else if (type == 'cod') isCodSelected = true;
+                          _autoFillSelectedMethodAmount(type);
                           _notifyChanges();
                         });
 

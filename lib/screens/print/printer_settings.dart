@@ -61,6 +61,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'premium1', 'name': 'Premium 1'},
     {'id': 'standard', 'name': 'Standard'},
     {'id': 'arabic_and_english', 'name': 'Arabic&English'},
+    {'id': 'supermarket', 'name': 'Supermarket'},
   ];
 
   @override
