@@ -2538,8 +2538,8 @@ class LocalProductProvider extends ChangeNotifier {
 
     try {
       // Clear Hive boxes
-      // await _productsBox.clear();
-      // debugPrint("  ✅ Cleared products box");
+      await _productsBox.clear();
+      debugPrint("  ✅ Cleared products box");
 
       await _cartItemsBox.clear();
       debugPrint("  ✅ Cleared cart_items box");
@@ -2552,9 +2552,13 @@ class LocalProductProvider extends ChangeNotifier {
         debugPrint("  ✅ Cleared confirmed_orders box");
       }
 
+      final prefsProvider = prefs_provider.SharedPreferenceProvider();
+      await prefsProvider.clearLastProductSyncIso();
+      debugPrint("  ✅ Cleared product delta sync marker");
+
       // Clear in-memory lists
-      // _products.clear();
-      // _filteredProducts.clear();
+      _products.clear();
+      _filteredProducts.clear();
       _cartItems.clear();
       _savedOrders.clear();
       _confirmedOrders.clear();

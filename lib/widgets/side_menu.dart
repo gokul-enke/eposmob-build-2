@@ -18,13 +18,11 @@ import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 import '../screens/login/login.dart';
+import '../services/session_reset_service.dart';
 import 'drawer_list_tile_expandable.dart';
 import '../widgets/user_switcher.dart';
 import '../widgets/store_switcher.dart';
 import '../providers/role_provider.dart';
-import '../providers/local_product_provider.dart';
-import '../providers/category_providers.dart';
-import '../providers/document_config_provider.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -886,19 +884,7 @@ class _SideMenuState extends State<SideMenu> {
                   .logout(token, context)
                   .then((value) async {
                 if (value["status"] == "success") {
-                  // Clear all local data for multi-tenant isolation
-                  final localProductProvider =
-                      Provider.of<LocalProductProvider>(context, listen: false);
-                  final categoryProvider =
-                      Provider.of<CategoryProvider>(context, listen: false);
-                  final docConfigProvider =
-                      Provider.of<DocumentConfigProvider>(context, listen: false);
-                  await localProductProvider.clearAllLocalData();
-                  await categoryProvider.clearAllCategories();
-                  await docConfigProvider.clearCache();
-
-                  authModel.logout();
-                  SharedPreferenceProvider().removeTokenAndCustomerId();
+                  await SessionResetService.resetAfterLogout(context);
 
                   // debugPrint(" authmodel logout token ${authModel.token}");
                   showScaffold(

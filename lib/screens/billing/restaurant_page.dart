@@ -17,6 +17,7 @@ import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_confirmation_dialog.dart';
@@ -1531,6 +1532,7 @@ class _MenuPanel extends StatefulWidget {
 class _MenuPanelState extends State<_MenuPanel> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isResyncingProducts = false;
 
   void _showProductInfoDialog(
       BuildContext context, GetProduct product, bool compact) {
@@ -1847,6 +1849,53 @@ class _MenuPanelState extends State<_MenuPanel> {
     });
   }
 
+  Future<void> _resyncProductsFromEmptyState() async {
+    if (_isResyncingProducts) return;
+
+    setState(() {
+      _isResyncingProducts = true;
+    });
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      await localProductProvider.fetchProductsFromAPI(refresh: true);
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        await syncProvider.syncAllData(context);
+      }
+
+      if (!mounted) return;
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Resync finished but no products were returned. Check tenant/API key or internet.',
+        );
+      } else {
+        showScaffold(
+          context: context,
+          message: 'Products resynced successfully',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync products: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResyncingProducts = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<CategoryProvider, LocalProductProvider>(
@@ -1862,6 +1911,8 @@ class _MenuPanelState extends State<_MenuPanel> {
 
         final categories = categoryProvider.category ?? [];
         final selectedCategoryId = widget.activeCategoryId ?? 0;
+        final bool isProductsLoading =
+          productProvider.isLoading || _isResyncingProducts;
 
         // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
@@ -2205,7 +2256,31 @@ class _MenuPanelState extends State<_MenuPanel> {
               ),
               // Menu items
               Expanded(
-                child: items.isEmpty
+                child: isProductsLoading
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              width: 28,
+                              height: 28,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2.5),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Loading menu items...',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s14,
+                                0.21,
+                                ColorManager.textColor.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : items.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -2223,6 +2298,22 @@ class _MenuPanelState extends State<_MenuPanel> {
                                   FontSize.s14,
                                   0.21,
                                   ColorManager.textColor.withOpacity(0.7)),
+                            ),
+                            const SizedBox(height: 12),
+                            CustomRoundButton(
+                              title: _isResyncingProducts
+                                  ? 'Resyncing...'
+                                  : 'Resync Products',
+                              fct: _isResyncingProducts
+                                  ? () {}
+                                  : _resyncProductsFromEmptyState,
+                              width: 170,
+                              height: 36,
+                              fontSize: 11,
+                              boxColor: ColorManager.kPrimaryColor,
+                              borderColor: ColorManager.kPrimaryColor,
+                              textColor: Colors.white,
+                              radius: 8,
                             ),
                           ],
                         ),

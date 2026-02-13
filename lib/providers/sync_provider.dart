@@ -17,6 +17,7 @@ import '../providers/delivery_methods_provider.dart';
 /// centralized API calls and state management.
 class SyncProvider extends ChangeNotifier {
   bool _isSyncing = false;
+  bool _cancelRequested = false;
   String _syncMessage = '';
   double _syncProgress = 0.0;
   bool _hasError = false;
@@ -261,6 +262,7 @@ class SyncProvider extends ChangeNotifier {
 
   /// Start sync process
   void _startSync() {
+    _cancelRequested = false;
     _isSyncing = true;
     _hasError = false;
     _errorMessage = '';
@@ -271,6 +273,7 @@ class SyncProvider extends ChangeNotifier {
 
   /// Update sync progress
   void _updateProgress(double progress, String message) {
+    if (_cancelRequested) return;
     _syncProgress = progress;
     _syncMessage = message;
     debugPrint("🔄 Sync Progress: ${(progress * 100).toInt()}% - $message");
@@ -279,6 +282,14 @@ class SyncProvider extends ChangeNotifier {
 
   /// Complete sync successfully
   void _completSync() {
+    if (_cancelRequested) {
+      _isSyncing = false;
+      _hasError = false;
+      _syncProgress = 0.0;
+      _syncMessage = 'Sync cancelled';
+      notifyListeners();
+      return;
+    }
     _isSyncing = false;
     _hasError = false;
     _syncProgress = 1.0;
@@ -288,6 +299,15 @@ class SyncProvider extends ChangeNotifier {
 
   /// Handle sync error
   void _syncError(String error) {
+    if (_cancelRequested) {
+      _isSyncing = false;
+      _hasError = false;
+      _errorMessage = '';
+      _syncMessage = 'Sync cancelled';
+      _syncProgress = 0.0;
+      notifyListeners();
+      return;
+    }
     _isSyncing = false;
     _hasError = true;
     _errorMessage = error;
@@ -300,6 +320,17 @@ class SyncProvider extends ChangeNotifier {
   void clearError() {
     _hasError = false;
     _errorMessage = '';
+    notifyListeners();
+  }
+
+  void forceResetSyncState() {
+    _cancelRequested = true;
+    _isSyncing = false;
+    _hasError = false;
+    _errorMessage = '';
+    _syncProgress = 0.0;
+    _syncMessage = '';
+    _lastSyncTime = null;
     notifyListeners();
   }
 

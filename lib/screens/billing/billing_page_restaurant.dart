@@ -38,6 +38,7 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -159,6 +160,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
   bool _toCustomerCreditEnabled = false;
+  bool _isResyncingProducts = false;
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -7389,6 +7391,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       builder: (context, productProvider, categoryProvider, child) {
         // Use sellableFilteredProducts to only show products that are marked as sellable
         final products = productProvider.sellableFilteredProducts;
+        final bool isProductsLoading =
+            productProvider.isLoading || _isResyncingProducts;
         final rawCategories =
             categoryProvider.category ?? categoryProvider.searchCategory ?? [];
 
@@ -7580,7 +7584,29 @@ class BillingPageState extends State<BillingPageRestaurant>
 
             // Products grid - large tiles for quick tap
             Expanded(
-              child: products.isEmpty
+              child: isProductsLoading
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Loading products...',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : products.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -7594,6 +7620,22 @@ class BillingPageState extends State<BillingPageRestaurant>
                               color: Colors.grey.shade500,
                               fontSize: 16,
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          CustomRoundButton(
+                            title: _isResyncingProducts
+                                ? 'Resyncing...'
+                                : 'Resync Products',
+                            fct: _isResyncingProducts
+                                ? () {}
+                                : _resyncProductsFromMainGrid,
+                            width: 170,
+                            height: 36,
+                            fontSize: 11,
+                            boxColor: ColorManager.kPrimaryColor,
+                            borderColor: ColorManager.kPrimaryColor,
+                            textColor: Colors.white,
+                            radius: 8,
                           ),
                         ],
                       ),
@@ -7726,6 +7768,53 @@ class BillingPageState extends State<BillingPageRestaurant>
         );
       },
     );
+  }
+
+  Future<void> _resyncProductsFromMainGrid() async {
+    if (_isResyncingProducts) return;
+
+    setState(() {
+      _isResyncingProducts = true;
+    });
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      await localProductProvider.fetchProductsFromAPI(refresh: true);
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        await syncProvider.syncAllData(context);
+      }
+
+      if (!mounted) return;
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Resync finished but no products were returned. Check tenant/API key or internet.',
+        );
+      } else {
+        showScaffold(
+          context: context,
+          message: 'Products resynced successfully',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync products: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResyncingProducts = false;
+        });
+      }
+    }
   }
 
   Widget _buildProductCardWithImage(BuildContext context, GetProduct product,

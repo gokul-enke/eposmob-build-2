@@ -34,6 +34,7 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -154,6 +155,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
   bool _toCustomerCreditEnabled = false;
+  bool _isResyncingProducts = false;
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -1312,7 +1314,7 @@ class BillingPageState extends State<BillingPage>
               Expanded(
                 child: Container(
                   child: _selectedSidebarTab == 0
-                      ? const SideBarProductList()
+                      ? _buildProductTab()
                       : _buildOrdersTab(),
                 ),
               ),
@@ -1348,6 +1350,149 @@ class BillingPageState extends State<BillingPage>
         ],
       ),
     );
+  }
+
+  Widget _buildProductTab() {
+    return Consumer2<LocalProductProvider, SyncProvider>(
+      builder: (context, localProductProvider, syncProvider, child) {
+        final bool hasProducts = localProductProvider.sellableProducts.isNotEmpty;
+        final bool isLoading =
+            localProductProvider.isLoading || syncProvider.isSyncing || _isResyncingProducts;
+
+        if (hasProducts) {
+          return const SideBarProductList();
+        }
+
+        if (isLoading) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Resyncing products...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Please wait while products are being loaded.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 40,
+                  color: Colors.grey.shade500,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'No products loaded',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Try resyncing products. Check internet and tenant if this continues.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                CustomRoundButton(
+                  title: _isResyncingProducts ? 'Resyncing...' : 'Resync Products',
+                  fct: _isResyncingProducts ? () {} : _resyncProductsFromEmptyState,
+                  width: 170,
+                  height: 36,
+                  fontSize: 11,
+                  boxColor: ColorManager.kPrimaryColor,
+                  borderColor: ColorManager.kPrimaryColor,
+                  textColor: Colors.white,
+                  radius: 8,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _resyncProductsFromEmptyState() async {
+    if (_isResyncingProducts) return;
+
+    setState(() {
+      _isResyncingProducts = true;
+    });
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      await localProductProvider.fetchProductsFromAPI(refresh: true);
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        await syncProvider.syncAllData(context);
+      }
+
+      if (!mounted) return;
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Resync finished but no products were returned. Check tenant/API key or internet.',
+        );
+      } else {
+        showScaffold(
+          context: context,
+          message: 'Products resynced successfully',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync products: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResyncingProducts = false;
+        });
+      }
+    }
   }
 
   Widget _buildOrdersTab() {

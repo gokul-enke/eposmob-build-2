@@ -4,8 +4,8 @@ import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
-import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/screens/login/login.dart';
+import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/screens/profile/widgets/change_password_widget.dart';
 import 'package:pos_machine/screens/profile/widgets/personal_information_edit_widget.dart';
 import 'package:pos_machine/screens/profile/widgets/personal_information_view_widget.dart';
@@ -332,9 +332,8 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                                 .then((value) async {
                                               if (value["status"] ==
                                                   "success") {
-                                                authModel.logout();
-                                                SharedPreferenceProvider()
-                                                    .removeTokenAndCustomerId();
+                                              await SessionResetService
+                                                .resetAfterLogout(context);
 
                                                 debugPrint(
                                                     " authmodel logout token ${authModel.token}");

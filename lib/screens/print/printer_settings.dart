@@ -11,7 +11,6 @@ import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/screens/login/login.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:path_provider/path_provider.dart';
@@ -373,86 +372,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         showScaffoldError(
           context: context,
           message: "Error resetting printer settings: ${e.toString()}",
-        );
-      }
-    }
-  }
-
-  Future<void> clearLocalStorageAndLogout() async {
-    try {
-      // Show confirmation dialog
-      final shouldClear = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Clear Local Storage'),
-          content: const Text(
-            'This will clear all local data except login credentials and log you out. Are you sure?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Clear & Logout',
-                style: TextStyle(color: ColorManager.kButtonRed),
-              ),
-            ),
-          ],
-        ),
-      );
-
-      if (shouldClear != true) return;
-
-      final prefs = await SharedPreferences.getInstance();
-
-      // Save login credentials before clearing
-      final String? emailRemember = prefs.getString('emailRemember');
-      final String? passwordRemember = prefs.getString('passwordRemember');
-      final bool? rememberMe = prefs.getBool('remember_me');
-
-      // Clear all SharedPreferences except login credentials
-      await prefs.clear();
-
-      // Restore login credentials if needed
-      if (rememberMe == true) {
-        await prefs.setBool('remember_me', true);
-        if (emailRemember != null) {
-          await prefs.setString('emailRemember', emailRemember);
-        }
-        if (passwordRemember != null) {
-          await prefs.setString('passwordRemember', passwordRemember);
-        }
-      }
-
-      // Clear Hive data
-      await clearAllHiveData();
-
-      // Log out - clear auth data from provider
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      authModel.logout();
-
-      if (mounted) {
-        showScaffold(
-          context: context,
-          message: "Local storage cleared successfully",
-        );
-
-        // Navigate to login screen after a short delay
-        Future.delayed(const Duration(milliseconds: 500), () {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const SignInScreen()),
-            (route) => false,
-          );
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: "Error clearing local storage: ${e.toString()}",
         );
       }
     }
@@ -1175,17 +1094,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                               boxColor: ColorManager.kPrimaryColor,
                               textColor: Colors.white,
                               isLoading: _isResyncingDocConfig,
-                            ),
-                            const SizedBox(width: 16),
-                            CustomRoundButton(
-                              fct: () => {clearLocalStorageAndLogout()},
-                              title: 'Clear Local Storage',
-                              height: 44,
-                              width: 220,
-                              fontSize: 14,
-                              borderColor: Colors.orange,
-                              boxColor: Colors.orange,
-                              textColor: Colors.white,
                             ),
                             const SizedBox(width: 16),
                             CustomRoundButton(
