@@ -886,6 +886,12 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   void _handleKeyPress(KeyEvent event) {
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    if (focusedContext != null &&
+        focusedContext.widget is EditableText) {
+      return;
+    }
+
     if (event is KeyDownEvent) {
       try {
         if (event.logicalKey == LogicalKeyboardKey.f6) {
@@ -1097,6 +1103,10 @@ class BillingPageState extends State<BillingPageRestaurant>
       {CheckoutActionMode actionMode = CheckoutActionMode.confirm}) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
 
+    // Release global shortcut focus so modal text fields receive keyboard input reliably.
+    _focusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+
     // Reset payment state to start fresh each time modal opens
     setState(() {
       _hasOpenedPaymentModalOnce = false;
@@ -1281,11 +1291,12 @@ class BillingPageState extends State<BillingPageRestaurant>
             });
           },
           onAddNewCustomer: (String searchQuery) async {
-            // Check if search query is a 10-digit number
+            // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
-            if (searchQuery.length == 10 &&
-                RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
-              phoneToPreFill = searchQuery;
+            final normalizedSearchQuery = searchQuery.trim();
+            if (normalizedSearchQuery.isNotEmpty &&
+                RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
+              phoneToPreFill = normalizedSearchQuery;
             }
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,

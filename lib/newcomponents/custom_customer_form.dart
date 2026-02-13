@@ -38,6 +38,7 @@ class CustomCustomerForm extends StatefulWidget {
 
 class _CustomCustomerFormState extends State<CustomCustomerForm> {
   final _formKey = GlobalKey<FormState>();
+  bool _showPhoneValidationOnLoad = false;
   final firstNameTextController = TextEditingController();
   final lastNameTextController = TextEditingController();
   final emailTextController = TextEditingController();
@@ -70,6 +71,10 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
     super.initState();
     if (widget.initialMobileNumber != null) {
       phoneNumberController.text = widget.initialMobileNumber!;
+      final normalizedPhone =
+          widget.initialMobileNumber!.replaceAll(RegExp(r'\D'), '');
+      _showPhoneValidationOnLoad =
+          normalizedPhone.isNotEmpty && normalizedPhone.length < 10;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final locationProvider =
@@ -91,6 +96,9 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
 
     return Form(
       key: _formKey,
+      autovalidateMode: _showPhoneValidationOnLoad
+          ? AutovalidateMode.always
+          : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

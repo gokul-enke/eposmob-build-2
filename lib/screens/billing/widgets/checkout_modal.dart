@@ -829,9 +829,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               _isAddingCustomer ? 'Adding...' : 'Add New Customer'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.grey.shade100,
-                            foregroundColor: Colors.grey.shade700,
-                            side: BorderSide(color: Colors.grey.shade300),
+                            backgroundColor: const Color(0xFFECFDF3),
+                            foregroundColor: const Color(0xFF047857),
+                            side: const BorderSide(color: Color(0xFF34D399)),
                           ),
                           onPressed:
                               _isAddingCustomer ? null : _handleAddNewCustomer,
@@ -1199,9 +1199,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
       );
     }
 
-    return ListView.separated(
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 2.9,
+      ),
       itemCount: _filteredCustomers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final customer = _filteredCustomers[index];
         final isSelected = _localSelectedCustomer?.id == customer.id;
@@ -1250,13 +1255,20 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(customer.name ?? 'Unknown',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(
+                          customer.name ?? 'Unknown',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         if (customer.phone != null)
-                          Text(customer.phone!,
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade600)),
+                          Text(
+                            customer.phone!,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                       ],
                     ),
                   ),

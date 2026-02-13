@@ -6311,6 +6311,9 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   void _showCheckoutModal() async {
+    // Release any current focus so checkout modal text fields receive input cleanly.
+    FocusManager.instance.primaryFocus?.unfocus();
+
     // Mark that payment modal opportunity has been given (via checkout dialog)
     setState(() {
       _hasOpenedPaymentModalOnce = false;
@@ -6424,10 +6427,12 @@ class _OrderPanelState extends State<_OrderPanel> {
           onAddNewCustomer: (String searchQuery) async {
             // NOTE: Do not close the checkout dialog here. We will return the result.
             
-            // Check if search query is a 10-digit number
+            // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
-            if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
-              phoneToPreFill = searchQuery;
+            final normalizedSearchQuery = searchQuery.trim();
+            if (normalizedSearchQuery.isNotEmpty &&
+                RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
+              phoneToPreFill = normalizedSearchQuery;
             }
             final result = await showAddCustomerModal(
               context, 
