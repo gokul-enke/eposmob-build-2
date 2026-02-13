@@ -55,6 +55,8 @@ class SessionResetService {
     'kot_font_style',
     'billing_receipt_theme',
     'kot_receipt_theme',
+    'app_locale_code',
+    'app_font_size_level',
   ];
 
   static Future<void> resetAfterLogout(BuildContext context) async {
