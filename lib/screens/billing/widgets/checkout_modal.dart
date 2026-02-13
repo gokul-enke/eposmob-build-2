@@ -153,6 +153,7 @@ class CheckoutModal extends StatefulWidget {
 class _CheckoutModalState extends State<CheckoutModal> {
   int _currentStep =
       0; // 0: Customer, 1: Discount/Delivery, ... logic updated below
+  bool _hasEvaluatedSkipCustomerSelection = false;
   bool _isConfirming = false;
   bool _isPrinting = false;
   bool _hasOpenedPaymentModalOnce =
@@ -288,6 +289,33 @@ class _CheckoutModalState extends State<CheckoutModal> {
       masterDataProvider.fetchPaymentMethods();
       _applyDefaultPaymentMethod();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _applyInitialStepFromSettings();
+  }
+
+  void _applyInitialStepFromSettings() {
+    if (_hasEvaluatedSkipCustomerSelection) {
+      return;
+    }
+
+    final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
+    if (appSettings == null) {
+      return;
+    }
+
+    _hasEvaluatedSkipCustomerSelection = true;
+    if (appSettings.skipCustomerSelection && mounted && _currentStep != 3) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _currentStep = 3;
+        });
+      });
+    }
   }
 
   @override

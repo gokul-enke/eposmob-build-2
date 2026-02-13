@@ -22,6 +22,7 @@ class AppSettings {
   final String defaultDeliveryMethod;
   final String defaultPaymentMethod;
   final bool posPrintDoubleBill;
+  final bool skipCustomerSelection;
 
   AppSettings({
     required this.barcodeSales,
@@ -45,6 +46,7 @@ class AppSettings {
     required this.defaultDeliveryMethod,
     required this.defaultPaymentMethod,
     required this.posPrintDoubleBill,
+    required this.skipCustomerSelection,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -116,8 +118,10 @@ class AppSettings {
           settingsMap['DEFAULT_DELIVERY_METHOD']?['value'] ?? "",
       defaultPaymentMethod:
           settingsMap['DEFAULT_PAYMENT_METHOD']?['value'] ?? "",
-        posPrintDoubleBill:
+      posPrintDoubleBill:
           settingsMap['POS_PRINT_DOUBLE_BILL']?['status'] ?? false,
+      skipCustomerSelection:
+          settingsMap['SKIP_CUSTOMER_SELECTION']?['status'] ?? false,
     );
   }
 
@@ -243,6 +247,12 @@ class AppSettings {
           "code": "POS_PRINT_DOUBLE_BILL",
           "value": "",
           "status": posPrintDoubleBill.toString(),
+        },
+        {
+          "name": "Skip Customer Selection",
+          "code": "SKIP_CUSTOMER_SELECTION",
+          "value": "",
+          "status": skipCustomerSelection.toString(),
         },
       ],
     };

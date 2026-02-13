@@ -1,14 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
 import 'dart:ui' as ui;
 
 /// Kitchen Order Ticket (KOT) Printer using Document Configuration
@@ -763,7 +761,7 @@ class KotThermalPrinter {
   Future<void> _printImage(
       img.Image image, String paperSize, PrinterType printerType) async {
     // DEBUG: Save bitmap image before printing
-    await _saveDebugImage(image, paperSize);
+    await PrintDebugImageSaver.saveKotImage(image, paperSize);
 
     final profile = await CapabilityProfile.load();
     final generator = Generator(
@@ -777,56 +775,6 @@ class KotThermalPrinter {
     bytes += generator.cut();
 
     await printerManager.send(type: printerType, bytes: bytes);
-  }
-
-  /// Save debug image to device storage for previewing receipts
-  Future<void> _saveDebugImage(img.Image image, String paperSize) async {
-    try {
-      // Get temporary directory
-      final tempDir = await getTemporaryDirectory();
-      final debugDir = Directory('${tempDir.path}/kot_debug');
-
-      // Create debug directory if it doesn't exist
-      if (!await debugDir.exists()) {
-        await debugDir.create(recursive: true);
-      }
-
-      // Generate filename with timestamp
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filename = 'kot_${paperSize}_$timestamp.png';
-      final filepath = '${debugDir.path}/$filename';
-
-      // Encode and save image
-      final pngBytes = img.encodePng(image);
-      final file = File(filepath);
-      await file.writeAsBytes(pngBytes);
-
-      debugPrint('🖼️ DEBUG: KOT image saved to: $filepath');
-      debugPrint('📐 Image size: ${image.width}x${image.height}px');
-
-      // Also save base64 for easy sharing
-      final base64File =
-          File('${debugDir.path}/kot_${paperSize}_$timestamp.txt');
-      await base64File.writeAsString(base64Encode(pngBytes));
-      debugPrint('📝 Base64 saved to: ${base64File.path}');
-
-      // List all debug images
-      final images =
-          debugDir.listSync().where((f) => f.path.endsWith('.png')).toList();
-      debugPrint('📁 Total debug images: ${images.length}');
-
-      // Clean up old images (keep only last 10)
-      if (images.length > 10) {
-        images.sort(
-            (a, b) => a.statSync().modified.compareTo(b.statSync().modified));
-        for (var i = 0; i < images.length - 10; i++) {
-          await images[i].delete();
-          debugPrint('🗑️ Deleted old debug image: ${images[i].path}');
-        }
-      }
-    } catch (e) {
-      debugPrint('⚠️ Error saving debug image: $e');
-    }
   }
 
   /// Load default printer from SharedPreferences
