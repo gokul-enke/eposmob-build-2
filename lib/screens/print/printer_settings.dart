@@ -11,7 +11,6 @@ import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/screens/login/login.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:path_provider/path_provider.dart';
@@ -22,6 +21,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/screens/print/print_thermal.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -43,6 +43,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   var devices = <BluetoothPrinter>[];
   StreamSubscription<PrinterDevice>? _subscription;
   bool _isScanning = false;
+  bool _isResyncingDocConfig = false;
 
   // List of available paper sizes
   final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
@@ -376,86 +377,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     }
   }
 
-  Future<void> clearLocalStorageAndLogout() async {
-    try {
-      // Show confirmation dialog
-      final shouldClear = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Clear Local Storage'),
-          content: const Text(
-            'This will clear all local data except login credentials and log you out. Are you sure?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Clear & Logout',
-                style: TextStyle(color: ColorManager.kButtonRed),
-              ),
-            ),
-          ],
-        ),
-      );
-
-      if (shouldClear != true) return;
-
-      final prefs = await SharedPreferences.getInstance();
-
-      // Save login credentials before clearing
-      final String? emailRemember = prefs.getString('emailRemember');
-      final String? passwordRemember = prefs.getString('passwordRemember');
-      final bool? rememberMe = prefs.getBool('remember_me');
-
-      // Clear all SharedPreferences except login credentials
-      await prefs.clear();
-
-      // Restore login credentials if needed
-      if (rememberMe == true) {
-        await prefs.setBool('remember_me', true);
-        if (emailRemember != null) {
-          await prefs.setString('emailRemember', emailRemember);
-        }
-        if (passwordRemember != null) {
-          await prefs.setString('passwordRemember', passwordRemember);
-        }
-      }
-
-      // Clear Hive data
-      await clearAllHiveData();
-
-      // Log out - clear auth data from provider
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      authModel.logout();
-
-      if (mounted) {
-        showScaffold(
-          context: context,
-          message: "Local storage cleared successfully",
-        );
-
-        // Navigate to login screen after a short delay
-        Future.delayed(const Duration(milliseconds: 500), () {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const SignInScreen()),
-            (route) => false,
-          );
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: "Error clearing local storage: ${e.toString()}",
-        );
-      }
-    }
-  }
-
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
     final key = selectedSettingsType == 'Billing'
@@ -498,6 +419,49 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         context: context,
         message: "Receipt theme saved",
       );
+    }
+  }
+
+  Future<void> _resyncDocumentConfigurations() async {
+    if (_isResyncingDocConfig) return;
+
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Missing access token. Please login again.',
+      );
+      return;
+    }
+
+    setState(() {
+      _isResyncingDocConfig = true;
+    });
+
+    try {
+      final docProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+
+      await docProvider.clearAllCaches();
+      await docProvider.fetchDocumentConfigurations(accessToken: accessToken);
+
+      if (!mounted) return;
+      showScaffold(
+        context: context,
+        message: 'Document configuration resynced successfully',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync document configurations: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResyncingDocConfig = false;
+        });
+      }
     }
   }
 
@@ -1117,14 +1081,19 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                         Row(
                           children: [
                             CustomRoundButton(
-                              fct: () => {clearLocalStorageAndLogout()},
-                              title: 'Clear Local Storage',
+                              fct: _isResyncingDocConfig
+                                  ? () {}
+                                  : _resyncDocumentConfigurations,
+                              title: _isResyncingDocConfig
+                                  ? 'Resyncing...'
+                                  : 'Resync Doc Config',
                               height: 44,
-                              width: 220,
+                              width: 210,
                               fontSize: 14,
-                              borderColor: Colors.orange,
-                              boxColor: Colors.orange,
+                              borderColor: ColorManager.kPrimaryColor,
+                              boxColor: ColorManager.kPrimaryColor,
                               textColor: Colors.white,
+                              isLoading: _isResyncingDocConfig,
                             ),
                             const SizedBox(width: 16),
                             CustomRoundButton(

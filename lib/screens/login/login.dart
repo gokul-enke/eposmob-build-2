@@ -9,8 +9,7 @@ import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:pos_machine/screens/login/store_selection_screen.dart';
 import 'package:provider/provider.dart';
@@ -94,18 +93,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _resetApiKey() async {
     try {
-      // Clear all local data for multi-tenant isolation BEFORE resetting API key
-      if (mounted) {
-        final localProductProvider =
-            Provider.of<LocalProductProvider>(context, listen: false);
-        final categoryProvider =
-            Provider.of<CategoryProvider>(context, listen: false);
-        await localProductProvider.clearAllLocalData();
-        await categoryProvider.clearAllCategories();
-      }
-
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.remove('api_key');
+      await SessionResetService.resetForApiKeyReset(context);
 
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/api-key');

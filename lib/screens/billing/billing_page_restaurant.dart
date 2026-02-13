@@ -38,6 +38,7 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -67,6 +68,8 @@ import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 // import 'package:pos_machine/screens/print/print_kot.dart'; // Add KOT print import
+
+enum CheckoutActionMode { confirm, save }
 
 class BillingPageRestaurant extends StatefulWidget {
   const BillingPageRestaurant({super.key});
@@ -157,6 +160,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
   bool _toCustomerCreditEnabled = false;
+  bool _isResyncingProducts = false;
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -190,6 +194,10 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
+
+  VoidCallback? _appSettingsDebugListener;
+  VoidCallback? _deliveryMethodListener;
+  VoidCallback? _paymentMethodListener;
 
   @override
   void initState() {
@@ -294,14 +302,15 @@ class BillingPageState extends State<BillingPageRestaurant>
       // Listen for app settings changes
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
-      appSettingsProvider.addListener(() {
+      _appSettingsDebugListener = () {
         debugPrint('🎫 APP SETTINGS CHANGED:');
         debugPrint('  - New appSettings: ${appSettingsProvider.appSettings}');
         if (appSettingsProvider.appSettings != null) {
           debugPrint(
               '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
         }
-      });
+      };
+      appSettingsProvider.addListener(_appSettingsDebugListener!);
 
       // Listen for cart changes to reset payment modal flag
       final localProductProvider =
@@ -316,7 +325,6 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
     });
 
-    _fetchCustomers();
   }
 
   @override
@@ -367,6 +375,22 @@ class BillingPageState extends State<BillingPageRestaurant>
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       localProductProvider.removeListener(_onCartChanged);
+
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      if (_appSettingsDebugListener != null) {
+        appSettingsProvider.removeListener(_appSettingsDebugListener!);
+      }
+      if (_paymentMethodListener != null) {
+        appSettingsProvider.removeListener(_paymentMethodListener!);
+      }
+
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      if (_deliveryMethodListener != null) {
+        deliveryMethodsProvider.removeListener(_deliveryMethodListener!);
+        appSettingsProvider.removeListener(_deliveryMethodListener!);
+      }
     } catch (e) {
       debugPrint("Error removing listeners: $e");
     }
@@ -646,9 +670,12 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  Future<void> _fetchCustomers() async {
-    // Set loading flag
-    if (_isLoadingCustomers) {
+  Future<void> _fetchCustomers({
+    bool forceRefresh = false,
+    bool applyDefaultSelection = true,
+  }) async {
+    // Set loading flag - check for duplicate calls first
+    if (_isLoadingCustomers && !forceRefresh) {
       debugPrint("🛡️ _fetchCustomers() already in progress, skipping duplicate call");
       return;
     }
@@ -656,15 +683,11 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Early guard: if editing a saved order, do not override customer with defaults
     final currentOrder =
         Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
-    if (currentOrder != null) {
+    if (currentOrder != null && !forceRefresh) {
       debugPrint(
           "🛡️ Skipping default customer fetch because a saved order is being edited");
       return;
     }
-
-    setState(() {
-      _isLoadingCustomers = true;
-    });
 
     debugPrint("🔍 _fetchCustomers() called");
     debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
@@ -674,7 +697,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
 
     // If customer was manually selected (either from list or phone entry), don't reset to default
-    if (_isCustomerManuallySelected &&
+    if (applyDefaultSelection &&
+      _isCustomerManuallySelected &&
         (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
       debugPrint("🛡️ Customer manually selected, skipping reset to default");
       debugPrint("  - selectedCustomerID: $selectedCustomerID");
@@ -683,7 +707,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
 
     // Additional check: if the text field contains user-entered data that's not the sales executive's info, preserve it
-    if (mobileNumberTextController.text.isNotEmpty &&
+    if (applyDefaultSelection &&
+      mobileNumberTextController.text.isNotEmpty &&
         !mobileNumberTextController.text.contains(
             "${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.name ?? ''} ${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.phone ?? ''}")) {
       debugPrint("🛡️ Text field contains user data, preserving manual entry");
@@ -700,17 +725,29 @@ class BillingPageState extends State<BillingPageRestaurant>
       return;
     }
 
+    if (mounted) {
+      setState(() {
+        _isLoadingCustomers = true;
+      });
+    }
+
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
     try {
       final response = await CustomerProvider()
-          .listCustomer(accessToken: accessToken!, sortAscending: true);
+          .listCustomer(accessToken: accessToken!, sortAscending: true, loadAll: true);
 
       if (response["status"] == "success") {
         CustomerListModel customerListModel =
             CustomerListModel.fromJson(response);
         setState(() {
           customerList = customerListModel.data; // Store the customer list
+
+          if (!applyDefaultSelection) {
+            debugPrint(
+                "🔄 Customer list refreshed without modifying current selection");
+            return;
+          }
 
           // Check if auto-assign is enabled in app settings
           final appSettingsProvider =
@@ -722,7 +759,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           if (!autoAssignEnabled) {
             debugPrint(
                 "🔧 APP SETTINGS: Auto-assign default customer is DISABLED - only fetching customer list");
-            // No return needed here - let the setState complete and finally block clear the loading flag
+            return; // Exit early, only customer list is fetched
           }
 
           CustomerListModelData? defaultCustomer;
@@ -849,6 +886,12 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   void _handleKeyPress(KeyEvent event) {
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    if (focusedContext != null &&
+        focusedContext.widget is EditableText) {
+      return;
+    }
+
     if (event is KeyDownEvent) {
       try {
         if (event.logicalKey == LogicalKeyboardKey.f6) {
@@ -1056,7 +1099,14 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _showCheckoutModal() async {
+  void _showCheckoutModal(
+      {CheckoutActionMode actionMode = CheckoutActionMode.confirm}) async {
+    final isSaveMode = actionMode == CheckoutActionMode.save;
+
+    // Release global shortcut focus so modal text fields receive keyboard input reliably.
+    _focusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+
     // Reset payment state to start fresh each time modal opens
     setState(() {
       _hasOpenedPaymentModalOnce = false;
@@ -1110,6 +1160,39 @@ class BillingPageState extends State<BillingPageRestaurant>
       // Wait a bit for the fetch to complete
       await Future.delayed(const Duration(milliseconds: 500));
     }
+
+    // Reload payment methods
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+    masterDataProvider.clearPaymentMethodsCache();
+    final methods = await masterDataProvider.fetchPaymentMethods();
+
+    if (methods != null && mounted) {
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      String? cashId, cardId, upiId, codId;
+      for (var m in methods) {
+        final val = m.value.toUpperCase();
+        if (val == 'CASH') {
+          cashId = m.id.toString();
+        } else if (val == 'CARD') {
+          cardId = m.id.toString();
+        } else if (val == 'UPI') {
+          upiId = m.id.toString();
+        } else if (val == 'COD') {
+          codId = m.id.toString();
+        }
+      }
+      billingProvider.updatePaymentMethodIds(
+        cashId: cashId,
+        cardId: cardId,
+        upiId: upiId,
+        codId: codId,
+      );
+    }
+
+    // Apply default payment method
+    _applyDefaultPaymentMethod();
 
     if (!mounted) return;
 
@@ -1185,6 +1268,11 @@ class BillingPageState extends State<BillingPageRestaurant>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
+            confirmButtonTitle:
+              isSaveMode ? 'billing.save_order'.tr : 'Confirm',
+            printButtonTitle:
+              isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
+            requireCheckoutCompletion: !isSaveMode,
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -1203,32 +1291,85 @@ class BillingPageState extends State<BillingPageRestaurant>
             });
           },
           onAddNewCustomer: (String searchQuery) async {
-            // Check if search query is a 10-digit number
+            // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
-            if (searchQuery.length == 10 &&
-                RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
-              phoneToPreFill = searchQuery;
+            final normalizedSearchQuery = searchQuery.trim();
+            if (normalizedSearchQuery.isNotEmpty &&
+                RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
+              phoneToPreFill = normalizedSearchQuery;
             }
-            // Navigate to AddCustomerModal but don't close CheckoutModal (handled by logic inside CheckoutModal if needed,
-            // but here we are using showDialog on top of it or temporarily replacing it.
-            // Actually CheckoutModal expects to call this function and wait for result.
-
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
                 mobileNumber: phoneToPreFill);
 
             if (result != null && result['status'] == 'success') {
-              await _fetchCustomers(); // Refresh list
-              // Find and return the newly added customer
-              final addedPhone = result['phone'];
-              final matchingCustomer = customerList?.firstWhere(
-                (customer) => customer.phone == addedPhone,
-                orElse: () => CustomerListModelData(),
+              final responseData = result['response']?['data'];
+              final userData = responseData?['user'];
+              final customerData = responseData?['customer'];
+
+              final int? createdCustomerId =
+                  int.tryParse(customerData?['id']?.toString() ?? '');
+              final int? createdUserId =
+                  int.tryParse(userData?['id']?.toString() ?? '');
+              final int? createdCompanyId =
+                  int.tryParse(customerData?['company_id']?.toString() ?? '');
+              final int? createdStoreId =
+                  int.tryParse(customerData?['store_id']?.toString() ?? '');
+              final double? createdBalance =
+                  double.tryParse(customerData?['balance']?.toString() ?? '0');
+
+              // Fast path: create local customer object from add API response
+              if (createdCustomerId != null) {
+                final createdCustomer = CustomerListModelData(
+                  id: createdCustomerId,
+                  userId: createdUserId,
+                  companyId: createdCompanyId,
+                  storeId: createdStoreId,
+                  name: (userData?['name'] ?? result['name'] ?? '').toString(),
+                  email: userData?['email']?.toString(),
+                  phone:
+                      (userData?['phone'] ?? result['phone'] ?? '').toString(),
+                  altPhone: customerData?['alt_phone']?.toString(),
+                  gender: customerData?['gender']?.toString(),
+                  dob: customerData?['dob']?.toString(),
+                  balance: createdBalance,
+                  paymentType: customerData?['payment_type']?.toString(),
+                  customerType: customerData?['customer_type']?.toString(),
+                );
+
+                setState(() {
+                  customerList ??= [];
+                  customerList!.removeWhere((customer) =>
+                      customer.id == createdCustomer.id ||
+                      (customer.phone != null &&
+                          customer.phone == createdCustomer.phone));
+                  customerList!.insert(0, createdCustomer);
+                });
+
+                return createdCustomer;
+              }
+
+              // Fallback: refresh list only if response didn't contain enough data
+              await _fetchCustomers(
+                forceRefresh: true,
+                applyDefaultSelection: false,
               );
 
-              if (matchingCustomer != null &&
-                  matchingCustomer.phone == addedPhone) {
-                return matchingCustomer;
+              final addedPhone = result['phone'];
+              final normalizedAddedPhone =
+                  addedPhone?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
+                      '';
+              if (normalizedAddedPhone.isNotEmpty && customerList != null) {
+                final byPhone = customerList!.firstWhere(
+                  (customer) {
+                    final customerPhone =
+                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ??
+                            '';
+                    return customerPhone == normalizedAddedPhone;
+                  },
+                  orElse: () => CustomerListModelData(),
+                );
+                if (byPhone.id != null) return byPhone;
               }
             }
             return null;
@@ -1266,6 +1407,11 @@ class BillingPageState extends State<BillingPageRestaurant>
             _transactionNumberController.text = trans;
             _toCustomerCreditEnabled = toCredit;
 
+            setState(() {
+              _hasOpenedPaymentModalOnce =
+                  true; // Mark as opened when payment is updated in modal
+            });
+
             // Store payment method IDs in BillingProvider for later use
             billingProvider.updatePaymentFromModal(
               isCash: isCash,
@@ -1291,40 +1437,43 @@ class BillingPageState extends State<BillingPageRestaurant>
                 (double.tryParse(card) ?? 0) +
                 (double.tryParse(upi) ?? 0) +
                 (double.tryParse(cod) ?? 0);
-            _paidAmountController.text = total.toStringAsFixed(2);
 
-            // Update balance and trigger rebuild
-            double newBalance = _calculateBalanceAmount();
-            setState(() {
-              _balanceAmount = newBalance;
-              _hasOpenedPaymentModalOnce =
-                  true; // Mark as opened when payment is updated in modal
-            });
+            _paidAmountController.text = total.toStringAsFixed(2);
+            _updateBalanceAmount();
           },
           onConfirmOrder: () async {
-            // Set loading state BEFORE closing modal so button shows loading immediately
             setState(() {
-              isLoadingConfirmOrder = true;
-              _hasOpenedPaymentModalOnce =
-                  true; // Mark as opened when confirmed via checkout modal
+              if (isSaveMode) {
+                isLoadingSaveOrder = true;
+              } else {
+                isLoadingConfirmOrder = true;
+                _hasOpenedPaymentModalOnce = true;
+              }
             });
-
             // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
-
-            // Then call confirm (loading state is already set)
-            await _confirmOrder();
+            if (isSaveMode) {
+              await _saveOrder();
+            } else {
+              await _confirmOrder();
+            }
           },
           onConfirmAndPrint: () async {
-            // Set loading state BEFORE closing modal so button shows loading immediately
             setState(() {
-              isLoadingCreateOrder = true;
-              _hasOpenedPaymentModalOnce =
-                  true; // Mark as opened when confirmed via checkout modal
+              if (isSaveMode) {
+                isLoadingSaveOrderAndPrint = true;
+              } else {
+                isLoadingCreateOrder = true;
+                _hasOpenedPaymentModalOnce = true;
+              }
             });
             // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
-            await _createOrderAndPrint();
+            if (isSaveMode) {
+              await _saveOrderAndPrint();
+            } else {
+              await _createOrderAndPrint();
+            }
           },
         );
       },
@@ -3724,15 +3873,16 @@ class BillingPageState extends State<BillingPageRestaurant>
           _buildActionButton(
             text: 'billing.save_order'.tr,
             color: ColorManager.kButtonYellow,
-            onPressed: _saveOrder,
+            onPressed: () =>
+                _showCheckoutModal(actionMode: CheckoutActionMode.save),
             isLoading: isLoadingSaveOrder,
           ),
           if (_hasInternet) ...[
             _buildActionButton(
               text: 'billing.confirm_and_print'.tr,
               color: ColorManager.kButtonBlue,
-              // onPressed: _createOrderAndPrint,
-              onPressed: _showCheckoutModal,
+              onPressed: () =>
+                  _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
               isLoading: isLoadingCreateOrder,
             ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
@@ -3742,8 +3892,8 @@ class BillingPageState extends State<BillingPageRestaurant>
               _buildActionButton(
                 text: 'billing.confirm_order'.tr,
                 color: ColorManager.kButtonGreen,
-                // onPressed: _confirmOrder,.
-                onPressed: _showCheckoutModal,
+                onPressed: () =>
+                    _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
                 isLoading: isLoadingConfirmOrder,
               ),
           ],
@@ -3751,7 +3901,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             _buildActionButton(
               text: 'billing.save_and_print'.tr,
               color: ColorManager.kButtonYellow,
-              onPressed: _saveOrderAndPrint,
+              onPressed: () =>
+                  _showCheckoutModal(actionMode: CheckoutActionMode.save),
               isLoading: isLoadingSaveOrderAndPrint,
             ),
           ],
@@ -4033,7 +4184,6 @@ class BillingPageState extends State<BillingPageRestaurant>
           message: "billing.order_saved_success".tr,
         );
         resetAutocomplete();
-        _fetchCustomers();
         // Centralized clear
         _clearCart();
       }
@@ -4050,7 +4200,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _saveOrderAndPrint() async {
+  Future<void> _saveOrderAndPrint() async {
     setState(() {
       isLoadingSaveOrderAndPrint = true; // Indicate that loading has started
     });
@@ -4088,9 +4238,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         _showPaymentMethodModal(onAfterApply: _saveOrderAndPrint);
         return;
       }
-
-      // Get selected payment methods (optional - no validation required)
-      List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -4295,7 +4442,6 @@ class BillingPageState extends State<BillingPageRestaurant>
 
       resetAutocomplete();
       // Centralized clear
-      _fetchCustomers();
       // Clear cart without restoring stock (order is confirmed)
       localProductProvider.clearCartAfterOrder();
       localProductProvider.clearCurrentOrder();
@@ -4700,7 +4846,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                   false); // Preserve customer selection after confirming
 
           _clearCart();
-          _fetchCustomers();
           _focusTextField();
         } else {
           debugPrint("❌ API ERROR - Create Order and Print failed");
@@ -4929,7 +5074,6 @@ class BillingPageState extends State<BillingPageRestaurant>
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
 
-          _fetchCustomers();
           _clearCart();
         } else {
           debugPrint("❌ API ERROR - Confirm Order failed");
@@ -6369,9 +6513,11 @@ class BillingPageState extends State<BillingPageRestaurant>
         }
       }
 
+      _deliveryMethodListener = updateDeliveryMethod;
+
       // Add listeners
-      deliveryMethodsProvider.addListener(updateDeliveryMethod);
-      appSettingsProvider.addListener(updateDeliveryMethod);
+      deliveryMethodsProvider.addListener(_deliveryMethodListener!);
+      appSettingsProvider.addListener(_deliveryMethodListener!);
 
       // Initial check
       updateDeliveryMethod();
@@ -6382,20 +6528,16 @@ class BillingPageState extends State<BillingPageRestaurant>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
-      final masterDataProvider =
-          Provider.of<MasterDataProvider>(context, listen: false);
-
-      // Pre-fetch payment method IDs so they are available for fallback
-      masterDataProvider.fetchPaymentMethods();
 
       void updatePaymentMethod() {
         setState(() {
           _applyDefaultPaymentMethod();
-          _updateBalanceAmount();
         });
       }
 
-      appSettingsProvider.addListener(updatePaymentMethod);
+      _paymentMethodListener = updatePaymentMethod;
+
+      appSettingsProvider.addListener(_paymentMethodListener!);
       updatePaymentMethod();
     });
   }
@@ -6417,39 +6559,10 @@ class BillingPageState extends State<BillingPageRestaurant>
         appSettingsProvider.appSettings?.defaultPaymentMethod;
     if (defaultPayment != null && defaultPayment.isNotEmpty) {
       debugPrint("💰 Applying default payment method: $defaultPayment");
-
-      // Get cart total for auto-fill
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-      final cartTotal = localProductProvider.getRoundedTotal(context);
-      final discountAmount =
-          (localProductProvider.priceSummary?.flatDiscount ?? 0) +
-              (localProductProvider.priceSummary?.percentageDiscount ?? 0);
-      final effectiveTotal = cartTotal - discountAmount;
-
-      // Apply default payment method and auto-fill amount
-      if (defaultPayment.toUpperCase() == 'CASH') {
-        _isCashSelected = true;
-        // Only auto-fill if amount is empty
-        if (_cashAmountController.text.isEmpty) {
-          _cashAmountController.text = effectiveTotal.toStringAsFixed(2);
-        }
-      } else if (defaultPayment.toUpperCase() == 'CARD') {
-        _isCardSelected = true;
-        if (_cardAmountController.text.isEmpty) {
-          _cardAmountController.text = effectiveTotal.toStringAsFixed(2);
-        }
-      } else if (defaultPayment.toUpperCase() == 'UPI') {
-        _isUpiSelected = true;
-        if (_upiAmountController.text.isEmpty) {
-          _upiAmountController.text = effectiveTotal.toStringAsFixed(2);
-        }
-      } else if (defaultPayment.toUpperCase() == 'COD') {
-        _isCodSelected = true;
-        if (_codAmountController.text.isEmpty) {
-          _codAmountController.text = effectiveTotal.toStringAsFixed(2);
-        }
-      }
+      _isCashSelected = defaultPayment.toUpperCase() == 'CASH';
+      _isCardSelected = defaultPayment.toUpperCase() == 'CARD';
+      _isUpiSelected = defaultPayment.toUpperCase() == 'UPI';
+      _isCodSelected = defaultPayment.toUpperCase() == 'COD';
     }
   }
 
@@ -7289,6 +7402,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       builder: (context, productProvider, categoryProvider, child) {
         // Use sellableFilteredProducts to only show products that are marked as sellable
         final products = productProvider.sellableFilteredProducts;
+        final bool isProductsLoading =
+            productProvider.isLoading || _isResyncingProducts;
         final rawCategories =
             categoryProvider.category ?? categoryProvider.searchCategory ?? [];
 
@@ -7480,7 +7595,29 @@ class BillingPageState extends State<BillingPageRestaurant>
 
             // Products grid - large tiles for quick tap
             Expanded(
-              child: products.isEmpty
+              child: isProductsLoading
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Loading products...',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : products.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -7494,6 +7631,22 @@ class BillingPageState extends State<BillingPageRestaurant>
                               color: Colors.grey.shade500,
                               fontSize: 16,
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          CustomRoundButton(
+                            title: _isResyncingProducts
+                                ? 'Resyncing...'
+                                : 'Resync Products',
+                            fct: _isResyncingProducts
+                                ? () {}
+                                : _resyncProductsFromMainGrid,
+                            width: 170,
+                            height: 36,
+                            fontSize: 11,
+                            boxColor: ColorManager.kPrimaryColor,
+                            borderColor: ColorManager.kPrimaryColor,
+                            textColor: Colors.white,
+                            radius: 8,
                           ),
                         ],
                       ),
@@ -7626,6 +7779,53 @@ class BillingPageState extends State<BillingPageRestaurant>
         );
       },
     );
+  }
+
+  Future<void> _resyncProductsFromMainGrid() async {
+    if (_isResyncingProducts) return;
+
+    setState(() {
+      _isResyncingProducts = true;
+    });
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      await localProductProvider.fetchProductsFromAPI(refresh: true);
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        await syncProvider.syncAllData(context);
+      }
+
+      if (!mounted) return;
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Resync finished but no products were returned. Check tenant/API key or internet.',
+        );
+      } else {
+        showScaffold(
+          context: context,
+          message: 'Products resynced successfully',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync products: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResyncingProducts = false;
+        });
+      }
+    }
   }
 
   Widget _buildProductCardWithImage(BuildContext context, GetProduct product,

@@ -9,6 +9,11 @@ import '../resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DocumentConfigProvider extends ChangeNotifier {
+  static const String _docConfigSnapshotKey =
+      'document_configs_snapshot_json';
+  static const String _docConfigSnapshotUpdatedAtKey =
+      'document_configs_snapshot_updated_at';
+
   bool isLoading = false;
   DocumentConfigurationsModel? _documentConfigurations;
   String? _errorMessage;
@@ -41,6 +46,11 @@ class DocumentConfigProvider extends ChangeNotifier {
 
       // Load configs from Hive into memory on init
       await _loadFromHive();
+
+      // Fallback: if Hive is empty/not yet ready, try SharedPreferences snapshot
+      if (_documentConfigurations == null) {
+        await _loadFromSharedPreferencesBackup();
+      }
     } catch (e) {
       debugPrint('❌ [DocConfig] Error opening Hive box: $e');
     }
@@ -54,6 +64,24 @@ class DocumentConfigProvider extends ChangeNotifier {
       debugPrint('🗑️ [DocConfig] Cache cleared');
     } catch (e) {
       debugPrint('❌ [DocConfig] Error clearing cache: $e');
+    }
+  }
+
+  /// Clear all cached document configs from Hive and SharedPreferences backup
+  Future<void> clearAllCaches() async {
+    try {
+      await _docConfigBox?.clear();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_docConfigSnapshotKey);
+      await prefs.remove(_docConfigSnapshotUpdatedAtKey);
+
+      _documentConfigurations = null;
+      _errorMessage = null;
+      debugPrint('🗑️ [DocConfig] Cleared Hive + SharedPreferences snapshot caches');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ [DocConfig] Error clearing all caches: $e');
     }
   }
 
@@ -90,6 +118,50 @@ class DocumentConfigProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('❌ [DocConfig] Error loading from Hive: $e');
+    }
+  }
+
+  /// Save full document configurations response to SharedPreferences as backup
+  Future<void> _saveSnapshotToSharedPreferences(
+      Map<String, dynamic> snapshotJson) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          _docConfigSnapshotKey, json.encode(snapshotJson));
+      await prefs.setString(
+          _docConfigSnapshotUpdatedAtKey, DateTime.now().toIso8601String());
+      debugPrint('💾 [DocConfig] Snapshot saved to SharedPreferences backup');
+    } catch (e) {
+      debugPrint('❌ [DocConfig] Error saving snapshot to SharedPreferences: $e');
+    }
+  }
+
+  /// Load document configurations from SharedPreferences backup
+  Future<void> _loadFromSharedPreferencesBackup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final snapshot = prefs.getString(_docConfigSnapshotKey);
+
+      if (snapshot == null || snapshot.isEmpty) {
+        debugPrint('📭 [DocConfig] No SharedPreferences snapshot found');
+        return;
+      }
+
+      final Map<String, dynamic> snapshotJson =
+          json.decode(snapshot) as Map<String, dynamic>;
+
+      _documentConfigurations =
+          DocumentConfigurationsModel.fromJson(snapshotJson);
+
+      final updatedAt =
+          prefs.getString(_docConfigSnapshotUpdatedAtKey) ?? 'unknown';
+      debugPrint(
+          '✅ [DocConfig] Loaded document configs from SharedPreferences snapshot (updatedAt=$updatedAt)');
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+          '❌ [DocConfig] Error loading from SharedPreferences backup: $e');
     }
   }
 
@@ -138,6 +210,11 @@ class DocumentConfigProvider extends ChangeNotifier {
         _documentConfigurations =
             DocumentConfigurationsModel.fromJson(jsonData);
 
+        // Save full response snapshot to SharedPreferences backup
+        if (jsonData is Map<String, dynamic>) {
+          await _saveSnapshotToSharedPreferences(jsonData);
+        }
+
         // Save each config to Hive for persistence
         if (_documentConfigurations?.documentConfigurations != null) {
           _documentConfigurations!.documentConfigurations!
@@ -158,6 +235,12 @@ class DocumentConfigProvider extends ChangeNotifier {
       }
     } catch (error) {
       _errorMessage = 'Error fetching document configurations: $error';
+
+      // Fallback to SharedPreferences snapshot if memory is empty
+      if (_documentConfigurations == null) {
+        await _loadFromSharedPreferencesBackup();
+      }
+
       isLoading = false;
       notifyListeners();
       rethrow; // Re-throw the error for the calling code to handle if needed

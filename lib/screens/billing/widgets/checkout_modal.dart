@@ -64,6 +64,9 @@ class CheckoutModal extends StatefulWidget {
   final double flatDiscount;
   final double percentageDiscount;
   final bool isCouponApplied;
+  final String confirmButtonTitle;
+  final String printButtonTitle;
+  final bool requireCheckoutCompletion;
 
   // Callbacks
   final Function(CustomerListModelData) onCustomerSelected;
@@ -131,6 +134,9 @@ class CheckoutModal extends StatefulWidget {
     required this.flatDiscount,
     required this.percentageDiscount,
     required this.isCouponApplied,
+    this.confirmButtonTitle = 'Confirm',
+    this.printButtonTitle = 'Confirm & Print',
+    this.requireCheckoutCompletion = true,
     required this.onCustomerSelected,
     required this.onAddNewCustomer,
     required this.onDiscountApplied,
@@ -155,6 +161,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Local state for Customer Search
   String _customerSearchQuery = '';
+  List<CustomerListModelData> _allCustomers = [];
   List<CustomerListModelData> _filteredCustomers = [];
   final TextEditingController _customerSearchController =
       TextEditingController();
@@ -235,7 +242,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   @override
   void initState() {
     super.initState();
-    _filteredCustomers = widget.availableCustomers;
+    _allCustomers = List<CustomerListModelData>.from(widget.availableCustomers);
+    _filteredCustomers = List<CustomerListModelData>.from(_allCustomers);
 
     // Initialize Local State from Widget Props
     _localSelectedCustomer = widget.selectedCustomer;
@@ -280,6 +288,36 @@ class _CheckoutModalState extends State<CheckoutModal> {
       masterDataProvider.fetchPaymentMethods();
       _applyDefaultPaymentMethod();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant CheckoutModal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.availableCustomers != widget.availableCustomers) {
+      final previousSelectedId = _localSelectedCustomer?.id;
+      _allCustomers = List<CustomerListModelData>.from(widget.availableCustomers);
+
+      if (_customerSearchQuery.isEmpty) {
+        _filteredCustomers = List<CustomerListModelData>.from(_allCustomers);
+      } else {
+        final query = _customerSearchQuery;
+        _filteredCustomers = _allCustomers.where((customer) {
+          final name = (customer.name ?? '').toLowerCase();
+          final phone = (customer.phone ?? '').toLowerCase();
+          return name.contains(query) || phone.contains(query);
+        }).toList();
+      }
+
+      if (previousSelectedId != null) {
+        for (final customer in _allCustomers) {
+          if (customer.id == previousSelectedId) {
+            _localSelectedCustomer = customer;
+            break;
+          }
+        }
+      }
+    }
   }
 
   void _applyDefaultPaymentMethod() {
@@ -354,10 +392,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (step >= 0 && step <= 3) {
       setState(() {
         _currentStep = step;
-        // Mark payment modal as opened if we're visiting the payment step (3)
-        if (step == 3) {
-          _hasOpenedPaymentModalOnce = true;
-        }
       });
     }
   }
@@ -387,9 +421,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
     setState(() {
       _customerSearchQuery = query.toLowerCase();
       if (_customerSearchQuery.isEmpty) {
-        _filteredCustomers = widget.availableCustomers;
+        _filteredCustomers = List<CustomerListModelData>.from(_allCustomers);
       } else {
-        _filteredCustomers = widget.availableCustomers.where((customer) {
+        _filteredCustomers = _allCustomers.where((customer) {
           final name = (customer.name ?? '').toLowerCase();
           final phone = (customer.phone ?? '').toLowerCase();
           return name.contains(_customerSearchQuery) ||
@@ -414,26 +448,25 @@ class _CheckoutModalState extends State<CheckoutModal> {
     setState(() {
       _isAddingCustomer = true;
     });
-    final newCustomer = await widget.onAddNewCustomer(_customerSearchQuery);
-    if (newCustomer != null) {
-      if (mounted) {
+    try {
+      final newCustomer = await widget.onAddNewCustomer(_customerSearchQuery);
+      if (newCustomer != null && mounted) {
         setState(() {
-          // Add to local list if not present
-          if (!_filteredCustomers.any((c) => c.id == newCustomer.id)) {
-            _filteredCustomers.insert(0, newCustomer);
-          }
+          _allCustomers.removeWhere((c) => c.id == newCustomer.id);
+          _allCustomers.insert(0, newCustomer);
+          _filteredCustomers = List<CustomerListModelData>.from(_allCustomers);
           _localSelectedCustomer = newCustomer;
           _customerSearchController.clear();
           _customerSearchQuery = '';
         });
-        // Also update parent
         widget.onCustomerSelected(newCustomer);
       }
-    }
-    if (mounted) {
-      setState(() {
-        _isAddingCustomer = false;
-      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingCustomer = false;
+        });
+      }
     }
   }
 
@@ -481,6 +514,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _lDebitAmount = debit;
       _lTransactionNumber = trans;
       _lToCustomerCreditEnabled = toCredit;
+      _hasOpenedPaymentModalOnce = true;
     });
     widget.onPaymentUpdated(isCash, isCard, isUpi, isCod, isDebit, cash, card,
         upi, cod, debit, trans, toCredit,
@@ -492,6 +526,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth =
+      (screenSize.width * 0.94).clamp(320.0, 1300.0).toDouble();
+    final dialogHeight =
+      (screenSize.height * 0.92).clamp(520.0, 850.0).toDouble();
+
     // Determine status for stepper/wizard using LOCAL state
     final hasCustomer = _localSelectedCustomer != null;
     final hasDelivery = _lDeliveryMethod.isNotEmpty; // Simple check
@@ -504,11 +544,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
       elevation: 8,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Stack(
         children: [
           Container(
-            width: 1300,
-            height: 850,
+            width: dialogWidth,
+            height: dialogHeight,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -788,9 +829,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               _isAddingCustomer ? 'Adding...' : 'Add New Customer'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.grey.shade100,
-                            foregroundColor: Colors.grey.shade700,
-                            side: BorderSide(color: Colors.grey.shade300),
+                            backgroundColor: const Color(0xFFECFDF3),
+                            foregroundColor: const Color(0xFF047857),
+                            side: const BorderSide(color: Color(0xFF34D399)),
                           ),
                           onPressed:
                               _isAddingCustomer ? null : _handleAddNewCustomer,
@@ -1158,9 +1199,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
       );
     }
 
-    return ListView.separated(
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 2.9,
+      ),
       itemCount: _filteredCustomers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final customer = _filteredCustomers[index];
         final isSelected = _localSelectedCustomer?.id == customer.id;
@@ -1209,13 +1255,20 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(customer.name ?? 'Unknown',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(
+                          customer.name ?? 'Unknown',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         if (customer.phone != null)
-                          Text(customer.phone!,
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade600)),
+                          Text(
+                            customer.phone!,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                       ],
                     ),
                   ),
@@ -1651,7 +1704,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Check if Confirm and Print buttons should be enabled
   bool get _canConfirmOrPrint {
-    return _localSelectedCustomer != null && _hasOpenedPaymentModalOnce;
+    if (!widget.requireCheckoutCompletion) {
+      return true;
+    }
+
+    return _localSelectedCustomer != null &&
+        _hasOpenedPaymentModalOnce &&
+        _hasPaymentMethod();
   }
 
   Widget _buildFooter({
@@ -1686,7 +1745,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: Opacity(
                       opacity: _canConfirmOrPrint ? 1.0 : 0.5,
                       child: CustomRoundButtonWithIconAdvanced(
-                        title: 'Confirm',
+                        title: widget.confirmButtonTitle,
                         isLoading: _isConfirming,
                         fct: _canConfirmOrPrint
                             ? onConfirm
@@ -1695,8 +1754,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 _goToStep(3);
                                 showScaffoldError(
                                   context: context,
-                                  message:
-                                      'Please visit the payment tab before confirm',
+                                  message: widget.requireCheckoutCompletion
+                                      ? 'Please configure payment before confirm'
+                                      : 'Unable to proceed',
                                 );
                               },
                         size: MediaQuery.of(context).size,
@@ -1723,7 +1783,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: Opacity(
                       opacity: _canConfirmOrPrint ? 1.0 : 0.5,
                       child: CustomRoundButtonWithIconAdvanced(
-                        title: 'Confirm & Print',
+                        title: widget.printButtonTitle,
                         isLoading: _isPrinting,
                         fct: _canConfirmOrPrint
                             ? onPrint
@@ -1732,8 +1792,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 _goToStep(3);
                                 showScaffoldError(
                                   context: context,
-                                  message:
-                                      'Please visit the payment tab before confirm',
+                                  message: widget.requireCheckoutCompletion
+                                      ? 'Please configure payment before confirm'
+                                      : 'Unable to proceed',
                                 );
                               },
                         size: MediaQuery.of(context).size,

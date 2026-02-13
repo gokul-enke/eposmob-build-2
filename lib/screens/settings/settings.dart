@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -11,6 +13,11 @@ import 'package:pos_machine/resources/localization_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/screens/login/login.dart';
+import 'package:pos_machine/services/session_reset_service.dart';
+import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -20,6 +27,149 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  Future<void> _resyncProducts() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      await localProductProvider.fetchProductsFromAPI(refresh: true);
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        await syncProvider.syncAllData(context);
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Resync finished but no products were returned. Check tenant/API key or internet.',
+        );
+      } else {
+        showScaffold(
+          context: context,
+          message:
+              'Products resynced successfully (${localProductProvider.sellableProducts.length} items)',
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync products: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _clearProductsDebug() async {
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Product Cache'),
+        content: const Text(
+          'This will clear locally cached products and last product sync timestamp. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldClear != true) return;
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.resetProducts();
+      await SharedPreferenceProvider().clearLastProductSyncIso();
+
+      if (!mounted) return;
+      showScaffold(
+        context: context,
+        message: 'Local product cache cleared (debug)',
+      );
+      setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to clear product cache: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _clearLocalStorageAndLogout() async {
+    try {
+      final shouldClear = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Clear Local Storage'),
+          content: const Text(
+            'This will clear all local data except login credentials and log you out. Are you sure?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Clear & Logout',
+                style: TextStyle(color: ColorManager.kButtonRed),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldClear != true) return;
+      await SessionResetService.clearLocalStorageAndLogout(
+        context,
+        preserveRememberMe: true,
+      );
+
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: 'Local storage cleared successfully',
+        );
+
+        Future.delayed(const Duration(milliseconds: 500), () {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const SignInScreen()),
+            (route) => false,
+          );
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error clearing local storage: ${e.toString()}',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -66,7 +216,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisSpacing: 14,
                         childAspectRatio: 1.08,
                       ),
-                      itemCount: 4, // Added Language + Last Sync
+                      itemCount: kDebugMode ? 7 : 6,
                       itemBuilder: (context, index) {
                         switch (index) {
                           case 0:
@@ -123,6 +273,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     isoTime != null,
                                   ),
                                 );
+                              },
+                            );
+                          case 4:
+                            return _SettingsCardWithIcon(
+                              title: 'Resync Products',
+                              icon: FontAwesomeIcons.arrowsRotate,
+                              backgroundColor: const Color(0xFFEDE7F6),
+                              iconColor: const Color(0xFF5E35B1),
+                              onTap: () async {
+                                await _resyncProducts();
+                              },
+                            );
+                          case 5:
+                            return _SettingsCardWithIcon(
+                              title: 'Clear Local Storage',
+                              icon: FontAwesomeIcons.trashCan,
+                              backgroundColor: const Color(0xFFFFF3E0),
+                              iconColor: const Color(0xFFEF6C00),
+                              onTap: () async {
+                                await _clearLocalStorageAndLogout();
+                              },
+                            );
+                          case 6:
+                            if (!kDebugMode) return const SizedBox.shrink();
+                            return _SettingsCardWithIcon(
+                              title: 'Clear Product Cache (Debug)',
+                              icon: FontAwesomeIcons.broom,
+                              backgroundColor: const Color(0xFFFFEBEE),
+                              iconColor: const Color(0xFFC62828),
+                              onTap: () async {
+                                await _clearProductsDebug();
                               },
                             );
                           default:

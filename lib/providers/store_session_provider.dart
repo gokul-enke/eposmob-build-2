@@ -163,4 +163,12 @@ class StoreSessionProvider extends ChangeNotifier {
     _setStatus(message);
     await Future.delayed(const Duration(milliseconds: 200));
   }
+
+  void resetSession() {
+    _activeStore = null;
+    _isBootstrapping = false;
+    _statusMessage = null;
+    _availableStores = [];
+    notifyListeners();
+  }
 }
