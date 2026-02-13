@@ -30,6 +30,7 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
 import '../thermal/printer_utils.dart';
+import '../thermal/debug_image_saver.dart';
 
 /// Premium receipt layout - Modern & Clean design.
 ///
@@ -162,19 +163,11 @@ class Premium1ReceiptLayout implements ReceiptLayout {
       // ========== DEBUG: SAVE IMAGES TO DESKTOP ==========
       if (kDebugMode) {
         try {
-          final String desktopPath = 'C:/Users/gokul/Desktop';
-          final String timestamp =
-              DateTime.now().millisecondsSinceEpoch.toString();
-
-          final File file1 =
-              File('$desktopPath/receipt_${timestamp}_part1.png');
-          await file1.writeAsBytes(img.encodePng(imagePart1));
-          debugPrint("Saved debug image to: ${file1.path}");
-
-          final File file2 =
-              File('$desktopPath/receipt_${timestamp}_part2.png');
-          await file2.writeAsBytes(img.encodePng(imagePart2));
-          debugPrint("Saved debug image to: ${file2.path}");
+          await PrintDebugImageSaver.saveReceiptImages(
+            imagePart1,
+            imagePart2,
+            params.selectedPaperSize,
+          );
         } catch (e) {
           debugPrint("Error saving debug images: $e");
         }
@@ -1477,6 +1470,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
     return null;
   }
+
 }
 
 /// Thin solid line divider for Premium theme
