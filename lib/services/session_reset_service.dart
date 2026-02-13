@@ -44,6 +44,19 @@ class SessionResetService {
     'document_configs_snapshot_updated_at',
   ];
 
+  static const List<String> _deviceScopedKeys = [
+    'default_printer',
+    'default_paper_size',
+    'default_font_style',
+    'default_printer_name',
+    'default_printer_address',
+    'kot_printer',
+    'kot_paper_size',
+    'kot_font_style',
+    'billing_receipt_theme',
+    'kot_receipt_theme',
+  ];
+
   static Future<void> resetAfterLogout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     for (final key in _authScopedKeys) {
@@ -70,6 +83,7 @@ class SessionResetService {
       clearApiKey: true,
       clearAllPreferences: true,
       preserveRememberMe: preserveRememberMe,
+      preserveDeviceScopedKeys: true,
     );
   }
 
@@ -78,6 +92,7 @@ class SessionResetService {
     required bool clearApiKey,
     required bool clearAllPreferences,
     required bool preserveRememberMe,
+    bool preserveDeviceScopedKeys = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -85,11 +100,21 @@ class SessionResetService {
     String? rememberedPassword;
     bool rememberedFlag = false;
     final String? existingApiKey = prefs.getString('api_key');
+    final Map<String, Object> preservedDeviceValues = <String, Object>{};
 
     if (preserveRememberMe) {
       rememberedEmail = prefs.getString('emailRemember');
       rememberedPassword = prefs.getString('passwordRemember');
       rememberedFlag = prefs.getBool('remember_me') ?? false;
+    }
+
+    if (preserveDeviceScopedKeys) {
+      for (final key in _deviceScopedKeys) {
+        final value = prefs.get(key);
+        if (value != null) {
+          preservedDeviceValues[key] = value;
+        }
+      }
     }
 
     try {
@@ -109,11 +134,14 @@ class SessionResetService {
       }
     }
 
-    final shouldClearApiKey = clearApiKey && !(preserveRememberMe && rememberedFlag);
+    final shouldClearApiKey =
+        clearApiKey && !(preserveRememberMe && rememberedFlag);
 
     if (shouldClearApiKey) {
       await prefs.remove('api_key');
-    } else if (clearAllPreferences && existingApiKey != null && existingApiKey.isNotEmpty) {
+    } else if (clearAllPreferences &&
+        existingApiKey != null &&
+        existingApiKey.isNotEmpty) {
       await prefs.setString('api_key', existingApiKey);
     }
 
@@ -124,6 +152,23 @@ class SessionResetService {
       }
       if (rememberedPassword != null) {
         await prefs.setString('passwordRemember', rememberedPassword);
+      }
+    }
+
+    if (preserveDeviceScopedKeys && preservedDeviceValues.isNotEmpty) {
+      for (final entry in preservedDeviceValues.entries) {
+        final value = entry.value;
+        if (value is String) {
+          await prefs.setString(entry.key, value);
+        } else if (value is int) {
+          await prefs.setInt(entry.key, value);
+        } else if (value is double) {
+          await prefs.setDouble(entry.key, value);
+        } else if (value is bool) {
+          await prefs.setBool(entry.key, value);
+        } else if (value is List<String>) {
+          await prefs.setStringList(entry.key, value);
+        }
       }
     }
 
