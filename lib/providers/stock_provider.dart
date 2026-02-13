@@ -1190,6 +1190,165 @@ class StockProvider extends ChangeNotifier {
     }
   }
 
+  /// *********************** ADJUST STOCK API ***************************************************
+
+  Future<bool> adjustStockAPI({
+    required int stockId,
+    required String type,
+    required double quantity,
+    required String reason,
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${APPUrl.adjustStock}/$stockId');
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
+      final body = jsonEncode({
+        'type': type,
+        'quantity': quantity,
+        'reason': reason,
+      });
+
+      debugPrint('🚀 ADJUST STOCK REQUEST:');
+      debugPrint('   URL: $url');
+      debugPrint('   BODY: $body');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: body,
+      );
+
+      debugPrint('📥 ADJUST STOCK RESPONSE:');
+      debugPrint('   STATUS: ${response.statusCode}');
+      debugPrint('   BODY: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['status'] == 'success') {
+          await loadAllStocks(accessToken);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error adjusting stock: $e');
+      return false;
+    }
+  }
+
+  /// *********************** MOVE STOCK API ***************************************************
+
+  Future<bool> moveStockAPI({
+    required int stockId,
+    required int destStoreId,
+    required double quantity,
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${APPUrl.moveStock}/$stockId');
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
+      final body = jsonEncode({
+        'dest_store_id': destStoreId,
+        'quantity': quantity,
+      });
+
+      debugPrint('🚀 MOVE STOCK REQUEST:');
+      debugPrint('   URL: $url');
+      debugPrint('   BODY: $body');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: body,
+      );
+
+      debugPrint('📥 MOVE STOCK RESPONSE:');
+      debugPrint('   STATUS: ${response.statusCode}');
+      debugPrint('   BODY: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['status'] == 'success') {
+          await loadAllStocks(accessToken);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error moving stock: $e');
+      return false;
+    }
+  }
+
+  /// *********************** WITHDRAW STOCK API ***************************************************
+
+  Future<bool> withdrawStockAPI({
+    required int stockId,
+    required double quantity,
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${APPUrl.withdrawStock}/$stockId');
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
+      final body = jsonEncode({
+        'quantity': quantity,
+      });
+
+      debugPrint('🚀 WITHDRAW STOCK REQUEST:');
+      debugPrint('   URL: $url');
+      debugPrint('   BODY: $body');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: body,
+      );
+
+      debugPrint('📥 WITHDRAW STOCK RESPONSE:');
+      debugPrint('   STATUS: ${response.statusCode}');
+      debugPrint('   BODY: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['status'] == 'success') {
+          await loadAllStocks(accessToken);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error withdrawing stock: $e');
+      return false;
+    }
+  }
+
   //          *********************** SYNC STOCK DATA ***************************************************
 
   /// Sync stock data from server - fetches latest stock quantities and details

@@ -124,7 +124,7 @@ class StandardReceiptLayout implements ReceiptLayout {
       }
 
       // ========== HEADER SECTION (Modern & Clean) ==========
-        _buildHeaderSection(
+      _buildHeaderSection(
           part1Rows, params, displayConfig, appSettings, isEnglish);
 
       // ========== CUSTOMER SECTION ==========
@@ -162,7 +162,7 @@ class StandardReceiptLayout implements ReceiptLayout {
       // ========== DEBUG: SAVE IMAGES TO DESKTOP ==========
       if (kDebugMode) {
         try {
-          final String desktopPath = 'C:/Users/gokul/Desktop';
+          final String desktopPath = 'C:/Users/Hi/Desktop';
           final String timestamp =
               DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -571,15 +571,15 @@ class StandardReceiptLayout implements ReceiptLayout {
       final invoiceAlign = isEnglish ? TextAlign.left : TextAlign.right;
       final tokenAlign = isEnglish ? TextAlign.right : TextAlign.left;
       final invoiceCol = ReceiptTableColumn(invoiceNumberText,
-        weight: 0.58, align: invoiceAlign, isBold: true, scale: 0.9);
+          weight: 0.58, align: invoiceAlign, isBold: true, scale: 0.9);
       final tokenCol = ReceiptTableColumn(tokenText,
-        weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
+          weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
       final spacerCol =
-        ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
+          ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
 
       rows.add(ReceiptTableRow(isEnglish
-        ? [invoiceCol, spacerCol, tokenCol]
-        : [tokenCol, spacerCol, invoiceCol]));
+          ? [invoiceCol, spacerCol, tokenCol]
+          : [tokenCol, spacerCol, invoiceCol]));
     } else if (invoiceNumberText != null) {
       rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
     } else if (tokenText != null) {
@@ -1653,7 +1653,8 @@ class StandardReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String invoicePrefix =
+          params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(3));
       rows.add(TextRow('$invoicePrefix$strippedNumber', scale: 0.8));
@@ -1667,7 +1668,8 @@ class StandardReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String invoicePrefix =
+          params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(5));
       rows.add(StandardThinDividerRow());

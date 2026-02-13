@@ -551,16 +551,21 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle4: () {
                       sideBarController.index.value = 77;
                     },
+                    onTapTitle5: () {
+                      sideBarController.index.value = 80;
+                    },
                     listTitle1: "Sales Executive Reports",
                     listTitle2: "Customer Transactions Reports",
                     listTitle3: "Supplier Transactions Reports",
                     listTitle4: "Non-Stock Report",
+                    listTitle5: "Consumed Stocks Report",
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
                     showTitle2: hasCustomerTransactionsPermission,
                     showTitle3: hasSupplierTransactionsPermission,
                     showTitle4:
                         true, // Show for now, add specific permission if needed
+                    showTitle5: true,
                     icon: fa.FontAwesomeIcons.chartPie,
                     title: 'Reports',
                     onTap: () {
@@ -575,7 +580,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 66 ||
                         sideBarController.index.value == 67 ||
                         sideBarController.index.value == 68 ||
-                        sideBarController.index.value == 77),
+                        sideBarController.index.value == 77 ||
+                        sideBarController.index.value == 80),
               );
             },
           ),

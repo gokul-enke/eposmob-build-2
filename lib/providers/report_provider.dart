@@ -9,6 +9,7 @@ import 'package:pos_machine/models/get_product_sales_report_model.dart';
 import 'package:pos_machine/models/get_sales_report_model.dart';
 import 'package:pos_machine/models/get_supplier_sales_report_model.dart';
 import 'package:pos_machine/models/get_non_stock_report_model.dart';
+import 'package:pos_machine/models/get_consumed_stocks_report_model.dart';
 
 import '../models/get_customer_account_book_model.dart';
 import '../resources/app_url.dart';
@@ -19,6 +20,7 @@ class ReportsProvider with ChangeNotifier {
   GetSalesReportResponse? _salesReport;
   GetSupplierSalesReportResponse? _supplierSalesReport;
   GetNonStockReportResponse? _nonStockReport;
+  GetConsumedStocksReportResponse? _consumedStocksReport;
 
   GetCustomerAccountBookResponse? get customerAccountBook =>
       _customerAccountBook;
@@ -27,6 +29,8 @@ class ReportsProvider with ChangeNotifier {
   GetSupplierSalesReportResponse? get supplierSalesReport =>
       _supplierSalesReport;
   GetNonStockReportResponse? get nonStockReport => _nonStockReport;
+  GetConsumedStocksReportResponse? get consumedStocksReport =>
+      _consumedStocksReport;
 
   Future<void> fetchCustomerAccountBook({
     required String accessToken,
@@ -321,6 +325,70 @@ class ReportsProvider with ChangeNotifier {
         debugPrint(
             'Failed to load non-stock report: ${response.statusCode} - ${response.body}');
         throw Exception('Failed to load non-stock report');
+      }
+    } catch (error) {
+      rethrow;
+    }
+  }
+
+  Future<void> fetchConsumedStocksReport({
+    required String accessToken,
+    String? productId,
+    String? storeId,
+    String? from,
+    String? until,
+    int? page,
+  }) async {
+    final queryParameters = <String, String>{};
+
+    if (productId != null && productId.isNotEmpty) {
+      queryParameters['product_id'] = productId;
+    }
+    if (storeId != null && storeId.isNotEmpty) {
+      queryParameters['store_id'] = storeId;
+    }
+    if (from != null && from.isNotEmpty) {
+      queryParameters['from'] = from;
+    }
+    if (until != null && until.isNotEmpty) {
+      queryParameters['until'] = until;
+    }
+    if (page != null) {
+      queryParameters['page'] = page.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.consumedStocksReport)
+        .replace(queryParameters: queryParameters);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        if (response.body.isNotEmpty) {
+          final jsonData = json.decode(response.body);
+          _consumedStocksReport =
+              GetConsumedStocksReportResponse.fromJson(jsonData);
+          notifyListeners();
+        } else {
+          throw Exception('Received empty response');
+        }
+      } else {
+        debugPrint(
+            'Failed to load consumed stocks report: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to load consumed stocks report');
       }
     } catch (error) {
       rethrow;
