@@ -300,6 +300,7 @@ class AmountHelper {
 
     List<String> arabicTens = [
       '',
+      '',
       'عشرون',
       'ثلاثون',
       'أربعون',
@@ -315,6 +316,9 @@ class AmountHelper {
     } else {
       int tens = number ~/ 10;
       int ones = number % 10;
+      if (tens < 0 || tens >= arabicTens.length) {
+        return arabicOnes[number.clamp(0, arabicOnes.length - 1)];
+      }
       if (ones == 0) {
         return arabicTens[tens];
       } else if (ones == 1 || ones == 2) {
