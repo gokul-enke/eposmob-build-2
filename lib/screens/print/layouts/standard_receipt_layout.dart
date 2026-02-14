@@ -579,6 +579,27 @@ class StandardReceiptLayout implements ReceiptLayout {
       rows.add(TextRow(tokenText, scale: 1.4, isBold: true));
     }
 
+    // Date and Time - moved to top section
+    if (displayConfig?['showDate']?.visible != false) {
+      final resolvedLabels = params.billDocumentConfig.resolvedLabels;
+      String formattedDate = params.isFromLocalStorage
+          ? DateHelper.formatToISODateOnlyFromISO(params.orderDate)
+          : DateHelper.formatISODate(params.orderDate);
+      String formattedTime = params.isFromLocalStorage
+          ? DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)
+          : DateHelper.formatISOTimeOnlyToIST(params.orderDate);
+
+      final dateLabel =
+          _getLabel(displayConfig, 'showDate', resolvedLabels?.date, "");
+      rows.add(SpacingRow(3));
+      if (dateLabel.isNotEmpty) {
+        rows.add(
+            TextRow("$dateLabel: $formattedDate  $formattedTime", scale: 0.85));
+      } else {
+        rows.add(TextRow("$formattedDate  $formattedTime", scale: 0.85));
+      }
+    }
+
     rows.add(SpacingRow(_itemGap));
     rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
@@ -801,8 +822,10 @@ class StandardReceiptLayout implements ReceiptLayout {
             "Item")
         : _getLabel(displayConfig, 'showParticulars',
             resolvedLabels?.particulars, isEnglish ? "Item" : "الصنف");
-    final String mrpLabel =
-        _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, "MRP");
+    final String mrpLabel = isDualLanguage
+      ? _getBilingualLabel(
+        displayConfig, 'showMRP', resolvedLabels?.mrp, null, "السعر", "MRP")
+      : _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, "MRP");
     final String qtyLabel = isDualLanguage
         ? _getBilingualLabel(displayConfig, 'showQty', resolvedLabels?.qty,
             resolvedLabels?.qtyDefault, "الكمية", "Qty")
@@ -829,10 +852,10 @@ class StandardReceiptLayout implements ReceiptLayout {
             'showSLNumber',
             resolvedLabels?.slNumber,
             resolvedLabels?.slNumberDefault,
-            "#",
+        "م",
             "SL#")
         : _getLabel(displayConfig, 'showSLNumber', resolvedLabels?.slNumber,
-            isEnglish ? "SL#" : "#");
+        isEnglish ? "SL#" : "م");
 
     // Build table header
     _buildTableHeader(
@@ -878,72 +901,78 @@ class StandardReceiptLayout implements ReceiptLayout {
     if (isEnglish) {
       if (displayConfig?['showSLNumber']?.visible == true) {
         headerCols.add(ReceiptTableColumn(slLabel,
-            weight: 0.08, align: TextAlign.left, isBold: true));
+            weight: 0.1, align: TextAlign.left, scale: 0.8, isBold: true));
       }
       if (displayConfig?['showParticulars']?.visible == true) {
         headerCols.add(ReceiptTableColumn(particularsLabel,
             weight:
-                displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+                displayConfig?['showSLNumber']?.visible == true ? 0.15 : 0.25,
             align: TextAlign.left,
+            scale: 0.85,
             isBold: true));
       }
       if (displayConfig?['showMRP']?.visible == true) {
         headerCols.add(ReceiptTableColumn(mrpLabel,
-            weight: 0.15, align: TextAlign.center, isBold: true));
+            weight: 0.15, align: TextAlign.center, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showQty']?.visible == true) {
         headerCols.add(ReceiptTableColumn(qtyLabel,
-            weight: 0.12, align: TextAlign.center, isBold: true));
+            weight: 0.12, align: TextAlign.center, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showRate']?.visible == true) {
         headerCols.add(ReceiptTableColumn(rateLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: 0.15, align: TextAlign.right, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols.add(ReceiptTableColumn(taxHeaderLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: 0.15, align: TextAlign.right, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(ReceiptTableColumn(totalLabel,
-            weight: 0.18, align: TextAlign.right, isBold: true));
+            weight: 0.18, align: TextAlign.right, scale: 0.85, isBold: true));
       }
     } else {
       // Arabic header (RTL)
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(ReceiptTableColumn(totalLabel,
-            weight: 0.18, align: TextAlign.right, isBold: true));
+            weight: 0.18, align: TextAlign.right, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols.add(ReceiptTableColumn(taxHeaderLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: 0.15, align: TextAlign.right, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showRate']?.visible == true) {
         headerCols.add(ReceiptTableColumn(rateLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: 0.15, align: TextAlign.right, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showQty']?.visible == true) {
         headerCols.add(ReceiptTableColumn(qtyLabel,
-            weight: 0.12, align: TextAlign.right, isBold: true));
+            weight: 0.12, align: TextAlign.right, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showMRP']?.visible == true) {
         headerCols.add(ReceiptTableColumn(mrpLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: 0.15, align: TextAlign.right, scale: 0.85, isBold: true));
       }
       if (displayConfig?['showParticulars']?.visible == true) {
         headerCols.add(ReceiptTableColumn(particularsLabel,
             weight:
-                displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+                displayConfig?['showSLNumber']?.visible == true ? 0.15 : 0.25,
             align: TextAlign.right,
+            scale: 0.85,
             isBold: true));
       }
       if (displayConfig?['showSLNumber']?.visible == true) {
         headerCols.add(ReceiptTableColumn(slLabel,
-            weight: 0.08, align: TextAlign.right, isBold: true));
+            weight: 0.1, align: TextAlign.right, scale: 0.8, isBold: true));
       }
     }
 
     if (headerCols.isNotEmpty) {
-      rows.add(ReceiptTableRow(headerCols));
+      if (isDualLanguage) {
+        rows.add(MultiLineReceiptTableRow(headerCols));
+      } else {
+        rows.add(ReceiptTableRow(headerCols));
+      }
       rows.add(StandardThinDividerRow());
     }
   }
@@ -1616,27 +1645,6 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_headerGap));
 
-    final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-
-    // Date and Time - Clean format (with visibility check)
-    if (displayConfig?['showDate']?.visible != false) {
-      String formattedDate = params.isFromLocalStorage
-          ? DateHelper.formatToISODateOnlyFromISO(params.orderDate)
-          : DateHelper.formatISODate(params.orderDate);
-      String formattedTime = params.isFromLocalStorage
-          ? DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)
-          : DateHelper.formatISOTimeOnlyToIST(params.orderDate);
-
-      final dateLabel =
-          _getLabel(displayConfig, 'showDate', resolvedLabels?.date, "");
-      if (dateLabel.isNotEmpty) {
-        rows.add(
-            TextRow("$dateLabel: $formattedDate  $formattedTime", scale: 0.85));
-      } else {
-        rows.add(TextRow("$formattedDate  $formattedTime", scale: 0.85));
-      }
-    }
-
     // Order Number (with visibility check)
     if (displayConfig?['showOrderNumber']?.visible != false) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
@@ -2209,4 +2217,64 @@ class StandardBoxedLineItem {
     this.isSeparator = false,
     this.icon,
   });
+}
+
+/// Local replacement for ReceiptTableRow that supports multiple lines (for bilingual headers)
+class MultiLineReceiptTableRow extends ReceiptRow {
+  final List<ReceiptTableColumn> columns;
+  final int? maxLines;
+
+  MultiLineReceiptTableRow(this.columns, {this.maxLines = 2});
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    double maxHeight = 0;
+    for (var col in columns) {
+      final tp = _createPainter(col, width, fontSize, textDirection);
+      if (tp.height > maxHeight) maxHeight = tp.height;
+    }
+    return maxHeight + 4;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    double currentX = 0;
+
+    for (var col in columns) {
+      final colWidth = width * col.weight;
+      final tp = _createPainter(col, width, fontSize, textDirection);
+
+      double xOffset = 0;
+      if (col.align == TextAlign.center) {
+        xOffset = (colWidth - tp.width) / 2;
+      } else if (col.align == TextAlign.right) {
+        xOffset = colWidth - tp.width;
+      } else if (col.align == TextAlign.left) {
+        xOffset = 0;
+      }
+
+      tp.paint(canvas, Offset(currentX + xOffset, y + 2));
+      currentX += colWidth;
+    }
+  }
+
+  TextPainter _createPainter(ReceiptTableColumn col, double totalWidth,
+      double fontSize, TextDirection textDirection) {
+    return TextPainter(
+      text: TextSpan(
+        text: col.text,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: fontSize * col.scale,
+          fontWeight: col.isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: textDirection,
+      textAlign: col.align,
+      maxLines: maxLines,
+    )..layout(maxWidth: totalWidth * col.weight);
+  }
 }

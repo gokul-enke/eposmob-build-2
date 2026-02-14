@@ -416,9 +416,9 @@ class Names {
   });
 
   factory Names.fromJson(Map<String, dynamic> json) => Names(
-        en: json["en"],
+      en: json["en"] ?? json["EN"],
         hi: json["hi"],
-        ar: json["ar"],
+      ar: json["ar"] ?? json["AR"],
       );
 
   Map<String, dynamic> toJson() => {
