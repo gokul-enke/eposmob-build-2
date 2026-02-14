@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -154,6 +155,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
+  final ListQueue<String> _barcodeQueue = ListQueue<String>();
   bool _toCustomerCreditEnabled = false;
   bool _isResyncingProducts = false;
 
@@ -273,7 +275,7 @@ class BillingPageState extends State<BillingPage>
       debugPrint("🟡 [BillingPage] Widget mounted: $mounted");
       if (mounted) {
         debugPrint("🟡 [BillingPage] Calling processBarcode()...");
-        processBarcode(barcode);
+        _enqueueBarcode(barcode);
       } else {
         debugPrint(
             "⚠️ [BillingPage] Widget not mounted - skipping processBarcode");
@@ -933,8 +935,13 @@ class BillingPageState extends State<BillingPage>
 
   void _focusTextField() {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    Provider.of<CustomerProvider>(context, listen: false)
-        .loadAllCustomers(accessToken!);
+    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+    if ((customerProvider.allCustomers == null ||
+            customerProvider.allCustomers!.isEmpty) &&
+        accessToken != null &&
+        accessToken.isNotEmpty) {
+      customerProvider.loadAllCustomers(accessToken);
+    }
     // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -977,6 +984,38 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> processBarcode(String barcode) async {
+    _enqueueBarcode(barcode);
+  }
+
+  void _enqueueBarcode(String barcode) {
+    final sanitizedBarcode = barcode.trim();
+    if (sanitizedBarcode.isEmpty) {
+      return;
+    }
+
+    _barcodeQueue.addLast(sanitizedBarcode);
+    _processNextBarcode();
+  }
+
+  Future<void> _processNextBarcode() async {
+    if (!mounted || _isProcessingBarcode || _barcodeQueue.isEmpty) {
+      return;
+    }
+
+    _isProcessingBarcode = true;
+    final barcode = _barcodeQueue.removeFirst();
+
+    try {
+      await _processBarcodeInternal(barcode);
+    } finally {
+      _isProcessingBarcode = false;
+      if (_barcodeQueue.isNotEmpty && mounted) {
+        Future.microtask(_processNextBarcode);
+      }
+    }
+  }
+
+  Future<void> _processBarcodeInternal(String barcode) async {
     debugPrint(
         "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE START ==========");
     debugPrint("🔴 [BillingPage.processBarcode] Input barcode: '$barcode'");
@@ -987,22 +1026,16 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "🔴 [BillingPage.processBarcode] barcode.isEmpty: ${barcode.isEmpty}");
 
-    // If a barcode is already being processed, or if the input is empty, do nothing.
-    if (_isProcessingBarcode || barcode.isEmpty) {
+    // If input is empty, do nothing.
+    if (barcode.isEmpty) {
       debugPrint(
-          "⚠️ [BillingPage.processBarcode] SKIPPING - Already processing or empty barcode");
+          "⚠️ [BillingPage.processBarcode] SKIPPING - Empty barcode");
       debugPrint(
           "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END (SKIPPED) ==========\n");
       return;
     }
 
     debugPrint("✅ [BillingPage.processBarcode] Starting barcode processing...");
-    // Set the flag to true to prevent duplicate processing.
-    setState(() {
-      _isProcessingBarcode = true;
-    });
-    debugPrint(
-        "🔴 [BillingPage.processBarcode] _isProcessingBarcode set to true");
     String query = barcode;
 
     List<GetProduct> filteredProducts = [];
@@ -1131,20 +1164,11 @@ class BillingPageState extends State<BillingPage>
     } finally {
       debugPrint(
           "🔴 [BillingPage.processBarcode] Finally block - resetting processing flag...");
-      // Reset the flag and ensure barcode is always cleared
-      Future.delayed(const Duration(milliseconds: 750), () {
-        if (mounted) {
-          debugPrint(
-              "🔴 [BillingPage.processBarcode] Resetting _isProcessingBarcode to false");
-          setState(() {
-            _isProcessingBarcode = false;
-            // Ensure barcode is always cleared
-            barcodeController.clear();
-          });
-          debugPrint(
-              "🔴 [BillingPage.processBarcode] Processing complete - ready for next scan");
-        }
-      });
+      if (mounted) {
+        setState(() {
+          barcodeController.clear();
+        });
+      }
       debugPrint(
           "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END ==========\n");
     }
