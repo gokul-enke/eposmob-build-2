@@ -2263,8 +2263,7 @@ class LocalProductProvider extends ChangeNotifier {
         customerName: customerName ?? _savedOrders[index].customerName,
         customerPhone: customerPhone ?? _savedOrders[index].customerPhone,
         comment: comment ?? _savedOrders[index].comment,
-        createdAt:
-            DateHelper.now().toIso8601String(), // Keep original creation date
+        createdAt: _savedOrders[index].createdAt,
         total: total,
         deliveryMethod: deliveryMethod ?? _savedOrders[index].deliveryMethod,
         // Update or preserve API-compatible fields
