@@ -39,14 +39,14 @@ android {
         keystoreProperties.load(keystorePropertiesFile.inputStream())
     }
 
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String?
-        }
-    }
+//    signingConfigs {
+//        create("release") {
+//            keyAlias = keystoreProperties["keyAlias"] as String?
+//            keyPassword = keystoreProperties["keyPassword"] as String?
+//            storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+//            storePassword = keystoreProperties["storePassword"] as String?
+//        }
+//    }
 
     buildTypes {
         release {
