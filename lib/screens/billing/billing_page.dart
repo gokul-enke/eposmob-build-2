@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -154,6 +155,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
+  final ListQueue<String> _barcodeQueue = ListQueue<String>();
   bool _toCustomerCreditEnabled = false;
   bool _isResyncingProducts = false;
 
@@ -273,7 +275,7 @@ class BillingPageState extends State<BillingPage>
       debugPrint("🟡 [BillingPage] Widget mounted: $mounted");
       if (mounted) {
         debugPrint("🟡 [BillingPage] Calling processBarcode()...");
-        processBarcode(barcode);
+        _enqueueBarcode(barcode);
       } else {
         debugPrint(
             "⚠️ [BillingPage] Widget not mounted - skipping processBarcode");
@@ -630,11 +632,40 @@ class BillingPageState extends State<BillingPage>
             }
           } else {
             // Single method
-            _isCashSelected = pm.toUpperCase() == 'CASH';
-            _isCardSelected = pm.toUpperCase() == 'CARD';
-            _isUpiSelected = pm.toUpperCase() == 'UPI';
-            _isDebitSelected = pm.toUpperCase() == 'DEBIT';
-            _isCodSelected = pm.toUpperCase() == 'COD';
+            final billingProvider =
+                Provider.of<BillingProvider>(context, listen: false);
+            final masterDataProvider =
+                Provider.of<MasterDataProvider>(context, listen: false);
+
+            final cashId = billingProvider.cashPaymentMethodId;
+            final cardId = billingProvider.cardPaymentMethodId;
+            final upiId = billingProvider.upiPaymentMethodId;
+            final codId = billingProvider.codPaymentMethodId;
+
+            String normalizedMethod = pm.toUpperCase();
+            final int? methodId = int.tryParse(pm);
+            if (methodId != null) {
+              final resolved = masterDataProvider.getPaymentMethodValue(methodId);
+              if (resolved != null && resolved.isNotEmpty) {
+                normalizedMethod = resolved.toUpperCase();
+              }
+            }
+
+            bool isMethodMatch(List<String> candidates) {
+              final upperCandidates =
+                  candidates.map((c) => c.toUpperCase()).toList(growable: false);
+              return upperCandidates.contains(normalizedMethod) ||
+                  upperCandidates.contains(pm.toUpperCase());
+            }
+
+            _isCashSelected =
+                isMethodMatch(['CASH', if (cashId != null) cashId]);
+            _isCardSelected =
+                isMethodMatch(['CARD', if (cardId != null) cardId]);
+            _isUpiSelected =
+                isMethodMatch(['UPI', if (upiId != null) upiId]);
+            _isDebitSelected = isMethodMatch(['DEBIT']);
+            _isCodSelected = isMethodMatch(['COD', if (codId != null) codId]);
 
             final paid = currentOrder.paidAmount ?? '0.0';
             if (_isCashSelected) _cashAmountController.text = paid;
@@ -678,6 +709,19 @@ class BillingPageState extends State<BillingPage>
 
         // 6. Restore To Customer Credit flag
         _toCustomerCreditEnabled = currentOrder.toCustomerCredit ?? false;
+
+        // Mark checkout payment step as completed when a saved order has payment data
+        _hasOpenedPaymentModalOnce = _isCashSelected ||
+            _isCardSelected ||
+            _isUpiSelected ||
+            _isCodSelected ||
+            _isDebitSelected ||
+            _toCustomerCreditEnabled ||
+            (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_debitAmountController.text) ?? 0) > 0;
       });
 
       // 7. Final UI Updates
@@ -891,8 +935,13 @@ class BillingPageState extends State<BillingPage>
 
   void _focusTextField() {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    Provider.of<CustomerProvider>(context, listen: false)
-        .loadAllCustomers(accessToken!);
+    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+    if ((customerProvider.allCustomers == null ||
+            customerProvider.allCustomers!.isEmpty) &&
+        accessToken != null &&
+        accessToken.isNotEmpty) {
+      customerProvider.loadAllCustomers(accessToken);
+    }
     // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -935,6 +984,38 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> processBarcode(String barcode) async {
+    _enqueueBarcode(barcode);
+  }
+
+  void _enqueueBarcode(String barcode) {
+    final sanitizedBarcode = barcode.trim();
+    if (sanitizedBarcode.isEmpty) {
+      return;
+    }
+
+    _barcodeQueue.addLast(sanitizedBarcode);
+    _processNextBarcode();
+  }
+
+  Future<void> _processNextBarcode() async {
+    if (!mounted || _isProcessingBarcode || _barcodeQueue.isEmpty) {
+      return;
+    }
+
+    _isProcessingBarcode = true;
+    final barcode = _barcodeQueue.removeFirst();
+
+    try {
+      await _processBarcodeInternal(barcode);
+    } finally {
+      _isProcessingBarcode = false;
+      if (_barcodeQueue.isNotEmpty && mounted) {
+        Future.microtask(_processNextBarcode);
+      }
+    }
+  }
+
+  Future<void> _processBarcodeInternal(String barcode) async {
     debugPrint(
         "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE START ==========");
     debugPrint("🔴 [BillingPage.processBarcode] Input barcode: '$barcode'");
@@ -945,22 +1026,16 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "🔴 [BillingPage.processBarcode] barcode.isEmpty: ${barcode.isEmpty}");
 
-    // If a barcode is already being processed, or if the input is empty, do nothing.
-    if (_isProcessingBarcode || barcode.isEmpty) {
+    // If input is empty, do nothing.
+    if (barcode.isEmpty) {
       debugPrint(
-          "⚠️ [BillingPage.processBarcode] SKIPPING - Already processing or empty barcode");
+          "⚠️ [BillingPage.processBarcode] SKIPPING - Empty barcode");
       debugPrint(
           "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END (SKIPPED) ==========\n");
       return;
     }
 
     debugPrint("✅ [BillingPage.processBarcode] Starting barcode processing...");
-    // Set the flag to true to prevent duplicate processing.
-    setState(() {
-      _isProcessingBarcode = true;
-    });
-    debugPrint(
-        "🔴 [BillingPage.processBarcode] _isProcessingBarcode set to true");
     String query = barcode;
 
     List<GetProduct> filteredProducts = [];
@@ -1089,20 +1164,11 @@ class BillingPageState extends State<BillingPage>
     } finally {
       debugPrint(
           "🔴 [BillingPage.processBarcode] Finally block - resetting processing flag...");
-      // Reset the flag and ensure barcode is always cleared
-      Future.delayed(const Duration(milliseconds: 750), () {
-        if (mounted) {
-          debugPrint(
-              "🔴 [BillingPage.processBarcode] Resetting _isProcessingBarcode to false");
-          setState(() {
-            _isProcessingBarcode = false;
-            // Ensure barcode is always cleared
-            barcodeController.clear();
-          });
-          debugPrint(
-              "🔴 [BillingPage.processBarcode] Processing complete - ready for next scan");
-        }
-      });
+      if (mounted) {
+        setState(() {
+          barcodeController.clear();
+        });
+      }
       debugPrint(
           "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END ==========\n");
     }
@@ -4348,8 +4414,37 @@ class BillingPageState extends State<BillingPage>
   }
 
   // Function to load a saved order for editing
-  void _loadSavedOrderForEditing(String orderId) {
+  void _loadSavedOrderForEditing(String orderId) async {
     try {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+
+      final methods = await masterDataProvider.fetchPaymentMethods();
+      if (methods != null && mounted) {
+        String? cashId, cardId, upiId, codId;
+        for (var m in methods) {
+          final val = m.value.toUpperCase();
+          if (val == 'CASH') {
+            cashId = m.id.toString();
+          } else if (val == 'CARD') {
+            cardId = m.id.toString();
+          } else if (val == 'UPI') {
+            upiId = m.id.toString();
+          } else if (val == 'COD') {
+            codId = m.id.toString();
+          }
+        }
+
+        billingProvider.updatePaymentMethodIds(
+          cashId: cashId,
+          cardId: cardId,
+          upiId: upiId,
+          codId: codId,
+        );
+      }
+
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -4953,31 +5048,6 @@ class BillingPageState extends State<BillingPage>
     _focusNode.unfocus();
     FocusManager.instance.primaryFocus?.unfocus();
 
-    // Reset payment state to start fresh each time modal opens
-    setState(() {
-      _hasOpenedPaymentModalOnce = false;
-
-      // Reset payment method selections
-      _isCashSelected = false;
-      _isCardSelected = false;
-      _isUpiSelected = false;
-      _isCodSelected = false;
-      _isDebitSelected = false;
-
-      // Clear payment amount controllers
-      _cashAmountController.clear();
-      _cardAmountController.clear();
-      _upiAmountController.clear();
-      _codAmountController.clear();
-      _debitAmountController.clear();
-
-      // Reset transaction number
-      _transactionNumberController.clear();
-
-      // Reset credit flag
-      _toCustomerCreditEnabled = false;
-    });
-
     // Wait for customers to finish loading if they're still being fetched
     if (_isLoadingCustomers) {
       // Show a loading dialog while waiting for customers
@@ -5002,7 +5072,14 @@ class BillingPageState extends State<BillingPage>
 
     // Double-check customerList is not empty, if it is, try fetching one more time
     if ((customerList == null || customerList!.isEmpty) && !_isLoadingCustomers) {
-      await _fetchCustomers();
+      final isEditingSavedOrder =
+          Provider.of<LocalProductProvider>(context, listen: false)
+                  .currentOrder !=
+              null;
+      await _fetchCustomers(
+        forceRefresh: isEditingSavedOrder,
+        applyDefaultSelection: false,
+      );
       // Wait a bit for the fetch to complete
       await Future.delayed(const Duration(milliseconds: 500));
     }
@@ -5037,8 +5114,23 @@ class BillingPageState extends State<BillingPage>
       );
     }
 
-    // Apply default payment method
-    _applyDefaultPaymentMethod();
+    final hasExistingPaymentState =
+        _isCashSelected ||
+            _isCardSelected ||
+            _isUpiSelected ||
+            _isCodSelected ||
+            _isDebitSelected ||
+            _toCustomerCreditEnabled ||
+            (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_debitAmountController.text) ?? 0) > 0;
+
+    // Apply default payment method only when no existing/rehydrated payment state exists
+    if (!hasExistingPaymentState) {
+      _applyDefaultPaymentMethod();
+    }
 
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
@@ -5046,6 +5138,20 @@ class BillingPageState extends State<BillingPage>
         Provider.of<DeliveryMethodsProvider>(context, listen: false);
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+
+    CustomerListModelData? checkoutSelectedCustomer =
+        selectedCustomer ?? customerSelectionProvider.selectedCustomer;
+
+    // Prefer richer customer data from loaded list when IDs match
+    if (checkoutSelectedCustomer?.id != null && customerList != null) {
+      try {
+        checkoutSelectedCustomer = customerList!.firstWhere(
+          (customer) => customer.id == checkoutSelectedCustomer!.id,
+        );
+      } catch (_) {}
+    }
 
     // Check if delivery should be enabled (if methods exist)
     bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
@@ -5058,7 +5164,7 @@ class BillingPageState extends State<BillingPage>
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
-          selectedCustomer: selectedCustomer,
+          selectedCustomer: checkoutSelectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
 
           // Delivery State

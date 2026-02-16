@@ -1493,28 +1493,82 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       final newEffectiveTotal =
                           widget.cartTotal - newDiscountAmount;
 
-                      String currentCash = _lCashAmount;
-                      if (_lIsCashSelected && currentCash.isNotEmpty) {
-                        final cashVal = double.tryParse(currentCash) ?? 0.0;
-                        if ((cashVal - oldEffectiveTotal).abs() < 0.01) {
-                          currentCash = newEffectiveTotal.toStringAsFixed(2);
+                      String nextCash = _lCashAmount;
+                      String nextCard = _lCardAmount;
+                      String nextUpi = _lUpiAmount;
+                      String nextCod = _lCodAmount;
+
+                      final bool anySelected = _lIsCashSelected ||
+                          _lIsCardSelected ||
+                          _lIsUpiSelected ||
+                          _lIsCodSelected;
+
+                      final int selectedCount =
+                          (_lIsCashSelected ? 1 : 0) +
+                              (_lIsCardSelected ? 1 : 0) +
+                              (_lIsUpiSelected ? 1 : 0) +
+                              (_lIsCodSelected ? 1 : 0);
+
+                      final double cashVal = double.tryParse(_lCashAmount) ?? 0.0;
+                      final double cardVal = double.tryParse(_lCardAmount) ?? 0.0;
+                      final double upiVal = double.tryParse(_lUpiAmount) ?? 0.0;
+                      final double codVal = double.tryParse(_lCodAmount) ?? 0.0;
+                      final double totalPaid = cashVal + cardVal + upiVal + codVal;
+
+                      // If nothing is selected, clear stale amounts so Payment tab auto-fill
+                      // always uses the freshly discounted total.
+                      if (!anySelected) {
+                        nextCash = '';
+                        nextCard = '';
+                        nextUpi = '';
+                        nextCod = '';
+                      }
+
+                      // If exactly one method is selected and it matched old effective total,
+                      // remap it to the new discounted total.
+                      if (selectedCount == 1 &&
+                          (totalPaid - oldEffectiveTotal).abs() < 0.01) {
+                        final remappedAmount = newEffectiveTotal.toStringAsFixed(2);
+                        if (_lIsCashSelected) {
+                          nextCash = remappedAmount;
+                          nextCard = '';
+                          nextUpi = '';
+                          nextCod = '';
+                        } else if (_lIsCardSelected) {
+                          nextCash = '';
+                          nextCard = remappedAmount;
+                          nextUpi = '';
+                          nextCod = '';
+                        } else if (_lIsUpiSelected) {
+                          nextCash = '';
+                          nextCard = '';
+                          nextUpi = remappedAmount;
+                          nextCod = '';
+                        } else if (_lIsCodSelected) {
+                          nextCash = '';
+                          nextCard = '';
+                          nextUpi = '';
+                          nextCod = remappedAmount;
                         }
                       }
 
                       _handleDiscountUpdate(code, applied, newFlatDiscount,
                           newPercentageDiscount);
 
-                      if (currentCash != _lCashAmount) {
+                      if (nextCash != _lCashAmount ||
+                          nextCard != _lCardAmount ||
+                          nextUpi != _lUpiAmount ||
+                          nextCod != _lCodAmount) {
                         _handlePaymentUpdate(
                             _lIsCashSelected,
                             _lIsCardSelected,
                             _lIsUpiSelected,
                             _lIsCodSelected,
                             _lIsDebitSelected,
-                            currentCash,
-                            _lCardAmount,
-                            _lUpiAmount,
-                            _lCodAmount,
+                            nextCash,
+                            nextCard,
+                            nextUpi,
+                            nextCod,
                             _lDebitAmount,
                             _lTransactionNumber,
                             _lToCustomerCreditEnabled,

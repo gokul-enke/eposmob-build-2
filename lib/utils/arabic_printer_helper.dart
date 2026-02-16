@@ -164,30 +164,55 @@ class ReceiptTableColumn {
   final TextAlign align;
   final bool isBold;
   final double scale; // font scale multiplier (1.0 = normal)
+  final int maxLines;
+  final bool autoScaleToFit;
+  final double minScale;
 
   ReceiptTableColumn(this.text,
       {required this.weight,
       this.align = TextAlign.right,
       this.isBold = false,
-      this.scale = 1.0});
+      this.scale = 1.0,
+      this.maxLines = 1,
+      this.autoScaleToFit = true,
+      this.minScale = 0.62});
 
   TextPainter createPainter(
       double totalWidth, double fontSize, TextDirection textDirection) {
-    return TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: fontSize * scale,
-          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          fontFamily: ArabicPrinterHelper.fontFamily,
+    final double maxWidth = totalWidth * weight;
+    final double baseFontSize = fontSize * scale;
+    final double minFontSize = fontSize * minScale;
+
+    TextPainter buildPainter(double size, {String? ellipsis}) {
+      return TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: size,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            fontFamily: ArabicPrinterHelper.fontFamily,
+          ),
         ),
-      ),
-      textDirection: textDirection,
-      textAlign: align,
-      maxLines: 1,
-      ellipsis: '...',
-    )..layout(maxWidth: totalWidth * weight);
+        textDirection: textDirection,
+        textAlign: align,
+        maxLines: maxLines,
+        ellipsis: ellipsis,
+      )..layout(maxWidth: maxWidth);
+    }
+
+    if (autoScaleToFit) {
+      double currentSize = baseFontSize;
+      while (currentSize >= minFontSize) {
+        final candidate = buildPainter(currentSize);
+        if (candidate.didExceedMaxLines == false) {
+          return candidate;
+        }
+        currentSize -= 1.0;
+      }
+    }
+
+    return buildPainter(minFontSize, ellipsis: '...');
   }
 }
 

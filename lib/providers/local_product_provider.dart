@@ -138,6 +138,8 @@ class LocalProductProvider extends ChangeNotifier {
 
   // The complete list of products loaded locally.
   List<GetProduct> _products = [];
+  final Map<String, List<GetProduct>> _productsByBarcode =
+      <String, List<GetProduct>>{};
 
   // A filtered subset of _products, based on search or category.
   List<GetProduct> _filteredProducts = [];
@@ -281,6 +283,28 @@ class LocalProductProvider extends ChangeNotifier {
     _loadCartFromHive();
     _loadSavedOrdersFromHive();
     _initConfirmedOrdersBox();
+  }
+
+  String _normalizeBarcode(String? barcode) {
+    return (barcode ?? '').trim();
+  }
+
+  void _rebuildBarcodeIndex() {
+    _productsByBarcode.clear();
+
+    for (final product in _products) {
+      final barcode = _normalizeBarcode(product.barcode);
+      if (barcode.isEmpty) {
+        continue;
+      }
+
+      final existing = _productsByBarcode[barcode];
+      if (existing == null) {
+        _productsByBarcode[barcode] = <GetProduct>[product];
+      } else {
+        existing.add(product);
+      }
+    }
   }
 
   // Initialize the confirmed orders box safely
@@ -450,6 +474,7 @@ class LocalProductProvider extends ChangeNotifier {
         return GetProduct.fromJson(jsonData);
       }).toList();
       _filteredProducts = List.from(_products);
+      _rebuildBarcodeIndex();
       debugPrint(
           "✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}");
       notifyListeners();
@@ -766,6 +791,7 @@ class LocalProductProvider extends ChangeNotifier {
     _products = products;
     // Initially, set filtered products same as the full list.
     _filteredProducts = List.from(_products);
+    _rebuildBarcodeIndex();
     _saveProductsToHive();
     notifyListeners();
   }
@@ -928,6 +954,7 @@ class LocalProductProvider extends ChangeNotifier {
         _products = allProducts;
       }
       _filteredProducts = List.from(_products);
+      _rebuildBarcodeIndex();
       _updatePagination();
       _saveProductsToHive();
       if (successResponses > 0) {
@@ -1614,6 +1641,7 @@ class LocalProductProvider extends ChangeNotifier {
   void resetProducts() {
     _products = [];
     _filteredProducts = [];
+    _productsByBarcode.clear();
     _productsBox.clear();
     notifyListeners();
   }
@@ -1621,6 +1649,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// Refreshes products by reinitializing the filtered list to the full product list.
   void refreshProducts() {
     _filteredProducts = List.from(_products);
+    _rebuildBarcodeIndex();
     notifyListeners();
   }
 
@@ -1839,17 +1868,16 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   List<GetProduct> filterProductByBarcode({required String barCode}) {
-    debugPrint("filterProductByBarcode $barCode");
-    List<GetProduct> filteredProducts = [];
-    // Filter the products
-    filteredProducts =
-        _products.where((product) => product.barcode == barCode).toList();
+    final normalizedBarcode = _normalizeBarcode(barCode);
+    debugPrint("filterProductByBarcode $normalizedBarcode");
+    final filteredProducts =
+      List<GetProduct>.from(_productsByBarcode[normalizedBarcode] ?? const []);
 
     // Check if any product was found before accessing .first
     if (filteredProducts.isNotEmpty) {
       debugPrint(filteredProducts.first.productName);
     } else {
-      debugPrint("No product found for barcode: $barCode");
+      debugPrint("No product found for barcode: $normalizedBarcode");
     }
     return filteredProducts;
   }
@@ -2263,8 +2291,7 @@ class LocalProductProvider extends ChangeNotifier {
         customerName: customerName ?? _savedOrders[index].customerName,
         customerPhone: customerPhone ?? _savedOrders[index].customerPhone,
         comment: comment ?? _savedOrders[index].comment,
-        createdAt:
-            DateHelper.now().toIso8601String(), // Keep original creation date
+        createdAt: _savedOrders[index].createdAt,
         total: total,
         deliveryMethod: deliveryMethod ?? _savedOrders[index].deliveryMethod,
         // Update or preserve API-compatible fields
