@@ -51,23 +51,27 @@ class SalesReturnData {
 
   factory SalesReturnData.fromJson(Map<String, dynamic> json) {
     return SalesReturnData(
-      currentPage: json['current_page'],
-      data: (json['data'] as List)
-          .map((order) => SalesReturnOrder.fromJson(order))
-          .toList(),
-      firstPageUrl: json['first_page_url'],
-      from: json['from'],
-      lastPage: json['last_page'],
-      lastPageUrl: json['last_page_url'],
-      links: (json['links'] as List)
-          .map((link) => SalesReturnLink.fromJson(link))
-          .toList(),
-      nextPageUrl: json['next_page_url'],
-      path: json['path'],
-      perPage: json['per_page'],
-      prevPageUrl: json['prev_page_url'],
-      to: json['to'],
-      total: json['total'],
+      currentPage: json['current_page'] ?? 1,
+      data: (json['data'] as List?)
+              ?.map((order) => SalesReturnOrder.fromJson(order))
+              .toList() ??
+          [],
+      firstPageUrl: json['first_page_url']?.toString() ?? '',
+      from: json['from'] ?? 0,
+      lastPage: json['last_page'] ?? 1,
+      lastPageUrl: json['last_page_url']?.toString() ?? '',
+      links: (json['links'] as List?)
+              ?.map((link) => SalesReturnLink.fromJson(link))
+              .toList() ??
+          [],
+      nextPageUrl: json['next_page_url']?.toString(),
+      path: json['path']?.toString() ?? '',
+      perPage: json['per_page'] is int
+          ? json['per_page']
+          : int.tryParse(json['per_page']?.toString() ?? '15') ?? 15,
+      prevPageUrl: json['prev_page_url']?.toString(),
+      to: json['to'] ?? 0,
+      total: json['total'] ?? 0,
     );
   }
 }
@@ -117,13 +121,25 @@ class SalesReturnOrder {
 
   factory SalesReturnOrder.fromJson(Map<String, dynamic> json) {
     return SalesReturnOrder(
-      id: json['id'],
-      orderId: json['order_id'],
-      totalAmount: json['total_amount'] ?? '0.00', // Default value
-      userId: json['user_id'],
-      status: json['status'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      orderId: json['order_id'] is int
+          ? json['order_id']
+          : int.tryParse(json['order_id']?.toString() ?? '0') ?? 0,
+      totalAmount: json['total_amount']?.toString() ?? '0.00',
+      userId: json['user_id'] is int
+          ? json['user_id']
+          : int.tryParse(json['user_id']?.toString() ?? '0') ?? 0,
+      status: json['status'] is int
+          ? json['status']
+          : int.tryParse(json['status']?.toString() ?? '0') ?? 0,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime.now(),
       items: (json['items'] as List?)
               ?.map((item) => SalesReturnItem.fromJson(item))
               .toList() ??
@@ -158,16 +174,26 @@ class SalesReturnItem {
 
   factory SalesReturnItem.fromJson(Map<String, dynamic> json) {
     return SalesReturnItem(
-      id: json['id'],
-      orderReturnId: json['order_return_id'],
-      cartItemId: json['cart_item_id'],
-      price: json['price']?.toString() ?? '0.00', // Convert to string and provide default
-      reason: json['reason'] ?? '', // Provide an empty string if null
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      orderReturnId: json['order_return_id'] is int
+          ? json['order_return_id']
+          : int.tryParse(json['order_return_id']?.toString() ?? '0') ?? 0,
+      cartItemId: json['cart_item_id'] is int
+          ? json['cart_item_id']
+          : int.tryParse(json['cart_item_id']?.toString() ?? '0') ?? 0,
+      price: json['price']?.toString() ?? '0.00',
+      reason: json['reason']?.toString() ?? '',
       quantity: (json['quantity'] is String)
           ? num.tryParse(json['quantity']) ?? 0
-          : json['quantity'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+          : json['quantity'] ?? 0,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
       cartItem: CartItem.fromJson(json['cart_item']),
     );
   }
@@ -206,21 +232,36 @@ class CartItem {
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
     return CartItem(
-      id: json['id'],
-      cartId: json['cart_id'],
-      categoryId: json['category_id'],
-      productId: json['product_id'],
-      productStockId: json['product_stock_id'], // This can be null
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      cartId: json['cart_id'] is int
+          ? json['cart_id']
+          : int.tryParse(json['cart_id']?.toString() ?? '0') ?? 0,
+      categoryId: json['category_id'] is int
+          ? json['category_id']
+          : int.tryParse(json['category_id']?.toString() ?? '0') ?? 0,
+      productId: json['product_id'] is int
+          ? json['product_id']
+          : int.tryParse(json['product_id']?.toString() ?? '0') ?? 0,
+      productStockId: json['product_stock_id'] is int
+          ? json['product_stock_id']
+          : int.tryParse(json['product_stock_id']?.toString() ?? '0'),
       quantity: (json['quantity'] is String)
           ? num.tryParse(json['quantity']) ?? 0
-          : json['quantity'],
-      unitPrice: json['unit_price'].toString(),
-      totalPrice: json['total_price'].toString(),
-      taxRate: json['tax_rate'].toString(),
-      taxAmount: json['tax_amount'].toString(),
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-      product: json['product'] != null ? Product.fromJson(json['product']) : null,
+          : json['quantity'] ?? 0,
+      unitPrice: json['unit_price']?.toString() ?? '0.00',
+      totalPrice: json['total_price']?.toString() ?? '0.00',
+      taxRate: json['tax_rate']?.toString() ?? '0.00',
+      taxAmount: json['tax_amount']?.toString() ?? '0.00',
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      product:
+          json['product'] != null ? Product.fromJson(json['product']) : null,
     );
   }
 }
@@ -266,23 +307,39 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'],
-      categoryId: json['category_id'],
-      barcode: json['barcode'], // This can be null
-      name: json['name'],
-      description: json['description'], // This can be null
-      slug: json['slug'],
-      active: json['active'],
-      price: json['price'].toString(),
-      mrp: json['mrp'].toString(),
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      categoryId: json['category_id'] is int
+          ? json['category_id']
+          : int.tryParse(json['category_id']?.toString() ?? '0') ?? 0,
+      barcode: json['barcode']?.toString(),
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString(),
+      slug: json['slug']?.toString() ?? '',
+      active: json['active'] is int
+          ? json['active']
+          : int.tryParse(json['active']?.toString() ?? '0') ?? 0,
+      price: json['price']?.toString() ?? '0.00',
+      mrp: json['mrp']?.toString() ?? '0.00',
       purchasePrice: json['purchase_price']?.toString(),
-      unit: json['unit'],
-      sku: json['sku'], // This can be null
-      reorderLevel: json['reorder_level'],
-      userId: json['user_id'],
-      companyId: json['company_id'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      unit: json['unit']?.toString() ?? '',
+      sku: json['sku']?.toString(),
+      reorderLevel: json['reorder_level'] is int
+          ? json['reorder_level']
+          : int.tryParse(json['reorder_level']?.toString() ?? '0') ?? 0,
+      userId: json['user_id'] is int
+          ? json['user_id']
+          : int.tryParse(json['user_id']?.toString() ?? '0') ?? 0,
+      companyId: json['company_id'] is int
+          ? json['company_id']
+          : int.tryParse(json['company_id']?.toString() ?? '0') ?? 0,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at']) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 }
@@ -337,30 +394,54 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['id'],
-      cartId: json['cart_id'],
-      addressId: json['address_id'],
-      orderDate: json['order_date'],
-      orderNumber: json['order_number'],
-      paymentId: json['payment_id'],
-      paymentMethod: json['payment_method'] != null
-          ? List<String>.from(json['payment_method'])
-          : null,
-      paymentStatus: json['payment_status'],
-      deliveryStatus: json['delivery_status'],
-      status: json['status'],
-      subTotal: json['sub_total'].toString(),
-      discount: json['discount'].toString(),
-      grandTotal: json['grand_total'].toString(),
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      cartId: json['cart_id'] is int
+          ? json['cart_id']
+          : int.tryParse(json['cart_id']?.toString() ?? '0') ?? 0,
+      addressId: json['address_id'] is int
+          ? json['address_id']
+          : int.tryParse(json['address_id']?.toString() ?? '0'),
+      orderDate: json['order_date']?.toString() ?? '',
+      orderNumber: json['order_number']?.toString() ?? '',
+      // Handling possible List for payment_id
+      paymentId: json['payment_id'] is List
+          ? (json['payment_id'].isNotEmpty
+              ? int.tryParse(json['payment_id'][0].toString())
+              : null)
+          : (json['payment_id'] is int
+              ? json['payment_id']
+              : int.tryParse(json['payment_id']?.toString() ?? '')),
+      paymentMethod: json['payment_method'] is List
+          ? List<String>.from(json['payment_method'].map((v) => v.toString()))
+          : (json['payment_method'] != null
+              ? [json['payment_method'].toString()]
+              : null),
+      paymentStatus: json['payment_status']?.toString(),
+      deliveryStatus: json['delivery_status']?.toString(),
+      status: json['status']?.toString() ?? '',
+      subTotal: json['sub_total']?.toString() ?? '0.00',
+      discount: json['discount']?.toString() ?? '0.00',
+      grandTotal: json['grand_total']?.toString() ?? '0.00',
       tax: json['tax']?.toString(),
       shippingCost: json['shipping_cost']?.toString(),
-      sourceType: json['source_type'],
-      deliveryMethodId: json['delivery_method_id'],
-      companyId: json['company_id'],
-      customer:
-          json['customer'] != null ? OrderCustomer.fromJson(json['customer']) : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      sourceType: json['source_type']?.toString() ?? '',
+      deliveryMethodId: json['delivery_method_id'] is int
+          ? json['delivery_method_id']
+          : int.tryParse(json['delivery_method_id']?.toString() ?? '0') ?? 0,
+      companyId: json['company_id'] is int
+          ? json['company_id']
+          : int.tryParse(json['company_id']?.toString() ?? '0') ?? 0,
+      customer: json['customer'] != null
+          ? OrderCustomer.fromJson(json['customer'])
+          : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at']) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 }
@@ -380,10 +461,18 @@ class OrderCustomer {
 
   factory OrderCustomer.fromJson(Map<String, dynamic> json) {
     return OrderCustomer(
-      id: json['id'],
-      userId: json['user_id'],
-      laravelThroughKey: json['laravel_through_key'],
-      user: json['user'] != null ? OrderCustomerUser.fromJson(json['user']) : null,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      userId: json['user_id'] is int
+          ? json['user_id']
+          : int.tryParse(json['user_id']?.toString() ?? '0') ?? 0,
+      laravelThroughKey: json['laravel_through_key'] is int
+          ? json['laravel_through_key']
+          : int.tryParse(json['laravel_through_key']?.toString() ?? '0'),
+      user: json['user'] != null
+          ? OrderCustomerUser.fromJson(json['user'])
+          : null,
     );
   }
 }

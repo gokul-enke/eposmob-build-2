@@ -842,19 +842,19 @@ class SupermarketLayout implements ReceiptLayout {
     if (isEnglish) {
       if (displayConfig?['showSLNumber']?.visible == true) {
         headerCols.add(ReceiptTableColumn(slLabel,
-            weight: 0.08, align: TextAlign.left, isBold: true, scale: 0.75));
+            weight: 0.06, align: TextAlign.left, isBold: true, scale: 0.75));
       }
       if (displayConfig?['showParticulars']?.visible == true) {
         headerCols.add(ReceiptTableColumn(particularsLabel,
             weight:
-                displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+                displayConfig?['showSLNumber']?.visible == true ? 0.18 : 0.24,
             align: TextAlign.left,
             isBold: true,
             scale: 0.75));
       }
       if (displayConfig?['showMRP']?.visible == true) {
         headerCols.add(ReceiptTableColumn(mrpLabel,
-            weight: 0.15, align: TextAlign.center, isBold: true, scale: 0.75));
+            weight: 0.13, align: TextAlign.center, isBold: true, scale: 0.75));
       }
       if (displayConfig?['showQty']?.visible == true) {
         headerCols.add(ReceiptTableColumn(qtyLabel,
@@ -862,15 +862,15 @@ class SupermarketLayout implements ReceiptLayout {
       }
       if (displayConfig?['showRate']?.visible == true) {
         headerCols.add(ReceiptTableColumn(rateLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true, scale: 0.75));
+            weight: 0.14, align: TextAlign.right, isBold: true, scale: 0.75));
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols.add(ReceiptTableColumn(taxHeaderLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true, scale: 0.75));
+            weight: 0.16, align: TextAlign.right, isBold: true, scale: 0.75));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(ReceiptTableColumn(totalLabel,
-            weight: 0.18, align: TextAlign.right, isBold: true, scale: 0.75));
+            weight: 0.21, align: TextAlign.right, isBold: true, scale: 0.75));
       }
     } else {
       // Arabic header (RTL)
@@ -987,26 +987,26 @@ class SupermarketLayout implements ReceiptLayout {
       }
       // Price details row
       List<ReceiptTableColumn> priceCols = [];
-      priceCols.add(ReceiptTableColumn("", weight: 0.25));
+      priceCols.add(ReceiptTableColumn("", weight: 0.24));
       if (displayConfig?['showMRP']?.visible == true) {
         priceCols.add(ReceiptTableColumn(mrp,
-            weight: 0.15, align: TextAlign.center, scale: 0.7));
+            weight: 0.13, align: TextAlign.center, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showQty']?.visible == true) {
         priceCols.add(ReceiptTableColumn(quantity,
-            weight: 0.12, align: TextAlign.center, scale: 0.7));
+            weight: 0.12, align: TextAlign.center, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceCols.add(ReceiptTableColumn(unitPrice,
-            weight: 0.15, align: TextAlign.right, scale: 0.7));
+            weight: 0.14, align: TextAlign.right, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         priceCols.add(ReceiptTableColumn(itemTaxAmount,
-            weight: 0.15, align: TextAlign.right, scale: 0.7));
+            weight: 0.16, align: TextAlign.right, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         priceCols.add(ReceiptTableColumn(totalPrice,
-            weight: 0.18, align: TextAlign.right, scale: 0.7, isBold: true));
+            weight: 0.21, align: TextAlign.right, scale: 0.7, isBold: true));
       }
       if (priceCols.length > 1) {
         rows.add(ReceiptTableRow(priceCols));
@@ -1050,25 +1050,25 @@ class SupermarketLayout implements ReceiptLayout {
       List<ReceiptTableColumn> priceCols = [];
       if (displayConfig?['showTotal']?.visible == true) {
         priceCols.add(ReceiptTableColumn(totalPrice,
-            weight: 0.18, align: TextAlign.right, scale: 0.7, isBold: true));
+            weight: 0.25, align: TextAlign.right, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         priceCols.add(ReceiptTableColumn(itemTaxAmount,
-            weight: 0.15, align: TextAlign.right, scale: 0.7));
+            weight: 0.15, align: TextAlign.right, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceCols.add(ReceiptTableColumn(unitPrice,
-            weight: 0.15, align: TextAlign.right, scale: 0.7));
+            weight: 0.15, align: TextAlign.right, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showQty']?.visible == true) {
         priceCols.add(ReceiptTableColumn(quantity,
-            weight: 0.12, align: TextAlign.right, scale: 0.7));
+            weight: 0.12, align: TextAlign.right, scale: 0.7, isBold: true));
       }
       if (displayConfig?['showMRP']?.visible == true) {
         priceCols.add(ReceiptTableColumn(mrp,
-            weight: 0.15, align: TextAlign.right, scale: 0.7));
+            weight: 0.15, align: TextAlign.right, scale: 0.7, isBold: true));
       }
-      priceCols.add(ReceiptTableColumn("", weight: 0.25));
+      priceCols.add(ReceiptTableColumn("", weight: 0.18));
       if (priceCols.length > 1) {
         rows.add(ReceiptTableRow(priceCols));
       }
@@ -1939,7 +1939,6 @@ class SupermarketLayout implements ReceiptLayout {
     }
     return null;
   }
-
 }
 
 /// Thin solid line divider for Standard theme
@@ -2009,7 +2008,7 @@ class StandardBoxedTotalsRow extends ReceiptRow {
   StandardBoxedTotalsRow({
     required this.items,
     this.cornerRadius = 12.0,
-    this.padding = 6.0,
+    this.padding = 12.0,
   });
 
   @override
