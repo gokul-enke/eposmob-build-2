@@ -47,8 +47,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       await salesProvider.fetchSalesReturn(
-          accessToken: accessToken ?? "",
-          page: currentPage);
+          accessToken: accessToken ?? "", page: currentPage);
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -178,11 +177,12 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
           ),
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           columnWidths: const {
-            0: FlexColumnWidth(1),
-            1: FlexColumnWidth(2),
-            2: FlexColumnWidth(2),
-            3: FlexColumnWidth(1),
-            4: FlexColumnWidth(1),
+            0: FlexColumnWidth(1.5), // Order Number
+            1: FlexColumnWidth(1), // Quantity
+            2: FlexColumnWidth(2), // Amount
+            3: FlexColumnWidth(1), // Status
+            4: FlexColumnWidth(1.5), // Date
+            5: FlexColumnWidth(1.5), // Action
           },
           children: [
             _buildTableHeader(),
@@ -205,11 +205,12 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                 ),
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 columnWidths: const {
-                  0: FlexColumnWidth(1),
-                  1: FlexColumnWidth(2),
-                  2: FlexColumnWidth(2),
-                  3: FlexColumnWidth(1),
-                  4: FlexColumnWidth(1),
+                  0: FlexColumnWidth(1.5), // Order Number
+                  1: FlexColumnWidth(1), // Quantity
+                  2: FlexColumnWidth(2), // Amount
+                  3: FlexColumnWidth(1), // Status
+                  4: FlexColumnWidth(1.5), // Date
+                  5: FlexColumnWidth(1.5), // Action
                 },
                 children: [
                   _buildTableRow(order, index + 1),
@@ -259,9 +260,9 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     // Calculate total quantity by summing all item quantities
     int totalQuantity = order.items.fold<int>(
       0,
-      (sum, item) => sum + (item.quantity is int ? item.quantity as int : (item.quantity as double).toInt()),
+      (sum, item) => sum + item.quantity.toInt(),
     );
-    
+
     return TableRow(
       children: [
         _buildTableCell(order.order?.orderNumber ?? order.orderId.toString()),
@@ -277,12 +278,13 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                   final currency = settings.appSettings?.currency ?? 'INR';
                   final raw = order.totalAmount; // string
                   final parsed = double.tryParse(raw);
-                  final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
+                  final amount =
+                      parsed != null ? parsed.toStringAsFixed(2) : raw;
                   return Text(
                     '$currency $amount',
                     style: buildCustomStyle(
                       FontWeightManager.medium,
-                      FontSize.s9,
+                      FontSize.s12,
                       0.13,
                       Colors.black,
                     ),
@@ -336,11 +338,13 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                           ),
                           onPressed: () {
                             // Convert SalesReturnOrder items to OrderReturnItem list
-                            List<OrderReturnItem> returnItems = order.items.map((item) {
+                            List<OrderReturnItem> returnItems =
+                                order.items.map((item) {
                               return OrderReturnItem(
                                 id: item.id,
-                                productName: item.cartItem.product?.name ?? 'Unknown',
-                                quantity: item.quantity is int ? item.quantity as int : (item.quantity as double).toInt(),
+                                productName:
+                                    item.cartItem.product?.name ?? 'Unknown',
+                                quantity: item.quantity.toInt(),
                                 reason: item.reason,
                               );
                             }).toList();
@@ -353,8 +357,10 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                                   returnItems: returnItems,
                                   returnTotalAmount: order.totalAmount,
                                   orderDate: order.createdAt.toString(),
-                                  orderNumber: order.order?.orderNumber ?? order.orderId.toString(),
-                                  customerName: order.order?.customer?.user?.name,
+                                  orderNumber: order.order?.orderNumber ??
+                                      order.orderId.toString(),
+                                  customerName:
+                                      order.order?.customer?.user?.name,
                                 ),
                               ),
                             );
@@ -412,7 +418,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             text,
             style: buildCustomStyle(
               FontWeightManager.medium,
-              FontSize.s9,
+              FontSize.s12,
               0.13,
               Colors.black,
             ),

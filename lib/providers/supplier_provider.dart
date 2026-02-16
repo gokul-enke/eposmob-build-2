@@ -335,7 +335,8 @@ class SupplierProvider with ChangeNotifier {
         },
       );
 
-      debugPrint('Supplier Transactions API Response status: ${response.statusCode}');
+      debugPrint(
+          'Supplier Transactions API Response status: ${response.statusCode}');
       debugPrint('Supplier Transactions API URL: $url');
 
       if (response.statusCode == 200) {
@@ -377,9 +378,10 @@ class SupplierProvider with ChangeNotifier {
       'email': email,
       'phone': phone,
       'balance': double.tryParse(balance) ?? 0.0, // ✅ send number not string
-      'payment_type': paymentStatus,
+      'type': 1,
       'address': address,
       'alt_phone': altPhone,
+      'payment_type': paymentStatus,
       // 'product_categories': productCategories,
     };
 
@@ -520,7 +522,8 @@ class SupplierProvider with ChangeNotifier {
           final safeErrorResponse = Map<String, dynamic>.from(errorResponse);
           return {
             'status': 'error',
-            'message': safeErrorResponse['message'] ?? 'Failed to update supplier',
+            'message':
+                safeErrorResponse['message'] ?? 'Failed to update supplier',
             'errors': safeErrorResponse['data'] ?? {},
           };
         } catch (jsonError) {
@@ -539,7 +542,8 @@ class SupplierProvider with ChangeNotifier {
       debugPrint('Network/Exception error: $e');
       return {
         'status': 'error',
-        'message': 'Network error: Please check your internet connection and try again.'
+        'message':
+            'Network error: Please check your internet connection and try again.'
       };
     }
   }

@@ -4801,62 +4801,81 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     stockItems[index].salePrice;
                 _getMrpController(index).text = stockItems[index].mrp;
 
-                // Auto-fill unit dropdown - find the matching unit key
+                // Auto-fill unit dropdown
                 if (product.unit != null && product.unit!.isNotEmpty) {
-                  debugPrint('🔍 SEARCHING FOR UNIT KEY: ${product.unit}');
                   final purchaseProvider =
                       Provider.of<PurchaseProvider>(context, listen: false);
                   final unitList = purchaseProvider.getUnitList;
                   if (unitList != null) {
-                    // Find the key that matches the unit value
-                    String? matchingUnitKey = unitList.entries
-                        .firstWhere(
-                          (entry) => entry.value == product.unit,
-                          orElse: () => const MapEntry('', ''),
-                        )
-                        .key;
-                    if (matchingUnitKey.isNotEmpty) {
-                      stockItems[index].selectedUnit =
-                          matchingUnitKey; // Store unit ID
+                    // 1) Try to match by ID (Key) - The log showed "3310"
+                    String? matchingUnitKey;
+                    if (unitList.containsKey(product.unit)) {
+                      matchingUnitKey = product.unit;
+                    }
+
+                    // 2) Try to match by Name (Value) if ID matching fails
+                    if (matchingUnitKey == null) {
+                      final targetUnit = product.unit!.toLowerCase().trim();
+                      try {
+                        matchingUnitKey = unitList.entries
+                            .firstWhere(
+                              (entry) =>
+                                  entry.value.toLowerCase().trim() ==
+                                  targetUnit,
+                            )
+                            .key;
+                      } catch (_) {}
+                    }
+
+                    if (matchingUnitKey != null && matchingUnitKey.isNotEmpty) {
+                      stockItems[index].selectedUnit = matchingUnitKey;
                       stockItems[index].unit =
-                          product.unit!; // Store unit name for display
-                      debugPrint('   - Unit Key (ID): $matchingUnitKey');
-                      debugPrint('   - Unit Name: ${product.unit}');
+                          unitList[matchingUnitKey] ?? product.unit!;
+                      debugPrint(
+                          '   - ✅ UNIT AUTO-FILL: ${stockItems[index].unit} ($matchingUnitKey)');
                     }
                   }
                 }
 
-                // Auto-fill purchase rate: use only product-level purchasePrice; do not fall back to stock entries
-                if (product.purchasePrice != null &&
-                    product.purchasePrice!.toString().isNotEmpty) {
-                  stockItems[index].purchaseRate =
-                      product.purchasePrice!.toString();
-                  debugPrint(
-                      '   - Purchase Rate (from product): ${stockItems[index].purchaseRate}');
-                } else {
-                  debugPrint(
-                      '   - Purchase Rate: not available on product, leaving empty');
+                // Auto-fill Prices (MRP and Sale Price)
+                stockItems[index].salePrice =
+                    product.price?.price?.toString() ?? '0';
+                stockItems[index].mrp = product.mrp?.toString() ??
+                    product.price?.price?.toString() ??
+                    '0';
+                stockItems[index].unit = product.unit ?? '';
+
+                // Purchase Rate Fallback: Try product.purchasePrice, then fallback to latest stock purchase_price
+                String? purchaseRate = (product.purchasePrice != null &&
+                        product.purchasePrice.toString().isNotEmpty &&
+                        product.purchasePrice != "0")
+                    ? product.purchasePrice.toString()
+                    : null;
+
+                if (purchaseRate == null &&
+                    product.stock != null &&
+                    product.stock!.isNotEmpty) {
+                  final latestStock = product.stock!.first;
+                  if (latestStock.purchasePrice != null &&
+                      latestStock.purchasePrice!.isNotEmpty) {
+                    purchaseRate = latestStock.purchasePrice;
+                  }
                 }
+                stockItems[index].purchaseRate = purchaseRate ?? '';
 
-                // Auto-fill wholesale price: leave empty as no wholesale price field exists on product
-                stockItems[index].wholesale = '';
-                debugPrint(
-                    '   - Wholesale Price: not available on product, leaving empty');
-
-                // Auto-fill Minimum Units for Wholesale: leave empty as no wholesale min unit field exists on product
-                stockItems[index].batchNumber = '';
-                debugPrint(
-                    '   - Batch Number: not available on product, leaving empty');
-
-                // Update controllers with new values
+                // Update ALL controllers to reflect auto-filled values
+                _getRetailPriceController(index).text =
+                    stockItems[index].salePrice;
+                _getMrpController(index).text = stockItems[index].mrp;
                 _getPurchaseRateController(index).text =
                     stockItems[index].purchaseRate;
-                _getWholesaleController(index).text =
-                    stockItems[index].wholesale;
-                _getBatchNumberController(index).text =
-                    stockItems[index].batchNumber;
+                _getWholesaleController(index).text = '';
+                _getBatchNumberController(index).text = '';
 
-                _markForRecalculation(); // Trigger recalculation
+                debugPrint(
+                    '   - ✅ PRICE AUTO-FILL: Sale: ${stockItems[index].salePrice}, MRP: ${stockItems[index].mrp}, Purchase: ${stockItems[index].purchaseRate}');
+
+                _markForRecalculation();
               });
 
               // Trigger tax calculation for both retail and wholesale prices after product selection
