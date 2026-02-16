@@ -37,6 +37,8 @@ class ReceiptLayoutParams {
   final String? zatcaCompanyName;
   // Flag to indicate if the customer is the default/walk-in customer
   final bool isDefaultCustomer;
+  // Flag to hide phone for default/walk-in customer
+  final bool hideDefaultCustomerPhone;
   final String? netExcTax;
 
   const ReceiptLayoutParams({
@@ -69,6 +71,7 @@ class ReceiptLayoutParams {
     this.zatcaVatNumber,
     this.zatcaCompanyName,
     this.isDefaultCustomer = false,
+    this.hideDefaultCustomerPhone = true,
     this.netExcTax,
   });
 

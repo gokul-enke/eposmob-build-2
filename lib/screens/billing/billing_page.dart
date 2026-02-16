@@ -2299,9 +2299,11 @@ class BillingPageState extends State<BillingPage>
                           itemBuilder: (context, index) {
                             final item = cartItems[index];
                             return Container(
-                              color: index % 2 == 0
-                                  ? Colors.white
-                                  : Colors.grey.shade50,
+                                    color: index == 0
+                                      ? Colors.green.withOpacity(0.32)
+                                  : (index % 2 == 0
+                                      ? Colors.white
+                                      : Colors.grey.shade50),
                               child: Row(
                                 children: [
                                   // Index Number

@@ -442,7 +442,9 @@ class ClassicReceiptLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left),
         ]));
       }
-      if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
+        if (params.customerPhone != null &&
+          params.customerPhone!.isNotEmpty &&
+          !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
             displayConfig?['showCustomerPhoneMasked']?.visible ??
                 displayConfig?['maskCustomerPhone']?.visible ??
@@ -498,7 +500,9 @@ class ClassicReceiptLayout implements ReceiptLayout {
               weight: 0.35, align: TextAlign.right, isBold: true),
         ]));
       }
-      if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
+        if (params.customerPhone != null &&
+          params.customerPhone!.isNotEmpty &&
+          !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
             displayConfig?['showCustomerPhoneMasked']?.visible ??
                 displayConfig?['maskCustomerPhone']?.visible ??

@@ -35,7 +35,7 @@
     "gst": "GST",
     "tax_amount": "Tax Amount",
     "total": "Total",
-    "total_payable": "Total Payable",
+    "total_payable": "Net Total",
     "table_serial": "#",
     "table_item_name": "Item Name",
     "table_unit": "Unit",

@@ -476,7 +476,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
+        if (params.customerPhone != null &&
+          params.customerPhone!.isNotEmpty &&
+          !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
             displayConfig?['showCustomerPhoneMasked']?.visible ??
                 displayConfig?['maskCustomerPhone']?.visible ??
@@ -537,7 +539,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerPhone != null && params.customerPhone!.isNotEmpty) {
+        if (params.customerPhone != null &&
+          params.customerPhone!.isNotEmpty &&
+          !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
             displayConfig?['showCustomerPhoneMasked']?.visible ??
                 displayConfig?['maskCustomerPhone']?.visible ??
