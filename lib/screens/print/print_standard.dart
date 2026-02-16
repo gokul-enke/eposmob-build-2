@@ -138,6 +138,8 @@ class StandardPrinter {
     // ZATCA fields for Saudi Arabia e-invoicing
     String? zatcaVatNumber,
     String? zatcaCompanyName,
+    bool isDefaultCustomer = false,
+    bool hideDefaultCustomerPhone = true,
   }) async {
     debugPrint(
         "[LOGO_DEBUG] generateAndPrintPDF started for order: $orderNumber");
@@ -601,6 +603,8 @@ class StandardPrinter {
                 bodyStyle,
                 paymentMethod: paymentMethod,
                 customerAlternatePhone: customerAlternatePhone,
+                isDefaultCustomer: isDefaultCustomer,
+                hideDefaultCustomerPhone: hideDefaultCustomerPhone,
                 isRtl: isRtl,
                 arabicFontBold: arabicFontBold,
                 displayConfig: updatedSettings,
@@ -1737,6 +1741,8 @@ class StandardPrinter {
     pw.TextStyle bodyStyle, {
     String? customerAlternatePhone,
     String? paymentMethod,
+    bool isDefaultCustomer = false,
+    bool hideDefaultCustomerPhone = true,
     bool isRtl = false,
     pw.Font? arabicFontBold,
     Map<String, DisplayOption>? displayConfig,
@@ -1753,9 +1759,13 @@ class StandardPrinter {
     List<pw.Widget> customerDetails = [];
 
     final bool maskPhone = displayConfig?['maskCustomerPhone']?.visible ?? true;
+    final bool shouldShowPhone =
+      customerPhone != null &&
+      customerPhone.isNotEmpty &&
+      !(isDefaultCustomer && hideDefaultCustomerPhone);
 
     if ((customerName != null && customerName.isNotEmpty) &&
-        (customerPhone != null && customerPhone.isNotEmpty)) {
+      shouldShowPhone) {
       final String displayedPhone = maskPhone
           ? StringHelper.maskStringShowLast4(customerPhone)
           : customerPhone;
@@ -1767,7 +1777,7 @@ class StandardPrinter {
       if (customerName != null && customerName.isNotEmpty) {
         customerDetails.add(pw.Text(customerName, style: customerDetailStyle));
       }
-      if (customerPhone != null && customerPhone.isNotEmpty) {
+      if (shouldShowPhone) {
         final String displayedPhone = maskPhone
             ? StringHelper.maskStringShowLast4(customerPhone)
             : customerPhone;
@@ -1779,7 +1789,7 @@ class StandardPrinter {
     }
 
     if (customerAddress != null && customerAddress.isNotEmpty) {
-      if (customerName == null && customerPhone == null) {
+      if ((customerName == null || customerName.isEmpty) && !shouldShowPhone) {
         // If name/phone empty, add as just text
         customerDetails
             .add(pw.Text(customerAddress, style: customerDetailStyle));
@@ -1799,6 +1809,10 @@ class StandardPrinter {
             : 'Payment Method: $paymentMethod',
         style: customerDetailStyle,
       ));
+    }
+
+    if (customerDetails.isEmpty) {
+      return pw.SizedBox();
     }
 
     return pw.Container(
@@ -2453,6 +2467,8 @@ class StandardPrinter {
     String? orderComment,
     String? customerAlternatePhone,
     String? paymentMethod,
+    bool isDefaultCustomer = false,
+    bool hideDefaultCustomerPhone = true,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -2816,6 +2832,8 @@ class StandardPrinter {
                     bodyStyle,
                     paymentMethod: paymentMethod,
                     customerAlternatePhone: customerAlternatePhone,
+                    isDefaultCustomer: isDefaultCustomer,
+                    hideDefaultCustomerPhone: hideDefaultCustomerPhone,
                     isRtl: isRtl,
                     arabicFontBold: arabicFontBold,
                   ),

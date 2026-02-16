@@ -23,6 +23,7 @@ class AppSettings {
   final String defaultPaymentMethod;
   final bool posPrintDoubleBill;
   final bool skipCustomerSelection;
+  final bool hideDefaultPhone;
 
   AppSettings({
     required this.barcodeSales,
@@ -47,6 +48,7 @@ class AppSettings {
     required this.defaultPaymentMethod,
     required this.posPrintDoubleBill,
     required this.skipCustomerSelection,
+    required this.hideDefaultPhone,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -122,6 +124,8 @@ class AppSettings {
           settingsMap['POS_PRINT_DOUBLE_BILL']?['status'] ?? false,
       skipCustomerSelection:
           settingsMap['SKIP_CUSTOMER_SELECTION']?['status'] ?? false,
+        hideDefaultPhone:
+          settingsMap['HIDE_DEFAULT_PHONE']?['status'] ?? true,
     );
   }
 
@@ -253,6 +257,12 @@ class AppSettings {
           "code": "SKIP_CUSTOMER_SELECTION",
           "value": "",
           "status": skipCustomerSelection.toString(),
+        },
+        {
+          "name": "Hide Default Customer Phone",
+          "code": "HIDE_DEFAULT_PHONE",
+          "value": "",
+          "status": hideDefaultPhone.toString(),
         },
       ],
     };

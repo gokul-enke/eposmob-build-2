@@ -30,44 +30,67 @@ class BuildPaymentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Widget leftContent = titleWidget ??
+        BuildTitle(
+          title: title,
+          textStyle: firstRowTextStyle ??
+              buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.18,
+                color,
+              ),
+        );
+
+    final Widget rightContent = isTextField == false
+        ? BuildTitle(
+            title: amount,
+            textStyle: secondRowTextStyle ??
+                buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.18,
+                  color,
+                ),
+          )
+        : child ??
+            BuildTitle(
+              title: amount,
+              textStyle: secondRowTextStyle ??
+                  buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.18,
+                    color,
+                  ),
+            );
+
     return Padding(
       padding: padding ?? const EdgeInsets.all(0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          titleWidget ??
-              BuildTitle(
-                title: title,
-                textStyle: firstRowTextStyle ??
-                    buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.18,
-                      color,
-                    ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: leftContent,
               ),
-          isTextField == false
-              ? BuildTitle(
-                  title: amount,
-                  textStyle: secondRowTextStyle ??
-                      buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.18,
-                        color,
-                      ),
-                )
-              : child ??
-                  BuildTitle(
-                    title: amount,
-                    textStyle: secondRowTextStyle ??
-                        buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.18,
-                          color,
-                        ),
-                  ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: rightContent,
+              ),
+            ),
+          ),
         ],
       ),
     );

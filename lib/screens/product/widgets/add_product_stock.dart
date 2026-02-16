@@ -4342,6 +4342,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   isRequired: true,
                   keyboardType: TextInputType.number,
                   controller: _getPurchaseRateController(index),
+                  inputFontSize: FontSize.s13,
                 ),
               ),
               const SizedBox(width: 6),
@@ -4360,6 +4361,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   isRequired: true,
                   keyboardType: TextInputType.number,
                   controller: _getRetailPriceController(index),
+                  inputFontSize: FontSize.s13,
                 ),
               ),
               const SizedBox(width: 6),
@@ -4375,6 +4377,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   },
                   keyboardType: TextInputType.number,
                   controller: _getMrpController(index),
+                  inputFontSize: FontSize.s13,
                 ),
               ),
             ],
@@ -4443,6 +4446,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
     TextEditingController? controller,
+    double inputFontSize = FontSize.s11,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4480,7 +4484,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             keyboardType: keyboardType,
             style: buildCustomStyle(
               FontWeightManager.regular,
-              FontSize.s11,
+              inputFontSize,
               0.27,
               ColorManager.textColor,
             ),
@@ -5050,18 +5054,22 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      "Including Tax",
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s10,
-                        0.27,
-                        Colors.grey.shade600,
+                    Expanded(
+                      child: Text(
+                        "Including Tax",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s11,
+                          0.27,
+                          Colors.grey.shade600,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     Transform.scale(
-                      scale: 0.8,
+                      scale: 0.75,
                       child: Switch(
                         value: item.taxInclude,
                         onChanged: (bool value) {
@@ -5137,7 +5145,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       Color color, bool isIncluding) {
     return Container(
       height: 80,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -5161,7 +5169,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     title == "Retail Price" ? "1" : "2",
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
-                      FontSize.s10,
+                      FontSize.s11,
                       0.27,
                       Colors.white,
                     ),
@@ -5172,9 +5180,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               Expanded(
                 child: Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s11,
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
                     0.27,
                     color,
                   ),
@@ -5182,23 +5192,38 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ),
             ],
           ),
-          Text(
-            priceText,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s12,
-              0.27,
-              Colors.black87,
-            ),
-          ),
-          Text(
-            taxText,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s10,
-              0.27,
-              Colors.grey.shade600,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  priceText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s13,
+                    0.27,
+                    Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                fit: FlexFit.loose,
+                child: Text(
+                  taxText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s10,
+                    0.27,
+                    Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

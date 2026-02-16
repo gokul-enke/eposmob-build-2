@@ -204,6 +204,7 @@ class PrintPage extends StatefulWidget {
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
         isDefaultCustomer: isDefaultCustomer,
+        hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
         netExcTax: netExcTax,
       );
 
@@ -239,6 +240,8 @@ class PrintPage extends StatefulWidget {
           paymentMethod: paymentMethod,
           zatcaVatNumber: zatcaVatNumber,
           zatcaCompanyName: zatcaCompanyName,
+          isDefaultCustomer: isDefaultCustomer,
+          hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
         );
       }
 
@@ -650,6 +653,11 @@ class _PrintPageState extends State<PrintPage> {
     } else {
       debugPrint("[PrintPage] No ZATCA credentials found, using standard QR");
     }
+
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final bool hideDefaultCustomerPhone =
+        appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
     
     // Create params object for the layout
     final params = ReceiptLayoutParams(
@@ -682,6 +690,7 @@ class _PrintPageState extends State<PrintPage> {
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
+      hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
     );
     
@@ -715,6 +724,10 @@ class _PrintPageState extends State<PrintPage> {
   Future<void> _generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
     final standardPrinter = StandardPrinter(context);
+    final appSettingsProvider =
+      Provider.of<AppSettingsProvider>(context, listen: false);
+    final bool hideDefaultCustomerPhone =
+      appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
     // Fetch ZATCA credentials for Saudi Arabia e-invoicing
     final sharedPrefProvider = SharedPreferenceProvider();
@@ -754,6 +767,8 @@ class _PrintPageState extends State<PrintPage> {
       paymentMethod: widget.paymentMethod,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
+      isDefaultCustomer: widget.isDefaultCustomer,
+      hideDefaultCustomerPhone: hideDefaultCustomerPhone,
     );
   }
 
