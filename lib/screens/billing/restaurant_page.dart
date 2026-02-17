@@ -7298,7 +7298,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 discountAmount:
                     orderDetails.data!.priceSummary?.discount?.toString() ??
                         "0.00",
-                orderDate: DateHelper.formatInputToDisplay(orderDate),
+                orderDate: orderDate,
                 orderNumber: orderDetails.data!.orderNumber ?? "",
                 tokenNumber: orderDetails.data?.tokenNumber,
                 customerName: customerName,

@@ -4730,7 +4730,7 @@ class BillingPageState extends State<BillingPage>
                 discountAmount:
                     orderDetails.data!.priceSummary?.discount?.toString() ??
                         "0.00",
-                orderDate: DateHelper.formatInputToDisplay(orderDate),
+                orderDate: orderDate,
                 orderNumber: orderDetails.data!.orderNumber.toString(),
                 tokenNumber: orderDetails.data?.tokenNumber,
                 customerName: customerName,

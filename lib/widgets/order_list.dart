@@ -1253,9 +1253,7 @@ class _OrderListState extends State<OrderList> {
                                             formattedTotal: formattedTotal,
                                             discountAmount: Provider.of<CartProvider>(context, listen: false)
                                                 .priceSummary?.discount?.toString() ?? "0.00",
-                                            orderDate:
-                                                DateHelper.formatInputToDisplay(
-                                                    DateHelper.now().toString()),
+                                            orderDate: DateHelper.now().toIso8601String(),
                                             orderNumber: "#000000",
                                             // storeName: cartProductItems,
                                           ),

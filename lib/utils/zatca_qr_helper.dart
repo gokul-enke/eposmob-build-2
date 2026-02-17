@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:convert/convert.dart';
+import 'package:intl/intl.dart';
 
 /// ZATCA Phase 1 QR Code Helper
 ///
@@ -187,6 +188,33 @@ class ZatcaQrHelper {
   /// Generate QR code data from invoice details with validation
   ///
   /// Returns empty string if ZATCA credentials are not available or invalid
+  DateTime? _parseInvoiceTimestamp(String invoiceDate) {
+    final raw = invoiceDate.trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {}
+
+    final fallbackFormats = <String>[
+      'dd-MM-yyyy hh:mm:ss a',
+      'dd-MM-yyyy hh:mm a',
+      'dd-MM-yyyy HH:mm:ss',
+      'dd-MM-yyyy HH:mm',
+      'dd-MM-yyyy',
+    ];
+
+    for (final format in fallbackFormats) {
+      try {
+        return DateFormat(format).parse(raw);
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
   String generateQrForInvoice({
     required String? sellerName,
     required String? vatNumber,
@@ -205,13 +233,11 @@ class ZatcaQrHelper {
       return '';
     }
 
-    // Parse invoice date
-    DateTime timestamp;
-    try {
-      timestamp = DateTime.parse(invoiceDate);
-    } catch (e) {
-      debugPrint('[ZatcaQrHelper] Invalid date format, using current time');
-      timestamp = DateTime.now();
+    final parsedTimestamp = _parseInvoiceTimestamp(invoiceDate);
+    final timestamp = parsedTimestamp ?? DateTime.now();
+    if (parsedTimestamp == null) {
+      debugPrint(
+          '[ZatcaQrHelper] Invalid invoice date "$invoiceDate", using current time');
     }
 
     return generateZatcaQrData(
