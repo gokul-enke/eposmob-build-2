@@ -806,9 +806,12 @@ class LocalProductProvider extends ChangeNotifier {
     int currentPage = 1;
     const int batchSize = 10; // Fetch 10 pages concurrently
     final prefsProvider = prefs_provider.SharedPreferenceProvider();
-    final lastSyncIso = refresh ? null : await prefsProvider.getLastProductSyncIso();
+    final lastSyncIso =
+        refresh ? null : await prefsProvider.getLastProductSyncIso();
     final syncEndIso = DateHelper.now().toUtc().toIso8601String();
-    final useDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
+    final requestedDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
+    final hasLocalBaseline = _products.isNotEmpty;
+    final useDelta = requestedDelta && hasLocalBaseline;
     int successResponses = 0;
 
     isLoading = true;
@@ -821,6 +824,9 @@ class LocalProductProvider extends ChangeNotifier {
       if (useDelta) {
         debugPrint(
             "🕒 [API] Delta sync enabled: updated_at_range=$lastSyncIso,$syncEndIso");
+      } else if (requestedDelta && !hasLocalBaseline) {
+        debugPrint(
+            "♻️ [API] Delta sync marker exists but local product baseline is empty. Switching to full product sync.");
       }
 
       // Get API key from SharedPreferences
@@ -1870,8 +1876,8 @@ class LocalProductProvider extends ChangeNotifier {
   List<GetProduct> filterProductByBarcode({required String barCode}) {
     final normalizedBarcode = _normalizeBarcode(barCode);
     debugPrint("filterProductByBarcode $normalizedBarcode");
-    final filteredProducts =
-      List<GetProduct>.from(_productsByBarcode[normalizedBarcode] ?? const []);
+    final filteredProducts = List<GetProduct>.from(
+        _productsByBarcode[normalizedBarcode] ?? const []);
 
     // Check if any product was found before accessing .first
     if (filteredProducts.isNotEmpty) {
