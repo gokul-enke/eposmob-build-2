@@ -15,6 +15,8 @@ class CategoryProvider extends ChangeNotifier {
   bool isLoading = false;
   bool _isCategoriesLoaded =
       false; // Add this flag to track if categories are loaded
+  DateTime? _lastSuccessfulCategoryFetchAt;
+  static const Duration _categoryCacheValidity = Duration(minutes: 2);
   List<Category>? categoryList = [];
   List<Category>? searchCategoryList = [];
   List<Category>? filteredcategoryList = [];
@@ -104,18 +106,26 @@ class CategoryProvider extends ChangeNotifier {
     bool sellableOnly = true,
     bool force = false,
   }) async {
+    final bool isUnfilteredRequest = filterName == null && filterParent == null;
+    final bool hasInMemoryCategories =
+        categoryList != null && categoryList!.isNotEmpty;
+    final bool cacheIsFresh = _lastSuccessfulCategoryFetchAt != null &&
+        DateTime.now().difference(_lastSuccessfulCategoryFetchAt!) <
+            _categoryCacheValidity;
+
     // If categories are already loaded and no filtering is applied, return early
     // BUT also check if categoryList is not empty to avoid empty list issues
     if (!force &&
         _isCategoriesLoaded &&
-        filterName == null &&
-        filterParent == null &&
-        categoryList != null &&
-        categoryList!.isNotEmpty) {
+        isUnfilteredRequest &&
+        hasInMemoryCategories &&
+        cacheIsFresh) {
       debugPrint(
           "🏷️ [CategoryProvider] Using cached categories: ${categoryList!.length}");
       return;
     }
+
+    bool loadedFromHiveCache = false;
 
     // If filtering is applied, we need to make a new API call regardless
     if (filterName != null || filterParent != null) {
@@ -133,16 +143,20 @@ class CategoryProvider extends ChangeNotifier {
           categoryList = cachedCategories;
           _originalCategoryList = List.from(categoryList!);
           _isCategoriesLoaded = true;
-          isLoading = false;
+          loadedFromHiveCache = true;
           notifyListeners();
           debugPrint("🏷️ [CategoryProvider] Using categories from Hive cache");
-          return;
         }
       }
     }
 
-    isLoading = true;
-    notifyListeners();
+    if (loadedFromHiveCache) {
+      debugPrint(
+          "🏷️ [CategoryProvider] Refreshing categories from API in background");
+    } else {
+      isLoading = true;
+      notifyListeners();
+    }
 
     // Ensure we always send a valid page number; default to 1 if not provided
     final int effectivePage = page ?? 1;
@@ -196,6 +210,7 @@ class CategoryProvider extends ChangeNotifier {
         if (filterName == null && filterParent == null) {
           _originalCategoryList = List.from(categoryList!);
           _isCategoriesLoaded = true;
+          _lastSuccessfulCategoryFetchAt = DateTime.now();
 
           // Save to Hive for future offline use
           if (categoryList != null && categoryList!.isNotEmpty) {
@@ -212,9 +227,15 @@ class CategoryProvider extends ChangeNotifier {
       }
     } catch (error) {
       isLoading = false;
-      _isCategoriesLoaded = false; // Reset flag on error
+      if (categoryList == null || categoryList!.isEmpty) {
+        _isCategoriesLoaded =
+            false; // Reset flag on error only when no fallback
+      }
       notifyListeners();
       debugPrint('Error fetching categories: $error');
+      if (loadedFromHiveCache) {
+        return;
+      }
       rethrow;
     }
   }
