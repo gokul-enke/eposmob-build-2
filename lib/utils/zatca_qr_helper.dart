@@ -106,15 +106,22 @@ class ZatcaQrHelper {
 
   /// Format DateTime to ZATCA-compliant ISO 8601 format
   ///
-  /// Format: "YYYY-MM-DDTHH:MM:SSZ" (UTC)
+  /// Format: "YYYY-MM-DDTHH:MM:SS±HH:MM" (local time with offset)
   String _formatTimestamp(DateTime dateTime) {
-    final utc = dateTime.toUtc();
-    return '${utc.year.toString().padLeft(4, '0')}-'
-        '${utc.month.toString().padLeft(2, '0')}-'
-        '${utc.day.toString().padLeft(2, '0')}T'
-        '${utc.hour.toString().padLeft(2, '0')}:'
-        '${utc.minute.toString().padLeft(2, '0')}:'
-        '${utc.second.toString().padLeft(2, '0')}Z';
+    final offset = dateTime.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final absOffset = offset.abs();
+    final offsetHours = absOffset.inHours.toString().padLeft(2, '0');
+    final offsetMinutes =
+        (absOffset.inMinutes % 60).toString().padLeft(2, '0');
+
+    return '${dateTime.year.toString().padLeft(4, '0')}-'
+        '${dateTime.month.toString().padLeft(2, '0')}-'
+        '${dateTime.day.toString().padLeft(2, '0')}T'
+        '${dateTime.hour.toString().padLeft(2, '0')}:'
+        '${dateTime.minute.toString().padLeft(2, '0')}:'
+        '${dateTime.second.toString().padLeft(2, '0')}'
+        '$sign$offsetHours:$offsetMinutes';
   }
 
   /// Parse a ZATCA QR code data (for debugging/verification)

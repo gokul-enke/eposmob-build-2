@@ -788,6 +788,7 @@ class StandardPrinter {
                     zatcaVatNumber: zatcaVatNumber,
                     zatcaCompanyName: zatcaCompanyName,
                     orderDate: orderDate,
+                    isFromLocalStorage: isFromLocalStorage,
                     formattedTotal: formattedTotal,
                     totalTax: totalTax,
                     manualPaymentGateway: manualPaymentGateway,
@@ -1535,6 +1536,7 @@ class StandardPrinter {
     required String? zatcaVatNumber,
     required String? zatcaCompanyName,
     required String orderDate,
+    required bool isFromLocalStorage,
     required String formattedTotal,
     required double totalTax,
     required PaymentGateway manualPaymentGateway,
@@ -1559,11 +1561,16 @@ class StandardPrinter {
       // Generate ZATCA Phase 1 compliant QR code
       final zatcaHelper = ZatcaQrHelper();
       final totalAmount = double.tryParse(formattedTotal) ?? 0.0;
+      final qrInvoiceDate = isFromLocalStorage
+          ? DateHelper.formatToISODateFromIST(orderDate)
+          : ((orderDate.contains(' AM') || orderDate.contains(' PM'))
+              ? orderDate
+              : '${DateHelper.formatISODate(orderDate)} ${DateHelper.formatISOTimeOnlyToIST(orderDate)}');
 
       qrData = zatcaHelper.generateQrForInvoice(
         sellerName: zatcaCompanyName,
         vatNumber: zatcaVatNumber,
-        invoiceDate: orderDate,
+        invoiceDate: qrInvoiceDate,
         totalAmount: totalAmount,
         vatAmount: totalTax,
       );

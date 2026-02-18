@@ -1239,12 +1239,16 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
       // Check if ZATCA credentials are available
       if (params.hasZatcaCredentials) {
+        final qrInvoiceDate = params.isFromLocalStorage
+            ? '${DateHelper.formatToISODateOnlyFromISO(params.orderDate)} ${DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)}'
+            : '${DateHelper.formatISODate(params.orderDate)} ${DateHelper.formatISOTimeOnlyToIST(params.orderDate)}';
+
         // Generate ZATCA Phase 1 compliant QR code
         final zatcaHelper = ZatcaQrHelper();
         final zatcaQrData = zatcaHelper.generateQrForInvoice(
           sellerName: params.zatcaCompanyName,
           vatNumber: params.zatcaVatNumber,
-          invoiceDate: params.orderDate,
+          invoiceDate: qrInvoiceDate,
           totalAmount: params.totalAmountAsDouble,
           vatAmount: params.totalTax,
         );
