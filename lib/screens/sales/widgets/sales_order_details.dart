@@ -369,6 +369,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? customerAlternatePhone = customerDetails?.alternatePhone;
               String? paymentMethod =
                   orderDetailsModelData?.paymentDetails?.paymentMethod;
+                String? deliveryMethod =
+                  orderDetailsModelData?.deliveryMethodName;
 
               String? orderComment;
               if (orderDetailsModelData?.orderProps != null) {
@@ -428,6 +430,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 customerAlternatePhone: customerAlternatePhone,
                 paymentMethod: paymentMethod,
                 orderComment: orderComment,
+                deliveryMethod: deliveryMethod,
                 orderReturns: orderDetailsModelData?.orderReturns,
                 paidAmount: paidAmount > 0 ? paidAmount : null,
                 customerCurrentBalance: customerCurrentBalance,
@@ -456,6 +459,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       customerAlternatePhone: customerAlternatePhone,
                       paymentMethod: paymentMethod,
                       orderComment: orderComment,
+                      deliveryMethod: deliveryMethod,
                       orderReturns: orderDetailsModelData?.orderReturns,
                       paidAmount: paidAmount > 0 ? paidAmount : null,
                       customerCurrentBalance: customerCurrentBalance,
@@ -682,6 +686,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       String? customerAlternatePhone = customerDetails?.alternatePhone;
       String? paymentMethod =
           orderDetailsModelData?.paymentDetails?.paymentMethod;
+        String? deliveryMethod = orderDetailsModelData?.deliveryMethodName;
 
       String? orderComment;
       if (orderDetailsModelData?.orderProps != null) {
@@ -728,6 +733,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
       );
 
       Navigator.of(context, rootNavigator: true).pop();

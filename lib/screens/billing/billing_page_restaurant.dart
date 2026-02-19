@@ -4771,8 +4771,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                 paidAmount: totalPaid > 0 ? totalPaid : null,
                 customerAlternatePhone: customerAlternatePhone,
                 paymentMethod: paymentMethod,
-                paymentBreakdown: paymentBreakdown,
+                paymentBreakdown: paymentBreakdown, 
                 orderComment: orderComment,
+                deliveryMethod: orderDetails.data?.deliveryMethodName ?? deliveryMethod,
                 isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                         context,
                         listen: false)
@@ -6085,6 +6086,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
+    String? deliveryMethod,
     bool isDefaultCustomer = false,
     String? netExcTax,
   }) async {
@@ -6112,6 +6114,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
+      deliveryMethod: deliveryMethod,
       isDefaultCustomer: isDefaultCustomer,
       netExcTax: netExcTax,
     );
@@ -6141,6 +6144,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
+            deliveryMethod: deliveryMethod,
             isDefaultCustomer: isDefaultCustomer,
             netExcTax: netExcTax,
           ),
@@ -6242,6 +6246,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           paymentMethod: savedOrder.paymentMethod,
           customerAlternatePhone: savedOrder.alternatePhone,
           orderComment: savedOrder.comment,
+            deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount:
               (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
                   ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)

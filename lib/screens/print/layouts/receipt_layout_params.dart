@@ -29,6 +29,7 @@ class ReceiptLayoutParams {
   final double? customerCurrentBalance;
   final double? paidAmount;
   final String? orderComment;
+  final String? deliveryMethod;
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
@@ -65,6 +66,7 @@ class ReceiptLayoutParams {
     this.customerCurrentBalance,
     this.paidAmount,
     this.orderComment,
+    this.deliveryMethod,
     this.customerAlternatePhone,
     this.paymentMethod,
     this.paymentBreakdown,

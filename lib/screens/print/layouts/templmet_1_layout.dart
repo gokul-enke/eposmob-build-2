@@ -567,7 +567,8 @@ class SupermarketLayout implements ReceiptLayout {
     if (params.customerName == null &&
         params.customerPhone == null &&
         params.customerAddress == null &&
-        params.orderComment == null) {
+        params.orderComment == null &&
+        params.deliveryMethod == null) {
       return;
     }
 
@@ -623,6 +624,11 @@ class SupermarketLayout implements ReceiptLayout {
                 : 'showComment',
             null,
             isEnglish ? "Comment:" : "تعليق:");
+    final deliveryLabel = isDualLanguage
+      ? _getBilingualLabelHorizontal(displayConfig, 'showDeliveryMethod',
+        null, null, "التوصيل:", "Delivery:")
+      : _getLabel(displayConfig, 'showDeliveryMethod', null,
+        isEnglish ? "Delivery:" : "التوصيل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -687,6 +693,15 @@ class SupermarketLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left, scale: 0.75),
         ]));
       }
+
+      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(deliveryLabel,
+              weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
+          ReceiptTableColumn(params.deliveryMethod!,
+              weight: 0.65, align: TextAlign.left, scale: 0.75),
+        ]));
+      }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
       if (params.customerName != null && params.customerName!.isNotEmpty) {
@@ -731,6 +746,15 @@ class SupermarketLayout implements ReceiptLayout {
           ReceiptTableColumn(params.orderComment!,
               weight: 0.65, align: TextAlign.left, scale: 0.75),
           ReceiptTableColumn(commentLabel,
+              weight: 0.35, align: TextAlign.right, isBold: true, scale: 0.75),
+        ]));
+      }
+
+      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(params.deliveryMethod!,
+              weight: 0.65, align: TextAlign.left, scale: 0.75),
+          ReceiptTableColumn(deliveryLabel,
               weight: 0.35, align: TextAlign.right, isBold: true, scale: 0.75),
         ]));
       }

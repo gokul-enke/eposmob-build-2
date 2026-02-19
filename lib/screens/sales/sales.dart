@@ -304,6 +304,7 @@ class _SalesScreenState extends State<SalesScreen> {
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
       String? paymentMethod = orderData.paymentDetails?.paymentMethod;
+        String? deliveryMethod = orderData.deliveryMethodName;
 
       String? orderComment;
       if (orderData.orderProps != null) {
@@ -346,6 +347,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
       );
 
       // Close loading dialog
@@ -739,6 +741,7 @@ class _SalesScreenState extends State<SalesScreen> {
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
       String? paymentMethod = orderData.paymentDetails?.paymentMethod;
+        String? deliveryMethod = orderData.deliveryMethodName;
 
       String? orderComment;
       if (orderData.orderProps != null) {
@@ -779,6 +782,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
       );
 
       if (pdfFile == null) {
@@ -1342,6 +1346,8 @@ Powered by CloudPOS''',
                     orderDetails.data?.customerDetails?.alternatePhone;
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
+                String? deliveryMethod =
+                  orderDetails.data?.deliveryMethodName;
 
               String? orderComment;
               if (orderDetails.data?.orderProps != null) {
@@ -1425,6 +1431,7 @@ Powered by CloudPOS''',
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
                 orderComment: orderComment,
+                deliveryMethod: deliveryMethod,
                 orderReturns: orderDetails.data?.orderReturns,
                 paidAmount: paidAmount > 0 ? paidAmount : null,
                 customerCurrentBalance: customerCurrentBalance,
@@ -1454,6 +1461,7 @@ Powered by CloudPOS''',
                       paymentMethod: paymentMethod,
                       paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
                       orderComment: orderComment,
+                      deliveryMethod: deliveryMethod,
                       orderReturns: orderDetails.data?.orderReturns,
                       paidAmount: paidAmount > 0 ? paidAmount : null,
                       customerCurrentBalance: customerCurrentBalance,

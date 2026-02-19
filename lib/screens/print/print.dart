@@ -40,6 +40,7 @@ class PrintPage extends StatefulWidget {
   final double? customerCurrentBalance;
   final double? paidAmount;
   final String? orderComment;
+  final String? deliveryMethod;
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
@@ -66,6 +67,7 @@ class PrintPage extends StatefulWidget {
     this.customerCurrentBalance,
     this.paidAmount,
     this.orderComment,
+    this.deliveryMethod,
     this.customerAlternatePhone,
     this.paymentMethod,
     this.paymentBreakdown,
@@ -97,6 +99,7 @@ class PrintPage extends StatefulWidget {
     double? customerCurrentBalance,
     double? paidAmount,
     String? orderComment,
+    String? deliveryMethod,
     String? customerAlternatePhone,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
@@ -198,6 +201,7 @@ class PrintPage extends StatefulWidget {
         customerCurrentBalance: customerCurrentBalance,
         paidAmount: paidAmount,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         paymentBreakdown: paymentBreakdown,
@@ -236,6 +240,7 @@ class PrintPage extends StatefulWidget {
           customerCurrentBalance: customerCurrentBalance,
           paidAmount: paidAmount,
           orderComment: orderComment,
+          deliveryMethod: deliveryMethod,
           customerAlternatePhone: customerAlternatePhone,
           paymentMethod: paymentMethod,
           zatcaVatNumber: zatcaVatNumber,
@@ -684,6 +689,7 @@ class _PrintPageState extends State<PrintPage> {
       customerCurrentBalance: widget.customerCurrentBalance,
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
+      deliveryMethod: widget.deliveryMethod,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       paymentBreakdown: widget.paymentBreakdown,
@@ -763,6 +769,7 @@ class _PrintPageState extends State<PrintPage> {
       customerCurrentBalance: widget.customerCurrentBalance,
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
+      deliveryMethod: widget.deliveryMethod,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       zatcaVatNumber: zatcaVatNumber,

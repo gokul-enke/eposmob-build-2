@@ -133,6 +133,7 @@ class StandardPrinter {
     double? customerCurrentBalance,
     required double? paidAmount,
     String? orderComment,
+    String? deliveryMethod,
     String? customerAlternatePhone,
     String? paymentMethod,
     // ZATCA fields for Saudi Arabia e-invoicing
@@ -773,6 +774,17 @@ class StandardPrinter {
               _buildLabelValueRow(
                 isRtl ? 'تعليق:' : 'Comment:',
                 orderComment,
+                summaryStyle,
+                isRtl: isRtl,
+              ),
+              pw.SizedBox(height: 5),
+            ],
+
+            if (deliveryMethod != null && deliveryMethod.isNotEmpty) ...[
+              pw.SizedBox(height: 5),
+              _buildLabelValueRow(
+                isRtl ? 'التوصيل:' : 'Delivery:',
+                deliveryMethod,
                 summaryStyle,
                 isRtl: isRtl,
               ),
@@ -2472,6 +2484,7 @@ class StandardPrinter {
     double? customerCurrentBalance,
     double? paidAmount,
     String? orderComment,
+    String? deliveryMethod,
     String? customerAlternatePhone,
     String? paymentMethod,
     bool isDefaultCustomer = false,
@@ -2948,6 +2961,21 @@ class StandardPrinter {
                     child: _buildLabelValueRow(
                       isRtl ? 'تعليق:' : 'Comment:',
                       orderComment,
+                      summaryStyle,
+                      isRtl: isRtl,
+                    ),
+                  ),
+                  pw.SizedBox(height: 5),
+                ],
+
+                if (deliveryMethod != null && deliveryMethod.isNotEmpty) ...[
+                  pw.SizedBox(height: 5),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 8),
+                    child: _buildLabelValueRow(
+                      isRtl ? 'التوصيل:' : 'Delivery:',
+                      deliveryMethod,
                       summaryStyle,
                       isRtl: isRtl,
                     ),

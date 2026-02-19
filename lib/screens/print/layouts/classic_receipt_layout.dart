@@ -406,7 +406,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
       return;
     }
 
-    if (params.customerName == null && params.customerPhone == null) {
+    if (params.customerName == null &&
+        params.customerPhone == null &&
+        params.customerAddress == null &&
+        params.orderComment == null &&
+        params.deliveryMethod == null) {
       return;
     }
 
@@ -431,6 +435,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
             : 'showComment',
         null,
         isEnglish ? "Comment:" : "تعليق:");
+    final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
+      isEnglish ? "Delivery:" : "التوصيل:");
 
     if (isEnglish) {
       // English: Label: Value format
@@ -490,6 +496,14 @@ class ClassicReceiptLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left),
         ]));
       }
+      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(deliveryLabel,
+              weight: 0.35, align: TextAlign.left, isBold: true),
+          ReceiptTableColumn(params.deliveryMethod!,
+              weight: 0.65, align: TextAlign.left),
+        ]));
+      }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
       if (params.customerName != null && params.customerName!.isNotEmpty) {
@@ -531,6 +545,14 @@ class ClassicReceiptLayout implements ReceiptLayout {
           ReceiptTableColumn(params.orderComment!,
               weight: 0.65, align: TextAlign.left),
           ReceiptTableColumn(commentLabel,
+              weight: 0.35, align: TextAlign.right, isBold: true),
+        ]));
+      }
+      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(params.deliveryMethod!,
+              weight: 0.65, align: TextAlign.left),
+          ReceiptTableColumn(deliveryLabel,
               weight: 0.35, align: TextAlign.right, isBold: true),
         ]));
       }
