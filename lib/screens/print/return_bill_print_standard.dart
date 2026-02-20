@@ -17,6 +17,8 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/utils/zatca_qr_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReturnBillStandardPrinter {
   final BuildContext context;
@@ -103,7 +105,11 @@ class ReturnBillStandardPrinter {
       // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
           Provider.of<PaymentGatewaysProvider>(context, listen: false);
-      final currencySymbol = Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'Rs.';
+      final currencySymbol =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.currency ??
+              'Rs.';
       final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
           .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
               orElse: () => PaymentGateway(
@@ -122,6 +128,30 @@ class ReturnBillStandardPrinter {
                     createdAt: "",
                     updatedAt: "",
                   ));
+
+      // Fetch ZATCA credentials before PDF build
+      final zatcaPrefs = await SharedPreferences.getInstance();
+      final zatcaVatNum = zatcaPrefs.getString('zatca_vat_number');
+      final zatcaCompName = zatcaPrefs.getString('zatca_company_name');
+      final bool hasZatcaCredentials = zatcaVatNum != null &&
+          zatcaVatNum.isNotEmpty &&
+          zatcaCompName != null &&
+          zatcaCompName.isNotEmpty;
+
+      // Pre-compute QR data
+      String returnQrData = '';
+      if (hasZatcaCredentials) {
+        returnQrData = ZatcaQrHelper().generateQrForInvoice(
+          sellerName: zatcaCompName,
+          vatNumber: zatcaVatNum,
+          invoiceDate: orderDate, // Pass true UTC ISO string
+          totalAmount: double.tryParse(returnTotalAmount) ?? 0.0,
+          vatAmount: 0.0,
+        );
+        debugPrint('[ReturnBillPDF] ZATCA QR generated for return bill');
+      } else if (manualPaymentGateway.link.isNotEmpty) {
+        returnQrData = manualPaymentGateway.link;
+      }
 
       // Determine page format based on paper size
       PdfPageFormat pageFormat =
@@ -314,9 +344,7 @@ class ReturnBillStandardPrinter {
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text(
-                          '$currencySymbol ',
-                          style: netTotalStyle),
+                      pw.Text('$currencySymbol ', style: netTotalStyle),
                       pw.Text(returnTotalAmount, style: netTotalStyle),
                     ],
                   ),
@@ -407,21 +435,23 @@ class ReturnBillStandardPrinter {
 
             pw.SizedBox(height: 5),
 
-            // QR Code
+            // QR Code - ZATCA or payment gateway
             if (displayConfig?['showQRCode']?.visible == true &&
-                manualPaymentGateway.link.isNotEmpty)
+                returnQrData.isNotEmpty)
               pw.Center(
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      displayConfig?['showQRCode']?.value?.toString() ??
-                          'Scan QR to Pay',
+                      hasZatcaCredentials
+                          ? 'ZATCA E-Invoice QR'
+                          : (displayConfig?['showQRCode']?.value?.toString() ??
+                              'Scan QR to Pay'),
                       style: bodyStyle,
                     ),
                     pw.SizedBox(height: 3),
                     pw.BarcodeWidget(
                       barcode: pw.Barcode.qrCode(),
-                      data: manualPaymentGateway.link,
+                      data: returnQrData,
                       width: 80,
                       height: 80,
                     ),

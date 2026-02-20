@@ -625,10 +625,10 @@ class SupermarketLayout implements ReceiptLayout {
             null,
             isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = isDualLanguage
-      ? _getBilingualLabelHorizontal(displayConfig, 'showDeliveryMethod',
-        null, null, "التوصيل:", "Delivery:")
-      : _getLabel(displayConfig, 'showDeliveryMethod', null,
-        isEnglish ? "Delivery:" : "التوصيل:");
+        ? _getBilingualLabelHorizontal(displayConfig, 'showDeliveryMethod',
+            null, null, "التوصيل:", "Delivery:")
+        : _getLabel(displayConfig, 'showDeliveryMethod', null,
+            isEnglish ? "Delivery:" : "التوصيل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -641,7 +641,7 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-        if (params.customerPhone != null &&
+      if (params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -713,7 +713,7 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-        if (params.customerPhone != null &&
+      if (params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -1538,16 +1538,12 @@ class SupermarketLayout implements ReceiptLayout {
         debugPrint(
             '[StandardLayout] ZATCA credentials found, generating ZATCA QR');
 
-        final qrInvoiceDate = params.isFromLocalStorage
-            ? '${DateHelper.formatToISODateOnlyFromISO(params.orderDate)} ${DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)}'
-            : '${DateHelper.formatISODate(params.orderDate)} ${DateHelper.formatISOTimeOnlyToIST(params.orderDate)}';
-
         // Generate ZATCA Phase 1 compliant QR code
         final zatcaHelper = ZatcaQrHelper();
         qrData = zatcaHelper.generateQrForInvoice(
           sellerName: params.zatcaCompanyName,
           vatNumber: params.zatcaVatNumber,
-          invoiceDate: qrInvoiceDate,
+          invoiceDate: params.orderDate, // Pass true UTC ISO string
           totalAmount: params.totalAmountAsDouble,
           vatAmount: params.totalTax,
         );

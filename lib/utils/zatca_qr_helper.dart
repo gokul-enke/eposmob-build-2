@@ -106,22 +106,19 @@ class ZatcaQrHelper {
 
   /// Format DateTime to ZATCA-compliant ISO 8601 format
   ///
-  /// Format: "YYYY-MM-DDTHH:MM:SS±HH:MM" (local time with offset)
+  /// Format: "YYYY-MM-DDTHH:MM:SS+03:00" (Explicit Saudi local time offset)
   String _formatTimestamp(DateTime dateTime) {
-    final offset = dateTime.timeZoneOffset;
-    final sign = offset.isNegative ? '-' : '+';
-    final absOffset = offset.abs();
-    final offsetHours = absOffset.inHours.toString().padLeft(2, '0');
-    final offsetMinutes =
-        (absOffset.inMinutes % 60).toString().padLeft(2, '0');
-
+    // We explicitly append +03:00 (Saudi Arabia offset) because devices generating
+    // the QR code might be in different timezones (e.g. India +05:30).
+    // If we used .toUtc(), an Indian device parsing "20:37" would subtract 5.5 hours.
+    // By appending +03:00, we force validation apps to understand this is exactly
+    // the KSA timezone time matching the printed receipt.
     return '${dateTime.year.toString().padLeft(4, '0')}-'
         '${dateTime.month.toString().padLeft(2, '0')}-'
         '${dateTime.day.toString().padLeft(2, '0')}T'
         '${dateTime.hour.toString().padLeft(2, '0')}:'
         '${dateTime.minute.toString().padLeft(2, '0')}:'
-        '${dateTime.second.toString().padLeft(2, '0')}'
-        '$sign$offsetHours:$offsetMinutes';
+        '${dateTime.second.toString().padLeft(2, '0')}Z';
   }
 
   /// Parse a ZATCA QR code data (for debugging/verification)

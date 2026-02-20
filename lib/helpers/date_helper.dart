@@ -7,10 +7,10 @@ class DateHelper {
   static String? _timeZone;
   // Default fallback (IST) if timezone is invalid or not set
   static const Duration _defaultOffset = Duration(hours: 5, minutes: 30);
-  static int _serverTimeOffset = 0; // Offset in milliseconds (Server Time - Local Time)
+  static int _serverTimeOffset =
+      0; // Offset in milliseconds (Server Time - Local Time)
 
-  static final RegExp _timezoneHintRegex =
-      RegExp(r'(Z|[+-]\d{2}:?\d{2})$');
+  static final RegExp _timezoneHintRegex = RegExp(r'(Z|[+-]\d{2}:?\d{2})$');
 
   static bool _hasExplicitTimezone(String dateString) {
     return _timezoneHintRegex.hasMatch(dateString.trim());
@@ -21,7 +21,7 @@ class DateHelper {
     if (timeZone != null) {
       setTimeZone(timeZone);
     }
-    
+
     final offset = await SharedPreferenceProvider().getServerTimeOffset();
     if (offset != null) {
       _serverTimeOffset = offset;
@@ -49,28 +49,28 @@ class DateHelper {
   static DateTime _convertToLocal(DateTime inputDate) {
     // Assume inputDate is in UTC (as per previous logic)
     // Ensure we have a UTC DateTime object
-    final utcDate = inputDate.isUtc 
-        ? inputDate 
+    final utcDate = inputDate.isUtc
+        ? inputDate
         : DateTime.utc(
-            inputDate.year, 
-            inputDate.month, 
-            inputDate.day, 
-            inputDate.hour, 
-            inputDate.minute, 
+            inputDate.year,
+            inputDate.month,
+            inputDate.day,
+            inputDate.hour,
+            inputDate.minute,
             inputDate.second,
             inputDate.millisecond,
-            inputDate.microsecond
-          );
+            inputDate.microsecond);
 
     if (_timeZone != null) {
       try {
         final location = tz.getLocation(_timeZone!);
         return tz.TZDateTime.from(utcDate, location);
       } catch (e) {
-        debugPrint("DateHelper: Invalid or missing timezone '$_timeZone', falling back to default offset. Error: $e");
+        debugPrint(
+            "DateHelper: Invalid or missing timezone '$_timeZone', falling back to default offset. Error: $e");
       }
     }
-    
+
     // Fallback to manual offset (IST)
     return utcDate.add(_defaultOffset);
   }
@@ -141,30 +141,30 @@ class DateHelper {
         // Example: "21-01-2026 11:51:44 AM" -> parts: [21-01-2026, 11:51:44, AM]
         // We want "11:51 AM"
         if (isoDateString.contains(' AM') || isoDateString.contains(' PM')) {
-           // Extract time part logic
-           // Simple approach: return everything after the first space?
-           // Or just return the string if we can't parse it?
-           // ClassicReceiptLayout expects JUST time here.
-           
-           // Let's try to parse the formatted string to extract time
-           try {
-             final DateFormat inputFormat = DateFormat('dd-MM-yyyy hh:mm:ss a');
-             final DateTime parsed = inputFormat.parse(isoDateString);
-             final DateFormat outputFormat = DateFormat('hh:mm a');
-             return outputFormat.format(parsed);
-           } catch (_) {
-             // If strict parse fails, try splitting
-             final parts = isoDateString.split(' ');
-             if (parts.length >= 3) {
-               // 11:51:44 AM -> 11:51 AM
-               String timePart = parts[1];
-               String amPm = parts[2];
-               if (timePart.contains(':')) {
-                 final timeParts = timePart.split(':');
-                 return "${timeParts[0]}:${timeParts[1]} $amPm";
-               }
-             }
-           }
+          // Extract time part logic
+          // Simple approach: return everything after the first space?
+          // Or just return the string if we can't parse it?
+          // ClassicReceiptLayout expects JUST time here.
+
+          // Let's try to parse the formatted string to extract time
+          try {
+            final DateFormat inputFormat = DateFormat('dd-MM-yyyy hh:mm:ss a');
+            final DateTime parsed = inputFormat.parse(isoDateString);
+            final DateFormat outputFormat = DateFormat('hh:mm a');
+            return outputFormat.format(parsed);
+          } catch (_) {
+            // If strict parse fails, try splitting
+            final parts = isoDateString.split(' ');
+            if (parts.length >= 3) {
+              // 11:51:44 AM -> 11:51 AM
+              String timePart = parts[1];
+              String amPm = parts[2];
+              if (timePart.contains(':')) {
+                final timeParts = timePart.split(':');
+                return "${timeParts[0]}:${timeParts[1]} $amPm";
+              }
+            }
+          }
         }
       }
       return isoDateString;
@@ -211,6 +211,20 @@ class DateHelper {
     final DateTime local = DateTime.parse(isoDateString).toLocal();
     final DateFormat formatter = DateFormat('hh:mm a');
     return formatter.format(local);
+  }
+
+  // To Print Local Date and Time with Seconds from ISO UTC (for ZATCA QR)
+  static String formatISODateTimeWithSecondsToIST(String isoDateString) {
+    try {
+      final parsedDate = DateTime.parse(isoDateString);
+      final localDate = _hasExplicitTimezone(isoDateString)
+          ? _convertToLocal(parsedDate)
+          : parsedDate;
+      final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm:ss a');
+      return formatter.format(localDate);
+    } catch (e) {
+      return isoDateString;
+    }
   }
 
   // Format without timezone conversion (for dates already in target timezone)

@@ -286,7 +286,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
     // Extra Heading 1 (e.g., CR NO)
     if (displayConfig?['showExtraHeading1']?.visible == true) {
-      final extraHeading1 = displayConfig?['showExtraHeading1']?.value as String?;
+      final extraHeading1 =
+          displayConfig?['showExtraHeading1']?.value as String?;
       if (extraHeading1 != null && extraHeading1.isNotEmpty) {
         rows.add(TextRow(extraHeading1, scale: 0.9, isBold: true));
       }
@@ -294,7 +295,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
     // Extra Heading 2 (e.g., VAT NO)
     if (displayConfig?['showExtraHeading2']?.visible == true) {
-      final extraHeading2 = displayConfig?['showExtraHeading2']?.value as String?;
+      final extraHeading2 =
+          displayConfig?['showExtraHeading2']?.value as String?;
       if (extraHeading2 != null && extraHeading2.isNotEmpty) {
         rows.add(TextRow(extraHeading2, scale: 0.9, isBold: true));
       }
@@ -375,15 +377,15 @@ class ClassicReceiptLayout implements ReceiptLayout {
       final invoiceAlign = isEnglish ? TextAlign.left : TextAlign.right;
       final tokenAlign = isEnglish ? TextAlign.right : TextAlign.left;
       final invoiceCol = ReceiptTableColumn(invoiceNumberText,
-        weight: 0.58, align: invoiceAlign, isBold: true);
+          weight: 0.58, align: invoiceAlign, isBold: true);
       final tokenCol = ReceiptTableColumn(tokenText,
-        weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
+          weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
       final spacerCol =
-        ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
+          ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
 
       rows.add(ReceiptTableRow(isEnglish
-        ? [invoiceCol, spacerCol, tokenCol]
-        : [tokenCol, spacerCol, invoiceCol]));
+          ? [invoiceCol, spacerCol, tokenCol]
+          : [tokenCol, spacerCol, invoiceCol]));
     } else if (invoiceNumberText != null) {
       rows.add(TextRow(invoiceNumberText, isBold: true));
     } else if (tokenText != null) {
@@ -436,7 +438,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         null,
         isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
-      isEnglish ? "Delivery:" : "التوصيل:");
+        isEnglish ? "Delivery:" : "التوصيل:");
 
     if (isEnglish) {
       // English: Label: Value format
@@ -448,7 +450,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left),
         ]));
       }
-        if (params.customerPhone != null &&
+      if (params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -514,7 +516,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
               weight: 0.35, align: TextAlign.right, isBold: true),
         ]));
       }
-        if (params.customerPhone != null &&
+      if (params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -1261,16 +1263,12 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
       // Check if ZATCA credentials are available
       if (params.hasZatcaCredentials) {
-        final qrInvoiceDate = params.isFromLocalStorage
-            ? '${DateHelper.formatToISODateOnlyFromISO(params.orderDate)} ${DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)}'
-            : '${DateHelper.formatISODate(params.orderDate)} ${DateHelper.formatISOTimeOnlyToIST(params.orderDate)}';
-
         // Generate ZATCA Phase 1 compliant QR code
         final zatcaHelper = ZatcaQrHelper();
         final zatcaQrData = zatcaHelper.generateQrForInvoice(
           sellerName: params.zatcaCompanyName,
           vatNumber: params.zatcaVatNumber,
-          invoiceDate: qrInvoiceDate,
+          invoiceDate: params.orderDate, // Pass true UTC ISO string
           totalAmount: params.totalAmountAsDouble,
           vatAmount: params.totalTax,
         );
@@ -1379,7 +1377,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String invoicePrefix =
+          params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(TextRow('$invoicePrefix$strippedNumber', scale: 0.8));
       rows.add(SpacingRow(5));
@@ -1393,13 +1392,14 @@ class ClassicReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String invoicePrefix =
+          params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(5));
       rows.add(DividerRow());
       rows.add(SpacingRow(5));
-      rows.add(TextRow('$invoicePrefix$strippedNumber',
-          scale: 1.1, isBold: true));
+      rows.add(
+          TextRow('$invoicePrefix$strippedNumber', scale: 1.1, isBold: true));
     }
 
     // Terms & Conditions
@@ -1419,14 +1419,13 @@ class ClassicReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showThankYouMessage']?.visible == true) {
       final String defaultThankYou =
           isEnglish ? 'Thank You... Visit Again' : 'شكراً لزيارتكم!';
-      final message =
-          (displayConfig?['showThankYouMessage']?.value as String?)
-                      ?.isNotEmpty ==
-                  true
-              ? displayConfig!['showThankYouMessage']!.value as String
-              : (params.billDocumentConfig.footer?.isNotEmpty == true
-                  ? params.billDocumentConfig.footer!
-                  : defaultThankYou);
+      final message = (displayConfig?['showThankYouMessage']?.value as String?)
+                  ?.isNotEmpty ==
+              true
+          ? displayConfig!['showThankYouMessage']!.value as String
+          : (params.billDocumentConfig.footer?.isNotEmpty == true
+              ? params.billDocumentConfig.footer!
+              : defaultThankYou);
       rows.add(TextRow(message, isBold: true));
     }
 
@@ -1497,5 +1496,4 @@ class ClassicReceiptLayout implements ReceiptLayout {
     }
     return null;
   }
-
 }

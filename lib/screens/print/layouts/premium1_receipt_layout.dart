@@ -125,7 +125,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
       }
 
       // ========== HEADER SECTION (Modern & Clean) ==========
-        _buildHeaderSection(
+      _buildHeaderSection(
           part1Rows, params, displayConfig, appSettings, isEnglish);
 
       // ========== CUSTOMER SECTION ==========
@@ -379,15 +379,15 @@ class Premium1ReceiptLayout implements ReceiptLayout {
       final invoiceAlign = isEnglish ? TextAlign.left : TextAlign.right;
       final tokenAlign = isEnglish ? TextAlign.right : TextAlign.left;
       final invoiceCol = ReceiptTableColumn(invoiceNumberText,
-        weight: 0.58, align: invoiceAlign, isBold: true, scale: 1.1);
+          weight: 0.58, align: invoiceAlign, isBold: true, scale: 1.1);
       final tokenCol = ReceiptTableColumn(tokenText,
-        weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
+          weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
       final spacerCol =
-        ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
+          ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
 
       rows.add(ReceiptTableRow(isEnglish
-        ? [invoiceCol, spacerCol, tokenCol]
-        : [tokenCol, spacerCol, invoiceCol]));
+          ? [invoiceCol, spacerCol, tokenCol]
+          : [tokenCol, spacerCol, invoiceCol]));
     } else if (invoiceNumberText != null) {
       rows.add(TextRow(invoiceNumberText, scale: 1.3, isBold: true));
     } else if (tokenText != null) {
@@ -445,7 +445,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         null,
         isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
-      isEnglish ? "Delivery:" : "التوصيل:");
+        isEnglish ? "Delivery:" : "التوصيل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -458,7 +458,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-        if (params.customerPhone != null &&
+      if (params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -530,7 +530,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-        if (params.customerPhone != null &&
+      if (params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -1261,16 +1261,12 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         debugPrint(
             '[PremiumLayout] ZATCA credentials found, generating ZATCA QR');
 
-        final qrInvoiceDate = params.isFromLocalStorage
-            ? '${DateHelper.formatToISODateOnlyFromISO(params.orderDate)} ${DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)}'
-            : '${DateHelper.formatISODate(params.orderDate)} ${DateHelper.formatISOTimeOnlyToIST(params.orderDate)}';
-
         // Generate ZATCA Phase 1 compliant QR code
         final zatcaHelper = ZatcaQrHelper();
         qrData = zatcaHelper.generateQrForInvoice(
           sellerName: params.zatcaCompanyName,
           vatNumber: params.zatcaVatNumber,
-          invoiceDate: qrInvoiceDate,
+          invoiceDate: params.orderDate, // Pass true UTC ISO string
           totalAmount: params.totalAmountAsDouble,
           vatAmount: params.totalTax,
         );
@@ -1367,7 +1363,8 @@ class Premium1ReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String invoicePrefix =
+          params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(3));
       rows.add(TextRow('$invoicePrefix$strippedNumber', scale: 0.8));
@@ -1381,7 +1378,8 @@ class Premium1ReceiptLayout implements ReceiptLayout {
           match != null ? match.group(0)! : params.orderNumber;
 
       // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix = params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String invoicePrefix =
+          params.billDocumentConfig.numberPrefix ?? 'INV-';
 
       rows.add(SpacingRow(5));
       rows.add(ThinDividerRow());
@@ -1499,7 +1497,6 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
     return null;
   }
-
 }
 
 /// Thin solid line divider for Premium theme

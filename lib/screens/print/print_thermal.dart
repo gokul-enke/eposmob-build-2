@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import 'package:pos_machine/utils/arabic_printer_helper.dart';
+import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:image/image.dart' as img;
 
 class ThermalPrinter {
@@ -281,13 +282,8 @@ class ThermalPrinter {
 
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
-        debugPrint("QR Code is enabled in display config");
-        // Access link from PaymentGatewaysProvider
         final paymentGatewaysProvider =
             Provider.of<PaymentGatewaysProvider>(context, listen: false);
-        debugPrint(
-            "Payment gateways available: ${paymentGatewaysProvider.paymentGateways.length}");
-
         final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
             .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
                 orElse: () => PaymentGateway(
@@ -306,12 +302,6 @@ class ThermalPrinter {
                       createdAt: "",
                       updatedAt: "",
                     ));
-
-        debugPrint("Manual payment gateway found:");
-        debugPrint("- ID: ${manualPaymentGateway.id}");
-        debugPrint("- Name: '${manualPaymentGateway.name}'");
-        debugPrint("- Code: '${manualPaymentGateway.code}'");
-        debugPrint("- Link: '${manualPaymentGateway.link}'");
 
         debugPrint("Building QR code...");
         bytes += _buildQRCode(generator, manualPaymentGateway.link,
@@ -953,42 +943,84 @@ class ThermalPrinter {
 
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
-        final paymentGatewaysProvider =
-            Provider.of<PaymentGatewaysProvider>(context, listen: false);
-        final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
-            .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
-                orElse: () => PaymentGateway(
-                      id: 0,
-                      name: "",
-                      code: "",
-                      label: "",
-                      link: "",
-                      image: "",
-                      status: "",
-                      isWebActive: 0,
-                      isAndroidActive: 0,
-                      isIosActive: 0,
-                      contactEmail: "",
-                      contactPhone: "",
-                      createdAt: "",
-                      updatedAt: "",
-                    ));
+        final prefs = await SharedPreferences.getInstance();
+        final zatcaVatNumber = prefs.getString('zatca_vat_number');
+        final zatcaCompanyName = prefs.getString('zatca_company_name');
 
-        String qrData = manualPaymentGateway.link;
-        if (qrData.isNotEmpty) {
-          if (qrData.contains('{formattedTotal}') ||
-              qrData.contains('{orderNumber}')) {
-            qrData = qrData
-                .replaceAll('{formattedTotal}', formattedTotal)
-                .replaceAll('{orderNumber}', orderNumber);
-          } else if (qrData.contains('@')) {
-            qrData =
-                'upi://pay?pa=$qrData&am=$formattedTotal&tn=$orderNumber&cu=INR';
+        final bool hasZatcaCredentials = zatcaVatNumber != null &&
+            zatcaVatNumber.isNotEmpty &&
+            zatcaCompanyName != null &&
+            zatcaCompanyName.isNotEmpty;
+
+        String qrData = '';
+        String qrMessage;
+
+        if (hasZatcaCredentials) {
+          debugPrint(
+              '[ThermalPrinter] ZATCA credentials found, generating ZATCA QR');
+          final zatcaHelper = ZatcaQrHelper();
+          final totalAmount = double.tryParse(formattedTotal) ?? 0.0;
+
+          // Calculate total tax from cart items
+          double totalTax = 0.0;
+          for (var item in cartItems) {
+            if (isFromLocalStorage) {
+              totalTax +=
+                  double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+            } else {
+              totalTax +=
+                  double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+            }
           }
 
-          final qrMessage =
+          qrData = zatcaHelper.generateQrForInvoice(
+            sellerName: zatcaCompanyName,
+            vatNumber: zatcaVatNumber,
+            invoiceDate: orderDate, // Pass true UTC ISO string
+            totalAmount: totalAmount,
+            vatAmount: totalTax,
+          );
+          qrMessage = isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية';
+        } else {
+          final paymentGatewaysProvider =
+              Provider.of<PaymentGatewaysProvider>(context, listen: false);
+          final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+              .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+                  orElse: () => PaymentGateway(
+                        id: 0,
+                        name: "",
+                        code: "",
+                        label: "",
+                        link: "",
+                        image: "",
+                        status: "",
+                        isWebActive: 0,
+                        isAndroidActive: 0,
+                        isIosActive: 0,
+                        contactEmail: "",
+                        contactPhone: "",
+                        createdAt: "",
+                        updatedAt: "",
+                      ));
+
+          qrData = manualPaymentGateway.link;
+          if (qrData.isNotEmpty) {
+            if (qrData.contains('{formattedTotal}') ||
+                qrData.contains('{orderNumber}')) {
+              qrData = qrData
+                  .replaceAll('{formattedTotal}', formattedTotal)
+                  .replaceAll('{orderNumber}', orderNumber);
+            } else if (qrData.contains('@')) {
+              qrData =
+                  'upi://pay?pa=$qrData&am=$formattedTotal&tn=$orderNumber&cu=INR';
+            }
+          }
+          qrMessage =
               displayConfig?['showQRCode']?.value as String? ?? 'Scan to Pay';
-          part2Rows.add(TextRow(isEnglish ? qrMessage : "امسح الرمز للدفع",
+        }
+
+        if (qrData.isNotEmpty) {
+          part2Rows.add(TextRow(isEnglish ? qrMessage : qrMessage,
               isBold: true, scale: 0.9));
           part2Rows.add(QrRow(qrData, size: 200));
         }

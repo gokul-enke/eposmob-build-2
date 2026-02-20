@@ -14,6 +14,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/utils/zatca_qr_helper.dart';
 
 class ReturnBillThermalPrinter {
   final BuildContext context;
@@ -75,17 +76,20 @@ class ReturnBillThermalPrinter {
     }
 
     debugPrint("Printing return bill with thermal printer:");
-    debugPrint("Printer: ${selectedPrinter.deviceName} (${selectedPrinter.typePrinter})");
+    debugPrint(
+        "Printer: ${selectedPrinter.deviceName} (${selectedPrinter.typePrinter})");
     debugPrint("Paper size: $selectedPaperSize");
 
     // Use the loaded display configuration
-    final displayConfig = returnBillDocumentConfig.displayConfiguration?.options;
+    final displayConfig =
+        returnBillDocumentConfig.displayConfiguration?.options;
     _debugPrintTemplateSettings(displayConfig);
 
     try {
       // Load the selected font type from preferences
       final selectedFontType = await _loadFontType();
-      debugPrint("Using font type: ${selectedFontType == PosFontType.fontA ? 'Font A' : 'Font B'}");
+      debugPrint(
+          "Using font type: ${selectedFontType == PosFontType.fontA ? 'Font A' : 'Font B'}");
 
       // Connect to the printer
       debugPrint("Connecting to printer...");
@@ -120,51 +124,86 @@ class ReturnBillThermalPrinter {
       debugPrint("Header built successfully");
 
       // Build customer details if available
-      if (customerName != null || customerPhone != null || customerEmail != null) {
+      if (customerName != null ||
+          customerPhone != null ||
+          customerEmail != null) {
         debugPrint("Building customer details...");
-        bytes += _buildCustomerDetails(generator, customerName, customerPhone,
-            customerEmail, customerAddress, customerBalance, selectedFontType, displayConfig);
+        bytes += _buildCustomerDetails(
+            generator,
+            customerName,
+            customerPhone,
+            customerEmail,
+            customerAddress,
+            customerBalance,
+            selectedFontType,
+            displayConfig);
         debugPrint("Customer details built successfully");
       }
 
       // Build return items table
       debugPrint("Building return items...");
-      bytes += _buildReturnItems(
-          generator,
-          returnItems,
-          displayConfig,
-          selectedPaperSize,
-          returnBillDocumentConfig,
-          selectedFontType);
+      bytes += _buildReturnItems(generator, returnItems, displayConfig,
+          selectedPaperSize, returnBillDocumentConfig, selectedFontType);
       debugPrint("Return items built successfully");
 
       // Build total amount
       debugPrint("Building total amount...");
-      bytes += _buildTotalAmount(
-          generator,
-          displayConfig,
-          returnTotalAmount,
-          returnItems.length,
-          returnBillDocumentConfig,
-          selectedFontType);
+      bytes += _buildTotalAmount(generator, displayConfig, returnTotalAmount,
+          returnItems.length, returnBillDocumentConfig, selectedFontType);
       debugPrint("Total amount built successfully");
 
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
         debugPrint("Building QR code...");
-        final paymentGatewaysProvider =
-            Provider.of<PaymentGatewaysProvider>(context, listen: false);
+        // Check for ZATCA credentials first
+        final prefs = await SharedPreferences.getInstance();
+        final zatcaVatNumber = prefs.getString('zatca_vat_number');
+        final zatcaCompanyName = prefs.getString('zatca_company_name');
+        final bool hasZatcaCredentials = zatcaVatNumber != null &&
+            zatcaVatNumber.isNotEmpty &&
+            zatcaCompanyName != null &&
+            zatcaCompanyName.isNotEmpty;
 
-        final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
-            .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
-                orElse: () => PaymentGateway(
-                      id: 0, name: "", code: "", label: "", link: "", image: "", 
-                      status: "", isWebActive: 0, isAndroidActive: 0, isIosActive: 0,
-                      contactEmail: "", contactPhone: "", createdAt: "", updatedAt: "",
-                    ));
-
-        bytes += _buildQRCode(generator, manualPaymentGateway.link,
-            returnTotalAmount, orderNumber, displayConfig, selectedFontType);
+        if (hasZatcaCredentials) {
+          debugPrint(
+              '[ReturnBillThermal] ZATCA credentials found, generating ZATCA QR');
+          final zatcaHelper = ZatcaQrHelper();
+          final totalAmount = double.tryParse(returnTotalAmount) ?? 0.0;
+          final qrData = zatcaHelper.generateQrForInvoice(
+            sellerName: zatcaCompanyName,
+            vatNumber: zatcaVatNumber,
+            invoiceDate: orderDate, // Pass true UTC ISO string
+            totalAmount: totalAmount,
+            vatAmount: 0.0, // Return bills typically have 0 VAT added
+          );
+          if (qrData.isNotEmpty) {
+            bytes += _buildQRCode(generator, qrData, returnTotalAmount,
+                orderNumber, displayConfig, selectedFontType);
+          }
+        } else {
+          final paymentGatewaysProvider =
+              Provider.of<PaymentGatewaysProvider>(context, listen: false);
+          final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+              .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+                  orElse: () => PaymentGateway(
+                        id: 0,
+                        name: "",
+                        code: "",
+                        label: "",
+                        link: "",
+                        image: "",
+                        status: "",
+                        isWebActive: 0,
+                        isAndroidActive: 0,
+                        isIosActive: 0,
+                        contactEmail: "",
+                        contactPhone: "",
+                        createdAt: "",
+                        updatedAt: "",
+                      ));
+          bytes += _buildQRCode(generator, manualPaymentGateway.link,
+              returnTotalAmount, orderNumber, displayConfig, selectedFontType);
+        }
         debugPrint("QR code built successfully");
       }
 
@@ -175,7 +214,8 @@ class ReturnBillThermalPrinter {
 
       // Order ID Barcode
       debugPrint("Building order barcode...");
-      bytes += _buildOrderBarcode(generator, orderNumber, selectedPaperSize, selectedFontType);
+      bytes += _buildOrderBarcode(
+          generator, orderNumber, selectedPaperSize, selectedFontType);
       debugPrint("Order barcode built successfully");
 
       // Terms & Conditions
@@ -189,7 +229,8 @@ class ReturnBillThermalPrinter {
       // Thank You Message
       if (displayConfig?['showThankYouMessage']?.visible == true) {
         debugPrint("Building thank you message...");
-        bytes += _buildThankYouMessage(generator, displayConfig, selectedFontType);
+        bytes +=
+            _buildThankYouMessage(generator, displayConfig, selectedFontType);
         debugPrint("Thank you message built successfully");
       }
 
@@ -198,11 +239,13 @@ class ReturnBillThermalPrinter {
 
       debugPrint("Return bill generated, sending to printer...");
       // Print receipt
-      await printerManager.send(type: selectedPrinter.typePrinter, bytes: bytes);
+      await printerManager.send(
+          type: selectedPrinter.typePrinter, bytes: bytes);
       debugPrint("Print job sent successfully");
 
       if (context.mounted) {
-        showScaffold(context: context, message: "Return Bill printed successfully");
+        showScaffold(
+            context: context, message: "Return Bill printed successfully");
         Navigator.pop(context);
       }
     } catch (e) {
@@ -390,7 +433,8 @@ class ReturnBillThermalPrinter {
     if (displayConfig?['showInvoiceNumber']?.visible == true) {
       // Use the numberPrefix from returnBillDocumentConfig if available, otherwise just use orderNumber
       final invoiceNumberText =
-          returnBillDocumentConfig?.numberPrefix != null && returnBillDocumentConfig!.numberPrefix!.isNotEmpty
+          returnBillDocumentConfig?.numberPrefix != null &&
+                  returnBillDocumentConfig!.numberPrefix!.isNotEmpty
               ? '${returnBillDocumentConfig.numberPrefix}$orderNumber'
               : 'Bill No: $orderNumber';
 
@@ -438,7 +482,8 @@ class ReturnBillThermalPrinter {
       }
     }
 
-    if (customerBalance != null && customerBalance.isNotEmpty &&
+    if (customerBalance != null &&
+        customerBalance.isNotEmpty &&
         displayConfig?['showCustomerBalance']?.visible == true) {
       bytes += generator.text(
         'Balance: $customerBalance',
@@ -478,25 +523,36 @@ class ReturnBillThermalPrinter {
     debugPrint("Building header columns...");
 
     if (displayConfig?['showReturnSLNumber']?.visible == true) {
-      final label = (displayConfig?['showReturnSLNumber']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnSLNumber']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnSLNumber']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnSlNumber?.isNotEmpty == true
+          : (returnBillDocumentConfig
+                      ?.resolvedLabels?.returnSlNumber?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnSlNumber!
               : 'SL#');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 1,
           styles: PosStyles(
-              fontType: fontType, align: PosAlign.left, bold: true, height: is58mm ? textSizeSmall : textSizeSmall)));
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 1;
       debugPrint(
           "Added SL column with width 1, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showReturnParticulars']?.visible == true) {
-      final label = (displayConfig?['showReturnParticulars']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnParticulars']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnParticulars']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnParticulars?.isNotEmpty == true
+          : (returnBillDocumentConfig
+                      ?.resolvedLabels?.returnParticulars?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnParticulars!
               : 'PARTICULARS');
       int particularsWidth = 5;
@@ -507,52 +563,74 @@ class ReturnBillThermalPrinter {
           text: label.toUpperCase(),
           width: particularsWidth,
           styles: PosStyles(
-              fontType: fontType, align: PosAlign.left, bold: true, height: is58mm ? textSizeSmall : textSizeSmall)));
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += particularsWidth;
       debugPrint(
           "Added PARTICULARS column with width $particularsWidth, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showReturnQty']?.visible == true) {
-      final label = (displayConfig?['showReturnQty']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnQty']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnQty']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnQty?.isNotEmpty == true
+          : (returnBillDocumentConfig?.resolvedLabels?.returnQty?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnQty!
               : 'QTY');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
           styles: PosStyles(
-              fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)));
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: textSizeSmall)));
     }
 
     if (displayConfig?['showReturnRate']?.visible == true) {
-      final label = (displayConfig?['showReturnRate']?.value as String?)?.isNotEmpty == true
+      final label = (displayConfig?['showReturnRate']?.value as String?)
+                  ?.isNotEmpty ==
+              true
           ? displayConfig!['showReturnRate']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnRate?.isNotEmpty == true
+          : (returnBillDocumentConfig?.resolvedLabels?.returnRate?.isNotEmpty ==
+                  true
               ? returnBillDocumentConfig!.resolvedLabels!.returnRate!
               : 'RATE');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
           styles: PosStyles(
-              fontType: fontType, align: PosAlign.right, bold: true, height: is58mm ? textSizeSmall : textSizeSmall)));
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 2;
       debugPrint(
           "Added RATE column with width 2, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showReturnTotal']?.visible == true) {
-      final label = (displayConfig?['showReturnTotal']?.value as String?)?.isNotEmpty == true
-          ? displayConfig!['showReturnTotal']!.value as String
-          : (returnBillDocumentConfig?.resolvedLabels?.returnTotal?.isNotEmpty == true
-              ? returnBillDocumentConfig!.resolvedLabels!.returnTotal!
-              : 'TOTAL');
+      final label =
+          (displayConfig?['showReturnTotal']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showReturnTotal']!.value as String
+              : (returnBillDocumentConfig
+                          ?.resolvedLabels?.returnTotal?.isNotEmpty ==
+                      true
+                  ? returnBillDocumentConfig!.resolvedLabels!.returnTotal!
+                  : 'TOTAL');
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: 2,
           styles: PosStyles(
-              fontType: fontType, align: PosAlign.right, bold: true, height: is58mm ? textSizeSmall : textSizeSmall)));
+              fontType: fontType,
+              align: PosAlign.right,
+              bold: true,
+              height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 2;
       debugPrint(
           "Added TOTAL column with width 2, total width: $totalHeaderWidth");
@@ -578,9 +656,8 @@ class ReturnBillThermalPrinter {
       String productName = returnItem.productName ?? 'Unknown';
       String quantity = '${returnItem.quantity ?? 0}';
       String slNumber = (i + 1).toString();
-      
-      debugPrint(
-          "Item $i: $productName, Qty: $quantity");
+
+      debugPrint("Item $i: $productName, Qty: $quantity");
 
       // Product Name Row using 11+1 column layout (same as sale bill)
       if (displayConfig?['showReturnParticulars']?.visible == true ||
@@ -703,7 +780,7 @@ class ReturnBillThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)));
       }
-      
+
       // Note: OrderReturnItem model doesn't have rate/total fields
       // Showing placeholders
       if (displayConfig?['showReturnRate']?.visible == true) {
@@ -1007,8 +1084,7 @@ class ReturnBillThermalPrinter {
 
     // Adjust barcode size based on paper width
     bool is58mm = selectedPaperSize == '58mm';
-    int barcodeHeight =
-        is58mm ? 40 : 30; // Bigger height for 58mm
+    int barcodeHeight = is58mm ? 40 : 30; // Bigger height for 58mm
 
     try {
       // Use CODE39 which supports: '0'–'9', A–Z, SP, $, %, *, +, -, ., /
