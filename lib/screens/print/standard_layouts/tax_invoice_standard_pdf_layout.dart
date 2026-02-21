@@ -877,10 +877,12 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           name = item.productName ?? '';
           qty = double.tryParse(item.quantity?.toString() ?? '0') ?? 0;
           unitPrice = double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0;
-          iDiscount =
-              double.tryParse(item.discountAmount?.toString() ?? '0') ?? 0;
           iTax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0;
           iTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0;
+        } catch (_) {}
+        try {
+          iDiscount =
+              double.tryParse(item.discountAmount?.toString() ?? '0') ?? 0;
         } catch (_) {}
       }
 
