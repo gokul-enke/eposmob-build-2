@@ -32,7 +32,8 @@ class ReceiptLayoutParams {
   final String? deliveryMethod;
   final String? customerAlternatePhone;
   final String? paymentMethod;
-  final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
+  final Map<String, dynamic>?
+      paymentBreakdown; // Added for multi-payment support
   // ZATCA fields for Saudi Arabia e-invoicing
   final String? zatcaVatNumber;
   final String? zatcaCompanyName;
@@ -155,6 +156,5 @@ class ReceiptLayoutParams {
       zatcaCompanyName!.isNotEmpty;
 
   /// Get the total amount as double
-  double get totalAmountAsDouble =>
-      double.tryParse(formattedTotal) ?? 0.0;
+  double get totalAmountAsDouble => double.tryParse(formattedTotal) ?? 0.0;
 }
