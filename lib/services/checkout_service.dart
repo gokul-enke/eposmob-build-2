@@ -12,9 +12,10 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 class CheckoutService {
   final BuildContext context;
   const CheckoutService(this.context);
-  
+
   Future<void> confirmOrder() async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
 
     if (!billingProvider.hasInternet) {
       showScaffoldError(
@@ -42,21 +43,25 @@ class CheckoutService {
       List<String> selectedPaymentMethods =
           Provider.of<BillingProvider>(context, listen: false)
               .getSelectedPaymentMethodsExcludingEmpty();
-      
+
       debugPrint('🔍 [CheckoutService] Validating payment methods...');
-      debugPrint('🔍 [CheckoutService] Selected methods (excluding empty): $selectedPaymentMethods');
-      debugPrint('🔍 [CheckoutService] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
-      debugPrint('🔍 [CheckoutService] isOnlineSelected: ${billingProvider.isOnlineSelected}');
-      
+      debugPrint(
+          '🔍 [CheckoutService] Selected methods (excluding empty): $selectedPaymentMethods');
+      debugPrint(
+          '🔍 [CheckoutService] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
+      debugPrint(
+          '🔍 [CheckoutService] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+
       if (!billingProvider.hasAnyPaymentSelected()) {
-        debugPrint('❌ [CheckoutService] No payment method selected - showing error');
+        debugPrint(
+            '❌ [CheckoutService] No payment method selected - showing error');
         showScaffoldError(
           context: context,
           message: "Please select a payment method",
         );
         return;
       }
-      
+
       debugPrint('✅ [CheckoutService] Payment method validation passed');
 
       if (!billingProvider.validateCarNumberIfNeeded()) {
@@ -67,7 +72,8 @@ class CheckoutService {
         return;
       }
 
-      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
       debugPrint("📦 Cart ID for order: $cartId");
@@ -101,7 +107,10 @@ class CheckoutService {
 
       // Validate that all items have valid pricing before API call
       bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-          item.price == null || item.price! < 0 || item.mrp == null || item.mrp! < 0);
+          item.price == null ||
+          item.price! < 0 ||
+          item.mrp == null ||
+          item.mrp! < 0);
 
       if (hasInvalidPricing) {
         showScaffoldError(
@@ -131,7 +140,8 @@ class CheckoutService {
       }
 
       debugPrint("📋 Order Items: ${items.length} products");
-      debugPrint("💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
+      debugPrint(
+          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
       debugPrint("👤 Customer ID: ${billingProvider.selectedCustomerID}");
       debugPrint(
           "📱 Customer Phone: ${billingProvider.selectedCustomerPhone ?? billingProvider.mobileNumberText}");
@@ -140,19 +150,21 @@ class CheckoutService {
       debugPrint(
           "🚚 Delivery Method: ${billingProvider.deliveryMethod} (ID: ${billingProvider.deliveryMethodId})");
 
-      final paidMethods = Provider.of<BillingProvider>(context, listen: false).getPaidMethods();
+      final paidMethods =
+          Provider.of<BillingProvider>(context, listen: false).getPaidMethods();
       debugPrint("💰 [ConfirmOrder] Payment Methods: $selectedPaymentMethods");
       debugPrint("💰 [ConfirmOrder] Paid Methods (with amounts): $paidMethods");
 
-      await Provider.of<CartProvider>(context, listen: false).addToOrderAPI(
+      await Provider.of<CartProvider>(context, listen: false)
+          .addToOrderAPI(
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: billingProvider.transactionNumberController.text,
         totalPrice: localProductProvider.priceSummary!.netTotal.toString(),
         customerId: billingProvider.selectedCustomerID,
-        customerPhone:
-            billingProvider.selectedCustomerPhone ?? billingProvider.mobileNumberText,
+        customerPhone: billingProvider.selectedCustomerPhone ??
+            billingProvider.mobileNumberText,
         // Always use multi-payment format
         paymentMethod: null,
         paidAmount: null,
@@ -161,12 +173,12 @@ class CheckoutService {
         balanceAmount: Provider.of<BillingProvider>(context, listen: false)
             .balanceAmount
             .toString(),
-        couponId: Provider.of<BillingProvider>(context, listen: false)
-                .isCouponApplied
-            ? Provider.of<BillingProvider>(context, listen: false)
-                .coupenCodeTextController
-                .text
-            : null,
+        couponId:
+            Provider.of<BillingProvider>(context, listen: false).isCouponApplied
+                ? Provider.of<BillingProvider>(context, listen: false)
+                    .coupenCodeTextController
+                    .text
+                : null,
         comment: billingProvider.commentController.text,
         deliveryMethodId: billingProvider.deliveryMethodId,
         carNumber: billingProvider.carNumberController.text,
@@ -175,10 +187,12 @@ class CheckoutService {
         deliveryTime: billingProvider.deliveryTime,
         // Include discount data
         flatDiscount: localProductProvider.priceSummary!.flatDiscount,
-        percentageDiscount: localProductProvider.priceSummary!.percentageDiscount,
+        percentageDiscount:
+            localProductProvider.priceSummary!.percentageDiscount,
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: billingProvider.toCustomerCreditEnabled,
-      ).then((response) {
+      )
+          .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
         if (response["order_id"] != null) {
           showScaffold(
@@ -208,9 +222,10 @@ class CheckoutService {
           billingProvider.commentController.clear();
           billingProvider.setDeliveryDate(null);
           billingProvider.setDeliveryTime(null);
-          
+
           // Clear all payment methods including Pine Labs ONLINE
-          debugPrint('🔄 [CheckoutService] Clearing all payment methods after order confirmation');
+          debugPrint(
+              '🔄 [CheckoutService] Clearing all payment methods after order confirmation');
           billingProvider.clearAllPaymentMethods();
           billingProvider.setPineLabsPaymentSuccess(false);
 
@@ -232,7 +247,8 @@ class CheckoutService {
   }
 
   Future<String?> createOrderAndPrint() async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     if (!billingProvider.hasInternet) {
       showScaffoldError(
         context: context,
@@ -259,14 +275,18 @@ class CheckoutService {
       // Guard: require at least one payment method (provider-level helper)
       final selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsExcludingEmpty();
-      
+
       debugPrint('🔍 [CreateOrderAndPrint] Validating payment methods...');
-      debugPrint('🔍 [CreateOrderAndPrint] Selected methods: $selectedPaymentMethods');
-      debugPrint('🔍 [CreateOrderAndPrint] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
-      debugPrint('🔍 [CreateOrderAndPrint] isOnlineSelected: ${billingProvider.isOnlineSelected}');
-      
+      debugPrint(
+          '🔍 [CreateOrderAndPrint] Selected methods: $selectedPaymentMethods');
+      debugPrint(
+          '🔍 [CreateOrderAndPrint] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
+      debugPrint(
+          '🔍 [CreateOrderAndPrint] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+
       if (!billingProvider.hasAnyPaymentSelected()) {
-        debugPrint('❌ [CreateOrderAndPrint] No payment method selected - showing error');
+        debugPrint(
+            '❌ [CreateOrderAndPrint] No payment method selected - showing error');
         showScaffoldError(
           context: context,
           message: "Please select a payment method",
@@ -301,7 +321,10 @@ class CheckoutService {
 
       // Validate item pricing
       final hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-          item.price == null || item.price! < 0 || item.mrp == null || item.mrp! < 0);
+          item.price == null ||
+          item.price! < 0 ||
+          item.mrp == null ||
+          item.mrp! < 0);
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
@@ -325,30 +348,31 @@ class CheckoutService {
 
       final priceSummary = localProductProvider.priceSummary!;
 
-      await Provider.of<CartProvider>(context, listen: false).addToOrderAPI(
+      await Provider.of<CartProvider>(context, listen: false)
+          .addToOrderAPI(
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: billingProvider.transactionNumberController.text,
         totalPrice: priceSummary.netTotal.toString(),
         customerId: billingProvider.selectedCustomerID,
-        customerPhone:
-            billingProvider.selectedCustomerPhone ?? billingProvider.mobileNumberText,
+        customerPhone: billingProvider.selectedCustomerPhone ??
+            billingProvider.mobileNumberText,
         // Always use multi-payment format
         paymentMethod: null,
         paidAmount: null,
         paymentMethods: selectedPaymentMethods,
-        paidMethods:
-            Provider.of<BillingProvider>(context, listen: false).getPaidMethods(),
+        paidMethods: Provider.of<BillingProvider>(context, listen: false)
+            .getPaidMethods(),
         balanceAmount: Provider.of<BillingProvider>(context, listen: false)
             .balanceAmount
             .toString(),
-        couponId: Provider.of<BillingProvider>(context, listen: false)
-                .isCouponApplied
-            ? Provider.of<BillingProvider>(context, listen: false)
-                .coupenCodeTextController
-                .text
-            : null,
+        couponId:
+            Provider.of<BillingProvider>(context, listen: false).isCouponApplied
+                ? Provider.of<BillingProvider>(context, listen: false)
+                    .coupenCodeTextController
+                    .text
+                : null,
         comment: billingProvider.commentController.text,
         deliveryMethodId: billingProvider.deliveryMethodId,
         carNumber: billingProvider.carNumberController.text,
@@ -360,8 +384,10 @@ class CheckoutService {
         percentageDiscount: priceSummary.percentageDiscount,
         discountAmount: priceSummary.discount,
         toCustomerCredit: billingProvider.toCustomerCreditEnabled,
-      ).then((response) async {
-        debugPrint("✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+      )
+          .then((response) async {
+        debugPrint(
+            "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
         if (response["order_id"] != null) {
           showScaffold(
             context: context,
@@ -412,20 +438,22 @@ class CheckoutService {
   }
 
   Future<bool> saveOrder() async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
     billingProvider.setLoadingSaveOrder(true);
     try {
       if (localProductProvider.cartItems.isEmpty) {
-        showScaffoldError(context: context, message: "Please add items to cart");
+        showScaffoldError(
+            context: context, message: "Please add items to cart");
         return false;
       }
 
       // Validate that all items have valid pricing
-      final hasInvalidPricing = localProductProvider.cartItems.any(
-          (item) => item.price == null || item.price! < 0);
+      final hasInvalidPricing = localProductProvider.cartItems
+          .any((item) => item.price == null || item.price! < 0);
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
@@ -477,8 +505,8 @@ class CheckoutService {
 
       final currentOrder = localProductProvider.currentOrder;
       final customerNameToSave = billingProvider.selectedCustomer?.name;
-      final customerPhoneToSave =
-          billingProvider.selectedCustomerPhone ?? billingProvider.mobileNumberText;
+      final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
+          billingProvider.mobileNumberText;
 
       if (currentOrder != null) {
         // Update existing order
@@ -544,20 +572,22 @@ class CheckoutService {
   }
 
   Future<SavedOrder?> saveOrderAndReturnConfirmed() async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
     billingProvider.setLoadingSaveOrderAndPrint(true);
     try {
       if (localProductProvider.cartItems.isEmpty) {
-        showScaffoldError(context: context, message: "Please add items to cart");
+        showScaffoldError(
+            context: context, message: "Please add items to cart");
         return null;
       }
 
       // Validate that all items have valid pricing
-      final hasInvalidPricing = localProductProvider.cartItems.any(
-          (item) => item.price == null || item.price! < 0);
+      final hasInvalidPricing = localProductProvider.cartItems
+          .any((item) => item.price == null || item.price! < 0);
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
@@ -610,8 +640,8 @@ class CheckoutService {
       SavedOrder? result;
       final currentOrder = localProductProvider.currentOrder;
       final customerNameToSave = billingProvider.selectedCustomer?.name;
-      final customerPhoneToSave =
-          billingProvider.selectedCustomerPhone ?? billingProvider.mobileNumberText;
+      final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
+          billingProvider.mobileNumberText;
 
       if (currentOrder != null) {
         result = localProductProvider.moveToConfirmedOrders(currentOrder.id);

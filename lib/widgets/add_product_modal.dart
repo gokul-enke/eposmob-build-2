@@ -58,6 +58,8 @@ class _AddProductWithBarcodeModalState
   final FocusNode _quantityFocusNode = FocusNode();
   final FocusNode _sellingPriceFocusNode = FocusNode();
   final FocusNode _purchasePriceFocusNode = FocusNode();
+  final FocusNode _unitFocusNode = FocusNode();
+  final FocusNode _categoryFocusNode = FocusNode();
 
   bool isLoading = false;
   bool isBarcodeGenerating = false;
@@ -89,6 +91,8 @@ class _AddProductWithBarcodeModalState
       _quantityFocusNode,
       _sellingPriceFocusNode,
       _purchasePriceFocusNode,
+      _unitFocusNode,
+      _categoryFocusNode,
     ];
 
     for (final node in allFocusNodes) {
@@ -124,6 +128,8 @@ class _AddProductWithBarcodeModalState
     _quantityFocusNode.dispose();
     _sellingPriceFocusNode.dispose();
     _purchasePriceFocusNode.dispose();
+    _unitFocusNode.dispose();
+    _categoryFocusNode.dispose();
 
     isLoading = false;
     selectedUnit = null;
@@ -161,8 +167,7 @@ class _AddProductWithBarcodeModalState
     if (languages.isEmpty) return null;
 
     try {
-      return languages
-          .firstWhere((lang) => lang.code.toLowerCase() == 'en');
+      return languages.firstWhere((lang) => lang.code.toLowerCase() == 'en');
     } catch (_) {
       return languages.first;
     }
@@ -363,8 +368,9 @@ class _AddProductWithBarcodeModalState
                 ),
                 const SizedBox(height: 16),
 
-                // Row 1: Product Name, Barcode
+                // Row 1: Product Name, Barcode, Category
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: _buildTextField(
@@ -380,18 +386,6 @@ class _AddProductWithBarcodeModalState
                     Expanded(
                       child: _buildBarcodeField(size),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildLanguageFields(size, languageProvider),
-                const SizedBox(height: 12),
-
-                // Row 2: Unit, Category
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildUnitDropdown(size, unitList),
-                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _buildCategoryDropdown(size, categoryList),
@@ -399,21 +393,15 @@ class _AddProductWithBarcodeModalState
                   ],
                 ),
                 const SizedBox(height: 12),
+                _buildLanguageFields(size, languageProvider),
+                const SizedBox(height: 12),
 
-                // Row 3: MRP, Purchase Price
+                // Row 2: Unit, Purchase Price, Max Sale Price / MRP
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: _buildTextField(
-                        "Max Sale Price / MRP",
-                        _productMRPController,
-                        TextInputType.number,
-                        size,
-                        isRequired: false,
-                        inputFormatter: FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
-                        focusNode: _mrpFocusNode,
-                      ),
+                      child: _buildUnitDropdown(size, unitList),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -428,12 +416,26 @@ class _AddProductWithBarcodeModalState
                         focusNode: _purchasePriceFocusNode,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildTextField(
+                        "Max Sale Price / MRP",
+                        _productMRPController,
+                        TextInputType.number,
+                        size,
+                        isRequired: false,
+                        inputFormatter: FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _mrpFocusNode,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // Row 4: Selling Price, Quantity
+                // Row 3: Selling Price, Quantity, Empty
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: _buildTextField(
@@ -459,6 +461,10 @@ class _AddProductWithBarcodeModalState
                             RegExp(r'^\d*\.?\d{0,2}$')),
                         focusNode: _quantityFocusNode,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: SizedBox.shrink(),
                     ),
                   ],
                 ),
@@ -581,6 +587,8 @@ class _AddProductWithBarcodeModalState
             controller: controller,
             focusNode: focusNode,
             keyboardType: keyboardType,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             inputFormatters: inputFormatter != null ? [inputFormatter] : null,
             cursorColor: ColorManager.kPrimaryColor,
             onTap: () {
@@ -656,6 +664,8 @@ class _AddProductWithBarcodeModalState
                   controller: _productBarcodeController,
                   focusNode: _barcodeFocusNode,
                   readOnly: widget.barcode != null,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   cursorColor: ColorManager.kPrimaryColor,
                   onTap: () {
                     _unfocusAllExcept(_barcodeFocusNode);
@@ -739,8 +749,7 @@ class _AddProductWithBarcodeModalState
       );
     }
 
-    if (languageProvider.error != null &&
-        languageProvider.languages.isEmpty) {
+    if (languageProvider.error != null && languageProvider.languages.isEmpty) {
       return Row(
         children: [
           Expanded(
@@ -834,6 +843,8 @@ class _AddProductWithBarcodeModalState
                   controller: controller,
                   textDirection:
                       language.isRtl ? TextDirection.rtl : TextDirection.ltr,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   cursorColor: ColorManager.kPrimaryColor,
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -855,9 +866,8 @@ class _AddProductWithBarcodeModalState
               child: Tooltip(
                 message: 'Translate',
                 child: ElevatedButton(
-                  onPressed: isTranslating
-                      ? null
-                      : () => _translateLanguage(language),
+                  onPressed:
+                      isTranslating ? null : () => _translateLanguage(language),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: ColorManager.kPrimaryColor,
                     padding: EdgeInsets.zero,
@@ -938,6 +948,7 @@ class _AddProductWithBarcodeModalState
         ),
         const SizedBox(height: 4),
         CustomDropDownWithSearch<String>(
+          focusNode: _unitFocusNode,
           title: "",
           hintText: "Choose Product Unit",
           value: selectedUnit,
@@ -995,6 +1006,7 @@ class _AddProductWithBarcodeModalState
         ),
         const SizedBox(height: 4),
         CustomDropDownWithSearch<Category>(
+          focusNode: _categoryFocusNode,
           title: "",
           hintText: "Select Category",
           value: selectedCategory,

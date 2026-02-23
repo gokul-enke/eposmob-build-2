@@ -12,7 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_dropdown_with_search.dart';
+
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -22,6 +22,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
@@ -1079,6 +1080,10 @@ Powered by CloudPOS''',
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
 
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      final activeStoreId = storeSession.activeStore?.storeId?.toString();
+
       debugPrint(
           'Access Token Available: ${accessToken != null ? "Yes" : "No"}');
       debugPrint('Access Token Length: ${accessToken?.length ?? 0}');
@@ -1086,10 +1091,10 @@ Powered by CloudPOS''',
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
-      debugPrint('Calling fetchOrders with storeId: 1');
+      debugPrint('Calling fetchOrders with storeId: $activeStoreId');
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
-        storeId: 1,
+        filterStore: activeStoreId,
       );
       debugPrint('fetchOrders completed successfully');
     } catch (error, stackTrace) {
@@ -1118,6 +1123,10 @@ Powered by CloudPOS''',
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      final activeStoreId = storeSession.activeStore?.storeId?.toString();
+
       // Prepare filters
       final filters = {
         if (orderNumberController.text.isNotEmpty)
@@ -1132,8 +1141,7 @@ Powered by CloudPOS''',
           'filterPhone': phoneController.text.trim(),
         if (selectedDate != null)
           'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
-        if (storeController.text.isNotEmpty)
-          'filterStore': storeController.text.trim(),
+        if (activeStoreId != null) 'filterStore': activeStoreId,
         if (selectedStatus != null && selectedStatus != 'all')
           'filterStatus': selectedStatus!.trim(), // Add status filter
         'page': page.toString(),
@@ -2468,74 +2476,6 @@ Powered by CloudPOS''',
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 15),
-
-                                  // Store
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Store",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        BuildDropDownWithSearch<
-                                            GetStoreModelData>(
-                                          title:
-                                              null, // Remove title since we're handling it manually
-                                          showName:
-                                              false, // Don't show the built-in title
-                                          hintText: 'Select Store',
-                                          value: storeSelected,
-                                          items: [
-                                            GetStoreModelData(
-                                                id: 0,
-                                                name:
-                                                    'All Stores'), // Add "All Stores" option
-                                            ...storeList!
-                                          ],
-                                          onChanged: (GetStoreModelData?
-                                              storeModelData) {
-                                            setState(() {
-                                              if (storeModelData?.id == 0) {
-                                                // Handle "All Stores" selection
-                                                storeSelected = null;
-                                                storeController.clear();
-                                              } else {
-                                                storeSelected = storeModelData;
-                                                if (storeModelData != null) {
-                                                  storeController.text =
-                                                      storeModelData.id
-                                                          .toString();
-                                                } else {
-                                                  storeController.clear();
-                                                }
-                                              }
-                                            });
-                                            searchOrders(1);
-                                          },
-                                          displayText: (store) =>
-                                              store.name ?? 'Unknown Store',
-                                          searchController:
-                                              storeSearchController,
-                                          height: 45,
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 0, vertical: 0),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-// Add this in your filter section (after the Store filter or wherever you prefer)
                                   const SizedBox(width: 15),
 
 // Status Filter

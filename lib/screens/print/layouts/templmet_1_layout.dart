@@ -539,12 +539,24 @@ class SupermarketLayout implements ReceiptLayout {
       final String lang = params.billDocumentConfig.language ?? 'en';
       final String invoicePrefix = _getDisplayValue(
         displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
+        params.billDocumentConfig.numberPrefix ??
+            displayConfig?['showInvoicePrefix']?.defaultValue,
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
       final invoiceNumberText = '$invoicePrefix $strippedNumber';
       rows.add(TextRow(invoiceNumberText, scale: 0.75, isBold: true));
+    }
+
+    // Token Number
+    if (displayConfig?['showTokenNumber']?.visible == true &&
+        params.tokenNumber != null &&
+        params.tokenNumber!.isNotEmpty) {
+      final String tokenPrefix =
+          displayConfig?['showTokenNumber']?.value as String? ?? 'Token: ';
+      rows.add(SpacingRow(_itemGap));
+      rows.add(TextRow('$tokenPrefix${params.tokenNumber}',
+          scale: 1.0, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -630,6 +642,11 @@ class SupermarketLayout implements ReceiptLayout {
             null, null, "التوصيل:", "Delivery:")
         : _getLabel(displayConfig, 'showDeliveryMethod', null,
             isEnglish ? "Delivery:" : "التوصيل:");
+    final customerVatLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerVatNumber',
+            null, null, "الرقم الضريبي للعميل:", "Customer VAT:")
+        : _getLabel(displayConfig, 'showCustomerVatNumber', null,
+            isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -703,6 +720,17 @@ class SupermarketLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left, scale: 0.75),
         ]));
       }
+
+      if (params.customerVatNumber != null &&
+          params.customerVatNumber!.isNotEmpty &&
+          displayConfig?['showCustomerVatNumber']?.visible == true) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(customerVatLabel,
+              weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
+          ReceiptTableColumn(params.customerVatNumber!,
+              weight: 0.65, align: TextAlign.left, scale: 0.75),
+        ]));
+      }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
       if (params.customerName != null && params.customerName!.isNotEmpty) {
@@ -763,6 +791,17 @@ class SupermarketLayout implements ReceiptLayout {
       if (params.customerAddress != null &&
           params.customerAddress!.isNotEmpty) {
         rows.add(TextRow(params.customerAddress!, scale: 0.75));
+      }
+
+      if (params.customerVatNumber != null &&
+          params.customerVatNumber!.isNotEmpty &&
+          displayConfig?['showCustomerVatNumber']?.visible == true) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(params.customerVatNumber!,
+              weight: 0.65, align: TextAlign.left, scale: 0.75),
+          ReceiptTableColumn(customerVatLabel,
+              weight: 0.35, align: TextAlign.right, isBold: true, scale: 0.75),
+        ]));
       }
     }
 
@@ -1665,8 +1704,10 @@ class SupermarketLayout implements ReceiptLayout {
 
       final String lang = params.billDocumentConfig.language ?? 'en';
       final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
+        displayConfig?['showOrderNumberInFooter']?.value ??
+            displayConfig?['showInvoicePrefix']?.value,
+        params.billDocumentConfig.numberPrefix ??
+            displayConfig?['showInvoicePrefix']?.defaultValue,
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 

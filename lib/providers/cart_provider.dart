@@ -865,7 +865,7 @@ class CartProvider with ChangeNotifier {
         finalPaidMethods != null &&
         finalPaidMethods.isNotEmpty) {
       apiBodyData = {
-        "items": items,
+        "items": items?.reversed.toList(),
         "phone": customerPhone,
         "transaction_number": transactionId,
         "payment_method": paymentMethods,
@@ -890,7 +890,7 @@ class CartProvider with ChangeNotifier {
     } else {
       // Fallback to single payment method format
       apiBodyData = {
-        "items": items,
+        "items": items?.reversed.toList(),
         "phone": customerPhone,
         "transaction_number": transactionId,
         "payment_method": paymentMethod,

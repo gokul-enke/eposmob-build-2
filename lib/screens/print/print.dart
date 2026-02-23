@@ -43,6 +43,7 @@ class PrintPage extends StatefulWidget {
   final String? deliveryMethod;
   final String? customerAlternatePhone;
   final String? paymentMethod;
+  final String? customerVatNumber;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
@@ -71,6 +72,7 @@ class PrintPage extends StatefulWidget {
     this.deliveryMethod,
     this.customerAlternatePhone,
     this.paymentMethod,
+    this.customerVatNumber,
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
@@ -104,6 +106,7 @@ class PrintPage extends StatefulWidget {
     String? deliveryMethod,
     String? customerAlternatePhone,
     String? paymentMethod,
+    String? customerVatNumber,
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
@@ -211,6 +214,7 @@ class PrintPage extends StatefulWidget {
         deliveryMethod: deliveryMethod,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
+        customerVatNumber: customerVatNumber,
         paymentBreakdown: paymentBreakdown,
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
@@ -674,6 +678,7 @@ class _PrintPageState extends State<PrintPage> {
       deliveryMethod: widget.deliveryMethod,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
+      customerVatNumber: widget.customerVatNumber,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
@@ -763,6 +768,7 @@ class _PrintPageState extends State<PrintPage> {
       deliveryMethod: widget.deliveryMethod,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
+      customerVatNumber: widget.customerVatNumber,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,

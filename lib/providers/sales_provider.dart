@@ -666,7 +666,7 @@ class SalesProvider with ChangeNotifier {
       },
       body: jsonEncode({
         'order_id': int.tryParse(orderId) ?? orderId,
-        'payment_method': int.tryParse(paymentMethod) ?? paymentMethod,
+        'refund_method': int.tryParse(paymentMethod) ?? paymentMethod,
       }),
     );
 
