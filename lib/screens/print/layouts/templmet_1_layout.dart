@@ -1675,36 +1675,32 @@ class SupermarketLayout implements ReceiptLayout {
       }
     }
 
-    // Order Number (with visibility check)
-    if (displayConfig?['showOrderNumber']?.visible != false) {
-      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+    // Order Number Display (Prioritize Footer if both are active)
+    final bool showInvoiceNumber =
+        displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showFooterInvoice =
+        displayConfig?['showOrderNumberInFooter']?.visible == true;
 
-      // Get prefix from display configuration - use language-specific fallback
-      final String lang = params.billDocumentConfig.language ?? 'en';
-      final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showInvoicePrefix']?.value,
-        displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
-      );
-
-      rows.add(SpacingRow(_itemGap));
-      rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
-    }
-
-    // Order Number in Footer
-    if (displayConfig?['showOrderNumberInFooter']?.visible == true) {
+    if (showFooterInvoice || showInvoiceNumber) {
+      // Extract number sequence (e.g., "1149" from "INV-1149")
       final regex = RegExp(r'[1-9]\d*');
       final match = regex.firstMatch(params.orderNumber);
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
       final String lang = params.billDocumentConfig.language ?? 'en';
+
+      // Determine prefix and style based on which setting is active
+      String prefixKey =
+          showFooterInvoice ? 'showOrderNumberInFooter' : 'showInvoiceNumber';
+      if (showFooterInvoice &&
+          displayConfig?['showOrderNumberInFooter']?.value == null) {
+        // Fallback to general prefix if footer value is null
+        prefixKey = 'showInvoiceNumber';
+      }
+
       final String invoicePrefix = _getDisplayValue(
-        displayConfig?['showOrderNumberInFooter']?.value ??
+        displayConfig?[prefixKey]?.value ??
             displayConfig?['showInvoicePrefix']?.value,
         params.billDocumentConfig.numberPrefix ??
             displayConfig?['showInvoicePrefix']?.defaultValue,
@@ -1712,10 +1708,14 @@ class SupermarketLayout implements ReceiptLayout {
       );
 
       rows.add(SpacingRow(_itemGap));
-      rows.add(StandardThinDividerRow());
-      rows.add(SpacingRow(_itemGap));
-      rows.add(
-          TextRow('$invoicePrefix $strippedNumber', scale: 1.1, isBold: true));
+      if (showFooterInvoice) {
+        rows.add(StandardThinDividerRow());
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow('$invoicePrefix $strippedNumber',
+            scale: 1.1, isBold: true));
+      } else {
+        rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
+      }
     }
 
     rows.add(SpacingRow(_itemGap));

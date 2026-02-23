@@ -62,6 +62,7 @@ class _AddProductWithBarcodeModalState
   final FocusNode _categoryFocusNode = FocusNode();
 
   bool isLoading = false;
+  bool isSaveAndCreateLoading = false;
   bool isBarcodeGenerating = false;
   String? selectedUnit;
   Category? selectedCategory;
@@ -132,6 +133,7 @@ class _AddProductWithBarcodeModalState
     _categoryFocusNode.dispose();
 
     isLoading = false;
+    isSaveAndCreateLoading = false;
     selectedUnit = null;
     selectedCategory = null;
     isValidatedOnce = false;
@@ -496,12 +498,49 @@ class _AddProductWithBarcodeModalState
                       ),
                     ),
                     const SizedBox(width: 10),
+                    // Save and Create Button
+                    SizedBox(
+                      width: 140,
+                      height: 40,
+                      child: ElevatedButton(
+                        onPressed: (isLoading || isSaveAndCreateLoading)
+                            ? null
+                            : () => _submitForm(keepOpen: true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(color: ColorManager.kPrimaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: isSaveAndCreateLoading
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      ColorManager.kPrimaryColor),
+                                ),
+                              )
+                            : Text(
+                                "Save and Create",
+                                style: TextStyle(
+                                  color: ColorManager.kPrimaryColor,
+                                  fontSize: FontSize.s12,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     // Add Product Button
                     SizedBox(
                       width: 120,
                       height: 40,
                       child: ElevatedButton(
-                        onPressed: isLoading ? null : _submitForm,
+                        onPressed: (isLoading || isSaveAndCreateLoading)
+                            ? null
+                            : () => _submitForm(keepOpen: false),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: ColorManager.kPrimaryColor,
                           shape: RoundedRectangleBorder(
@@ -519,7 +558,7 @@ class _AddProductWithBarcodeModalState
                                 ),
                               )
                             : const Text(
-                                "Add Product",
+                                "Save",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: FontSize.s12,
@@ -1034,7 +1073,7 @@ class _AddProductWithBarcodeModalState
   }
 
   // Submit form
-  Future<void> _submitForm() async {
+  Future<void> _submitForm({bool keepOpen = false}) async {
     setState(() {
       isValidatedOnce = true;
     });
@@ -1046,7 +1085,11 @@ class _AddProductWithBarcodeModalState
     if (isFormValid && isUnitValid && isCategoryValid) {
       formKey.currentState!.save();
       setState(() {
-        isLoading = true;
+        if (keepOpen) {
+          isSaveAndCreateLoading = true;
+        } else {
+          isLoading = true;
+        }
       });
 
       try {
@@ -1094,15 +1137,22 @@ class _AddProductWithBarcodeModalState
 
           try {
             final returnedProduct = GetProduct.fromJson(result['data']);
-            Navigator.pop(context, {
-              'product': returnedProduct,
-              'initialQuantity': _productQuantityController.text,
-            });
+            if (!keepOpen) {
+              Navigator.pop(context, {
+                'product': returnedProduct,
+                'initialQuantity': _productQuantityController.text,
+              });
+            }
           } catch (_) {
-            Navigator.pop(context, {
-              'product': result['data'],
-              'initialQuantity': _productQuantityController.text,
-            });
+            if (!keepOpen) {
+              Navigator.pop(context, {
+                'product': result['data'],
+                'initialQuantity': _productQuantityController.text,
+              });
+            }
+          }
+          if (keepOpen) {
+            _resetFormFields();
           }
           showScaffold(context: context, message: 'Product added successfully');
         } else {
@@ -1144,7 +1194,11 @@ class _AddProductWithBarcodeModalState
         debugPrint("Error in product creation: $e");
       } finally {
         setState(() {
-          isLoading = false;
+          if (keepOpen) {
+            isSaveAndCreateLoading = false;
+          } else {
+            isLoading = false;
+          }
         });
       }
     } else {
@@ -1153,5 +1207,24 @@ class _AddProductWithBarcodeModalState
         message: 'Please fill all required fields correctly',
       );
     }
+  }
+
+  void _resetFormFields() {
+    _productBarcodeController.clear();
+    _productNameController.clear();
+    _productMRPController.clear();
+    _productQuantityController.text = '0';
+    _productSellingPriceController.clear();
+    _productPurchasePriceController.clear();
+    for (var controller in _languageNameControllers.values) {
+      if (controller != _productNameController) {
+        controller.clear();
+      }
+    }
+    setState(() {
+      selectedUnit = null;
+      selectedCategory = null;
+      isValidatedOnce = false;
+    });
   }
 }
