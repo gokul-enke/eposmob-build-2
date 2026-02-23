@@ -40,6 +40,7 @@ class APPUrl {
   static String addToOrderUrl = '$baseURL/api/v1/order/add-to-order';
   static String updateOrderUrl = '$baseURL/api/v1/order/update-order';
   static String addToOrderConfirmUrl = '$baseURL/api/v1/order/confirm-order';
+  static String cancelOrderUrl = '$baseURL/api/v1/order/cancel-order';
   // static String getListOrder = '$baseURL/api/v1/order/list-orders';
   static String getListOrder = '$baseURL/api/v1/order/executive/list-orders';
   // static String getListOrder = '$baseURL/api/v1/order-searchbar';

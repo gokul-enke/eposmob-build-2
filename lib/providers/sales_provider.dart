@@ -643,6 +643,46 @@ class SalesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> cancelOrder({
+    required String accessToken,
+    required String orderId,
+    required String paymentMethod,
+  }) async {
+    final url = Uri.parse(APPUrl.cancelOrderUrl);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+      body: jsonEncode({
+        'order_id': int.tryParse(orderId) ?? orderId,
+        'payment_method': int.tryParse(paymentMethod) ?? paymentMethod,
+      }),
+    );
+
+    debugPrint("accessToken $accessToken");
+    debugPrint("orderId $orderId");
+    debugPrint("paymentMethod $paymentMethod");
+    debugPrint("response.statusCode ${response.statusCode}");
+    debugPrint("response.body ${response.body}");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      notifyListeners();
+    } else {
+      throw Exception('Failed to cancel order');
+    }
+  }
+
   Future<void> fetchDailySalesClose({
     required String accessToken,
     String? startDate,

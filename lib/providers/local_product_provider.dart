@@ -832,9 +832,15 @@ class LocalProductProvider extends ChangeNotifier {
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
+      String? accessToken = prefs.getString('access_token');
 
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
+      }
+
+      if (accessToken == null || accessToken.isEmpty) {
+        throw const HttpException(
+            "Access token not found. Please login again.");
       }
 
       bool hasMorePages = true;
@@ -870,6 +876,7 @@ class LocalProductProvider extends ChangeNotifier {
 
           futures.add(http.get(url, headers: {
             'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
             'X-Tenant': apiKey,
           }));
         }
@@ -919,6 +926,11 @@ class LocalProductProvider extends ChangeNotifier {
           } else {
             debugPrint(
                 '❌ [API] Page $pageNum failed: Status ${response.statusCode}');
+
+            if (response.statusCode == 401 || response.statusCode == 403) {
+              throw const HttpException("Unauthorized. Please login again.");
+            }
+
             emptyPageCount++;
           }
         }

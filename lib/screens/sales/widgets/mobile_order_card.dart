@@ -14,6 +14,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/sales/widgets/cancel_order_modal.dart';
 import 'package:provider/provider.dart';
 
 class MobileOrderCard extends StatelessWidget {
@@ -138,6 +139,57 @@ class MobileOrderCard extends StatelessWidget {
                   onTap: () async {
                     Navigator.pop(ctx);
                     _handleReturnOrder(context);
+                  },
+                ),
+                ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.red.withOpacity(0.12),
+                    child: const Icon(Icons.cancel_outlined, color: Colors.red),
+                  ),
+                  title: const Text('Cancel Order'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    if (!context.mounted) return;
+                    showDialog(
+                      context: context,
+                      builder: (dialogCtx) => CancelOrderModal(
+                        onConfirm: (paymentMethodId) async {
+                          try {
+                            final authModel =
+                                Provider.of<AuthModel>(context, listen: false);
+                            final salesProvider = Provider.of<SalesProvider>(
+                                context,
+                                listen: false);
+
+                            await salesProvider.cancelOrder(
+                              accessToken: authModel.token ?? "",
+                              orderId: order.id.toString(),
+                              paymentMethod: paymentMethodId,
+                            );
+
+                            if (context.mounted) {
+                              showScaffold(
+                                context: context,
+                                message: "Order cancelled successfully",
+                              );
+                              // Refresh orders
+                              salesProvider.fetchOrders(
+                                accessToken: authModel.token ?? "",
+                                page: salesProvider.currentPage,
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              showScaffoldError(
+                                context: context,
+                                message: "Failed to cancel order: $e",
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    );
                   },
                 ),
               ],
@@ -313,7 +365,8 @@ class MobileOrderCard extends StatelessWidget {
               orderReturns: orderDetails.data?.orderReturns,
               paidAmount: paidAmount > 0 ? paidAmount : null,
               customerCurrentBalance: customerCurrentBalance,
-              isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
+              isDefaultCustomer:
+                  _isDefaultCustomerPhone(context, customerPhone),
             ),
           ),
         );
