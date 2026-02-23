@@ -48,6 +48,7 @@ class SupermarketLayout implements ReceiptLayout {
   // Ultra-compact spacing for Supermarket
   static const double _sectionGap = 0.0;
   static const double _itemGap = 0.0;
+  static const double _smallItemGap = 1.0;
   static const double _headerGap = 0.0;
 
   @override
@@ -374,7 +375,7 @@ class SupermarketLayout implements ReceiptLayout {
         rows.add(SpacingRow(_itemGap));
         rows.add(
             TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.0));
-        rows.add(SpacingRow(2));
+        rows.add(SpacingRow(_itemGap));
       }
     }
 
@@ -402,7 +403,7 @@ class SupermarketLayout implements ReceiptLayout {
       }
 
       if (extraHeading1Text.isNotEmpty) {
-        rows.add(SpacingRow(2));
+        rows.add(SpacingRow(_itemGap));
         rows.add(TextRow(extraHeading1Text, scale: 0.75, isBold: true));
       }
     }
@@ -431,7 +432,7 @@ class SupermarketLayout implements ReceiptLayout {
       }
 
       if (extraHeading2Text.isNotEmpty) {
-        rows.add(SpacingRow(2));
+        rows.add(SpacingRow(_itemGap));
         rows.add(TextRow(extraHeading2Text, scale: 0.75, isBold: true));
       }
     }
@@ -487,7 +488,7 @@ class SupermarketLayout implements ReceiptLayout {
       }
 
       if (telephoneText.isNotEmpty) {
-        rows.add(SpacingRow(2));
+        rows.add(SpacingRow(_itemGap));
         rows.add(TextRow(telephoneText, scale: 0.75, isBold: true));
       }
     }
@@ -1404,7 +1405,7 @@ class SupermarketLayout implements ReceiptLayout {
               displayConfig, 'showSaved', null, null, "لقد وفرت:", "You Saved:")
           : _getLabel(displayConfig, 'showSaved', null,
               isEnglish ? "You Saved:" : "لقد وفرت:");
-      rows.add(SpacingRow(2));
+      rows.add(SpacingRow(_itemGap));
       rows.add(TextRow(
         "$savedLabel ${saved.toStringAsFixed(2)}",
         isBold: true,
@@ -1598,12 +1599,12 @@ class SupermarketLayout implements ReceiptLayout {
       // Display QR code if data is available
       if (qrData.isNotEmpty) {
         rows.add(TextRow(qrMessage, scale: 0.75));
-        rows.add(SpacingRow(5));
+        rows.add(SpacingRow(_itemGap));
         rows.add(QrRow(qrData, size: 220));
 
         // Show VAT number below QR for ZATCA receipts
         if (params.hasZatcaCredentials && params.zatcaVatNumber != null) {
-          rows.add(SpacingRow(5));
+          rows.add(SpacingRow(_itemGap));
           final vatLabel = isDualLanguage
               ? 'الرقم الضريبي:   VAT No:'
               : (isEnglish ? 'VAT No:' : 'الرقم الضريبي:');
@@ -1651,7 +1652,7 @@ class SupermarketLayout implements ReceiptLayout {
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
-      rows.add(SpacingRow(3));
+      rows.add(SpacingRow(_itemGap));
       rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
     }
 
@@ -1669,9 +1670,9 @@ class SupermarketLayout implements ReceiptLayout {
         lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
-      rows.add(SpacingRow(5));
+      rows.add(SpacingRow(_itemGap));
       rows.add(StandardThinDividerRow());
-      rows.add(SpacingRow(5));
+      rows.add(SpacingRow(_itemGap));
       rows.add(
           TextRow('$invoicePrefix $strippedNumber', scale: 1.1, isBold: true));
     }
