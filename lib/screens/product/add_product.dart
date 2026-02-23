@@ -7,7 +7,6 @@ import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
@@ -484,6 +483,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         const SizedBox(width: 15),
 
                         // Store
+                        /*
                         Expanded(
                           flex: 1,
                           child: Column(
@@ -533,9 +533,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ],
                           ),
                         ),
+                        */
+                        const Expanded(flex: 1, child: SizedBox()),
                         const SizedBox(width: 15),
 
                         // Supplier
+                        /*
                         Expanded(
                           flex: 1,
                           child: Column(
@@ -585,6 +588,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ],
                           ),
                         ),
+                        */
+                        const Expanded(flex: 1, child: SizedBox()),
                       ],
                     ),
 
