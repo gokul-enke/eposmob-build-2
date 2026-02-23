@@ -2,7 +2,7 @@ class APPUrl {
   static const String baseURL = String.fromEnvironment('BASE_URL',
       defaultValue: "https://eposdemo.yougoit.in");
   // static String baseURL = "https://eposdemo.yougoit.in";
-                                                                                                                                                                                            
+
   // static String baseURL = "https://linetolinepos.yougoit.in";
   // static String baseURL = "https://epos.hypersouq.in";
   // static String baseURL = "https://eeezeeerp.cloudposai.com";

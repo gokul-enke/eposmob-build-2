@@ -41,12 +41,15 @@ class SalesExecutiveReportData {
   final String? phone;
   final int? orderCount;
   final String? totalSales;
+  final String? onlineSales;
   final String? upiSales;
+  final String? cardSales;
   final String? cashSales;
-  final int? creditSales;
-  final int? collectedSales;
+  final String? creditSales;
+  final String? collectedSales;
   final String? totalPaymentReceived; // optional from API
-  final String? creditCollectedPrev; // optional from API (prev balance collected)
+  final String?
+      creditCollectedPrev; // optional from API (prev balance collected)
   final String? totalCollectedOnSale; // optional from API
 
   SalesExecutiveReportData({
@@ -54,7 +57,9 @@ class SalesExecutiveReportData {
     this.phone,
     this.orderCount,
     this.totalSales,
+    this.onlineSales,
     this.upiSales,
+    this.cardSales,
     this.cashSales,
     this.creditSales,
     this.collectedSales,
@@ -69,20 +74,47 @@ class SalesExecutiveReportData {
         phone: json["phone"] ?? "No Phone",
         // Prefer snake_case keys from API, fallback to camelCase for compatibility
         orderCount: (json["order_count"] ?? json["orderCount"]) is String
-            ? int.tryParse((json["order_count"] ?? json["orderCount"]).toString()) ?? 0
+            ? int.tryParse(
+                    (json["order_count"] ?? json["orderCount"]).toString()) ??
+                0
             : (json["order_count"] ?? json["orderCount"] ?? 0),
-        totalSales: (json["total_sales"] ?? json["totalSales"])?.toString() ?? "0.000",
-        upiSales: (json["upi_sales"] ?? json["upiSales"])?.toString() ?? "0.000",
-        cashSales: (json["cash_sales"] ?? json["cashSales"])?.toString() ?? "0.000",
-        creditSales: (json["credit_sales"] ?? json["creditSales"]) is String
-            ? int.tryParse((json["credit_sales"] ?? json["creditSales"]).toString()) ?? 0
-            : (json["credit_sales"] ?? json["creditSales"] ?? 0),
-        collectedSales: (json["collected_sales"] ?? json["collectedSales"]) is String
-            ? int.tryParse((json["collected_sales"] ?? json["collectedSales"]).toString()) ?? 0
-            : (json["collected_sales"] ?? json["collectedSales"] ?? 0),
-        totalPaymentReceived: (json["total_payment_received"] ?? json["payment_received"] ?? json["totalPaymentReceived"])?.toString() ?? "0.000",
-        creditCollectedPrev: (json["credit_collected_prev"] ?? json["prev_balance_collected"] ?? json["creditCollectedPrev"])?.toString() ?? "0.000",
-        totalCollectedOnSale: (json["total_collected_on_sale"] ?? json["totalCollectedOnSale"])?.toString() ?? "0.000",
+        totalSales:
+            (json["total_sales"] ?? json["totalSales"])?.toString() ?? "0.000",
+        onlineSales:
+            (json["online_sales"] ?? json["onlineSales"])?.toString() ??
+                "0.000",
+        upiSales: (json["payment_breakdown"]?["UPI"] ??
+                    json["upi_sales"] ??
+                    json["upiSales"])
+                ?.toString() ??
+            "0.000",
+        cardSales: (json["payment_breakdown"]?["CARD"] ??
+                    json["card_sales"] ??
+                    json["cardSales"])
+                ?.toString() ??
+            "0.000",
+        cashSales:
+            (json["cash_sales"] ?? json["cashSales"])?.toString() ?? "0.000",
+        creditSales:
+            (json["credit_sales"] ?? json["creditSales"])?.toString() ??
+                "0.000",
+        collectedSales:
+            (json["collected_sales"] ?? json["collectedSales"])?.toString() ??
+                "0.000",
+        totalPaymentReceived: (json["total_payment_received"] ??
+                    json["payment_received"] ??
+                    json["totalPaymentReceived"])
+                ?.toString() ??
+            "0.000",
+        creditCollectedPrev: (json["credit_collected_prev"] ??
+                    json["prev_balance_collected"] ??
+                    json["creditCollectedPrev"])
+                ?.toString() ??
+            "0.000",
+        totalCollectedOnSale:
+            (json["total_collected_on_sale"] ?? json["totalCollectedOnSale"])
+                    ?.toString() ??
+                "0.000",
       );
 
   Map<String, dynamic> toJson() => {
@@ -90,7 +122,9 @@ class SalesExecutiveReportData {
         "phone": phone,
         "orderCount": orderCount,
         "totalSales": totalSales,
+        "onlineSales": onlineSales,
         "upiSales": upiSales,
+        "cardSales": cardSales,
         "cashSales": cashSales,
         "creditSales": creditSales,
         "collectedSales": collectedSales,
@@ -104,8 +138,16 @@ class SalesExecutiveReportData {
     return double.tryParse(totalSales ?? "0") ?? 0.0;
   }
 
+  double get onlineSalesAmount {
+    return double.tryParse(onlineSales ?? "0") ?? 0.0;
+  }
+
   double get upiSalesAmount {
     return double.tryParse(upiSales ?? "0") ?? 0.0;
+  }
+
+  double get cardSalesAmount {
+    return double.tryParse(cardSales ?? "0") ?? 0.0;
   }
 
   double get cashSalesAmount {
@@ -113,11 +155,11 @@ class SalesExecutiveReportData {
   }
 
   double get creditSalesAmount {
-    return (creditSales ?? 0).toDouble();
+    return double.tryParse(creditSales ?? "0") ?? 0.0;
   }
 
   double get collectedSalesAmount {
-    return (collectedSales ?? 0).toDouble();
+    return double.tryParse(collectedSales ?? "0") ?? 0.0;
   }
 
   double get totalPaymentReceivedAmount {
@@ -137,8 +179,16 @@ class SalesExecutiveReportData {
     return totalSalesAmount.toStringAsFixed(2);
   }
 
+  String get formattedOnlineSales {
+    return onlineSalesAmount.toStringAsFixed(2);
+  }
+
   String get formattedUpiSales {
     return upiSalesAmount.toStringAsFixed(2);
+  }
+
+  String get formattedCardSales {
+    return cardSalesAmount.toStringAsFixed(2);
   }
 
   String get formattedCashSales {

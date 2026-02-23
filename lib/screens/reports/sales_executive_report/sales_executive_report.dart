@@ -833,6 +833,14 @@ class _SalesExecutiveReportScreenState
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}',
                             ),
                             _buildFinancialItem(
+                              'Total Card Sales',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCardSales}',
+                            ),
+                            _buildFinancialItem(
+                              'Total Online Sales',
+                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedOnlineSales}',
+                            ),
+                            _buildFinancialItem(
                               'Total Cash Sales',
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}',
                             ),

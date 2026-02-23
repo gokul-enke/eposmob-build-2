@@ -323,7 +323,7 @@ class SupermarketLayout implements ReceiptLayout {
       }
 
       if (descriptionText.isNotEmpty) {
-        rows.add(SpacingRow(5));
+        rows.add(SpacingRow(_itemGap));
         rows.add(TextRow(descriptionText, scale: 0.9, isBold: true));
       }
     }
@@ -371,7 +371,7 @@ class SupermarketLayout implements ReceiptLayout {
             );
 
       if (invoiceTitleText.isNotEmpty) {
-        rows.add(SpacingRow(5));
+        rows.add(SpacingRow(_itemGap));
         rows.add(
             TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.0));
         rows.add(SpacingRow(2));
@@ -487,7 +487,7 @@ class SupermarketLayout implements ReceiptLayout {
       }
 
       if (telephoneText.isNotEmpty) {
-        rows.add(SpacingRow(5));
+        rows.add(SpacingRow(2));
         rows.add(TextRow(telephoneText, scale: 0.75, isBold: true));
       }
     }
@@ -1404,7 +1404,7 @@ class SupermarketLayout implements ReceiptLayout {
               displayConfig, 'showSaved', null, null, "لقد وفرت:", "You Saved:")
           : _getLabel(displayConfig, 'showSaved', null,
               isEnglish ? "You Saved:" : "لقد وفرت:");
-      rows.add(SpacingRow(5));
+      rows.add(SpacingRow(2));
       rows.add(TextRow(
         "$savedLabel ${saved.toStringAsFixed(2)}",
         isBold: true,
