@@ -1367,39 +1367,47 @@ class ClassicReceiptLayout implements ReceiptLayout {
       rows.add(SpacingRow(5));
     }
 
-    // Invoice number - check visibility
-    final showOrderNumber = displayConfig?['showOrderNumber']?.visible ?? true;
-    if (showOrderNumber) {
-      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
+    // Order Number Display (Prioritize Footer if both are active)
+    final bool showInvoiceNumber =
+        displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showFooterInvoice =
+        displayConfig?['showOrderNumberInFooter']?.visible == true;
+
+    if (showFooterInvoice || showInvoiceNumber) {
+      // Extract number sequence (e.g., "1149" from "INV-1149")
       final regex = RegExp(r'[1-9]\d*');
       final match = regex.firstMatch(params.orderNumber);
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
-      // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix =
-          params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String lang = params.billDocumentConfig.language ?? 'en';
 
-      rows.add(TextRow('$invoicePrefix$strippedNumber', scale: 0.8));
+      // Determine prefix and style based on which setting is active
+      String prefixKey =
+          showFooterInvoice ? 'showOrderNumberInFooter' : 'showInvoiceNumber';
+      if (showFooterInvoice &&
+          displayConfig?['showOrderNumberInFooter']?.value == null) {
+        // Fallback to general prefix if footer value is null
+        prefixKey = 'showInvoiceNumber';
+      }
+
+      final String invoicePrefix = _getDisplayValue(
+        displayConfig?[prefixKey]?.value ??
+            displayConfig?['showInvoicePrefix']?.value,
+        params.billDocumentConfig.numberPrefix ??
+            displayConfig?['showInvoicePrefix']?.defaultValue,
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+      );
+
       rows.add(SpacingRow(5));
-    }
-
-    // Order Number in Footer
-    if (displayConfig?['showOrderNumberInFooter']?.visible == true) {
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
-
-      // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix =
-          params.billDocumentConfig.numberPrefix ?? 'INV-';
-
-      rows.add(SpacingRow(5));
-      rows.add(DividerRow());
-      rows.add(SpacingRow(5));
-      rows.add(
-          TextRow('$invoicePrefix$strippedNumber', scale: 1.1, isBold: true));
+      if (showFooterInvoice) {
+        rows.add(DividerRow());
+        rows.add(SpacingRow(5));
+        rows.add(TextRow('$invoicePrefix $strippedNumber',
+            scale: 0.85, isBold: true));
+      } else {
+        rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.85));
+      }
     }
 
     // Terms & Conditions

@@ -1712,9 +1712,9 @@ class SupermarketLayout implements ReceiptLayout {
         rows.add(StandardThinDividerRow());
         rows.add(SpacingRow(_itemGap));
         rows.add(TextRow('$invoicePrefix $strippedNumber',
-            scale: 1.1, isBold: true));
+            scale: 0.85, isBold: true));
       } else {
-        rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.8));
+        rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.85));
       }
     }
 
