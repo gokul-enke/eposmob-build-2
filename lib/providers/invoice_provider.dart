@@ -138,15 +138,22 @@ class InvoiceProvider extends ChangeNotifier {
       'page': (page ?? 1).toString(),
     };
 
-    final uri = Uri.parse(APPUrl.customerTransactions)
-        .replace(queryParameters: queryParams);
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Add store_id to query parameters
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.customerTransactions)
+        .replace(queryParameters: queryParams);
 
     try {
       final response = await http.get(
@@ -847,15 +854,24 @@ class InvoiceProvider extends ChangeNotifier {
   ) async {
     debugPrint("[InvoiceProvider] listAllPaymentList called");
 
-    final url = Uri.parse(APPUrl.listTransactionType);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint("[InvoiceProvider] API key not found");
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Build URL with store_id parameter
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.listTransactionType)
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
       debugPrint("[InvoiceProvider] Fetching payment methods from: $url");
       final response = await http.get(url, headers: {
@@ -947,15 +963,24 @@ class InvoiceProvider extends ChangeNotifier {
   ) async {
     debugPrint("[InvoiceProvider] listAllInvoiceAccountTypes called");
 
-    final url = Uri.parse(APPUrl.listInvoiceAccountType);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint("[InvoiceProvider] API key not found");
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Build URL with store_id parameter
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.listInvoiceAccountType)
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
       debugPrint("[InvoiceProvider] Fetching account types from: $url");
       final response = await http.get(url, headers: {
