@@ -198,17 +198,21 @@ class CustomerVoucherProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
     final queryParams = {
       'page': '1',
       'per_page': '1000',
     };
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
 
     final uri = Uri.parse(APPUrl.listCustomerVouchers)
         .replace(queryParameters: queryParams);
     debugPrint("Fetching vouchers from: $uri");
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");

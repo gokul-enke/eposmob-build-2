@@ -22,9 +22,15 @@ class LanguageProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = Uri.parse(APPUrl.listLanguages);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
+      final int? activeStoreId = prefs.getInt('active_store_id');
+
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.listLanguages).replace(queryParameters: queryParameters);
 
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");

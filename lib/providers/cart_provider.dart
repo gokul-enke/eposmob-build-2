@@ -533,16 +533,22 @@ class CartProvider with ChangeNotifier {
   }) async {
     debugPrint("📤 GET CART ITEM STATUSES API - Starting request");
 
-    final url = Uri.parse(APPUrl.getCartItemStatuses);
-    debugPrint('🌐 API URL: ${url.toString()}');
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.getCartItemStatuses)
+        .replace(queryParameters: queryParameters);
+    debugPrint('🌐 API URL: ${url.toString()}');
 
     try {
       final response = await http.get(url, headers: {
@@ -583,20 +589,27 @@ class CartProvider with ChangeNotifier {
     debugPrint("🛒 Cart Item ID: $cartItemId");
     debugPrint("📊 Status ID: $statusId");
 
-    final url =
-        Uri.parse(APPUrl.updateCartItemStatus).replace(queryParameters: {
-      'cart_item_id': cartItemId.toString(),
-      'status_id': statusId.toString(),
-    });
-    debugPrint('🌐 API URL: ${url.toString()}');
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {
+      'cart_item_id': cartItemId.toString(),
+      'status_id': statusId.toString(),
+    };
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final url =
+        Uri.parse(APPUrl.updateCartItemStatus).replace(queryParameters: queryParameters);
+    debugPrint('🌐 API URL: ${url.toString()}');
 
     try {
       final response = await http.post(url, headers: {
@@ -1325,6 +1338,8 @@ class CartProvider with ChangeNotifier {
   }) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint('CartProvider: API key not found. Please restart the app.');
       return {
@@ -1334,13 +1349,22 @@ class CartProvider with ChangeNotifier {
     }
     try {
       // Build URL with table query parameter if tableId is provided
-      String url = APPUrl.listSavedOrders;
+      final Map<String, String> queryParameters = {};
+      
       if (tableId != null && tableId.isNotEmpty) {
-        url += '?table=$tableId';
+        queryParameters['table'] = tableId;
       }
+      
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      
+      final url = Uri.parse(APPUrl.listSavedOrders)
+          .replace(queryParameters: queryParameters);
+      
       debugPrint('🌐 API URL: ${url.toString()}');
       final response = await http.get(
-        Uri.parse(url),
+        url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
