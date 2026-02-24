@@ -872,12 +872,6 @@ class LocalProductProvider extends ChangeNotifier {
               Map<String, dynamic>.from(baseUri.queryParameters)
                 ..addAll(queryParams);
 
-          // Attach active store_id if available
-          final int? activeStoreId = prefs.getInt('active_store_id');
-          if (activeStoreId != null) {
-            finalQueryParams['store_id'] = activeStoreId.toString();
-          }
-
           final url = baseUri.replace(queryParameters: finalQueryParams);
 
           futures.add(http.get(url, headers: {
