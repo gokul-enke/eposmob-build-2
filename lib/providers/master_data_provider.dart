@@ -69,6 +69,7 @@ class MasterDataProvider with ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       _error = "API key not found. Please restart the app.";
@@ -78,7 +79,11 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     try {
-      final url = Uri.parse(APPUrl.getPaymentMethods);
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.getPaymentMethods).replace(queryParameters: queryParameters);
       debugPrint('🔄 Fetching payment methods');
       debugPrint('📡 URL: $url');
 

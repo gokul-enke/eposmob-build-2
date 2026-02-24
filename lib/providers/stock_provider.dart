@@ -785,19 +785,25 @@ class StockProvider extends ChangeNotifier {
     required bool taxInclude,
   }) async {
     debugPrint("CALCULATE TAX API CALLED");
+    
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    
     final queryParameters = <String, String>{
       'price': price.toString(),
       'product_id': productId.toString(),
       'tax_include': taxInclude ? '1' : '0',
       'category_id': categoryId.toString(),
     };
+    
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
 
     final url = Uri.parse(APPUrl.calculateTax)
         .replace(queryParameters: queryParameters);
     debugPrint("Tax API URL: $url");
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -1116,10 +1122,16 @@ class StockProvider extends ChangeNotifier {
 
   Future<void> callStockDetails(
       {required int stockId, required String accessToken}) async {
-    final url = Uri.parse("${APPUrl.detailsOfStock}?id=$stockId");
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    
+    final Map<String, String> queryParameters = {'id': stockId.toString()};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.detailsOfStock).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
