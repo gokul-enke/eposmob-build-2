@@ -53,15 +53,20 @@ class ReportsProvider with ChangeNotifier {
       queryParameters['amount'] = amount;
     }
 
-    final uri = Uri.parse(APPUrl.customerAccountBook)
-        .replace(queryParameters: queryParameters);
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.customerAccountBook)
+        .replace(queryParameters: queryParameters);
     try {
       final response = await http.get(
         uri,
@@ -111,15 +116,20 @@ class ReportsProvider with ChangeNotifier {
       queryParameters['amount'] = amount;
     }
 
-    final uri = Uri.parse(APPUrl.productSalesReport)
-        .replace(queryParameters: queryParameters);
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.productSalesReport)
+        .replace(queryParameters: queryParameters);
     try {
       final response = await http.get(
         uri,
@@ -171,15 +181,20 @@ class ReportsProvider with ChangeNotifier {
       queryParameters['to_date'] = endDate;
     }
 
-    final uri =
-        Uri.parse(APPUrl.salesReport).replace(queryParameters: queryParameters);
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final uri =
+        Uri.parse(APPUrl.salesReport).replace(queryParameters: queryParameters);
     try {
       final response = await http.get(
         uri,
@@ -230,15 +245,20 @@ class ReportsProvider with ChangeNotifier {
       queryParameters['amount'] = amount;
     }
 
-    final uri = Uri.parse(APPUrl.supplierSalesReport)
-        .replace(queryParameters: queryParameters);
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.supplierSalesReport)
+        .replace(queryParameters: queryParameters);
     try {
       final response = await http.get(
         uri,
@@ -294,15 +314,20 @@ class ReportsProvider with ChangeNotifier {
       queryParameters['page'] = page.toString();
     }
 
-    final uri = Uri.parse(APPUrl.nonStockReportUrl)
-        .replace(queryParameters: queryParameters);
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.nonStockReportUrl)
+        .replace(queryParameters: queryParameters);
     try {
       final response = await http.get(
         uri,
@@ -357,15 +382,21 @@ class ReportsProvider with ChangeNotifier {
       queryParameters['page'] = page.toString();
     }
 
-    final uri = Uri.parse(APPUrl.consumedStocksReport)
-        .replace(queryParameters: queryParameters);
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Only add activeStoreId if store_id is not already provided as parameter
+    if (!queryParameters.containsKey('store_id') && activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final uri = Uri.parse(APPUrl.consumedStocksReport)
+        .replace(queryParameters: queryParameters);
     try {
       final response = await http.get(
         uri,

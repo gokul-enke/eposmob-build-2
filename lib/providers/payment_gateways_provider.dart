@@ -19,14 +19,22 @@ class PaymentGatewaysProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     notifyListeners();
-    final url = Uri.parse(APPUrl.getPaymentGateways);
+
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.getPaymentGateways).replace(queryParameters: queryParameters);
+
     try {
       final response = await http.get(
         url,

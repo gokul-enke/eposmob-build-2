@@ -852,17 +852,23 @@ class StockProvider extends ChangeNotifier {
       queryParameters['filter_name'] = filterName;
     }
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
     final uri =
         Uri.parse(APPUrl.listStock).replace(queryParameters: queryParameters);
 
     try {
-      // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? apiKey = prefs.getString('api_key');
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException("API key not found. Please restart the app.");
-      }
       final response = await http.get(
         uri,
         headers: {

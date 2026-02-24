@@ -173,9 +173,18 @@ class SalesProvider with ChangeNotifier {
     String? filterCreatedBy,
     int? page,
   }) async {
-    final queryParameters = <String, String>{
-      // 'store_id': storeId.toString(),
-    };
+    final queryParameters = <String, String>{};
+
+    // Add store_id from parameter or from SharedPreferences
+    if (storeId != null) {
+      queryParameters['store_id'] = storeId.toString();
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+    }
 
     if (orderNumber != null) queryParameters['number'] = orderNumber;
     if (filterName != null) queryParameters['filter_name'] = filterName;
@@ -378,12 +387,20 @@ class SalesProvider with ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final finalUrl = url.replace(queryParameters: queryParameters);
+
     try {
-      final response = await http.get(url, headers: {
+      final response = await http.get(finalUrl, headers: {
         'Authorization': 'Bearer $accessToken',
         'content-type': 'application/json',
         'X-Tenant': apiKey,
@@ -411,17 +428,23 @@ class SalesProvider with ChangeNotifier {
     final queryParameters = <String, String>{};
     if (page != null) queryParameters['page'] = page.toString();
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
     final uri = Uri.parse(APPUrl.listSalesReturn)
         .replace(queryParameters: queryParameters);
 
     try {
-      // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? apiKey = prefs.getString('api_key');
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException("API key not found. Please restart the app.");
-      }
       final response = await http.get(
         uri,
         headers: {
@@ -486,17 +509,23 @@ class SalesProvider with ChangeNotifier {
 
     debugPrint(queryParameters.toString());
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
     final uri = Uri.parse(APPUrl.listSalesReturnItems)
         .replace(queryParameters: queryParameters);
 
     try {
-      // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? apiKey = prefs.getString('api_key');
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException("API key not found. Please restart the app.");
-      }
       final response = await http.get(
         uri,
         headers: {
@@ -777,8 +806,8 @@ class SalesProvider with ChangeNotifier {
       'store_id': storeId.toString(),
     };
 
-    final uri = Uri.parse(APPUrl.dailySalesCloseSummary);
-    // .replace(queryParameters: queryParameters);
+    final uri = Uri.parse(APPUrl.dailySalesCloseSummary)
+        .replace(queryParameters: queryParameters);
 
     debugPrint('=== DEBUG: fetchDailySalesCloseSummary START ===');
     debugPrint('Full URL: $uri');

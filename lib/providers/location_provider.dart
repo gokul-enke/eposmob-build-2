@@ -17,14 +17,21 @@ class LocationProvider extends ChangeNotifier {
   Future<void> listAllStates(String accessToken) async {
     // debugPrint("LIST ALL STATES");
 
-    final url = Uri.parse(APPUrl.listStates);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.listStates).replace(queryParameters: queryParameters);
+
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
@@ -54,14 +61,23 @@ class LocationProvider extends ChangeNotifier {
       {required String accessToken, required String stateId}) async {
     // debugPrint("LIST ALL DISTRICTS");
 
-    final url = Uri.parse("${APPUrl.listDistricts}?state_id=$stateId");
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {
+      'state_id': stateId,
+    };
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.listDistricts).replace(queryParameters: queryParameters);
+
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
@@ -92,17 +108,24 @@ class LocationProvider extends ChangeNotifier {
       {required String accessToken, required String districtId}) async {
     debugPrint("🔄 CALLING PINCODE API - District ID: $districtId");
 
-    final url = Uri.parse("${APPUrl.listPincodes}?district_id=$districtId");
-    debugPrint("📡 API URL: $url");
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint("❌ API key not found");
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {
+      'district_id': districtId,
+    };
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.listPincodes).replace(queryParameters: queryParameters);
+    debugPrint("📡 API URL: $url");
 
     try {
       debugPrint("🚀 Making HTTP request to backend...");
