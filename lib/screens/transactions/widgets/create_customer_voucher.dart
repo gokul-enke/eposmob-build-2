@@ -173,11 +173,19 @@ class _CreateCustomerVoucherScreenState
           Provider.of<AuthModel>(context, listen: false).token;
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
+      final int? activeStoreId = prefs.getInt('active_store_id');
 
       if (accessToken == null || apiKey == null) return;
 
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.customerListUrl)
+          .replace(queryParameters: queryParameters);
+
       final response = await http.get(
-        Uri.parse(APPUrl.customerListUrl),
+        url,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
