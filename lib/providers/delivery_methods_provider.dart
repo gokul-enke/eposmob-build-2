@@ -38,9 +38,9 @@ class DeliveryMethodsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = Uri.parse(APPUrl.getDeliveryMethods);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
+      final int? activeStoreId = prefs.getInt('active_store_id');
 
       if (apiKey == null || apiKey.isEmpty) {
         debugPrint(
@@ -49,6 +49,16 @@ class DeliveryMethodsProvider with ChangeNotifier {
         notifyListeners();
         return;
       }
+
+      // Build query parameters with store_id
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+
+      final url = Uri.parse(APPUrl.getDeliveryMethods)
+          .replace(queryParameters: queryParameters);
+
       final response = await http.get(url, headers: {
         'X-Tenant': apiKey,
       });

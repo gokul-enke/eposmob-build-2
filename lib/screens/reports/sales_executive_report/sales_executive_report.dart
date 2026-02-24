@@ -426,7 +426,7 @@ class _SalesExecutiveReportScreenState
                                 1: FlexColumnWidth(1.5), // Phone
                                 2: FlexColumnWidth(1.5), // Total Orders
                                 3: FlexColumnWidth(1.5), // Total Sales
-                                4: FlexColumnWidth(1.5), // UPI Sales
+                                4: FlexColumnWidth(1.5), // Online Sales
                                 5: FlexColumnWidth(1.5), // Cash Sales
                                 6: FlexColumnWidth(1.5), // Credit Sales
                                 7: FlexColumnWidth(1.5), // Collected Sales
@@ -442,7 +442,7 @@ class _SalesExecutiveReportScreenState
                                     _buildTableHeader("Phone"),
                                     _buildTableHeader("Total Orders"),
                                     _buildTableHeader("Total Sales"),
-                                    _buildTableHeader("UPI Sales"),
+                                    _buildTableHeader("Online Sales"),
                                     _buildTableHeader("Cash Sales"),
                                     _buildTableHeader("Credit Sales"),
                                     _buildTableHeader("Collected Sales"),
@@ -485,7 +485,7 @@ class _SalesExecutiveReportScreenState
                                                 3: FlexColumnWidth(
                                                     1.5), // Total Sales
                                                 4: FlexColumnWidth(
-                                                    1.5), // UPI Sales
+                                                    1.5), // Online Sales
                                                 5: FlexColumnWidth(
                                                     1.5), // Cash Sales
                                                 6: FlexColumnWidth(
@@ -518,7 +518,7 @@ class _SalesExecutiveReportScreenState
                                                     _buildTableCell(
                                                         "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedTotalSales}"),
                                                     _buildTableCell(
-                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedUpiSales}"),
+                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedOnlineSales}"),
                                                     _buildTableCell(
                                                         "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCashSales}"),
                                                     _buildTableCell(
