@@ -158,7 +158,8 @@ class CartProvider with ChangeNotifier {
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final updatedUrl = url.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final updatedUrl = url.replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
     try {
       final response = await http.get(updatedUrl, headers: {
@@ -607,8 +608,8 @@ class CartProvider with ChangeNotifier {
       queryParameters['store_id'] = activeStoreId.toString();
     }
 
-    final url =
-        Uri.parse(APPUrl.updateCartItemStatus).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.updateCartItemStatus)
+        .replace(queryParameters: queryParameters);
     debugPrint('🌐 API URL: ${url.toString()}');
 
     try {
@@ -1282,14 +1283,22 @@ class CartProvider with ChangeNotifier {
   }) async {
     // debugPrint("********************APPLY COUPON API******************** ");
 
-    final url = Uri.parse(APPUrl.applyCoupon).replace(queryParameters: {
+    final queryParams = <String, String>{
       'price': totalAmount.toString(),
       'coupon_code': couponCode,
-    });
-    debugPrint('🌐 API URL: ${url.toString()}');
+    };
+
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+
+    final url =
+        Uri.parse(APPUrl.applyCoupon).replace(queryParameters: queryParams);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -1350,18 +1359,18 @@ class CartProvider with ChangeNotifier {
     try {
       // Build URL with table query parameter if tableId is provided
       final Map<String, String> queryParameters = {};
-      
+
       if (tableId != null && tableId.isNotEmpty) {
         queryParameters['table'] = tableId;
       }
-      
+
       if (activeStoreId != null) {
         queryParameters['store_id'] = activeStoreId.toString();
       }
-      
+
       final url = Uri.parse(APPUrl.listSavedOrders)
           .replace(queryParameters: queryParameters);
-      
+
       debugPrint('🌐 API URL: ${url.toString()}');
       final response = await http.get(
         url,

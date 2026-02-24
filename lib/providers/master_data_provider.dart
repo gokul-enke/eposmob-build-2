@@ -147,7 +147,15 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     try {
-      final url = Uri.parse('${APPUrl.getMasterDataValues}?code=$code');
+      final baseUri = Uri.parse('${APPUrl.getMasterDataValues}?code=$code');
+      final queryParams = Map<String, String>.from(baseUri.queryParameters);
+
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+
+      final url = baseUri.replace(queryParameters: queryParams);
       debugPrint('🔄 Fetching master data for code: $code');
       debugPrint('📡 URL: $url');
 

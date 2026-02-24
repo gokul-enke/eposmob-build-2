@@ -583,15 +583,23 @@ class CategoryProvider extends ChangeNotifier {
     required String accessToken,
   }) async {
     // debugPrint("FETCH PROP VALUES for category_id $categoryId");
-    final url =
+    final baseUri =
         Uri.parse("${APPUrl.fetchCategoryProps}?category_id=$categoryId");
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Preserve existing params (category_id) and add store_id if available
+    final queryParams = Map<String, String>.from(baseUri.queryParameters);
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = baseUri.replace(queryParameters: queryParams);
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',

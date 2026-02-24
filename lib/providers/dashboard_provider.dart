@@ -368,7 +368,7 @@ class DashboardProvider {
   Future<Map<String, dynamic>> listCartItnes(BuildContext context) async {
     // debugPrint("dashbaord");
 
-    final url = Uri.parse(
+    final baseUri = Uri.parse(
         "https://safai.enke.ae/api/carts/list-cart-items?customer_id=5");
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -377,6 +377,13 @@ class DashboardProvider {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+    final Map<String, String> queryParams =
+        Map<String, String>.from(baseUri.queryParameters);
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = baseUri.replace(queryParameters: queryParams);
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer 8|bTQHp0upEnGCgNEwbYo0bdhLLEg3CKBSvU6QPJe5',
@@ -557,15 +564,23 @@ class DashboardProvider {
 
   Future<SupplierCreditBalanceGraph> fetchSupplierCreditBalance(
       String accessToken, String startDate, String endDate) async {
-    final url = Uri.parse(
+    final baseUri = Uri.parse(
         '${APPUrl.supplierCreditBalance}?start_date=$startDate&end_date=$endDate');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Preserve existing params and add store_id when available
+    final queryParams = Map<String, String>.from(baseUri.queryParameters);
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = baseUri.replace(queryParameters: queryParams);
 
     debugPrint('Fetching supplier credit balance from: $url');
 
