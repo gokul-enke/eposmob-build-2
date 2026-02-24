@@ -32,6 +32,11 @@ Future<TaxCalculationResult> getCategoryTax({
   required String productId,
   required String retailPrice,
 }) async {
+  // Get API key from SharedPreferences
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? apiKey = prefs.getString('api_key');
+  final int? activeStoreId = prefs.getInt('active_store_id');
+
   final queryParameters = <String, String>{
     'tax_include': taxInclude,
     'category_id': categoryId.toString(),
@@ -39,14 +44,14 @@ Future<TaxCalculationResult> getCategoryTax({
     'retail_price': retailPrice.toString(),
   };
 
+  if (activeStoreId != null) {
+    queryParameters['store_id'] = activeStoreId.toString();
+  }
+
   // debugPrint(queryParameters.toString());
 
   final uri = Uri.parse(APPUrl.getTaxtDetails)
       .replace(queryParameters: queryParameters);
-
-  // Get API key from SharedPreferences
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  String? apiKey = prefs.getString('api_key');
 
   if (apiKey == null || apiKey.isEmpty) {
     throw const HttpException("API key not found. Please restart the app.");

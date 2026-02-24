@@ -24,7 +24,13 @@ class FaqProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
-      final url = Uri.parse(APPUrl.listFaqs);
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.listFaqs)
+          .replace(queryParameters: queryParameters.isNotEmpty ? queryParameters : null);
 
       final response = await http.get(url, headers: {
         'X-Tenant': apiKey,

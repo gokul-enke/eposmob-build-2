@@ -205,6 +205,11 @@ class CompanyAccountProvider extends ChangeNotifier {
       queryParameters['filter_status'] = filterStatus;
     }
 
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
     final url = Uri.parse(APPUrl.getCompanyaccounts)
         .replace(queryParameters: queryParameters);
 
@@ -408,10 +413,17 @@ class CompanyAccountProvider extends ChangeNotifier {
     // Try different approaches to get detailed account info
     // Approach 1: Try with include_transactions parameter
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+
       final queryParameters = <String, String>{
         'account_name': accountName,
         'include_transactions': 'true',
       };
+
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
 
       final url = Uri.parse(APPUrl.getCompanyaccounts)
           .replace(queryParameters: queryParameters);
@@ -477,7 +489,15 @@ class CompanyAccountProvider extends ChangeNotifier {
     // Approach 2: Try with account name as path parameter (if API supports it)
     try {
       final encodedAccountName = Uri.encodeComponent(accountName);
-      final url = Uri.parse('${APPUrl.getCompanyaccounts}/$encodedAccountName');
+      final baseUrl = Uri.parse('${APPUrl.getCompanyaccounts}/$encodedAccountName');
+      
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      final Map<String, String> queryParams = {};
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final url = baseUrl.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
       debugPrint("Making account details API call to ${url.toString()}");
 

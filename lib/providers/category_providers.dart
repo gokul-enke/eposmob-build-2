@@ -158,6 +158,10 @@ class CategoryProvider extends ChangeNotifier {
       notifyListeners();
     }
 
+    // Get API key for store_id
+    final prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
     // Ensure we always send a valid page number; default to 1 if not provided
     final int effectivePage = page ?? 1;
     final queryParameters = <String, String>{
@@ -169,6 +173,9 @@ class CategoryProvider extends ChangeNotifier {
     }
     if (filterParent != null && filterParent.isNotEmpty) {
       queryParameters['filter_parent'] = filterParent;
+    }
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
     }
 
     // Choose the appropriate URL based on the sellableOnly flag
@@ -182,8 +189,6 @@ class CategoryProvider extends ChangeNotifier {
           ..addAll(queryParameters);
     final uri = baseUri.replace(queryParameters: finalQueryParameters);
 
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
@@ -296,6 +301,10 @@ class CategoryProvider extends ChangeNotifier {
     String? filterParent,
     int? page,
   }) async {
+    // Get API key for store_id
+    final prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
     // Ensure we always send a valid page number; default to 1 if not provided
     final int effectivePage = page ?? 1;
     final queryParameters = <String, String>{
@@ -308,15 +317,15 @@ class CategoryProvider extends ChangeNotifier {
     if (filterParent != null && filterParent.isNotEmpty) {
       queryParameters['filter_parent'] = filterParent;
     }
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
 
     final baseUri = Uri.parse(APPUrl.getSellableCategoryListUrl);
     final finalQueryParameters =
         Map<String, dynamic>.from(baseUri.queryParameters)
           ..addAll(queryParameters);
     final uri = baseUri.replace(queryParameters: finalQueryParameters);
-
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
@@ -365,12 +374,21 @@ class CategoryProvider extends ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Add store_id to query parameters
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final updatedUrl = url.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
-      final response = await http.get(url, headers: {
+      final response = await http.get(updatedUrl, headers: {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       });

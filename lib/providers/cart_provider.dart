@@ -152,8 +152,16 @@ class CartProvider with ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Add store_id to query parameters
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final updatedUrl = url.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
-      final response = await http.get(url, headers: {
+      final response = await http.get(updatedUrl, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
         'X-Tenant': apiKey,
