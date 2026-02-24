@@ -528,9 +528,11 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice/Token Number - Render on same row when both are visible
+    // Invoice/Token Number - hide header invoice when footer invoice number is enabled
+    final bool showFooterInvoice =
+        displayConfig?['showOrderNumberInFooter']?.visible == true;
     final bool showInvoiceNumber =
-        displayConfig?['showInvoiceNumber']?.visible == true;
+        !showFooterInvoice && displayConfig?['showInvoiceNumber']?.visible == true;
     final bool showTokenNumber =
         displayConfig?['showTokenNumber']?.visible == true &&
             params.tokenNumber != null &&
@@ -598,18 +600,54 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       return;
     }
 
-    if (params.customerName == null &&
-        params.customerPhone == null &&
-        params.customerAddress == null &&
-        params.orderComment == null &&
-        params.deliveryMethod == null) {
-      return;
-    }
-
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
     final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final String paymentConfigKey =
+        displayConfig?.containsKey('showPaymentMethod') == true
+            ? 'showPaymentMethod'
+            : 'showPayment';
+    final String commentConfigKey =
+        displayConfig?.containsKey('showOrderComment') == true
+            ? 'showOrderComment'
+            : 'showComment';
+
+    final bool showCustomerName =
+        displayConfig?['showCustomerName']?.visible != false;
+    final bool showCustomerPhone =
+        displayConfig?['showCustomerPhone']?.visible != false;
+    final bool showPayment = displayConfig?[paymentConfigKey]?.visible != false;
+    final bool showCustomerAddress =
+        displayConfig?['showCustomerAddress']?.visible != false;
+    final bool showComment = displayConfig?[commentConfigKey]?.visible != false;
+    final bool showDeliveryMethod =
+        displayConfig?['showDeliveryMethod']?.visible != false;
+
+    final bool hasVisibleCustomerData =
+        (showCustomerName &&
+            params.customerName != null &&
+            params.customerName!.isNotEmpty) ||
+        (showCustomerPhone &&
+            params.customerPhone != null &&
+            params.customerPhone!.isNotEmpty &&
+            !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) ||
+        (showPayment &&
+            params.paymentMethod != null &&
+            params.paymentMethod!.isNotEmpty) ||
+        (showCustomerAddress &&
+            params.customerAddress != null &&
+            params.customerAddress!.isNotEmpty) ||
+        (showComment &&
+            params.orderComment != null &&
+            params.orderComment!.isNotEmpty) ||
+        (showDeliveryMethod &&
+            params.deliveryMethod != null &&
+            params.deliveryMethod!.isNotEmpty);
+
+    if (!hasVisibleCustomerData) {
+      return;
+    }
 
     // Use horizontal bilingual format for labels in dual language mode
     final customerLabel = isDualLanguage
@@ -624,8 +662,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
             isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig, 'showPayment', null, null, "الدفع:", "Payment:")
-        : _getLabel(displayConfig, 'showPayment', null,
+            displayConfig, paymentConfigKey, null, null, "الدفع:", "Payment:")
+        : _getLabel(displayConfig, paymentConfigKey, null,
             isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerAddress',
@@ -634,8 +672,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
             isEnglish ? "Address:" : "العنوان:");
     final commentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig, 'showComment', null, null, "تعليق:", "Comment:")
-        : _getLabel(displayConfig, 'showComment', null,
+            displayConfig, commentConfigKey, null, null, "تعليق:", "Comment:")
+        : _getLabel(displayConfig, commentConfigKey, null,
             isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showDeliveryMethod',
@@ -645,7 +683,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
-      if (params.customerName != null && params.customerName!.isNotEmpty) {
+      if (showCustomerName &&
+          params.customerName != null &&
+          params.customerName!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(customerLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
@@ -654,7 +694,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerPhone != null &&
+      if (showCustomerPhone &&
+          params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -679,7 +720,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
+      if (showPayment &&
+          params.paymentMethod != null &&
+          params.paymentMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(paymentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
@@ -688,7 +731,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerAddress != null &&
+      if (showCustomerAddress &&
+          params.customerAddress != null &&
           params.customerAddress!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(addressLabel,
@@ -698,7 +742,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.orderComment != null && params.orderComment!.isNotEmpty) {
+      if (showComment &&
+          params.orderComment != null &&
+          params.orderComment!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(commentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
@@ -707,7 +753,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+      if (showDeliveryMethod &&
+          params.deliveryMethod != null &&
+          params.deliveryMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(deliveryLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
@@ -717,7 +765,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
-      if (params.customerName != null && params.customerName!.isNotEmpty) {
+      if (showCustomerName &&
+          params.customerName != null &&
+          params.customerName!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.customerName!,
               weight: 0.65, align: TextAlign.left, scale: scale),
@@ -726,7 +776,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerPhone != null &&
+      if (showCustomerPhone &&
+          params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -745,7 +796,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
+      if (showPayment &&
+          params.paymentMethod != null &&
+          params.paymentMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.paymentMethod!,
               weight: 0.65, align: TextAlign.left, scale: scale),
@@ -754,7 +807,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.orderComment != null && params.orderComment!.isNotEmpty) {
+      if (showComment &&
+          params.orderComment != null &&
+          params.orderComment!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.orderComment!,
               weight: 0.65, align: TextAlign.left, scale: scale),
@@ -763,7 +818,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+      if (showDeliveryMethod &&
+          params.deliveryMethod != null &&
+          params.deliveryMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.deliveryMethod!,
               weight: 0.65, align: TextAlign.left, scale: scale),
@@ -772,7 +829,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerAddress != null &&
+      if (showCustomerAddress &&
+          params.customerAddress != null &&
           params.customerAddress!.isNotEmpty) {
         rows.add(TextRow(params.customerAddress!, scale: 0.9));
       }
@@ -1647,13 +1705,11 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Order Number Display (Prioritize Footer if both are active)
-    final bool showInvoiceNumber =
-        displayConfig?['showInvoiceNumber']?.visible == true;
+    // Order Number Display (Footer only)
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
 
-    if (showFooterInvoice || showInvoiceNumber) {
+    if (showFooterInvoice) {
       // Extract number sequence (e.g., "1149" from "INV-1149")
       final regex = RegExp(r'[1-9]\d*');
       final match = regex.firstMatch(params.orderNumber);

@@ -526,8 +526,13 @@ class SupermarketLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice Number - Use API prefix with stripped zeros/prefixes
-    if (displayConfig?['showInvoiceNumber']?.visible == true) {
+    // Invoice Number - hide in header when footer invoice number is enabled
+    final bool showFooterInvoice =
+        displayConfig?['showOrderNumberInFooter']?.visible == true;
+    final bool showInvoiceNumber =
+        !showFooterInvoice && displayConfig?['showInvoiceNumber']?.visible == true;
+
+    if (showInvoiceNumber) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
       // For "ORD-000430", this extracts "430"
       final regex = RegExp(r'[1-9]\d*');
@@ -577,15 +582,56 @@ class SupermarketLayout implements ReceiptLayout {
       return;
     }
 
-    if (params.customerName == null &&
-        params.customerPhone == null &&
-        params.customerAddress == null &&
-        params.orderComment == null &&
-        params.deliveryMethod == null) {
+    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final String paymentConfigKey =
+        displayConfig?.containsKey('showPaymentMethod') == true
+            ? 'showPaymentMethod'
+            : 'showPayment';
+    final String commentConfigKey =
+        displayConfig?.containsKey('showOrderComment') == true
+            ? 'showOrderComment'
+            : 'showComment';
+
+    final bool showCustomerName =
+        displayConfig?['showCustomerName']?.visible != false;
+    final bool showCustomerPhone =
+        displayConfig?['showCustomerPhone']?.visible != false;
+    final bool showPayment = displayConfig?[paymentConfigKey]?.visible != false;
+    final bool showCustomerAddress =
+        displayConfig?['showCustomerAddress']?.visible != false;
+    final bool showComment = displayConfig?[commentConfigKey]?.visible != false;
+    final bool showDeliveryMethod =
+        displayConfig?['showDeliveryMethod']?.visible != false;
+    final bool showCustomerVatNumber =
+        displayConfig?['showCustomerVatNumber']?.visible == true;
+
+    final bool hasVisibleCustomerData =
+        (showCustomerName &&
+            params.customerName != null &&
+            params.customerName!.isNotEmpty) ||
+        (showCustomerPhone &&
+            params.customerPhone != null &&
+            params.customerPhone!.isNotEmpty &&
+            !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) ||
+        (showPayment &&
+            params.paymentMethod != null &&
+            params.paymentMethod!.isNotEmpty) ||
+        (showCustomerAddress &&
+            params.customerAddress != null &&
+            params.customerAddress!.isNotEmpty) ||
+        (showComment &&
+            params.orderComment != null &&
+            params.orderComment!.isNotEmpty) ||
+        (showDeliveryMethod &&
+            params.deliveryMethod != null &&
+            params.deliveryMethod!.isNotEmpty) ||
+        (showCustomerVatNumber &&
+            params.customerVatNumber != null &&
+            params.customerVatNumber!.isNotEmpty);
+
+    if (!hasVisibleCustomerData) {
       return;
     }
-
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
 
     // Use horizontal bilingual format for labels in dual language mode
     final customerLabel = isDualLanguage
@@ -601,18 +647,14 @@ class SupermarketLayout implements ReceiptLayout {
     final paymentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
             displayConfig,
-            displayConfig?.containsKey('showPaymentMethod') == true
-                ? 'showPaymentMethod'
-                : 'showPayment',
+            paymentConfigKey,
             null,
             null,
             "الدفع:",
             "Payment:")
         : _getLabel(
             displayConfig,
-            displayConfig?.containsKey('showPaymentMethod') == true
-                ? 'showPaymentMethod'
-                : 'showPayment',
+            paymentConfigKey,
             null,
             isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = isDualLanguage
@@ -623,18 +665,14 @@ class SupermarketLayout implements ReceiptLayout {
     final commentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
             displayConfig,
-            displayConfig?.containsKey('showOrderComment') == true
-                ? 'showOrderComment'
-                : 'showComment',
+            commentConfigKey,
             null,
             null,
             "تعليق:",
             "Comment:")
         : _getLabel(
             displayConfig,
-            displayConfig?.containsKey('showOrderComment') == true
-                ? 'showOrderComment'
-                : 'showComment',
+            commentConfigKey,
             null,
             isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = isDualLanguage
@@ -650,7 +688,9 @@ class SupermarketLayout implements ReceiptLayout {
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
-      if (params.customerName != null && params.customerName!.isNotEmpty) {
+      if (showCustomerName &&
+          params.customerName != null &&
+          params.customerName!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(customerLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
@@ -659,7 +699,8 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerPhone != null &&
+      if (showCustomerPhone &&
+          params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -684,7 +725,9 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
+      if (showPayment &&
+          params.paymentMethod != null &&
+          params.paymentMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(paymentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
@@ -693,7 +736,8 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerAddress != null &&
+      if (showCustomerAddress &&
+          params.customerAddress != null &&
           params.customerAddress!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(addressLabel,
@@ -703,7 +747,9 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.orderComment != null && params.orderComment!.isNotEmpty) {
+      if (showComment &&
+          params.orderComment != null &&
+          params.orderComment!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(commentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
@@ -712,7 +758,9 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+      if (showDeliveryMethod &&
+          params.deliveryMethod != null &&
+          params.deliveryMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(deliveryLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
@@ -721,7 +769,8 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerVatNumber != null &&
+      if (showCustomerVatNumber &&
+          params.customerVatNumber != null &&
           params.customerVatNumber!.isNotEmpty &&
           displayConfig?['showCustomerVatNumber']?.visible == true) {
         rows.add(ReceiptTableRow([
@@ -733,7 +782,9 @@ class SupermarketLayout implements ReceiptLayout {
       }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
-      if (params.customerName != null && params.customerName!.isNotEmpty) {
+      if (showCustomerName &&
+          params.customerName != null &&
+          params.customerName!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.customerName!,
               weight: 0.65, align: TextAlign.left, scale: 0.75),
@@ -742,7 +793,8 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerPhone != null &&
+      if (showCustomerPhone &&
+          params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -761,7 +813,9 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
+      if (showPayment &&
+          params.paymentMethod != null &&
+          params.paymentMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.paymentMethod!,
               weight: 0.65, align: TextAlign.left, scale: 0.75),
@@ -770,7 +824,9 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.orderComment != null && params.orderComment!.isNotEmpty) {
+      if (showComment &&
+          params.orderComment != null &&
+          params.orderComment!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.orderComment!,
               weight: 0.65, align: TextAlign.left, scale: 0.75),
@@ -779,7 +835,9 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.deliveryMethod != null && params.deliveryMethod!.isNotEmpty) {
+      if (showDeliveryMethod &&
+          params.deliveryMethod != null &&
+          params.deliveryMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.deliveryMethod!,
               weight: 0.65, align: TextAlign.left, scale: 0.75),
@@ -788,12 +846,14 @@ class SupermarketLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerAddress != null &&
+      if (showCustomerAddress &&
+          params.customerAddress != null &&
           params.customerAddress!.isNotEmpty) {
         rows.add(TextRow(params.customerAddress!, scale: 0.75));
       }
 
-      if (params.customerVatNumber != null &&
+      if (showCustomerVatNumber &&
+          params.customerVatNumber != null &&
           params.customerVatNumber!.isNotEmpty &&
           displayConfig?['showCustomerVatNumber']?.visible == true) {
         rows.add(ReceiptTableRow([
@@ -1675,13 +1735,11 @@ class SupermarketLayout implements ReceiptLayout {
       }
     }
 
-    // Order Number Display (Prioritize Footer if both are active)
-    final bool showInvoiceNumber =
-        displayConfig?['showInvoiceNumber']?.visible == true;
+    // Order Number Display (Footer only)
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
 
-    if (showFooterInvoice || showInvoiceNumber) {
+    if (showFooterInvoice) {
       // Extract number sequence (e.g., "1149" from "INV-1149")
       final regex = RegExp(r'[1-9]\d*');
       final match = regex.firstMatch(params.orderNumber);
