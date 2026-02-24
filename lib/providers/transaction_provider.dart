@@ -83,10 +83,15 @@ class TransactionProvider extends ChangeNotifier {
         queryParams['filter_name'] = filterName;
       }
 
+      // Get API key and active store from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      if (activeStoreId != null && !queryParams.containsKey('store_id')) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
       final uri = Uri.parse(url).replace(queryParameters: queryParams);
 
       // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
 
       if (apiKey == null || apiKey.isEmpty) {
@@ -175,11 +180,16 @@ class TransactionProvider extends ChangeNotifier {
         'page': (page ?? 1).toString(),
       };
 
+      // Get API key and active store from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      if (activeStoreId != null && !queryParams.containsKey('store_id')) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
       final uri = Uri.parse(APPUrl.supplierTransactionsV2)
           .replace(queryParameters: queryParams);
 
       // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
