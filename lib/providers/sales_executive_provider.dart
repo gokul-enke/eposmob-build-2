@@ -288,6 +288,16 @@ class SalesExecutiveProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         try {
           final jsonData = json.decode(response.body);
+          
+          // Validate data structure before parsing
+          if (jsonData is! Map<String, dynamic>) {
+            throw FormatException('Response is not a valid JSON object');
+          }
+          
+          if (jsonData['data'] != null && jsonData['data'] is! List) {
+            throw FormatException('Data field is not a list');
+          }
+          
           SalesExecutiveReportModel reportModel =
               SalesExecutiveReportModel.fromJson(jsonData);
 
@@ -301,7 +311,8 @@ class SalesExecutiveProvider extends ChangeNotifier {
           return jsonData;
         } catch (parseError) {
           debugPrint('❌ JSON parsing error: $parseError');
-          _reportError = 'Failed to parse response data';
+          debugPrint('❌ Response body: ${response.body}');
+          _reportError = 'Failed to parse response data: $parseError';
           _isReportLoading = false;
           notifyListeners();
 

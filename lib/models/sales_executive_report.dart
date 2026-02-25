@@ -68,54 +68,61 @@ class SalesExecutiveReportData {
     this.totalCollectedOnSale,
   });
 
-  factory SalesExecutiveReportData.fromJson(Map<String, dynamic> json) =>
-      SalesExecutiveReportData(
-        name: json["name"] ?? "No Name",
-        phone: json["phone"] ?? "No Phone",
-        // Prefer snake_case keys from API, fallback to camelCase for compatibility
-        orderCount: (json["order_count"] ?? json["orderCount"]) is String
-            ? int.tryParse(
-                    (json["order_count"] ?? json["orderCount"]).toString()) ??
-                0
-            : (json["order_count"] ?? json["orderCount"] ?? 0),
-        totalSales:
-            (json["total_sales"] ?? json["totalSales"])?.toString() ?? "0.000",
-        onlineSales:
-            (json["online_sales"] ?? json["onlineSales"])?.toString() ??
-                "0.000",
-        upiSales: (json["payment_breakdown"]?["UPI"] ??
-                    json["upi_sales"] ??
-                    json["upiSales"])
-                ?.toString() ??
-            "0.000",
-        cardSales: (json["payment_breakdown"]?["CARD"] ??
-                    json["card_sales"] ??
-                    json["cardSales"])
-                ?.toString() ??
-            "0.000",
-        cashSales:
-            (json["cash_sales"] ?? json["cashSales"])?.toString() ?? "0.000",
-        creditSales:
-            (json["credit_sales"] ?? json["creditSales"])?.toString() ??
-                "0.000",
-        collectedSales:
-            (json["collected_sales"] ?? json["collectedSales"])?.toString() ??
-                "0.000",
-        totalPaymentReceived: (json["total_payment_received"] ??
-                    json["payment_received"] ??
-                    json["totalPaymentReceived"])
-                ?.toString() ??
-            "0.000",
-        creditCollectedPrev: (json["credit_collected_prev"] ??
-                    json["prev_balance_collected"] ??
-                    json["creditCollectedPrev"])
-                ?.toString() ??
-            "0.000",
-        totalCollectedOnSale:
-            (json["total_collected_on_sale"] ?? json["totalCollectedOnSale"])
-                    ?.toString() ??
-                "0.000",
-      );
+  factory SalesExecutiveReportData.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely convert values to string representation
+    String _toString(dynamic value) {
+      if (value == null) return "0.000";
+      if (value is String) return value;
+      if (value is int || value is double) return value.toString();
+      return "0.000";
+    }
+
+    // Helper function to safely extract from payment_breakdown
+    String _getPaymentBreakdownValue(
+        dynamic paymentBreakdown, String key, dynamic fallback) {
+      try {
+        // Check if payment_breakdown is a Map (object)
+        if (paymentBreakdown is Map<String, dynamic>) {
+          return _toString(paymentBreakdown[key] ?? fallback);
+        }
+        // If it's an empty list or other type, use fallback
+        return _toString(fallback);
+      } catch (e) {
+        return _toString(fallback);
+      }
+    }
+
+    return SalesExecutiveReportData(
+      name: json["name"]?.toString() ?? "No Name",
+      phone: json["phone"]?.toString() ?? "No Phone",
+      // Prefer snake_case keys from API, fallback to camelCase for compatibility
+      orderCount: (json["order_count"] ?? json["orderCount"]) is String
+          ? int.tryParse(
+                  (json["order_count"] ?? json["orderCount"]).toString()) ??
+              0
+          : (json["order_count"] ?? json["orderCount"] ?? 0),
+      totalSales: _toString(json["total_sales"] ?? json["totalSales"]),
+      onlineSales: _toString(json["online_sales"] ?? json["onlineSales"]),
+      upiSales: _getPaymentBreakdownValue(json["payment_breakdown"], "UPI",
+          json["upi_sales"] ?? json["upiSales"]),
+      cardSales: _getPaymentBreakdownValue(
+          json["payment_breakdown"],
+          "CARD",
+          json["card_sales"] ?? json["cardSales"]),
+      cashSales: _toString(json["cash_sales"] ?? json["cashSales"]),
+      creditSales: _toString(json["credit_sales"] ?? json["creditSales"]),
+      collectedSales:
+          _toString(json["collected_sales"] ?? json["collectedSales"]),
+      totalPaymentReceived: _toString(json["total_payment_received"] ??
+          json["payment_received"] ??
+          json["totalPaymentReceived"]),
+      creditCollectedPrev: _toString(json["credit_collected_prev"] ??
+          json["prev_balance_collected"] ??
+          json["creditCollectedPrev"]),
+      totalCollectedOnSale:
+          _toString(json["total_collected_on_sale"] ?? json["totalCollectedOnSale"]),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "name": name,

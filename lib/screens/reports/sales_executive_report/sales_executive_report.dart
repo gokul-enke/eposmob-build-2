@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/sales_executive_report.dart';
@@ -39,9 +40,11 @@ class _SalesExecutiveReportScreenState
 
   void loadInitData() async {
     try {
-      setState(() {
-        initLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = true;
+        });
+      }
 
       SalesExecutiveProvider salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
@@ -54,11 +57,9 @@ class _SalesExecutiveReportScreenState
     } catch (error) {
       debugPrint('Error loading sales executive data: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading data: $error'),
-            backgroundColor: Colors.red,
-          ),
+        showScaffoldError(
+          context: context,
+          message: 'Error loading data: $error',
         );
       }
     } finally {
@@ -71,6 +72,9 @@ class _SalesExecutiveReportScreenState
   }
 
   Future<void> fetchSalesExecutiveReport() async {
+    // Return early if widget is disposed
+    if (!mounted) return;
+
     try {
       SalesExecutiveProvider salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
@@ -110,25 +114,26 @@ class _SalesExecutiveReportScreenState
         toDate: toDate,
       );
 
+      // Check mounted again after async operation
+      if (!mounted) return;
+
       if (response != null && response['status'] == 'error') {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text(response['message'] ?? 'Failed to fetch report data'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
+        showScaffoldError(
+          context: context,
+          message: response['message'] ?? 'Failed to fetch report data',
+        );
+      } else if (response != null && response['status'] == 'success') {
+        showScaffold(
+          context: context,
+          message: 'Report data loaded successfully',
+        );
       }
     } catch (error) {
       debugPrint('❌ Error fetching sales executive report: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error fetching report: $error'),
-            backgroundColor: Colors.red,
-          ),
+        showScaffoldError(
+          context: context,
+          message: 'Error fetching report: $error',
         );
       }
     }
