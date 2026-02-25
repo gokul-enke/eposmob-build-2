@@ -12,6 +12,7 @@ import 'dart:ui' as ui;
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -1535,7 +1536,17 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final codec = await ui.instantiateImageCodec(response.bodyBytes);
         final fi = await codec.getNextFrame();

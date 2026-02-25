@@ -1547,7 +1547,17 @@ class ThermalPrinter {
     debugPrint("[LOGO_DEBUG] Fetching network logo from: $fullUrl");
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final image = img.decodeImage(response.bodyBytes);
         if (image != null) {
@@ -1584,7 +1594,17 @@ class ThermalPrinter {
     debugPrint("[LOGO_DEBUG] Fetching network UI logo from: $fullUrl");
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final Uint8List bytes = response.bodyBytes;
         final ui.Codec codec = await ui.instantiateImageCodec(bytes);

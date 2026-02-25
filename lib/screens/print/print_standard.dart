@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -3190,7 +3191,17 @@ class StandardPrinter {
     debugPrint("[LOGO_DEBUG] Fetching network logo for PDF from: $fullUrl");
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         debugPrint("[LOGO_DEBUG] Network logo fetched successfully for PDF");
         return pw.MemoryImage(response.bodyBytes);
