@@ -134,10 +134,11 @@ class ThermalPrinter {
 
     final displayConfig = billDocumentConfig.displayConfiguration?.options;
     _printerUtils.debugPrintTemplateSettings(displayConfig);
+    final normalizedLanguage = (billDocumentConfig.language ?? '').toLowerCase();
+    final bool isArabicLanguage = normalizedLanguage == 'ar';
 
     // Template selection
-    if (billDocumentConfig.language == 'ar' ||
-        billDocumentConfig.language == 'bilingual') {
+    if (normalizedLanguage == 'ar' || normalizedLanguage == 'bilingual') {
       _totalsBuilder = BilingualTotalsBuilder();
     } else {
       _totalsBuilder = TotalsSectionBuilder();
@@ -277,6 +278,7 @@ class ThermalPrinter {
           isFromLocalStorage,
           selectedFontType,
           displayConfig,
+          isArabic: isArabicLanguage,
         );
       } else {
         // Amount in words when no returns
@@ -286,6 +288,7 @@ class ThermalPrinter {
             generator,
             double.parse(formattedTotal),
             selectedFontType,
+            isArabic: isArabicLanguage,
           );
         }
 
@@ -463,7 +466,7 @@ class ThermalPrinter {
       // Use language from config if available, fallback to current app locale
       final configLanguage = billDocumentConfig.language;
       final isEnglish = configLanguage != null
-          ? configLanguage == 'en'
+          ? configLanguage.toLowerCase() == 'en'
           : LocalizationService.locale.languageCode == 'en';
 
       final textDirection = isEnglish ? TextDirection.ltr : TextDirection.rtl;
@@ -1202,7 +1205,7 @@ class ThermalPrinter {
       // Amount in Words
       if (displayConfig?['showAmountInWords']?.visible == true) {
         final amountInWords =
-            '${AmountHelper().convertNumberToWords(total)} Only.';
+            '${AmountHelper().convertNumberToWords(total, language: isEnglish ? 'en' : 'ar')}${isEnglish ? ' Only.' : ' فقط.'}';
         part1Rows.add(TextRow(amountInWords, scale: 0.9, isBold: true));
         part1Rows.add(DividerRow());
       }

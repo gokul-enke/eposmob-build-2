@@ -16,6 +16,7 @@ class TotalSummarySectionBuilder {
     bool isFromLocalStorage,
     PosFontType fontType,
     Map<String, DisplayOption>? displayConfig,
+    {bool isArabic = false}
   ) {
     List<int> bytes = [];
 
@@ -178,7 +179,8 @@ class TotalSummarySectionBuilder {
     // Amount in words for final total
     if (displayConfig?['showFinalAmountInWords']?.visible == true) {
       debugPrint("Building final amount in words...");
-      bytes += _buildAmountInWords(generator, finalTotal, fontType);
+      bytes +=
+          _buildAmountInWords(generator, finalTotal, fontType, isArabic: isArabic);
     }
 
     bytes += generator.emptyLines(1);
@@ -191,11 +193,12 @@ class TotalSummarySectionBuilder {
     Generator generator,
     double amount,
     PosFontType fontType,
+    {bool isArabic = false}
   ) {
     List<int> bytes = [];
 
     bytes += generator.text(
-      'Amount in words:',
+      isArabic ? 'المبلغ بالكلمات:' : 'Amount in words:',
       styles: PosStyles(
         fontType: fontType,
         align: PosAlign.left,
@@ -205,7 +208,7 @@ class TotalSummarySectionBuilder {
     );
 
     String amountInWords =
-        '${AmountHelper().convertNumberToWords(amount)} Only.';
+        '${AmountHelper().convertNumberToWords(amount, language: isArabic ? 'ar' : 'en')}${isArabic ? ' فقط.' : ' Only.'}';
 
     int maxCharsPerLine = 48;
     if (amountInWords.length <= maxCharsPerLine) {

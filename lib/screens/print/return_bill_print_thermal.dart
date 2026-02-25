@@ -83,6 +83,8 @@ class ReturnBillThermalPrinter {
     // Use the loaded display configuration
     final displayConfig =
         returnBillDocumentConfig.displayConfiguration?.options;
+    final bool isArabicLanguage =
+      (returnBillDocumentConfig.language ?? '').toLowerCase() == 'ar';
     _debugPrintTemplateSettings(displayConfig);
 
     try {
@@ -152,7 +154,8 @@ class ReturnBillThermalPrinter {
       // Build total amount
       debugPrint("Building total amount...");
       bytes += _buildTotalAmount(generator, displayConfig, returnTotalAmount,
-          returnItems.length, returnBillDocumentConfig, selectedFontType);
+          returnItems.length, returnBillDocumentConfig, selectedFontType,
+          isArabic: isArabicLanguage);
       debugPrint("Total amount built successfully");
 
       // QR Code
@@ -823,6 +826,7 @@ class ReturnBillThermalPrinter {
     int itemsCount,
     DocumentConfig? returnBillDocumentConfig,
     PosFontType fontType,
+    {bool isArabic = false}
   ) {
     List<int> bytes = [];
 
@@ -859,7 +863,8 @@ class ReturnBillThermalPrinter {
     // Amount in words
     if (displayConfig?['showReturnAmountInWords']?.visible == true) {
       final amountDouble = double.tryParse(returnTotalAmount) ?? 0.0;
-      bytes += _buildAmountInWords(generator, amountDouble, fontType);
+      bytes += _buildAmountInWords(generator, amountDouble, fontType,
+          isArabic: isArabic);
     }
 
     // Items count
@@ -883,12 +888,13 @@ class ReturnBillThermalPrinter {
     Generator generator,
     double amount,
     PosFontType fontType,
+    {bool isArabic = false}
   ) {
     List<int> bytes = [];
 
     bytes += generator.emptyLines(1);
     bytes += generator.text(
-      'Amount in words:',
+      isArabic ? 'المبلغ بالكلمات:' : 'Amount in words:',
       styles: PosStyles(
         fontType: fontType,
         align: PosAlign.left,
@@ -898,7 +904,7 @@ class ReturnBillThermalPrinter {
     );
 
     String amountInWords =
-        '${AmountHelper().convertNumberToWords(amount)} Only.';
+        '${AmountHelper().convertNumberToWords(amount, language: isArabic ? 'ar' : 'en')}${isArabic ? ' فقط.' : ' Only.'}';
 
     // Wrap long amount in words text (same as sale bill)
     int maxCharsPerLine = 48;

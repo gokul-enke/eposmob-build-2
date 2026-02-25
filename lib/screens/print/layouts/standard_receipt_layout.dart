@@ -46,9 +46,9 @@ class StandardReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Standard theme spacing constants
-  static const double _sectionGap = 20.0;
-  static const double _itemGap = 8.0;
-  static const double _headerGap = 15.0;
+  static const double _sectionGap = 14.0;
+  static const double _itemGap = 6.0;
+  static const double _headerGap = 8.0;
 
   @override
   String get layoutId => 'standard';
@@ -256,7 +256,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     bool isEnglish,
   ) {
     final billDocumentConfig = params.billDocumentConfig;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
@@ -285,7 +286,7 @@ class StandardReceiptLayout implements ReceiptLayout {
       }
 
       // Dynamic scaling based on name length
-      double storeNameScale = 1.8;
+      double storeNameScale = 1.6;
       // For bilingual, consider the longer of the two languages
       int maxLength = storeNameText
           .split('\n')
@@ -297,8 +298,11 @@ class StandardReceiptLayout implements ReceiptLayout {
         storeNameScale = 1.5;
       }
 
-      rows.add(TextRow(storeNameText.toUpperCase(),
-          isBold: true, scale: storeNameScale));
+      rows.add(TextRow(storeNameText.trim().toUpperCase(),
+          isBold: true,
+          scale: storeNameScale,
+          verticalPadding: 4,
+          verticalOffset: 1));
     }
 
     // Description/Subheader - Arabic subtitle style
@@ -326,8 +330,9 @@ class StandardReceiptLayout implements ReceiptLayout {
       }
 
       if (descriptionText.isNotEmpty) {
-        rows.add(SpacingRow(5));
-        rows.add(TextRow(descriptionText, scale: 1.0, isBold: true));
+        rows.add(SpacingRow(2));
+        rows.add(TextRow(descriptionText.trim(),
+            scale: 1.0, isBold: true, verticalPadding: 4, verticalOffset: 1));
       }
     }
 
@@ -531,8 +536,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Invoice/Token Number - hide header invoice when footer invoice is enabled
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
-    final bool showInvoiceNumber =
-        !showFooterInvoice && displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showInvoiceNumber = !showFooterInvoice &&
+        displayConfig?['showInvoiceNumber']?.visible == true;
     final bool showTokenNumber =
         displayConfig?['showTokenNumber']?.visible == true &&
             params.tokenNumber != null &&
@@ -624,7 +629,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
     final String paymentConfigKey =
         displayConfig?.containsKey('showPaymentMethod') == true
             ? 'showPaymentMethod'
@@ -645,8 +651,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     final bool showDeliveryMethod =
         displayConfig?['showDeliveryMethod']?.visible != false;
 
-    final bool hasVisibleCustomerData =
-        (showCustomerName &&
+    final bool hasVisibleCustomerData = (showCustomerName &&
             params.customerName != null &&
             params.customerName!.isNotEmpty) ||
         (showCustomerPhone &&
@@ -683,16 +688,8 @@ class StandardReceiptLayout implements ReceiptLayout {
             isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig,
-            paymentConfigKey,
-            null,
-            null,
-            "الدفع:",
-            "Payment:")
-        : _getLabel(
-            displayConfig,
-            paymentConfigKey,
-            null,
+            displayConfig, paymentConfigKey, null, null, "الدفع:", "Payment:")
+        : _getLabel(displayConfig, paymentConfigKey, null,
             isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerAddress',
@@ -701,16 +698,8 @@ class StandardReceiptLayout implements ReceiptLayout {
             isEnglish ? "Address:" : "العنوان:");
     final commentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig,
-            commentConfigKey,
-            null,
-            null,
-            "تعليق:",
-            "Comment:")
-        : _getLabel(
-            displayConfig,
-            commentConfigKey,
-            null,
+            displayConfig, commentConfigKey, null, null, "تعليق:", "Comment:")
+        : _getLabel(displayConfig, commentConfigKey, null,
             isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showDeliveryMethod',
@@ -887,7 +876,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     bool isEnglish,
   ) {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Extract labels with fallbacks
     // For dual language mode, we use stacked headers (Arabic on top, English below)
@@ -1226,7 +1216,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1469,25 +1460,25 @@ class StandardReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showAmountInWords']?.visible == true) {
       rows.add(SpacingRow(_itemGap));
 
-      String amountInWords;
-
       if (isDualLanguage) {
         final arabicText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'ar');
         final englishText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'en');
 
-        amountInWords = '$arabicText فقط.\n$englishText Only.';
+        rows.add(TextRow('$arabicText فقط.',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
+        rows.add(TextRow('$englishText Only.',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
       } else {
-        final language = params.billDocumentConfig.language ?? 'en';
+        final language =
+            (params.billDocumentConfig.language ?? 'en').toLowerCase();
         final amountText = AmountHelper().convertNumberToWords(total,
             currency: currency, language: language);
         final suffix = language == 'ar' ? ' فقط.' : ' Only.';
-        amountInWords = '$amountText$suffix';
+        rows.add(TextRow('$amountText$suffix',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
       }
-
-      rows.add(
-          TextRow(amountInWords, scale: is58mm ? 0.7 : 0.85, isBold: true));
     }
 
     // Items Count
@@ -1554,7 +1545,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     rows.add(SpacingRow(_itemGap));
     rows.add(StandardThinDividerRow());
@@ -1636,7 +1628,8 @@ class StandardReceiptLayout implements ReceiptLayout {
   ) {
     rows.add(SpacingRow(_sectionGap));
 
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // QR Code - Use ZATCA QR if credentials available, otherwise fallback to payment QR
     if (displayConfig?['showQRCode']?.visible == true) {
@@ -2040,13 +2033,14 @@ class StandardReceiptLayout implements ReceiptLayout {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final codec = await ui.instantiateImageCodec(response.bodyBytes);

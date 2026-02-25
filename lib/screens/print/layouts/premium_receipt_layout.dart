@@ -46,9 +46,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Premium theme spacing constants
-  static const double _sectionGap = 20.0;
-  static const double _itemGap = 8.0;
-  static const double _headerGap = 15.0;
+  static const double _sectionGap = 14.0;
+  static const double _itemGap = 6.0;
+  static const double _headerGap = 8.0;
 
   @override
   String get layoutId => 'premium';
@@ -264,15 +264,18 @@ class PremiumReceiptLayout implements ReceiptLayout {
           'STORE NAME';
 
       // Dynamic scaling based on name length
-      double storeNameScale = 1.8;
+      double storeNameScale = 1.6;
       if (storeName.length > 20) {
         storeNameScale = 1.3;
       } else if (storeName.length > 14) {
         storeNameScale = 1.5;
       }
 
-      rows.add(TextRow(storeName.toUpperCase(),
-          isBold: true, scale: storeNameScale));
+      rows.add(TextRow(storeName.trim().toUpperCase(),
+          isBold: true,
+          scale: storeNameScale,
+          verticalPadding: 4,
+          verticalOffset: 1));
     }
 
     // Description/Subheader - Arabic subtitle style
@@ -281,8 +284,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
           billDocumentConfig.subheader ??
           '';
       if (description.isNotEmpty) {
-        rows.add(SpacingRow(5));
-        rows.add(TextRow(description, scale: 1.0, isBold: true));
+        rows.add(SpacingRow(2));
+        rows.add(TextRow(description.trim(),
+            scale: 1.0, isBold: true, verticalPadding: 4, verticalOffset: 1));
       }
     }
 
@@ -367,8 +371,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Invoice/Token Number - hide header invoice when footer invoice number is enabled
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
-    final bool showInvoiceNumber =
-        !showFooterInvoice && displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showInvoiceNumber = !showFooterInvoice &&
+        displayConfig?['showInvoiceNumber']?.visible == true;
     final bool showTokenNumber =
         displayConfig?['showTokenNumber']?.visible == true &&
             params.tokenNumber != null &&
@@ -459,8 +463,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final bool showDeliveryMethod =
         displayConfig?['showDeliveryMethod']?.visible != false;
 
-    final bool hasVisibleCustomerData =
-        (showCustomerName &&
+    final bool hasVisibleCustomerData = (showCustomerName &&
             params.customerName != null &&
             params.customerName!.isNotEmpty) ||
         (showCustomerPhone &&
@@ -488,17 +491,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
         isEnglish ? "Customer:" : "العميل:");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
         isEnglish ? "Phone:" : "الهاتف:");
-    final paymentLabel = _getLabel(
-        displayConfig,
-        paymentConfigKey,
-        null,
+    final paymentLabel = _getLabel(displayConfig, paymentConfigKey, null,
         isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
         isEnglish ? "Address:" : "العنوان:");
-    final commentLabel = _getLabel(
-        displayConfig,
-        commentConfigKey,
-        null,
+    final commentLabel = _getLabel(displayConfig, commentConfigKey, null,
         isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
         isEnglish ? "Delivery:" : "التوصيل:");
@@ -981,7 +978,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Get currency from appSettings
     final String currency = appSettings?.currency ?? 'INR';
@@ -1202,25 +1200,26 @@ class PremiumReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showAmountInWords']?.visible == true) {
       rows.add(SpacingRow(_itemGap));
 
-      String amountInWords;
-
       if (isDualLanguage) {
         final arabicText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'ar');
         final englishText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'en');
 
-        amountInWords = '$arabicText فقط.\n$englishText Only.';
+        rows.add(TextRow('$arabicText فقط.',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
+        rows.add(TextRow('$englishText Only.',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
       } else {
-        final language = params.billDocumentConfig.language ?? 'en';
+        final language =
+            (params.billDocumentConfig.language ?? 'en').toLowerCase();
         final amountText = AmountHelper().convertNumberToWords(total,
             currency: currency, language: language);
         final suffix = language == 'ar' ? ' فقط.' : ' Only.';
-        amountInWords = '$amountText$suffix';
-      }
 
-      rows.add(
-          TextRow(amountInWords, scale: is58mm ? 0.7 : 0.85, isBold: true));
+        rows.add(TextRow('$amountText$suffix',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
+      }
     }
 
     // You Saved
@@ -1577,13 +1576,14 @@ class PremiumReceiptLayout implements ReceiptLayout {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final codec = await ui.instantiateImageCodec(response.bodyBytes);

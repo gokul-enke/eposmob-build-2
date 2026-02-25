@@ -331,7 +331,7 @@ class StandardPrinter {
       // Determine text direction based on configuration or app language
       final configLanguage = billDocumentConfig.language;
       final isRtl = configLanguage != null
-          ? configLanguage == 'ar'
+          ? configLanguage.toLowerCase() == 'ar'
           : LocalizationService.locale.languageCode == 'ar';
 
       final textDirection = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
@@ -702,7 +702,7 @@ class StandardPrinter {
                                 : (isRtl
                                     ? 'المبلغ بالكلمات:'
                                     : 'Amount in words:'),
-                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency)} Only.',
+                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                             summaryStyle,
                             isRtl: isRtl,
                           ),
@@ -2366,7 +2366,7 @@ class StandardPrinter {
                       ? displayConfig!['showFinalAmountInWords']!.value
                           as String
                       : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                  '${AmountHelper().convertNumberToWords(finalTotal, currency: currency)} Only.',
+                    '${AmountHelper().convertNumberToWords(finalTotal, currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                   summaryStyle,
                   isRtl: isRtl,
                 ),
@@ -2597,7 +2597,7 @@ class StandardPrinter {
       // Determine text direction based on configuration or app language
       final configLanguage = billDocumentConfig.language;
       final isRtl = configLanguage != null
-          ? configLanguage == 'ar'
+          ? configLanguage.toLowerCase() == 'ar'
           : LocalizationService.locale.languageCode == 'ar';
 
       final textDirection = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
@@ -3016,7 +3016,7 @@ class StandardPrinter {
                           ? updatedSettings!['showAmountInWords']!.value
                               as String
                           : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency)} Only.',
+                        '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                       summaryStyle,
                       isRtl: isRtl,
                     ),

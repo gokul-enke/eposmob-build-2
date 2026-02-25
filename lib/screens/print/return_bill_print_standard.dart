@@ -84,6 +84,8 @@ class ReturnBillStandardPrinter {
 
       final displayConfig =
           returnBillDocumentConfig.displayConfiguration?.options;
+        final bool isArabicLanguage =
+          (returnBillDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
       debugPrint("===== RETURN BILL PDF GENERATION =====");
       debugPrint("returnBillDocumentConfig ID: ${returnBillDocumentConfig.id}");
@@ -418,10 +420,14 @@ class ReturnBillStandardPrinter {
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('Amount in words:', style: bodyStyle),
+                        pw.Text(
+                            isArabicLanguage
+                                ? 'المبلغ بالكلمات:'
+                                : 'Amount in words:',
+                            style: bodyStyle),
                         pw.Expanded(
                           child: pw.Text(
-                            '${AmountHelper().convertNumberToWords(double.tryParse(returnTotalAmount) ?? 0.0)} Only.',
+                            '${AmountHelper().convertNumberToWords(double.tryParse(returnTotalAmount) ?? 0.0, language: isArabicLanguage ? 'ar' : 'en')}${isArabicLanguage ? ' فقط.' : ' Only.'}',
                             style: bodyStyle,
                             textAlign: pw.TextAlign.right,
                           ),

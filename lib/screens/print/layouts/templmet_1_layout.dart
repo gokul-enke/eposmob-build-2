@@ -255,7 +255,8 @@ class SupermarketLayout implements ReceiptLayout {
     dynamic appSettings,
   ) {
     final billDocumentConfig = params.billDocumentConfig;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
@@ -583,7 +584,8 @@ class SupermarketLayout implements ReceiptLayout {
       return;
     }
 
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
     final String paymentConfigKey =
         displayConfig?.containsKey('showPaymentMethod') == true
             ? 'showPaymentMethod'
@@ -880,7 +882,8 @@ class SupermarketLayout implements ReceiptLayout {
     bool isEnglish,
   ) {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Extract labels with fallbacks
     // For dual language mode, we use stacked headers (Arabic on top, English below)
@@ -1217,7 +1220,8 @@ class SupermarketLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1460,25 +1464,22 @@ class SupermarketLayout implements ReceiptLayout {
     if (displayConfig?['showAmountInWords']?.visible == true) {
       rows.add(SpacingRow(_itemGap));
 
-      String amountInWords;
-
       if (isDualLanguage) {
         final arabicText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'ar');
         final englishText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'en');
 
-        amountInWords = '$arabicText فقط.\n$englishText Only.';
+        rows.add(TextRow('$arabicText فقط.', scale: is58mm ? 0.65 : 0.75, isBold: true));
+        rows.add(TextRow('$englishText Only.', scale: is58mm ? 0.65 : 0.75, isBold: true));
       } else {
-        final language = params.billDocumentConfig.language ?? 'en';
+        final language =
+            (params.billDocumentConfig.language ?? 'en').toLowerCase();
         final amountText = AmountHelper().convertNumberToWords(total,
             currency: currency, language: language);
         final suffix = language == 'ar' ? ' فقط.' : ' Only.';
-        amountInWords = '$amountText$suffix';
+        rows.add(TextRow('$amountText$suffix', scale: is58mm ? 0.65 : 0.75, isBold: true));
       }
-
-      rows.add(
-          TextRow(amountInWords, scale: is58mm ? 0.65 : 0.75, isBold: true));
     }
 
     // Items Count
@@ -1545,7 +1546,8 @@ class SupermarketLayout implements ReceiptLayout {
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     rows.add(SpacingRow(_itemGap));
     rows.add(StandardThinDividerRow());
@@ -1627,7 +1629,8 @@ class SupermarketLayout implements ReceiptLayout {
   ) {
     rows.add(SpacingRow(_sectionGap));
 
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // QR Code - Use ZATCA QR if credentials available, otherwise fallback to payment QR
     if (displayConfig?['showQRCode']?.visible == true) {

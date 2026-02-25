@@ -8,11 +8,12 @@ class BalanceSectionBuilder {
     Generator generator,
     double amount,
     PosFontType fontType,
+    {bool isArabic = false}
   ) {
     List<int> bytes = [];
 
     bytes += generator.text(
-      'Amount in words:',
+      isArabic ? 'المبلغ بالكلمات:' : 'Amount in words:',
       styles: PosStyles(
         fontType: fontType,
         align: PosAlign.left,
@@ -23,7 +24,7 @@ class BalanceSectionBuilder {
 
     // Convert amount to words
     final amountInWords =
-        '${AmountHelper().convertNumberToWords(amount)} Only.';
+        '${AmountHelper().convertNumberToWords(amount, language: isArabic ? 'ar' : 'en')}${isArabic ? ' فقط.' : ' Only.'}';
 
     // Wrap long amount in words text
     int maxCharsPerLine = 48;

@@ -87,19 +87,19 @@ class ReceiptLayoutParams {
   /// Check if the document is configured for RTL (Arabic)
   bool get isRtl {
     final configLanguage = billDocumentConfig.language;
-    return configLanguage == 'ar';
+    return (configLanguage ?? '').toLowerCase() == 'ar';
   }
 
   /// Check if the document is configured for English
   bool get isEnglish {
     final configLanguage = billDocumentConfig.language;
-    return configLanguage == null || configLanguage == 'en';
+    return configLanguage == null || configLanguage.toLowerCase() == 'en';
   }
 
   /// Check if the document is bilingual
   bool get isBilingual {
     final configLanguage = billDocumentConfig.language;
-    return configLanguage == 'bilingual';
+    return (configLanguage ?? '').toLowerCase() == 'bilingual';
   }
 
   /// Get the active theme, defaulting to 'classic'

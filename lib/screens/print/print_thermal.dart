@@ -140,6 +140,8 @@ class ThermalPrinter {
 
     // Use the loaded display configuration
     final displayConfig = billDocumentConfig.displayConfiguration?.options;
+    final bool isArabicLanguage =
+      (billDocumentConfig.language ?? '').toLowerCase() == 'ar';
     _debugPrintTemplateSettings(displayConfig);
 
     try {
@@ -250,6 +252,7 @@ class ThermalPrinter {
           isFromLocalStorage,
           selectedFontType,
           displayConfig,
+          isArabic: isArabicLanguage,
         );
         debugPrint("Total summary section built successfully");
       } else {
@@ -261,6 +264,7 @@ class ThermalPrinter {
             generator,
             double.parse(formattedTotal),
             selectedFontType,
+            isArabic: isArabicLanguage,
           );
           debugPrint("Amount in words built successfully");
         }
@@ -870,7 +874,7 @@ class ThermalPrinter {
       // Amount in Words
       if (displayConfig?['showAmountInWords']?.visible == true) {
         final amountInWords =
-            '${AmountHelper().convertNumberToWords(total)} Only.';
+            '${AmountHelper().convertNumberToWords(total, language: isEnglish ? 'en' : 'ar')}${isEnglish ? ' Only.' : ' فقط.'}';
         part1Rows.add(TextRow(amountInWords, scale: 0.9, isBold: true));
         part1Rows.add(DividerRow());
       }
@@ -1642,6 +1646,7 @@ class ThermalPrinter {
     bool isFromLocalStorage,
     PosFontType fontType,
     Map<String, DisplayOption>? displayConfig,
+    {bool isArabic = false}
   ) {
     List<int> bytes = [];
 
@@ -1829,7 +1834,8 @@ class ThermalPrinter {
     // Use 'showFinalAmountInWords' for Sales Return Bill configuration
     if (displayConfig?['showFinalAmountInWords']?.visible == true) {
       debugPrint("Building final amount in words (returns scenario)...");
-      bytes += _buildAmountInWords(generator, finalTotal, fontType);
+      bytes +=
+          _buildAmountInWords(generator, finalTotal, fontType, isArabic: isArabic);
     }
 
     bytes += generator.emptyLines(1);
@@ -1843,12 +1849,13 @@ class ThermalPrinter {
     Generator generator,
     double amount,
     PosFontType fontType,
+    {bool isArabic = false}
   ) {
     List<int> bytes = [];
 
     // bytes += generator.emptyLines(1);
     bytes += generator.text(
-      'Amount in words:',
+      isArabic ? 'المبلغ بالكلمات:' : 'Amount in words:',
       styles: PosStyles(
         fontType: fontType,
         align: PosAlign.left,
@@ -1858,7 +1865,7 @@ class ThermalPrinter {
     );
 
     String amountInWords =
-        '${AmountHelper().convertNumberToWords(amount)} Only.';
+        '${AmountHelper().convertNumberToWords(amount, language: isArabic ? 'ar' : 'en')}${isArabic ? ' فقط.' : ' Only.'}';
 
     // Wrap long amount in words text
     int maxCharsPerLine = 48;
