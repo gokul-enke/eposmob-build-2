@@ -105,15 +105,18 @@ class ReceiptLayoutParams {
   /// Get the active theme, defaulting to 'classic'
   String get activeTheme => billDocumentConfig.activeTheme ?? 'classic';
 
-  /// Check if this is a thermal paper size (58mm or 80mm)
+    /// Check if this is a thermal paper size (58mm, 80mm, or 112mm)
   bool get isThermal =>
-      selectedPaperSize == '58mm' || selectedPaperSize == '80mm';
+      selectedPaperSize == '58mm' ||
+      selectedPaperSize == '80mm' ||
+      selectedPaperSize == '112mm';
 
   /// Check if this is 58mm paper
   bool get is58mm => selectedPaperSize == '58mm';
 
   /// Get print width for image-based printing
-  double get printWidth => is58mm ? 384.0 : 576.0;
+  double get printWidth =>
+      is58mm ? 384.0 : (selectedPaperSize == '112mm' ? 832.0 : 576.0);
 
   /// Get base font size for image-based printing
   double get baseFontSize => selectedPaperSize == '80mm' ? 28.0 : 20.0;

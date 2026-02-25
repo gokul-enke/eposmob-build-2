@@ -51,6 +51,8 @@ class SupplierVoucherThermalPrinter {
         paperSize = PaperSize.mm80;
       } else if (selectedPaperSize == '58mm') {
         paperSize = PaperSize.mm58;
+      } else if (selectedPaperSize == '112mm') {
+        paperSize = PaperSize.mm80;
       } else {
         paperSize = PaperSize.mm80;
       }

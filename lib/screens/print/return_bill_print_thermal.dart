@@ -107,6 +107,9 @@ class ReturnBillThermalPrinter {
       } else if (selectedPaperSize == '58mm') {
         paperSize = PaperSize.mm58;
         debugPrint("Using 58mm paper size configuration");
+      } else if (selectedPaperSize == '112mm') {
+        paperSize = PaperSize.mm80;
+        debugPrint("Using 112mm paper size configuration (mm80 ESC/POS mode)");
       } else {
         paperSize = PaperSize.mm80;
         debugPrint("Using default 80mm paper size configuration");
@@ -513,7 +516,7 @@ class ReturnBillThermalPrinter {
     debugPrint("Return items count: ${returnItems.length}");
     debugPrint("Selected paper size: $selectedPaperSize");
 
-    // Determine if we're using 58mm paper for font size adjustment
+    // Determine if we're using 58mm paper for narrow format font adjustments
     bool is58mm = selectedPaperSize == '58mm';
 
     // Build dynamic header for return table

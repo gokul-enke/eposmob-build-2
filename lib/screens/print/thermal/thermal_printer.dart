@@ -159,6 +159,8 @@ class ThermalPrinter {
         paperSize = PaperSize.mm80;
       } else if (selectedPaperSize == '58mm') {
         paperSize = PaperSize.mm58;
+      } else if (selectedPaperSize == '112mm') {
+        paperSize = PaperSize.mm80;
       } else {
         paperSize = PaperSize.mm80;
       }
@@ -469,7 +471,11 @@ class ThermalPrinter {
           "Language: ${isEnglish ? 'English' : 'Arabic'} (Source: ${configLanguage != null ? 'Config' : 'App Locale'}) ($textDirection)");
 
       // Setup print parameters
-      final double printWidth = selectedPaperSize == '58mm' ? 384.0 : 576.0;
+        final double printWidth = selectedPaperSize == '58mm'
+          ? 384.0
+          : selectedPaperSize == '112mm'
+            ? 832.0
+            : 576.0;
       // Dynamic font size: larger for 80mm to maintain proportional appearance
       final double baseFontSize = selectedPaperSize == '80mm' ? 28.0 : 20.0;
 

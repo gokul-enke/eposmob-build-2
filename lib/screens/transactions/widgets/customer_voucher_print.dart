@@ -334,7 +334,9 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
     debugPrint("✅ Document configuration is available");
 
     // Route to appropriate printer
-    if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
+    if (selectedPaperSize == '112mm' ||
+        selectedPaperSize == '80mm' ||
+        selectedPaperSize == '58mm') {
       debugPrint("Routing to thermal printer...");
       if (!mounted) return;
       await CustomerVoucherThermalPrinter(context).printCustomerVoucher(
@@ -450,7 +452,7 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
-                      children: ['80mm', '58mm', 'A5', 'A4']
+                        children: ['112mm', '80mm', '58mm', 'A5', 'A4']
                           .map((size) => ChoiceChip(
                                 label: Text(size),
                                 selected: selectedPaperSize == size,

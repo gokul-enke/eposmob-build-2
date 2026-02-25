@@ -46,7 +46,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool _isResyncingDocConfig = false;
 
   // List of available paper sizes
-  final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
+  final List<String> paperSizes = ['112mm', '80mm', '58mm', 'A5', 'A4'];
 
   // List of available font styles
   final List<String> fontStyles = [
@@ -54,7 +54,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     'Font B (Default)',
   ];
 
-  // List of available receipt themes for thermal printing (80mm/58mm)
+  // List of available receipt themes for thermal printing (112mm/80mm/58mm)
   final List<Map<String, String>> thermalReceiptThemes = [
     {'id': 'classic', 'name': 'Classic'},
     {'id': 'premium', 'name': 'Premium'},
@@ -625,7 +625,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Generate receipt with all fields enabled (dummy document config)
       final profile = await CapabilityProfile.load();
-      PaperSize paperSize =
+        PaperSize paperSize =
           selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
@@ -1448,14 +1448,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               }).toList(),
                                               onChanged: (String? newValue) {
                                                 if (newValue != null) {
-                                                  final wasThermal =
+                                                    final wasThermal =
                                                       selectedPaperSize ==
-                                                              '80mm' ||
-                                                          selectedPaperSize ==
-                                                              '58mm';
-                                                  final willBeThermal =
-                                                      newValue == '80mm' ||
-                                                          newValue == '58mm';
+                                                          '112mm' ||
+                                                        selectedPaperSize ==
+                                                          '80mm' ||
+                                                        selectedPaperSize ==
+                                                          '58mm';
+                                                    final willBeThermal =
+                                                      newValue == '112mm' ||
+                                                        newValue == '80mm' ||
+                                                        newValue == '58mm';
 
                                                   setState(() {
                                                     selectedPaperSize =

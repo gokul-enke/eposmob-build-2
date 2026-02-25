@@ -105,7 +105,7 @@ class KotPrintPage extends StatefulWidget {
       }
 
       // Print
-      if (paperSize == '80mm' || paperSize == '58mm') {
+      if (paperSize == '112mm' || paperSize == '80mm' || paperSize == '58mm') {
         final kotPrinter = KotThermalPrinter(context);
         String formattedTime = DateHelper.formatISODateToIST(orderTime);
 
@@ -164,7 +164,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
   static const Color textSecondaryColor = Color(0xFF7F8C8D);
   static const Color backgroundColor = Color(0xFFF5F6FA);
 
-  final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
+  final List<String> paperSizes = ['112mm', '80mm', '58mm', 'A5', 'A4'];
 
   @override
   void initState() {
@@ -466,7 +466,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
       return;
     }
 
-    if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
+    if (selectedPaperSize == '112mm' ||
+        selectedPaperSize == '80mm' ||
+        selectedPaperSize == '58mm') {
       await _printThermalKot();
     } else {
       await _generateAndPrintPDF();

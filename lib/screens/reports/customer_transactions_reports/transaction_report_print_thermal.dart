@@ -148,6 +148,9 @@ class TransactionReportThermalPrinter {
       } else if (selectedPaperSize == '58mm') {
         paperSize = PaperSize.mm58;
         debugPrint("Using 58mm paper size configuration");
+      } else if (selectedPaperSize == '112mm') {
+        paperSize = PaperSize.mm80;
+        debugPrint("Using 112mm paper size configuration (mm80 ESC/POS mode)");
       } else {
         // Default to 80mm for any other value
         paperSize = PaperSize.mm80;

@@ -74,7 +74,7 @@ class _TransactionReportPrintPageState
   static const Color textSecondaryColor = Color(0xFF7F8C8D);
   static const Color backgroundColor = Color(0xFFF5F6FA);
 
-  final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
+  final List<String> paperSizes = ['112mm', '80mm', '58mm', 'A5', 'A4'];
 
   @override
   void initState() {
@@ -369,10 +369,12 @@ class _TransactionReportPrintPageState
     }
 
     debugPrint("✅ Document configuration is available");
-    debugPrint("Routing to ${selectedPaperSize == '80mm' || selectedPaperSize == '58mm' ? 'THERMAL' : 'PDF'} printer...");
+    debugPrint("Routing to ${selectedPaperSize == '112mm' || selectedPaperSize == '80mm' || selectedPaperSize == '58mm' ? 'THERMAL' : 'PDF'} printer...");
     debugPrint("===== END HANDLE PRINTING =====\n");
 
-    if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
+    if (selectedPaperSize == '112mm' ||
+        selectedPaperSize == '80mm' ||
+        selectedPaperSize == '58mm') {
       await _printThermalReceipt(customerCareNumber, customerCareEmail);
     } else {
       await _generateAndPrintPDF(customerCareNumber, customerCareEmail);
