@@ -256,7 +256,7 @@ class SupermarketLayout implements ReceiptLayout {
   ) {
     final billDocumentConfig = params.billDocumentConfig;
     final bool isDualLanguage =
-      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
@@ -285,19 +285,19 @@ class SupermarketLayout implements ReceiptLayout {
       }
 
       // Dynamic scaling based on name length
-      double storeNameScale = 1.6;
+      double storeNameScale = 1.5;
       // For bilingual, consider the longer of the two languages
       int maxLength = storeNameText
           .split('\n')
           .map((s) => s.length)
           .reduce((a, b) => a > b ? a : b);
       if (maxLength > 20) {
-        storeNameScale = 1.2;
+        storeNameScale = 1.15;
       } else if (maxLength > 14) {
-        storeNameScale = 1.4;
+        storeNameScale = 1.3;
       }
 
-      rows.add(TextRow(storeNameText.toUpperCase(),
+      rows.add(TextRow(storeNameText.trim().toUpperCase(),
           isBold: true, scale: storeNameScale));
     }
 
@@ -327,7 +327,7 @@ class SupermarketLayout implements ReceiptLayout {
 
       if (descriptionText.isNotEmpty) {
         rows.add(SpacingRow(_itemGap));
-        rows.add(TextRow(descriptionText, scale: 0.9, isBold: true));
+        rows.add(TextRow(descriptionText.trim(), scale: 0.9, isBold: true));
       }
     }
 
@@ -531,8 +531,8 @@ class SupermarketLayout implements ReceiptLayout {
     // Invoice Number - hide in header when footer invoice number is enabled
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
-    final bool showInvoiceNumber =
-        !showFooterInvoice && displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showInvoiceNumber = !showFooterInvoice &&
+        displayConfig?['showInvoiceNumber']?.visible == true;
 
     if (showInvoiceNumber) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
@@ -585,7 +585,7 @@ class SupermarketLayout implements ReceiptLayout {
     }
 
     final bool isDualLanguage =
-      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
     final String paymentConfigKey =
         displayConfig?.containsKey('showPaymentMethod') == true
             ? 'showPaymentMethod'
@@ -608,8 +608,7 @@ class SupermarketLayout implements ReceiptLayout {
     final bool showCustomerVatNumber =
         displayConfig?['showCustomerVatNumber']?.visible == true;
 
-    final bool hasVisibleCustomerData =
-        (showCustomerName &&
+    final bool hasVisibleCustomerData = (showCustomerName &&
             params.customerName != null &&
             params.customerName!.isNotEmpty) ||
         (showCustomerPhone &&
@@ -649,16 +648,8 @@ class SupermarketLayout implements ReceiptLayout {
             isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig,
-            paymentConfigKey,
-            null,
-            null,
-            "الدفع:",
-            "Payment:")
-        : _getLabel(
-            displayConfig,
-            paymentConfigKey,
-            null,
+            displayConfig, paymentConfigKey, null, null, "الدفع:", "Payment:")
+        : _getLabel(displayConfig, paymentConfigKey, null,
             isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerAddress',
@@ -667,16 +658,8 @@ class SupermarketLayout implements ReceiptLayout {
             isEnglish ? "Address:" : "العنوان:");
     final commentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig,
-            commentConfigKey,
-            null,
-            null,
-            "تعليق:",
-            "Comment:")
-        : _getLabel(
-            displayConfig,
-            commentConfigKey,
-            null,
+            displayConfig, commentConfigKey, null, null, "تعليق:", "Comment:")
+        : _getLabel(displayConfig, commentConfigKey, null,
             isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showDeliveryMethod',
@@ -883,7 +866,7 @@ class SupermarketLayout implements ReceiptLayout {
   ) {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
     final bool isDualLanguage =
-      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Extract labels with fallbacks
     // For dual language mode, we use stacked headers (Arabic on top, English below)
@@ -1221,7 +1204,7 @@ class SupermarketLayout implements ReceiptLayout {
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
     final bool isDualLanguage =
-      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1446,6 +1429,7 @@ class SupermarketLayout implements ReceiptLayout {
             label = params.paymentMethod!;
           }
         }
+        
 
         boxedItems.add(StandardBoxedLineItem(
           label: label,
@@ -1470,15 +1454,18 @@ class SupermarketLayout implements ReceiptLayout {
         final englishText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'en');
 
-        rows.add(TextRow('$arabicText فقط.', scale: is58mm ? 0.65 : 0.75, isBold: true));
-        rows.add(TextRow('$englishText Only.', scale: is58mm ? 0.65 : 0.75, isBold: true));
+        rows.add(TextRow('$arabicText فقط.',
+            scale: is58mm ? 0.65 : 0.75, isBold: true));
+        rows.add(TextRow('$englishText Only.',
+            scale: is58mm ? 0.65 : 0.75, isBold: true));
       } else {
         final language =
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
         final amountText = AmountHelper().convertNumberToWords(total,
             currency: currency, language: language);
         final suffix = language == 'ar' ? ' فقط.' : ' Only.';
-        rows.add(TextRow('$amountText$suffix', scale: is58mm ? 0.65 : 0.75, isBold: true));
+        rows.add(TextRow('$amountText$suffix',
+            scale: is58mm ? 0.65 : 0.75, isBold: true));
       }
     }
 
@@ -1547,7 +1534,7 @@ class SupermarketLayout implements ReceiptLayout {
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
     final bool isDualLanguage =
-      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     rows.add(SpacingRow(_itemGap));
     rows.add(StandardThinDividerRow());
@@ -1630,7 +1617,7 @@ class SupermarketLayout implements ReceiptLayout {
     rows.add(SpacingRow(_sectionGap));
 
     final bool isDualLanguage =
-      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // QR Code - Use ZATCA QR if credentials available, otherwise fallback to payment QR
     if (displayConfig?['showQRCode']?.visible == true) {
@@ -2050,13 +2037,14 @@ class SupermarketLayout implements ReceiptLayout {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final codec = await ui.instantiateImageCodec(response.bodyBytes);
