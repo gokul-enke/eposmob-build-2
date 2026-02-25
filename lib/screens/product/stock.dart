@@ -316,12 +316,13 @@ class _AddStockScreenState extends State<AddStockScreen> {
           "Using token: ${accessToken.substring(0, min(accessToken.length, 10))}...");
 
       try {
-        final Map<String, String> queryParameters = {};
+        final baseUri = Uri.parse(APPUrl.getRacksDataValues);
+        final queryParameters =
+            Map<String, String>.from(baseUri.queryParameters);
         if (activeStoreId != null) {
           queryParameters['store_id'] = activeStoreId.toString();
         }
-        final url = Uri.parse(APPUrl.getRacksDataValues)
-            .replace(queryParameters: queryParameters);
+        final url = baseUri.replace(queryParameters: queryParameters);
         debugPrint("Making API call to ${url.toString()}");
 
         final response = await http.get(url, headers: {

@@ -79,11 +79,13 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     try {
-      final Map<String, String> queryParameters = {};
+      final baseUri = Uri.parse(APPUrl.getPaymentMethods);
+      final queryParameters =
+          Map<String, String>.from(baseUri.queryParameters);
       if (activeStoreId != null) {
         queryParameters['store_id'] = activeStoreId.toString();
       }
-      final url = Uri.parse(APPUrl.getPaymentMethods).replace(queryParameters: queryParameters);
+      final url = baseUri.replace(queryParameters: queryParameters);
       debugPrint('🔄 Fetching payment methods');
       debugPrint('📡 URL: $url');
 

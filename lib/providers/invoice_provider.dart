@@ -974,12 +974,14 @@ class InvoiceProvider extends ChangeNotifier {
     }
 
     // Build URL with store_id parameter
-    final Map<String, String> queryParams = {};
+    final baseInvoiceAccountTypeUri = Uri.parse(APPUrl.listInvoiceAccountType);
+    final queryParams =
+      Map<String, String>.from(baseInvoiceAccountTypeUri.queryParameters);
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.listInvoiceAccountType)
-        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final url =
+      baseInvoiceAccountTypeUri.replace(queryParameters: queryParams);
 
     try {
       debugPrint("[InvoiceProvider] Fetching account types from: $url");
@@ -1025,12 +1027,14 @@ class InvoiceProvider extends ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    final Map<String, String> queryParameters = {};
+    final baseVoucherAccountTypeUri = Uri.parse(APPUrl.listVoucherAccountType);
+    final queryParameters =
+      Map<String, String>.from(baseVoucherAccountTypeUri.queryParameters);
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.listVoucherAccountType)
-        .replace(queryParameters: queryParameters);
+    final url =
+      baseVoucherAccountTypeUri.replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(url, headers: {

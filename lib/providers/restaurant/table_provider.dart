@@ -58,6 +58,7 @@ class TableProvider with ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     debugPrint(
         '🔑 TableProvider: API Key found: ${apiKey != null ? 'Yes' : 'No'}');
@@ -67,7 +68,13 @@ class TableProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    final url = Uri.parse(APPUrl.getTableList);
+    final baseUri = Uri.parse(APPUrl.getTableList);
+    final queryParameters =
+        Map<String, String>.from(baseUri.queryParameters);
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = baseUri.replace(queryParameters: queryParameters);
     debugPrint('🌐 TableProvider: Making request to: $url');
 
     try {

@@ -169,14 +169,16 @@ class PurchaseProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
     
-    final Map<String, String> queryParameters = {};
+    final baseUri = Uri.parse(APPUrl.getStores);
+    final queryParameters =
+        Map<String, String>.from(baseUri.queryParameters);
     if (storeName != null && storeName.isNotEmpty) {
       queryParameters['store_name'] = storeName;
     }
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.getStores).replace(queryParameters: queryParameters);
+    final url = baseUri.replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
