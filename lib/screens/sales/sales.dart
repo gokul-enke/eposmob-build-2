@@ -1981,7 +1981,7 @@ Powered by CloudPOS''',
             ),
             child: Table(
               columnWidths: const {
-                0: FixedColumnWidth(1), // SI No
+                0: FixedColumnWidth(60), // SI No
                 1: FlexColumnWidth(2), // Order #
                 2: FlexColumnWidth(3), // Customer
                 3: FlexColumnWidth(2), // Date
@@ -2025,7 +2025,7 @@ Powered by CloudPOS''',
                   scrollDirection: Axis.vertical,
                   child: Table(
                     columnWidths: const {
-                      0: FixedColumnWidth(1), // SI No
+                      0: FixedColumnWidth(60), // SI No
                       1: FlexColumnWidth(2), // Order #
                       2: FlexColumnWidth(3), // Customer
                       3: FlexColumnWidth(2), // Date
@@ -2042,7 +2042,10 @@ Powered by CloudPOS''',
                         ListOrderModelData order = entry.value;
                         PriceSummary priceSummary =
                             order.priceSummary ?? PriceSummary();
-
+                        
+                        // Calculate serial number based on pagination
+                        int serialNumber = provider.paginationFrom + index;
+                        
                         return TableRow(
                           decoration: BoxDecoration(
                             color: index % 2 == 0
@@ -2052,7 +2055,7 @@ Powered by CloudPOS''',
                           children: [
                             SizedBox(
                               height: 55, // Set your desired row height here
-                              child: _buildTableCell("${index + 1}"),
+                              child: _buildTableCell("$serialNumber"),
                             ),
                             SizedBox(
                               height: 55,

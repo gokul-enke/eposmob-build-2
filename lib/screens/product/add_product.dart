@@ -776,6 +776,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                 .name ??
                                                             'Unknown'
                                                         : 'No Category';
+                                                
+                                                // Calculate serial number based on pagination
+                                                int serialNumber = productProvider.paginationFrom + index;
 
                                                 return TableRow(
                                                   decoration: BoxDecoration(
@@ -786,7 +789,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                   ),
                                                   children: [
                                                     _buildTableCell(
-                                                        "${index + 1}"),
+                                                        "$serialNumber"),
                                                     _buildTableCell(
                                                         "${product.productName}"),
                                                     _buildTableCell(

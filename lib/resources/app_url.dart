@@ -1,6 +1,6 @@
 class APPUrl {
   static const String baseURL = String.fromEnvironment('BASE_URL',
-      defaultValue: "https://eeezeeerp.cloudposai.com");
+      defaultValue: "https://eposdemo.yougoit.in");
   // static String baseURL = "https://eposdemo.yougoit.in";
 
   // static String baseURL = "https://linetolinepos.yougoit.in";

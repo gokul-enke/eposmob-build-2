@@ -19,6 +19,7 @@ class SalesProvider with ChangeNotifier {
   Pagination? dailySalesClosePagination;
   int currentPage = 1;
   int totalPages = 1;
+  int paginationFrom = 1;
   int salesReturnCurrentPage = 1;
   int salesReturnTotalPages = 1;
   List<ListOrderModelData> get orders => _orders;
@@ -296,6 +297,10 @@ class SalesProvider with ChangeNotifier {
                   listSalesOrderModel.pagination?.currentPage ?? 1;
               int newTotalPages =
                   listSalesOrderModel.pagination?.totalPages ?? 1;
+              int newPaginationFrom =
+                  listSalesOrderModel.pagination?.from ?? 1;
+              int newPaginationTo =
+                  listSalesOrderModel.pagination?.to ?? 1;
 
               debugPrint('=== PAGINATION UPDATE ===');
               debugPrint('Previous Current Page: $currentPage');
@@ -310,16 +315,29 @@ class SalesProvider with ChangeNotifier {
               debugPrint(
                   'Prev Page URL: ${listSalesOrderModel.pagination?.prevPageUrl}');
 
+              // If from value is invalid (0 or null), calculate it
+              if (newPaginationFrom <= 0) {
+                // Calculate based on current page and response items count
+                int itemsPerPage = _orders.length > 0 ? _orders.length : 1;
+                newPaginationFrom = ((newCurrentPage - 1) * itemsPerPage) + 1;
+                debugPrint(
+                    'Calculated From using itemsPerPage=$itemsPerPage: $newPaginationFrom');
+              }
+
               currentPage = newCurrentPage;
               totalPages = newTotalPages;
+              paginationFrom = newPaginationFrom;
 
               debugPrint('Updated Current Page: $currentPage');
               debugPrint('Updated Total Pages: $totalPages');
+              debugPrint('Updated Pagination From: $paginationFrom');
+              debugPrint('Updated Pagination To: $newPaginationTo');
             } else {
               debugPrint('=== NO PAGINATION DATA ===');
               debugPrint('Setting default pagination values');
               currentPage = 1;
               totalPages = 1;
+              paginationFrom = 1;
             }
 
             _orders = listSalesOrderModel.data ?? [];

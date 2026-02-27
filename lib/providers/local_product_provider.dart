@@ -253,7 +253,7 @@ class LocalProductProvider extends ChangeNotifier {
   // Add pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
-  int _itemsPerPage = 10;
+  int _itemsPerPage = 20;
 
   // Getters for pagination
   int get currentPage => _currentPage;
@@ -859,9 +859,9 @@ class LocalProductProvider extends ChangeNotifier {
         final futures = <Future<http.Response>>[];
         for (int page = batchStartPage; page <= batchEndPage; page++) {
           final queryParams = <String, String>{'page': page.toString()};
-          if (activeStoreId != null) {
-            queryParams['store_id'] = activeStoreId.toString();
-          }
+          // if (activeStoreId != null) {
+          //   queryParams['store_id'] = activeStoreId.toString();
+          // }
           if (useDelta) {
             queryParams['updated_at_range'] = "$lastSyncIso,$syncEndIso";
           }
@@ -1022,6 +1022,11 @@ class LocalProductProvider extends ChangeNotifier {
       startIndex,
       endIndex > _filteredProducts.length ? _filteredProducts.length : endIndex,
     );
+  }
+
+  /// Gets the starting serial number (from) for the current page
+  int get paginationFrom {
+    return ((_currentPage - 1) * _itemsPerPage) + 1;
   }
 
   /// Sets the current page
