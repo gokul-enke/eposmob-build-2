@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.506
-git push build v0.1.0-dev.506
+git tag v0.1.0-dev.507
+git push build v0.1.0-dev.507
 
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
@@ -14,6 +14,11 @@ git push build v0.1.0-dev.360
 yougoit build
 git tag v0.1.0-dev.259
 git push build1 v0.1.0-dev.259
+
+  // static String baseURL = "https://eposdemo.yougoit.in";
+  // static String baseURL = "https://linetolinepos.yougoit.in";
+  // static String baseURL = "https://epos.hypersouq.in";
+  // static String baseURL = "https://eeezeeerp.cloudposai.com";
 
 salesexecutive2@gmail.com
 CLOUDPOS_Z2IcS8wMtPlfNsaK1kKbcpMZcv2B10RO
