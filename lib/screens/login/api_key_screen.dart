@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 import '../../resources/app_url.dart';
 import '../../components/build_round_button.dart';
@@ -49,20 +50,72 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     });
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('api_key', _apiKeyController.text.trim());
+      final tenantKey = _apiKeyController.text.trim();
+      final response = await http.post(
+        Uri.parse(APPUrl.findDomainUrl),
+        headers: {
+          'X-Tenant-Key': tenantKey,
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 20));
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+      Map<String, dynamic> responseBody = {};
+      try {
+        responseBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {}
+
+      final int apiStatus =
+          (responseBody['status'] is int) ? responseBody['status'] as int : -1;
+
+      if (response.statusCode == 200 && apiStatus == 200) {
+        final data = responseBody['data'];
+        final String? domain =
+            (data is Map<String, dynamic>) ? data['domain']?.toString() : null;
+
+        if (domain == null || domain.trim().isEmpty) {
+          setState(() {
+            _errorMessage = 'Invalid response: domain not found.';
+          });
+          return;
+        }
+
+        String normalizedDomain = APPUrl.normalizeBaseUrl(domain);
+        if (!normalizedDomain.startsWith('http://') &&
+            !normalizedDomain.startsWith('https://')) {
+          normalizedDomain = 'https://$normalizedDomain';
+        }
+
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('api_key', tenantKey);
+        await prefs.setString('app_url', normalizedDomain);
+        APPUrl.updateBaseURL(normalizedDomain);
+
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+        return;
       }
+
+      final String serverMessage =
+          responseBody['message']?.toString() ?? 'Invalid API key';
+      setState(() {
+        _errorMessage = serverMessage;
+      });
+
+    } on TimeoutException {
+      setState(() {
+        _errorMessage = 'Request timed out. Please try again.';
+      });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Network error. Please check your connection.';
+        _errorMessage = 'Unable to verify API key. Please try again.';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
