@@ -859,9 +859,9 @@ class LocalProductProvider extends ChangeNotifier {
         final futures = <Future<http.Response>>[];
         for (int page = batchStartPage; page <= batchEndPage; page++) {
           final queryParams = <String, String>{'page': page.toString()};
-          // if (activeStoreId != null) {
-          //   queryParams['store_id'] = activeStoreId.toString();
-          // }
+          if (activeStoreId != null) {
+            queryParams['store_id'] = activeStoreId.toString();
+          }
           if (useDelta) {
             queryParams['updated_at_range'] = "$lastSyncIso,$syncEndIso";
           }
