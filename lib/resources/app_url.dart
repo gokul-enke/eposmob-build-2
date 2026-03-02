@@ -1,6 +1,7 @@
 class APPUrl {
-  static String baseURL = const String.fromEnvironment('BASE_URL',
-      defaultValue: 'https://eeezeeerp.cloudposai.com');
+    static const String defaultBaseURL = String.fromEnvironment('BASE_URL',
+            defaultValue: 'https://eposdemo.yougoit.in');
+    static String baseURL = defaultBaseURL;
   static const String findDomainUrl =
       'https://demo.cloudposai.com/api/v1/find-domain';
 

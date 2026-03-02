@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.508
-git push build v0.1.0-dev.508
+git tag v0.1.0-dev.509
+git push build v0.1.0-dev.509
 
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
@@ -28,7 +28,7 @@ CYCLOPEDIA_lss7VsbctNSByFd7h2vszA0eMHHXi2fj
 salesexecutive2@cyclopedia.in
 123456
 
-FUNZCART_nCRY4bH0ASOtZWqKsDl7xabUTcc7gaft
+DEMO_FUNZCART_vqguo7a24ezI8a69o2q0FlQsPXPZRzrw
 salesexecutive1@funzcart.in
 123456
 kitchenmaster@funzcart.in
@@ -55,3 +55,6 @@ ezeee
 CHILLIS_RESTAURANT_RkgPh2sBuGjOx44lHU6GV5eKXAA1V3lh
 restaurantsales@chillis.in
 
+
+THAMVEENATH_AMANA_XAAl7emT6t2un7MqQsCUW4lXyM7oU3ui
+salesexecutiveamana@thamveenath.com

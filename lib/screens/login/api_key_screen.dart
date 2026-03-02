@@ -39,10 +39,42 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     });
   }
 
+  Future<void> _saveApiConfig({
+    required String tenantKey,
+    required String domain,
+    bool usedDefaultDomain = false,
+  }) async {
+    String normalizedDomain = APPUrl.normalizeBaseUrl(domain);
+    if (!normalizedDomain.startsWith('http://') &&
+        !normalizedDomain.startsWith('https://')) {
+      normalizedDomain = 'https://$normalizedDomain';
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_key', tenantKey);
+    await prefs.setString('app_url', normalizedDomain);
+    await prefs.setBool('show_default_domain_warning', usedDefaultDomain);
+    APPUrl.updateBaseURL(normalizedDomain);
+  }
+
+  Future<void> _saveAndContinueWithDefaultDomain(String tenantKey) async {
+    await _saveApiConfig(
+      tenantKey: tenantKey,
+      domain: APPUrl.defaultBaseURL,
+      usedDefaultDomain: true,
+    );
+
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
   Future<void> _verifyAndSaveApiKey() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    final tenantKey = _apiKeyController.text.trim();
 
     setState(() {
       _isLoading = true;
@@ -50,7 +82,6 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     });
 
     try {
-      final tenantKey = _apiKeyController.text.trim();
       final response = await http.post(
         Uri.parse(APPUrl.findDomainUrl),
         headers: {
@@ -73,22 +104,15 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
             (data is Map<String, dynamic>) ? data['domain']?.toString() : null;
 
         if (domain == null || domain.trim().isEmpty) {
-          setState(() {
-            _errorMessage = 'Invalid response: domain not found.';
-          });
+          await _saveAndContinueWithDefaultDomain(tenantKey);
           return;
         }
 
-        String normalizedDomain = APPUrl.normalizeBaseUrl(domain);
-        if (!normalizedDomain.startsWith('http://') &&
-            !normalizedDomain.startsWith('https://')) {
-          normalizedDomain = 'https://$normalizedDomain';
-        }
-
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('api_key', tenantKey);
-        await prefs.setString('app_url', normalizedDomain);
-        APPUrl.updateBaseURL(normalizedDomain);
+        await _saveApiConfig(
+          tenantKey: tenantKey,
+          domain: domain,
+          usedDefaultDomain: false,
+        );
 
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/login');
@@ -96,16 +120,10 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
         return;
       }
 
-      final String serverMessage =
-          responseBody['message']?.toString() ?? 'Invalid API key';
-      setState(() {
-        _errorMessage = serverMessage;
-      });
+      await _saveAndContinueWithDefaultDomain(tenantKey);
 
     } on TimeoutException {
-      setState(() {
-        _errorMessage = 'Request timed out. Please try again.';
-      });
+      await _saveAndContinueWithDefaultDomain(tenantKey);
     } catch (e) {
       setState(() {
         _errorMessage = 'Unable to verify API key. Please try again.';
