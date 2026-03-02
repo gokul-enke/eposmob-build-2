@@ -49,7 +49,7 @@ class SupermarketLayout implements ReceiptLayout {
   // Ultra-compact spacing for Supermarket
   static const double _sectionGap = 0.0;
   static const double _itemGap = 0.0;
-  static const double _smallItemGap = 1.0;
+  static const double _smallItemGap = 3.0;
   static const double _headerGap = 0.0;
 
   @override
@@ -522,13 +522,39 @@ class SupermarketLayout implements ReceiptLayout {
     }
 
     rows.add(SpacingRow(_sectionGap));
-
+    rows.add(SpacingRow(_smallItemGap));
     // Thin divider line
     rows.add(StandardThinDividerRow());
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice Number - hide in header when footer invoice number is enabled
+    // Token Number
+    if (displayConfig?['showTokenNumber']?.visible == true &&
+        params.tokenNumber != null &&
+        params.tokenNumber!.isNotEmpty) {
+      final String tokenPrefix =
+          displayConfig?['showTokenNumber']?.value as String? ?? 'Token: ';
+      rows.add(SpacingRow(_itemGap));
+      rows.add(TextRow('$tokenPrefix${params.tokenNumber}',
+          scale: 1.0, isBold: true));
+    }
+    rows.add(SpacingRow(_itemGap));
+  }
+
+  // ==================== CUSTOMER SECTION ====================
+
+  void _buildCustomerSection(
+    List<ReceiptRow> rows,
+    ReceiptLayoutParams params,
+    Map<String, DisplayOption>? displayConfig,
+    bool isEnglish,
+  ) {
+    // Check if customer section should be visible
+    if (displayConfig?['showCustomerNameAndPhone']?.visible == false) {
+      return;
+    }
+
+    // Invoice Number - display at top of customer section
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
     final bool showInvoiceNumber = !showFooterInvoice &&
@@ -548,40 +574,17 @@ class SupermarketLayout implements ReceiptLayout {
         displayConfig?['showInvoicePrefix']?.value,
         params.billDocumentConfig.numberPrefix ??
             displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+        lang == 'ar' ? 'رقم الفاتورة:' : 'Invoice No:',
       );
 
       final invoiceNumberText = '$invoicePrefix $strippedNumber';
-      rows.add(TextRow(invoiceNumberText, scale: 0.75, isBold: true));
-    }
-
-    // Token Number
-    if (displayConfig?['showTokenNumber']?.visible == true &&
-        params.tokenNumber != null &&
-        params.tokenNumber!.isNotEmpty) {
-      final String tokenPrefix =
-          displayConfig?['showTokenNumber']?.value as String? ?? 'Token: ';
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(invoicePrefix,
+            weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
+        ReceiptTableColumn(strippedNumber,
+            weight: 0.65, align: TextAlign.left, scale: 0.75),
+      ]));
       rows.add(SpacingRow(_itemGap));
-      rows.add(TextRow('$tokenPrefix${params.tokenNumber}',
-          scale: 1.0, isBold: true));
-    }
-
-    rows.add(SpacingRow(_itemGap));
-    rows.add(StandardThinDividerRow());
-    rows.add(SpacingRow(_itemGap));
-  }
-
-  // ==================== CUSTOMER SECTION ====================
-
-  void _buildCustomerSection(
-    List<ReceiptRow> rows,
-    ReceiptLayoutParams params,
-    Map<String, DisplayOption>? displayConfig,
-    bool isEnglish,
-  ) {
-    // Check if customer section should be visible
-    if (displayConfig?['showCustomerNameAndPhone']?.visible == false) {
-      return;
     }
 
     final bool isDualLanguage =
@@ -1429,7 +1432,6 @@ class SupermarketLayout implements ReceiptLayout {
             label = params.paymentMethod!;
           }
         }
-        
 
         boxedItems.add(StandardBoxedLineItem(
           label: label,
@@ -2069,6 +2071,8 @@ class SupermarketLayout implements ReceiptLayout {
     }
     return null;
   }
+
+  // ==================== HELPER METHODS FOR REUSABLE STYLED LINES ====================
 }
 
 /// Thin solid line divider for Standard theme
@@ -2082,8 +2086,8 @@ class StandardThinDividerRow extends ReceiptRow {
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
     final paint = Paint()
-      ..color = Colors.black54
-      ..strokeWidth = 0.5;
+      ..color = Colors.black
+      ..strokeWidth = 1.5;
 
     const double dashWidth = 3.0;
     const double dashSpace = 2.0;
@@ -2111,11 +2115,11 @@ class StandardDottedDividerRow extends ReceiptRow {
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
     final paint = Paint()
-      ..color = Colors.black54
-      ..strokeWidth = 2;
+      ..color = Colors.black
+      ..strokeWidth = 1.5;
 
-    const double dashWidth = 4.0;
-    const double dashSpace = 3.0;
+    const double dashWidth = 3.0;
+    const double dashSpace = 2.0;
     double currentX = 0;
 
     while (currentX < width) {
@@ -2160,8 +2164,7 @@ class StandardBoxedTotalsRow extends ReceiptRow {
       TextDirection textDirection) {
     final paint = Paint()
       ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+      ..strokeWidth = 1.5;
 
     // Draw top dotted line
     const double dashWidth = 3.0;
@@ -2195,10 +2198,10 @@ class StandardBoxedTotalsRow extends ReceiptRow {
         // Draw dashed separator
         final sepPaint = Paint()
           ..color = Colors.black
-          ..strokeWidth = 2;
+          ..strokeWidth = 1.5;
 
-        const double dashWidth = 4.0;
-        const double dashSpace = 3.0;
+        const double dashWidth = 3.0;
+        const double dashSpace = 2.0;
         double currentX = padding;
         double endX = width - padding;
 
@@ -2214,41 +2217,98 @@ class StandardBoxedTotalsRow extends ReceiptRow {
       } else {
         final itemFontSize = fontSize * item.scale;
 
-        // Draw Icon if present
-        double valueOffsetX = padding;
-        if (item.icon != null) {
-          final double iconSize = itemFontSize * 1.2;
-          final src = Rect.fromLTWH(
-              0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
-          final dst = Rect.fromLTWH(
-              padding, currentY - (iconSize * 0.1), iconSize, iconSize);
-          canvas.drawImageRect(item.icon!, src, dst, Paint());
-          valueOffsetX += iconSize + 4; // Space after icon
+        if (textDirection == TextDirection.ltr) {
+          // English: Label on Left, Value + Icon on Right
+          // Label on Left
+          _drawScaledText(
+            canvas,
+            item.label,
+            Offset(padding, currentY),
+            (width * 0.55) - padding,
+            itemFontSize,
+            item.isBold,
+            TextAlign.left,
+            TextDirection.ltr,
+          );
+
+          // Value on Right, then Icon to the left of value
+          double rightEdge = width - padding;
+          double iconSpace = 0;
+          if (item.icon != null) {
+            final double iconSize = itemFontSize * 1.0;
+            iconSpace = iconSize + 4;
+          }
+
+          // Draw value text right-aligned, leaving room for icon
+          _drawScaledText(
+            canvas,
+            item.value,
+            Offset(rightEdge, currentY),
+            width * 0.40 - iconSpace,
+            itemFontSize,
+            item.isBold,
+            TextAlign.right,
+            TextDirection.ltr,
+          );
+
+          // Draw icon to the left of the value text
+          if (item.icon != null) {
+            final double iconSize = itemFontSize * 1.0;
+            // Measure value text width to position icon just before it
+            final valuePainter = TextPainter(
+              text: TextSpan(
+                text: item.value,
+                style: TextStyle(
+                  fontSize: itemFontSize,
+                  fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              textDirection: TextDirection.ltr,
+            )..layout();
+            final double iconX = rightEdge - valuePainter.width - iconSize - 4;
+            final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
+                item.icon!.height.toDouble());
+            final dst = Rect.fromLTWH(iconX,
+                currentY + (itemFontSize - iconSize) / 2, iconSize, iconSize);
+            canvas.drawImageRect(item.icon!, src, dst, Paint());
+          }
+        } else {
+          // Arabic: Value + Icon on Left, Label on Right
+          double valueOffsetX = padding;
+          if (item.icon != null) {
+            final double iconSize = itemFontSize * 1.2;
+            final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
+                item.icon!.height.toDouble());
+            final dst = Rect.fromLTWH(
+                padding, currentY - (iconSize * 0.1), iconSize, iconSize);
+            canvas.drawImageRect(item.icon!, src, dst, Paint());
+            valueOffsetX += iconSize + 4;
+          }
+
+          // Value on Left
+          _drawScaledText(
+            canvas,
+            item.value,
+            Offset(valueOffsetX, currentY),
+            (width * 0.50) - (valueOffsetX - padding),
+            itemFontSize,
+            item.isBold,
+            TextAlign.left,
+            TextDirection.rtl,
+          );
+
+          // Label on Right
+          _drawScaledText(
+            canvas,
+            item.label,
+            Offset(width - padding, currentY),
+            width * 0.70,
+            itemFontSize,
+            item.isBold,
+            TextAlign.right,
+            TextDirection.rtl,
+          );
         }
-
-        // Value on Left (after icon)
-        _drawScaledText(
-          canvas,
-          item.value,
-          Offset(valueOffsetX, currentY),
-          (width * 0.50) - (valueOffsetX - padding),
-          itemFontSize,
-          item.isBold,
-          TextAlign.left,
-          TextDirection.ltr,
-        );
-
-        // Label on Right
-        _drawScaledText(
-          canvas,
-          item.label,
-          Offset(width - padding, currentY), // Anchor at right
-          width * 0.70,
-          itemFontSize,
-          item.isBold,
-          TextAlign.right,
-          textDirection,
-        );
 
         currentY += itemFontSize + 2;
       }
@@ -2419,5 +2479,114 @@ class ReceiptTableRow extends ReceiptRow {
       tp.paint(canvas, Offset(currentX + xOffset, y));
       currentX += colWidth;
     }
+  }
+}
+
+/// Reusable styled line item for consistent formatting throughout receipts
+/// Used for displaying simple text lines with standardized boldness and scaling
+class StandardLineItem {
+  final String text;
+  final bool isBold;
+  final double scale;
+  final TextAlign align;
+  final bool isSeparator;
+
+  StandardLineItem({
+    this.text = '',
+    this.isBold = true,
+    this.scale = 0.75,
+    this.align = TextAlign.center,
+    this.isSeparator = false,
+  });
+}
+
+/// Reusable row for rendering styled lines with consistent formatting
+/// Perfect for Amount in Words, Items Count, You Saved, and other simple displays
+/// Can render multiple lines with separator support
+class StandardLineRow extends ReceiptRow {
+  final List<StandardLineItem> items;
+  final double lineGap;
+
+  StandardLineRow({
+    required this.items,
+    this.lineGap = 2.0,
+  });
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    double totalHeight = 0;
+    for (int i = 0; i < items.length; i++) {
+      if (items[i].isSeparator) {
+        totalHeight += 1.2; // Height for separator line
+      } else {
+        final tp = _createPainter(items[i], width, fontSize, textDirection);
+        totalHeight += tp.height;
+      }
+      if (i < items.length - 1) {
+        totalHeight += lineGap;
+      }
+    }
+    return totalHeight;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    double currentY = y;
+
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+
+      if (item.isSeparator) {
+        // Draw a thin dashed line
+        final paint = Paint()
+          ..color = Colors.black
+          ..strokeWidth = 1.5;
+
+        const double dashWidth = 3.0;
+        const double dashSpace = 2.0;
+        double currentX = 0;
+
+        while (currentX < width) {
+          canvas.drawLine(
+            Offset(currentX, currentY),
+            Offset((currentX + dashWidth).clamp(0, width), currentY),
+            paint,
+          );
+          currentX += dashWidth + dashSpace;
+        }
+        currentY += 1.2;
+      } else {
+        final tp = _createPainter(item, width, fontSize, textDirection);
+        double x = 0;
+        if (item.align == TextAlign.center) {
+          x = (width - tp.width) / 2;
+        } else if (item.align == TextAlign.right) {
+          x = width - tp.width;
+        }
+        tp.paint(canvas, Offset(x, currentY));
+        currentY += tp.height;
+      }
+
+      if (i < items.length - 1) {
+        currentY += lineGap;
+      }
+    }
+  }
+
+  TextPainter _createPainter(StandardLineItem item, double width,
+      double fontSize, TextDirection textDirection) {
+    return TextPainter(
+      text: TextSpan(
+        text: item.text,
+        style: TextStyle(
+          fontSize: fontSize * item.scale,
+          fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      textDirection: textDirection,
+      textAlign: item.align,
+    )..layout(maxWidth: width);
   }
 }

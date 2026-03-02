@@ -70,6 +70,7 @@ class InvoiceProvider extends ChangeNotifier {
   String? _filterFromDate;
   String? _filterToDate;
   String? _filterStatus;
+  String? _filterZatcaStatus;
   String? _filterOrderNumber;
   String? _filterPhone;
   String? _filterEmail;
@@ -107,6 +108,7 @@ class InvoiceProvider extends ChangeNotifier {
       filterFromDate: _filterFromDate,
       filterToDate: _filterToDate,
       filterStatus: _filterStatus,
+      filterZatcaStatus: _filterZatcaStatus,
       filterOrderNumber: _filterOrderNumber,
       filterPhone: _filterPhone,
       filterEmail: _filterEmail,
@@ -364,6 +366,7 @@ class InvoiceProvider extends ChangeNotifier {
       String? fromDate,
       String? toDate,
       String? status,
+      String? zatcaStatus,
       String? phone,
       String? email,
       String? orderNumber,
@@ -373,6 +376,7 @@ class InvoiceProvider extends ChangeNotifier {
     _filterFromDate = fromDate;
     _filterToDate = toDate;
     _filterStatus = status;
+    _filterZatcaStatus = zatcaStatus;
     _filterOrderNumber = orderNumber;
     _filterPhone = phone;
     _filterEmail = email;
@@ -386,6 +390,7 @@ class InvoiceProvider extends ChangeNotifier {
       filterFromDate: fromDate,
       filterToDate: toDate,
       filterStatus: status,
+      filterZatcaStatus: zatcaStatus,
       page: page,
     );
   }
@@ -425,6 +430,7 @@ class InvoiceProvider extends ChangeNotifier {
     _filterFromDate = null;
     _filterToDate = null;
     _filterStatus = null;
+    _filterZatcaStatus = null;
     _filterOrderNumber = null;
     _filterPhone = null;
     _filterEmail = null;
@@ -449,6 +455,7 @@ class InvoiceProvider extends ChangeNotifier {
       String? filterFromDate,
       String? filterToDate,
       String? filterStatus,
+      String? filterZatcaStatus,
       String? filterOrderNumber,
       String? filterPhone,
       String? filterEmail,
@@ -517,6 +524,14 @@ class InvoiceProvider extends ChangeNotifier {
       filteredInvoices = filteredInvoices.where((invoice) {
         return invoice.status.toLowerCase() == filterStatus.toLowerCase();
       }).toList();
+    }
+
+    if (filterZatcaStatus != null && filterZatcaStatus.isNotEmpty) {
+      filteredInvoices = filteredInvoices.where((invoice) {
+        return _matchesZatcaStatus(invoice, filterZatcaStatus);
+      }).toList();
+      debugPrint(
+          "After ZATCA status filter: ${filteredInvoices.length} invoices match '$filterZatcaStatus'");
     }
     //     if (filterOrderNumber != null && filterOrderNumber.isNotEmpty) {
     //   filteredInvoices = filteredInvoices.where((invoice) {
@@ -840,6 +855,7 @@ class InvoiceProvider extends ChangeNotifier {
       filterFromDate: _filterFromDate,
       filterToDate: _filterToDate,
       filterStatus: _filterStatus,
+      filterZatcaStatus: _filterZatcaStatus,
       filterOrderNumber: _filterOrderNumber,
       filterPhone: _filterPhone,
       filterEmail: _filterEmail,
@@ -1429,6 +1445,7 @@ class InvoiceProvider extends ChangeNotifier {
           filterFromDate: _filterFromDate,
           filterToDate: _filterToDate,
           filterStatus: _filterStatus,
+          filterZatcaStatus: _filterZatcaStatus,
           filterOrderNumber: _filterOrderNumber,
           filterPhone: _filterPhone,
           filterEmail: _filterEmail,
@@ -1801,6 +1818,38 @@ class InvoiceProvider extends ChangeNotifier {
 
     uniqueStatuses.sort();
     return ["All Status", ...uniqueStatuses];
+  }
+
+  List<String> getZatcaStatusOptions() {
+    if (_allInvoices == null || _allInvoices!.isEmpty) {
+      return ["All ZATCA Status"];
+    }
+
+    final uniqueStatuses = _allInvoices!
+        .map(_getNormalizedZatcaLabel)
+        .where((status) => status.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueStatuses.sort();
+    return ["All ZATCA Status", ...uniqueStatuses];
+  }
+
+  bool _matchesZatcaStatus(Invoice invoice, String selectedStatus) {
+    return _getNormalizedZatcaLabel(invoice).toLowerCase() ==
+        selectedStatus.toLowerCase();
+  }
+
+  String _getNormalizedZatcaLabel(Invoice invoice) {
+    final String? zatcaStatus = invoice.zatcaStatus?.toLowerCase();
+    final String? requestStatus = invoice.zatcaRequestStatus?.toLowerCase();
+
+    if (zatcaStatus == 'pass') return 'SUCCESS';
+    if (requestStatus == 'failed') return 'FAILED';
+    if (requestStatus == 'pending' || requestStatus == 'processing') {
+      return 'PENDING';
+    }
+    return 'NOT SENT';
   }
 
   List<String> getReceiptStatusOptions() {
