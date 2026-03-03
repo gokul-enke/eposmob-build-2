@@ -452,7 +452,7 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission =
-                  roleProvider.currentUserHasPermissionSync('view_category');
+                  roleProvider.currentUserHasPermissionSync('view_product');
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
