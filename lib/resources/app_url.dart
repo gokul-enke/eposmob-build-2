@@ -3,7 +3,7 @@ class APPUrl {
             defaultValue: 'https://eeezeeerp.cloudposai.com');
     static String baseURL = defaultBaseURL;
   static const String findDomainUrl =
-      'https://demo.cloudposai.com/api/v1/find-domain';
+      'https://cloudposai.com/api/v1/find-domain';
 
   static String normalizeBaseUrl(String url) {
     return url.trim().replaceFirst(RegExp(r'/*$'), '');
