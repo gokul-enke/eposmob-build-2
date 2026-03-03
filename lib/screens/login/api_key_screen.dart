@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 import '../../resources/app_url.dart';
 import '../../components/build_round_button.dart';
@@ -38,10 +39,42 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     });
   }
 
+  Future<void> _saveApiConfig({
+    required String tenantKey,
+    required String domain,
+    bool usedDefaultDomain = false,
+  }) async {
+    String normalizedDomain = APPUrl.normalizeBaseUrl(domain);
+    if (!normalizedDomain.startsWith('http://') &&
+        !normalizedDomain.startsWith('https://')) {
+      normalizedDomain = 'https://$normalizedDomain';
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_key', tenantKey);
+    await prefs.setString('app_url', normalizedDomain);
+    await prefs.setBool('show_default_domain_warning', usedDefaultDomain);
+    APPUrl.updateBaseURL(normalizedDomain);
+  }
+
+  Future<void> _saveAndContinueWithDefaultDomain(String tenantKey) async {
+    await _saveApiConfig(
+      tenantKey: tenantKey,
+      domain: APPUrl.defaultBaseURL,
+      usedDefaultDomain: true,
+    );
+
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
   Future<void> _verifyAndSaveApiKey() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    final tenantKey = _apiKeyController.text.trim();
 
     setState(() {
       _isLoading = true;
@@ -49,20 +82,58 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     });
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('api_key', _apiKeyController.text.trim());
+      final response = await http.post(
+        Uri.parse(APPUrl.findDomainUrl),
+        headers: {
+          'X-Tenant-Key': tenantKey,
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 20));
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+      Map<String, dynamic> responseBody = {};
+      try {
+        responseBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {}
+
+      final int apiStatus =
+          (responseBody['status'] is int) ? responseBody['status'] as int : -1;
+
+      if (response.statusCode == 200 && apiStatus == 200) {
+        final data = responseBody['data'];
+        final String? domain =
+            (data is Map<String, dynamic>) ? data['domain']?.toString() : null;
+
+        if (domain == null || domain.trim().isEmpty) {
+          await _saveAndContinueWithDefaultDomain(tenantKey);
+          return;
+        }
+
+        await _saveApiConfig(
+          tenantKey: tenantKey,
+          domain: domain,
+          usedDefaultDomain: false,
+        );
+
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+        return;
       }
+
+      await _saveAndContinueWithDefaultDomain(tenantKey);
+
+    } on TimeoutException {
+      await _saveAndContinueWithDefaultDomain(tenantKey);
     } catch (e) {
       setState(() {
-        _errorMessage = 'Network error. Please check your connection.';
+        _errorMessage = 'Unable to verify API key. Please try again.';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.490
-git push build v0.1.0-dev.490
+git tag v0.1.0-dev.512
+git push build v0.1.0-dev.512
 
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
@@ -8,13 +8,17 @@ git tag v0.1.0-dev.468
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git v0.1.0-dev.468
 
 souq build
-git tag v0.1.0-dev.359
-git push build v0.1.0-dev.359
+git tag v0.1.0-dev.360
+git push build v0.1.0-dev.360
 
 yougoit build
 git tag v0.1.0-dev.259
 git push build1 v0.1.0-dev.259
 
+  // static String baseURL = "https://eposdemo.yougoit.in";
+  // static String baseURL = "https://linetolinepos.yougoit.in";
+  // static String baseURL = "https://epos.hypersouq.in";
+  // static String baseURL = "https://eeezeeerp.cloudposai.com";
 
 salesexecutive2@gmail.com
 CLOUDPOS_Z2IcS8wMtPlfNsaK1kKbcpMZcv2B10RO
@@ -24,7 +28,7 @@ CYCLOPEDIA_lss7VsbctNSByFd7h2vszA0eMHHXi2fj
 salesexecutive2@cyclopedia.in
 123456
 
-FUNZCART_nCRY4bH0ASOtZWqKsDl7xabUTcc7gaft
+DEMO_FUNZCART_vqguo7a24ezI8a69o2q0FlQsPXPZRzrw
 salesexecutive1@funzcart.in
 123456
 kitchenmaster@funzcart.in
@@ -39,6 +43,10 @@ CHILLIS_RESTAURANT_xA0zcMObAQfrv7inwqOdwI8VbT4nA143
 ZAVIYA_AL_RAQI_Llh0LXAn1iatsjqF09FG9Kje27Xa8xo5
 salesexecutive1@zaviyaalraqi.com
 
+API_MygoPT9qMHJqATZrK9xdGIpoN58fySya8UUyiIoD
+billingsp@gmail.com
+salesexe@ruknaltabir.com
+
 
 
 
@@ -46,3 +54,7 @@ salesexecutive1@zaviyaalraqi.com
 ezeee
 CHILLIS_RESTAURANT_RkgPh2sBuGjOx44lHU6GV5eKXAA1V3lh
 restaurantsales@chillis.in
+
+
+THAMVEENATH_AMANA_XAAl7emT6t2un7MqQsCUW4lXyM7oU3ui
+salesexecutiveamana@thamveenath.com

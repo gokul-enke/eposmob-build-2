@@ -32,6 +32,7 @@ class InvoiceListScreen extends StatefulWidget {
 
 class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
+  Worker? _sidebarIndexWorker;
   bool isInitialized = false;
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController invoiceNumberController = TextEditingController();
@@ -41,6 +42,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final TextEditingController dateFromController = TextEditingController();
   final TextEditingController dateToController = TextEditingController();
   String? selectedStatus; // For the status dropdown
+  String? selectedZatcaStatus; // For the ZATCA status dropdown
   final Set<int> selectedInvoiceIds = {};
   bool isBulkSending = false;
 
@@ -50,6 +52,43 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadInvoices();
     });
+
+    _sidebarIndexWorker = ever<int>(sideBarController.index, (currentIndex) {
+      if (currentIndex != 21) {
+        _resetInvoiceFilters(clearProviderFilters: true);
+      }
+    });
+  }
+
+  void _resetInvoiceFilters({required bool clearProviderFilters}) {
+    searchTextController.clear();
+    invoiceNumberController.clear();
+    orderNumberController.clear();
+    phoneController.clear();
+    // emailController.clear(); // Email filter commented for now
+    dateFromController.clear();
+    dateToController.clear();
+    selectedStatus = null;
+    selectedZatcaStatus = null;
+    selectedInvoiceIds.clear();
+
+    if (clearProviderFilters) {
+      Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
+    }
+  }
+
+  @override
+  void dispose() {
+    _sidebarIndexWorker?.dispose();
+    _resetInvoiceFilters(clearProviderFilters: true);
+    searchTextController.dispose();
+    invoiceNumberController.dispose();
+    orderNumberController.dispose();
+    phoneController.dispose();
+    emailController.dispose();
+    dateFromController.dispose();
+    dateToController.dispose();
+    super.dispose();
   }
 
   Future<void> _performZatcaPhase2SendWithPdf(Invoice invoice) async {
@@ -507,10 +546,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       invoiceNumber: invoiceNumberController.text,
       // orderNumber: orderNumberController.text,
       phone: phoneController.text,
-      email: emailController.text,
+      // email: emailController.text, // Email filter commented for now
       fromDate: dateFromController.text,
       toDate: dateToController.text,
       status: selectedStatus,
+      zatcaStatus: selectedZatcaStatus,
     );
   }
 
@@ -521,10 +561,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       invoiceNumberController.clear();
       orderNumberController.clear();
       phoneController.clear();
-      emailController.clear();
+      // emailController.clear(); // Email filter commented for now
       dateFromController.clear();
       dateToController.clear();
       selectedStatus = null;
+      selectedZatcaStatus = null;
     });
 
     Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
@@ -689,7 +730,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               // Email Search Field
               Expanded(
                 flex: 1,
-                child: _buildEmailSearch(),
+                child: _buildZatcaStatusFilter(),
               ),
             ],
           ),
@@ -1200,6 +1241,36 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildZatcaStatusFilter() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Consumer<InvoiceProvider>(
+        builder: (context, invoiceProvider, child) {
+          final zatcaStatusOptions = invoiceProvider.getZatcaStatusOptions();
+
+          return BuildDropDownWithSearch<String>(
+            title: null,
+            showName: false,
+            hintText: 'All ZATCA Status',
+            value: selectedZatcaStatus,
+            items: zatcaStatusOptions
+                .where((status) => status != "All ZATCA Status")
+                .toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                selectedZatcaStatus = newValue;
+              });
+              searchInvoices();
+            },
+            displayText: (status) => status.toUpperCase(),
+            height: 45,
+            margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+          );
+        },
+      ),
     );
   }
 

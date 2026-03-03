@@ -47,10 +47,12 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'controllers/sidebar_controller.dart';
 import 'providers/cart.dart';
 import 'providers/carousel_provider.dart';
 import 'providers/purchase_provider.dart';
+import 'resources/app_url.dart';
 import 'screens/login/login.dart';
 import 'screens/login/base_url_wrapper.dart';
 import 'screens/login/api_key_screen.dart';
@@ -63,6 +65,8 @@ import 'package:timezone/data/latest.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await _initializeBaseUrlFromPreferences();
 
   if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     await _requestPermissions();
@@ -115,6 +119,16 @@ void main() async {
   Get.put(CategoryProvider());
   HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
+}
+
+Future<void> _initializeBaseUrlFromPreferences() async {
+  try {
+    final prefs = await sp.SharedPreferences.getInstance();
+    final savedAppUrl = prefs.getString('app_url');
+    if (savedAppUrl != null && savedAppUrl.trim().isNotEmpty) {
+      APPUrl.updateBaseURL(savedAppUrl);
+    }
+  } catch (_) {}
 }
 
 Future<void> _requestPermissions() async {

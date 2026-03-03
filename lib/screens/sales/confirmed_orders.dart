@@ -363,6 +363,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         paymentMethod: order.paymentMethod,
         customerAlternatePhone: order.alternatePhone,
         orderComment: order.comment,
+        deliveryMethod: order.deliveryMethod,
         paidAmount: paidAmount,
         isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
       );
@@ -386,6 +387,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               paymentMethod: order.paymentMethod,
               customerAlternatePhone: order.alternatePhone,
               orderComment: order.comment,
+              deliveryMethod: order.deliveryMethod,
               paidAmount: paidAmount,
               isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
             ),

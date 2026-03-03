@@ -29,9 +29,12 @@ class ReceiptLayoutParams {
   final double? customerCurrentBalance;
   final double? paidAmount;
   final String? orderComment;
+  final String? deliveryMethod;
   final String? customerAlternatePhone;
   final String? paymentMethod;
-  final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
+  final String? customerVatNumber;
+  final Map<String, dynamic>?
+      paymentBreakdown; // Added for multi-payment support
   // ZATCA fields for Saudi Arabia e-invoicing
   final String? zatcaVatNumber;
   final String? zatcaCompanyName;
@@ -65,8 +68,10 @@ class ReceiptLayoutParams {
     this.customerCurrentBalance,
     this.paidAmount,
     this.orderComment,
+    this.deliveryMethod,
     this.customerAlternatePhone,
     this.paymentMethod,
+    this.customerVatNumber,
     this.paymentBreakdown,
     this.zatcaVatNumber,
     this.zatcaCompanyName,
@@ -82,33 +87,36 @@ class ReceiptLayoutParams {
   /// Check if the document is configured for RTL (Arabic)
   bool get isRtl {
     final configLanguage = billDocumentConfig.language;
-    return configLanguage == 'ar';
+    return (configLanguage ?? '').toLowerCase() == 'ar';
   }
 
   /// Check if the document is configured for English
   bool get isEnglish {
     final configLanguage = billDocumentConfig.language;
-    return configLanguage == null || configLanguage == 'en';
+    return configLanguage == null || configLanguage.toLowerCase() == 'en';
   }
 
   /// Check if the document is bilingual
   bool get isBilingual {
     final configLanguage = billDocumentConfig.language;
-    return configLanguage == 'bilingual';
+    return (configLanguage ?? '').toLowerCase() == 'bilingual';
   }
 
   /// Get the active theme, defaulting to 'classic'
   String get activeTheme => billDocumentConfig.activeTheme ?? 'classic';
 
-  /// Check if this is a thermal paper size (58mm or 80mm)
+    /// Check if this is a thermal paper size (58mm, 80mm, or 112mm)
   bool get isThermal =>
-      selectedPaperSize == '58mm' || selectedPaperSize == '80mm';
+      selectedPaperSize == '58mm' ||
+      selectedPaperSize == '80mm' ||
+      selectedPaperSize == '112mm';
 
   /// Check if this is 58mm paper
   bool get is58mm => selectedPaperSize == '58mm';
 
   /// Get print width for image-based printing
-  double get printWidth => is58mm ? 384.0 : 576.0;
+  double get printWidth =>
+      is58mm ? 384.0 : (selectedPaperSize == '112mm' ? 832.0 : 576.0);
 
   /// Get base font size for image-based printing
   double get baseFontSize => selectedPaperSize == '80mm' ? 28.0 : 20.0;
@@ -153,6 +161,5 @@ class ReceiptLayoutParams {
       zatcaCompanyName!.isNotEmpty;
 
   /// Get the total amount as double
-  double get totalAmountAsDouble =>
-      double.tryParse(formattedTotal) ?? 0.0;
+  double get totalAmountAsDouble => double.tryParse(formattedTotal) ?? 0.0;
 }

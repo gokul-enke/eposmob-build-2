@@ -19,6 +19,7 @@ class SalesProvider with ChangeNotifier {
   Pagination? dailySalesClosePagination;
   int currentPage = 1;
   int totalPages = 1;
+  int paginationFrom = 1;
   int salesReturnCurrentPage = 1;
   int salesReturnTotalPages = 1;
   List<ListOrderModelData> get orders => _orders;
@@ -173,9 +174,18 @@ class SalesProvider with ChangeNotifier {
     String? filterCreatedBy,
     int? page,
   }) async {
-    final queryParameters = <String, String>{
-      // 'store_id': storeId.toString(),
-    };
+    final queryParameters = <String, String>{};
+
+    // Add store_id from parameter or from SharedPreferences
+    if (storeId != null) {
+      queryParameters['store_id'] = storeId.toString();
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+    }
 
     if (orderNumber != null) queryParameters['number'] = orderNumber;
     if (filterName != null) queryParameters['filter_name'] = filterName;
@@ -287,6 +297,10 @@ class SalesProvider with ChangeNotifier {
                   listSalesOrderModel.pagination?.currentPage ?? 1;
               int newTotalPages =
                   listSalesOrderModel.pagination?.totalPages ?? 1;
+              int newPaginationFrom =
+                  listSalesOrderModel.pagination?.from ?? 1;
+              int newPaginationTo =
+                  listSalesOrderModel.pagination?.to ?? 1;
 
               debugPrint('=== PAGINATION UPDATE ===');
               debugPrint('Previous Current Page: $currentPage');
@@ -301,16 +315,29 @@ class SalesProvider with ChangeNotifier {
               debugPrint(
                   'Prev Page URL: ${listSalesOrderModel.pagination?.prevPageUrl}');
 
+              // If from value is invalid (0 or null), calculate it
+              if (newPaginationFrom <= 0) {
+                // Calculate based on current page and response items count
+                int itemsPerPage = _orders.length > 0 ? _orders.length : 1;
+                newPaginationFrom = ((newCurrentPage - 1) * itemsPerPage) + 1;
+                debugPrint(
+                    'Calculated From using itemsPerPage=$itemsPerPage: $newPaginationFrom');
+              }
+
               currentPage = newCurrentPage;
               totalPages = newTotalPages;
+              paginationFrom = newPaginationFrom;
 
               debugPrint('Updated Current Page: $currentPage');
               debugPrint('Updated Total Pages: $totalPages');
+              debugPrint('Updated Pagination From: $paginationFrom');
+              debugPrint('Updated Pagination To: $newPaginationTo');
             } else {
               debugPrint('=== NO PAGINATION DATA ===');
               debugPrint('Setting default pagination values');
               currentPage = 1;
               totalPages = 1;
+              paginationFrom = 1;
             }
 
             _orders = listSalesOrderModel.data ?? [];
@@ -378,12 +405,20 @@ class SalesProvider with ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final finalUrl = url.replace(queryParameters: queryParameters);
+
     try {
-      final response = await http.get(url, headers: {
+      final response = await http.get(finalUrl, headers: {
         'Authorization': 'Bearer $accessToken',
         'content-type': 'application/json',
         'X-Tenant': apiKey,
@@ -411,17 +446,23 @@ class SalesProvider with ChangeNotifier {
     final queryParameters = <String, String>{};
     if (page != null) queryParameters['page'] = page.toString();
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
     final uri = Uri.parse(APPUrl.listSalesReturn)
         .replace(queryParameters: queryParameters);
 
     try {
-      // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? apiKey = prefs.getString('api_key');
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException("API key not found. Please restart the app.");
-      }
       final response = await http.get(
         uri,
         headers: {
@@ -486,17 +527,23 @@ class SalesProvider with ChangeNotifier {
 
     debugPrint(queryParameters.toString());
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
     final uri = Uri.parse(APPUrl.listSalesReturnItems)
         .replace(queryParameters: queryParameters);
 
     try {
-      // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? apiKey = prefs.getString('api_key');
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException("API key not found. Please restart the app.");
-      }
       final response = await http.get(
         uri,
         headers: {
@@ -643,6 +690,46 @@ class SalesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> cancelOrder({
+    required String accessToken,
+    required String orderId,
+    required String paymentMethod,
+  }) async {
+    final url = Uri.parse(APPUrl.cancelOrderUrl);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+      body: jsonEncode({
+        'order_id': int.tryParse(orderId) ?? orderId,
+        'refund_method': int.tryParse(paymentMethod) ?? paymentMethod,
+      }),
+    );
+
+    debugPrint("accessToken $accessToken");
+    debugPrint("orderId $orderId");
+    debugPrint("paymentMethod $paymentMethod");
+    debugPrint("response.statusCode ${response.statusCode}");
+    debugPrint("response.body ${response.body}");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      notifyListeners();
+    } else {
+      throw Exception('Failed to cancel order');
+    }
+  }
+
   Future<void> fetchDailySalesClose({
     required String accessToken,
     String? startDate,
@@ -737,8 +824,8 @@ class SalesProvider with ChangeNotifier {
       'store_id': storeId.toString(),
     };
 
-    final uri = Uri.parse(APPUrl.dailySalesCloseSummary);
-    // .replace(queryParameters: queryParameters);
+    final uri = Uri.parse(APPUrl.dailySalesCloseSummary)
+        .replace(queryParameters: queryParameters);
 
     debugPrint('=== DEBUG: fetchDailySalesCloseSummary START ===');
     debugPrint('Full URL: $uri');

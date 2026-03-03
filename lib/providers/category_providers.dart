@@ -15,6 +15,8 @@ class CategoryProvider extends ChangeNotifier {
   bool isLoading = false;
   bool _isCategoriesLoaded =
       false; // Add this flag to track if categories are loaded
+  DateTime? _lastSuccessfulCategoryFetchAt;
+  static const Duration _categoryCacheValidity = Duration(minutes: 2);
   List<Category>? categoryList = [];
   List<Category>? searchCategoryList = [];
   List<Category>? filteredcategoryList = [];
@@ -104,18 +106,26 @@ class CategoryProvider extends ChangeNotifier {
     bool sellableOnly = true,
     bool force = false,
   }) async {
+    final bool isUnfilteredRequest = filterName == null && filterParent == null;
+    final bool hasInMemoryCategories =
+        categoryList != null && categoryList!.isNotEmpty;
+    final bool cacheIsFresh = _lastSuccessfulCategoryFetchAt != null &&
+        DateTime.now().difference(_lastSuccessfulCategoryFetchAt!) <
+            _categoryCacheValidity;
+
     // If categories are already loaded and no filtering is applied, return early
     // BUT also check if categoryList is not empty to avoid empty list issues
     if (!force &&
         _isCategoriesLoaded &&
-        filterName == null &&
-        filterParent == null &&
-        categoryList != null &&
-        categoryList!.isNotEmpty) {
+        isUnfilteredRequest &&
+        hasInMemoryCategories &&
+        cacheIsFresh) {
       debugPrint(
           "🏷️ [CategoryProvider] Using cached categories: ${categoryList!.length}");
       return;
     }
+
+    bool loadedFromHiveCache = false;
 
     // If filtering is applied, we need to make a new API call regardless
     if (filterName != null || filterParent != null) {
@@ -133,16 +143,24 @@ class CategoryProvider extends ChangeNotifier {
           categoryList = cachedCategories;
           _originalCategoryList = List.from(categoryList!);
           _isCategoriesLoaded = true;
-          isLoading = false;
+          loadedFromHiveCache = true;
           notifyListeners();
           debugPrint("🏷️ [CategoryProvider] Using categories from Hive cache");
-          return;
         }
       }
     }
 
-    isLoading = true;
-    notifyListeners();
+    if (loadedFromHiveCache) {
+      debugPrint(
+          "🏷️ [CategoryProvider] Refreshing categories from API in background");
+    } else {
+      isLoading = true;
+      notifyListeners();
+    }
+
+    // Get API key for store_id
+    final prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     // Ensure we always send a valid page number; default to 1 if not provided
     final int effectivePage = page ?? 1;
@@ -156,6 +174,9 @@ class CategoryProvider extends ChangeNotifier {
     if (filterParent != null && filterParent.isNotEmpty) {
       queryParameters['filter_parent'] = filterParent;
     }
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
 
     // Choose the appropriate URL based on the sellableOnly flag
     final urlString = sellableOnly
@@ -168,8 +189,6 @@ class CategoryProvider extends ChangeNotifier {
           ..addAll(queryParameters);
     final uri = baseUri.replace(queryParameters: finalQueryParameters);
 
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
@@ -196,6 +215,7 @@ class CategoryProvider extends ChangeNotifier {
         if (filterName == null && filterParent == null) {
           _originalCategoryList = List.from(categoryList!);
           _isCategoriesLoaded = true;
+          _lastSuccessfulCategoryFetchAt = DateTime.now();
 
           // Save to Hive for future offline use
           if (categoryList != null && categoryList!.isNotEmpty) {
@@ -212,9 +232,15 @@ class CategoryProvider extends ChangeNotifier {
       }
     } catch (error) {
       isLoading = false;
-      _isCategoriesLoaded = false; // Reset flag on error
+      if (categoryList == null || categoryList!.isEmpty) {
+        _isCategoriesLoaded =
+            false; // Reset flag on error only when no fallback
+      }
       notifyListeners();
       debugPrint('Error fetching categories: $error');
+      if (loadedFromHiveCache) {
+        return;
+      }
       rethrow;
     }
   }
@@ -275,6 +301,10 @@ class CategoryProvider extends ChangeNotifier {
     String? filterParent,
     int? page,
   }) async {
+    // Get API key for store_id
+    final prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
     // Ensure we always send a valid page number; default to 1 if not provided
     final int effectivePage = page ?? 1;
     final queryParameters = <String, String>{
@@ -287,15 +317,15 @@ class CategoryProvider extends ChangeNotifier {
     if (filterParent != null && filterParent.isNotEmpty) {
       queryParameters['filter_parent'] = filterParent;
     }
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
 
     final baseUri = Uri.parse(APPUrl.getSellableCategoryListUrl);
     final finalQueryParameters =
         Map<String, dynamic>.from(baseUri.queryParameters)
           ..addAll(queryParameters);
     final uri = baseUri.replace(queryParameters: finalQueryParameters);
-
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
@@ -344,12 +374,21 @@ class CategoryProvider extends ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Add store_id to query parameters
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final updatedUrl = url.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
-      final response = await http.get(url, headers: {
+      final response = await http.get(updatedUrl, headers: {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       });
@@ -544,15 +583,23 @@ class CategoryProvider extends ChangeNotifier {
     required String accessToken,
   }) async {
     // debugPrint("FETCH PROP VALUES for category_id $categoryId");
-    final url =
+    final baseUri =
         Uri.parse("${APPUrl.fetchCategoryProps}?category_id=$categoryId");
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Preserve existing params (category_id) and add store_id if available
+    final queryParams = Map<String, String>.from(baseUri.queryParameters);
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = baseUri.replace(queryParameters: queryParams);
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',

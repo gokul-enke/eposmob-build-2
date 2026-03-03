@@ -59,15 +59,21 @@ class TextRow extends ReceiptRow {
   final TextAlign align;
   final bool isBold;
   final double scale;
+  final double verticalPadding;
+  final double verticalOffset;
 
   TextRow(this.text,
-      {this.align = TextAlign.center, this.isBold = false, this.scale = 1.0});
+      {this.align = TextAlign.center,
+      this.isBold = false,
+      this.scale = 1.0,
+      this.verticalPadding = 6.0,
+      this.verticalOffset = 2.0});
 
   @override
   double calculateHeight(
       double width, double fontSize, TextDirection textDirection) {
     final tp = _createPainter(width, fontSize, textDirection);
-    return tp.height + 10;
+    return tp.height + verticalPadding;
   }
 
   @override
@@ -85,7 +91,7 @@ class TextRow extends ReceiptRow {
     // If RTL & TextAlign.right, x = width - tp.width
     // TextPainter handles internal alignment, but offset needs manual calculation if we want precise column placement
 
-    tp.paint(canvas, Offset(x, y + 5));
+    tp.paint(canvas, Offset(x, y + verticalOffset));
   }
 
   TextPainter _createPainter(
@@ -277,16 +283,16 @@ class QrRow extends ReceiptRow {
     // Add quiet zone (white margin) around QR code - 4 modules is standard
     const int quietZoneModules = 4;
     final int totalModules = qrImage.moduleCount + (quietZoneModules * 2);
-    
+
     // Calculate module size based on total area including quiet zone
     final double moduleSize = size / totalModules;
-    
+
     // Calculate position to center the entire QR (including quiet zone)
     final double x = (width - size) / 2;
     final double qrStartY = y + 10; // Top padding
 
     final paint = Paint()..color = Colors.black;
-    
+
     // Shrink factor to prevent thermal ink bleed (0.85 = 15% gap between modules)
     // This creates small white gaps that prevent ink from bleeding together
     const double shrinkFactor = 0.85;
@@ -297,9 +303,11 @@ class QrRow extends ReceiptRow {
       for (int iy = 0; iy < qrImage.moduleCount; iy++) {
         if (qrImage.isDark(iy, ix)) {
           // Offset by quiet zone and apply shrink factor
-          final double drawX = x + ((ix + quietZoneModules) * moduleSize) + moduleOffset;
-          final double drawY = qrStartY + ((iy + quietZoneModules) * moduleSize) + moduleOffset;
-          
+          final double drawX =
+              x + ((ix + quietZoneModules) * moduleSize) + moduleOffset;
+          final double drawY =
+              qrStartY + ((iy + quietZoneModules) * moduleSize) + moduleOffset;
+
           canvas.drawRect(
             Rect.fromLTWH(
               drawX,
@@ -403,7 +411,7 @@ class SarAmountRow extends ReceiptRow {
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
     final scaledFontSize = fontSize * scale;
-    
+
     // Render label on the right side (for Arabic layout)
     final labelPainter = TextPainter(
       text: TextSpan(
@@ -440,15 +448,16 @@ class SarAmountRow extends ReceiptRow {
 
     // Position SAR symbol and amount on left
     double currentX = 0;
-    
+
     // Draw SAR symbol if available
     if (sarSymbol != null) {
       final symbolRenderSize = symbolSize * scale;
       final symbolY = y + 8 + (scaledFontSize - symbolRenderSize) / 2;
-      
+
       canvas.drawImageRect(
         sarSymbol!,
-        Rect.fromLTWH(0, 0, sarSymbol!.width.toDouble(), sarSymbol!.height.toDouble()),
+        Rect.fromLTWH(
+            0, 0, sarSymbol!.width.toDouble(), sarSymbol!.height.toDouble()),
         Rect.fromLTWH(currentX, symbolY, symbolRenderSize, symbolRenderSize),
         Paint(),
       );
@@ -459,4 +468,3 @@ class SarAmountRow extends ReceiptRow {
     amountPainter.paint(canvas, Offset(currentX, y + 8));
   }
 }
-

@@ -46,7 +46,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool _isResyncingDocConfig = false;
 
   // List of available paper sizes
-  final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
+  final List<String> paperSizes = ['112mm', '80mm', '58mm', 'A5', 'A4'];
 
   // List of available font styles
   final List<String> fontStyles = [
@@ -54,8 +54,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     'Font B (Default)',
   ];
 
-  // List of available receipt themes
-  final List<Map<String, String>> receiptThemes = [
+  // List of available receipt themes for thermal printing (112mm/80mm/58mm)
+  final List<Map<String, String>> thermalReceiptThemes = [
     {'id': 'classic', 'name': 'Classic'},
     {'id': 'premium', 'name': 'Premium'},
     {'id': 'premium1', 'name': 'Premium 1'},
@@ -63,6 +63,54 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'arabic_and_english', 'name': 'Arabic&English'},
     {'id': 'supermarket', 'name': 'Supermarket'},
   ];
+
+  // List of available receipt themes for standard PDF printing (A4/A5)
+  final List<Map<String, String>> standardPdfThemes = [
+    {'id': 'classic', 'name': 'Classic'},
+    {'id': 'tax_invoice', 'name': 'Tax Invoice'},
+    {'id': 'detailed_tax_invoice', 'name': 'Detailed Tax Invoice'},
+  ];
+
+  /// Returns the appropriate theme list based on selected paper size
+  List<Map<String, String>> get _activeThemes {
+    if (selectedPaperSize == 'A4' || selectedPaperSize == 'A5') {
+      return standardPdfThemes;
+    }
+    return thermalReceiptThemes;
+  }
+
+  /// Whether the current paper size is for standard PDF (A4/A5)
+  bool get _isStandardPdf =>
+      selectedPaperSize == 'A4' || selectedPaperSize == 'A5';
+
+  /// Returns a description for the selected theme
+  String _getThemeDescription(String themeId) {
+    if (_isStandardPdf) {
+      switch (themeId) {
+        case 'classic':
+          return 'Traditional A4/A5 PDF layout with standard formatting';
+        case 'tax_invoice':
+          return 'Formal ZATCA-compliant bilingual Tax Invoice layout';
+        default:
+          return 'Standard PDF layout';
+      }
+    }
+    switch (themeId) {
+      case 'classic':
+        return 'Traditional receipt layout with standard formatting';
+      case 'arabic_and_english':
+        return 'Bilingual layout optimized for Arabic and English';
+      case 'premium':
+      case 'premium1':
+        return 'Premium design with enhanced visual styling';
+      case 'standard':
+        return 'Clean and minimal receipt layout';
+      case 'supermarket':
+        return 'Modern & clean design with enhanced spacing';
+      default:
+        return 'Modern & clean design with enhanced spacing';
+    }
+  }
 
   @override
   void initState() {
@@ -303,7 +351,20 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     // Load receipt theme
     if (savedTheme != null) {
       setState(() {
-        selectedReceiptTheme = savedTheme;
+        // Validate saved theme against current paper size's available themes
+        bool isValidTheme = false;
+        if (selectedPaperSize == 'A4' || selectedPaperSize == 'A5') {
+          isValidTheme = standardPdfThemes.any((t) => t['id'] == savedTheme);
+        } else {
+          isValidTheme = thermalReceiptThemes.any((t) => t['id'] == savedTheme);
+        }
+
+        if (isValidTheme) {
+          selectedReceiptTheme = savedTheme;
+        } else {
+          selectedReceiptTheme = 'classic';
+          _saveReceiptTheme('classic');
+        }
       });
     } else {
       // Default to classic if no preference is set
@@ -564,7 +625,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Generate receipt with all fields enabled (dummy document config)
       final profile = await CapabilityProfile.load();
-      PaperSize paperSize =
+        PaperSize paperSize =
           selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
@@ -1387,9 +1448,39 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               }).toList(),
                                               onChanged: (String? newValue) {
                                                 if (newValue != null) {
+                                                    final wasThermal =
+                                                      selectedPaperSize ==
+                                                          '112mm' ||
+                                                        selectedPaperSize ==
+                                                          '80mm' ||
+                                                        selectedPaperSize ==
+                                                          '58mm';
+                                                    final willBeThermal =
+                                                      newValue == '112mm' ||
+                                                        newValue == '80mm' ||
+                                                        newValue == '58mm';
+
                                                   setState(() {
                                                     selectedPaperSize =
                                                         newValue;
+
+                                                    // Reset theme if crossing thermal↔standard boundary
+                                                    // and current theme doesn't exist in the new list
+                                                    if (wasThermal !=
+                                                        willBeThermal) {
+                                                      final newThemes =
+                                                          _activeThemes;
+                                                      final themeExists =
+                                                          newThemes.any((t) =>
+                                                              t['id'] ==
+                                                              selectedReceiptTheme);
+                                                      if (!themeExists) {
+                                                        selectedReceiptTheme =
+                                                            'classic';
+                                                        _saveReceiptTheme(
+                                                            'classic');
+                                                      }
+                                                    }
                                                   });
                                                   _saveDefaultPaperSize(
                                                       newValue);
@@ -1485,7 +1576,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                                 value: selectedReceiptTheme,
                                                 isExpanded: true,
                                                 underline: const SizedBox(),
-                                                items: receiptThemes.map(
+                                                items: _activeThemes.map(
                                                     (Map<String, String>
                                                         theme) {
                                                   return DropdownMenuItem<
@@ -1511,12 +1602,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      selectedReceiptTheme == 'classic'
-                                          ? 'Traditional receipt layout with standard formatting'
-                                          : selectedReceiptTheme ==
-                                                  'arabic_and_english'
-                                              ? 'Bilingual layout optimized for Arabic and English'
-                                              : 'Modern & clean design with enhanced spacing',
+                                      _getThemeDescription(
+                                          selectedReceiptTheme),
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: 12,

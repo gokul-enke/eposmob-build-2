@@ -55,7 +55,28 @@ class _SignInScreenState extends State<SignInScreen> {
         keyboardProvider.featureOff();
         keyboardProvider.clear();
       } catch (_) {}
+      _showDefaultDomainWarningIfAny();
     });
+  }
+
+  Future<void> _showDefaultDomainWarningIfAny() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final shouldShow = prefs.getBool('show_default_domain_warning') ?? false;
+      if (!shouldShow) {
+        return;
+      }
+
+      await prefs.setBool('show_default_domain_warning', false);
+
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message:
+              'API key saved. Domain verification failed, so default server URL is being used.',
+        );
+      }
+    } catch (_) {}
   }
 
   void _loadUserEmailPassword() async {

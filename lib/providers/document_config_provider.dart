@@ -187,14 +187,23 @@ class DocumentConfigProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final url = Uri.parse(APPUrl.documentConfigs);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Build URL with store_id parameter
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.documentConfigs)
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
       final response = await http.get(
         url,
@@ -263,14 +272,22 @@ class DocumentConfigProvider extends ChangeNotifier {
     if (language != null && language.isNotEmpty) {
       urlString += '&language=$language';
     }
-    final url = Uri.parse(urlString);
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Build URL with store_id parameter
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final baseUrl = Uri.parse(urlString);
+    final url = baseUrl.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
     try {
       final response = await http.get(

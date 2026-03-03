@@ -195,19 +195,19 @@ class KotThermalPrinter {
               ? displayConfig!['showOrderNumber']!.value as String
               : (resolvedLabels?.orderNumber?.isNotEmpty == true
                   ? resolvedLabels!.orderNumber!
-                  : 'Order NO');
+                  : 'INVOICE #');
 
       final tableLabel =
           (displayConfig?['showTableNumber']?.value as String?)?.isNotEmpty ==
                   true
               ? displayConfig!['showTableNumber']!.value as String
-              : 'Table';
+              : 'TABLE #';
 
       final timeLabel =
           (displayConfig?['showDateTime']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showDateTime']!.value as String
               : 'Time';
-      final tokenLabel = 'Token';
+      const tokenLabel = 'TOKEN #';
       final hasToken = tokenNumber != null && tokenNumber.trim().isNotEmpty;
 
       rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 0.5));
@@ -216,7 +216,7 @@ class KotThermalPrinter {
       // Table number - MOST PROMINENT (for kitchen staff to quickly identify)
       if (showTableNumber && tableName.trim().isNotEmpty) {
         rows.add(_KotTextRow(
-          showTableLabel ? '$tableLabel: $tableName' : tableName,
+          showTableLabel ? '$tableLabel $tableName' : tableName,
           isBold: true,
           scale: getTableScale(is58mm),
           center: true,
@@ -228,13 +228,13 @@ class KotThermalPrinter {
         rows.add(_KotTableRow(
           [
             _KotTableColumn(
-              '$orderLabel: ${_cleanOrderNumber(orderNumber)}',
+              '$orderLabel ${_cleanOrderNumber(orderNumber)}',
               flex: 1,
               isBold: true,
               align: TextAlign.left,
             ),
             _KotTableColumn(
-              '$tokenLabel: ${tokenNumber!.trim()}',
+              '$tokenLabel ${tokenNumber.trim()}',
               flex: 1,
               isBold: true,
               align: TextAlign.right,

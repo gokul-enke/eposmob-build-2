@@ -13,6 +13,7 @@ import 'dart:ui' as ui;
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -46,9 +47,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Standard theme spacing constants
-  static const double _sectionGap = 20.0;
-  static const double _itemGap = 8.0;
-  static const double _headerGap = 15.0;
+  static const double _sectionGap = 14.0;
+  static const double _itemGap = 6.0;
+  static const double _headerGap = 8.0;
 
   @override
   String get layoutId => 'arabic_and_english';
@@ -256,7 +257,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     bool isEnglish,
   ) {
     final billDocumentConfig = params.billDocumentConfig;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
@@ -285,7 +287,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       }
 
       // Dynamic scaling based on name length
-      double storeNameScale = 1.8;
+      double storeNameScale = 1.6;
       // For bilingual, consider the longer of the two languages
       int maxLength = storeNameText
           .split('\n')
@@ -297,8 +299,11 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         storeNameScale = 1.5;
       }
 
-      rows.add(TextRow(storeNameText.toUpperCase(),
-          isBold: true, scale: storeNameScale));
+      rows.add(TextRow(storeNameText.trim().toUpperCase(),
+          isBold: true,
+          scale: storeNameScale,
+          verticalPadding: 4,
+          verticalOffset: 1));
     }
 
     // Description/Subheader - Arabic subtitle style
@@ -326,8 +331,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       }
 
       if (descriptionText.isNotEmpty) {
-        rows.add(SpacingRow(5));
-        rows.add(TextRow(descriptionText, scale: 1.0, isBold: true));
+        rows.add(SpacingRow(2));
+        rows.add(TextRow(descriptionText.trim(),
+            scale: 1.0, isBold: true, verticalPadding: 4, verticalOffset: 1));
       }
     }
 
@@ -528,8 +534,10 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice/Token Number - Render on same row when both are visible
-    final bool showInvoiceNumber =
+    // Invoice/Token Number - hide header invoice when footer invoice number is enabled
+    final bool showFooterInvoice =
+        displayConfig?['showOrderNumberInFooter']?.visible == true;
+    final bool showInvoiceNumber = !showFooterInvoice &&
         displayConfig?['showInvoiceNumber']?.visible == true;
     final bool showTokenNumber =
         displayConfig?['showTokenNumber']?.visible == true &&
@@ -598,17 +606,54 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       return;
     }
 
-    if (params.customerName == null &&
-        params.customerPhone == null &&
-        params.customerAddress == null &&
-        params.orderComment == null) {
-      return;
-    }
-
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    final String paymentConfigKey =
+        displayConfig?.containsKey('showPaymentMethod') == true
+            ? 'showPaymentMethod'
+            : 'showPayment';
+    final String commentConfigKey =
+        displayConfig?.containsKey('showOrderComment') == true
+            ? 'showOrderComment'
+            : 'showComment';
+
+    final bool showCustomerName =
+        displayConfig?['showCustomerName']?.visible != false;
+    final bool showCustomerPhone =
+        displayConfig?['showCustomerPhone']?.visible != false;
+    final bool showPayment = displayConfig?[paymentConfigKey]?.visible != false;
+    final bool showCustomerAddress =
+        displayConfig?['showCustomerAddress']?.visible != false;
+    final bool showComment = displayConfig?[commentConfigKey]?.visible != false;
+    final bool showDeliveryMethod =
+        displayConfig?['showDeliveryMethod']?.visible != false;
+
+    final bool hasVisibleCustomerData = (showCustomerName &&
+            params.customerName != null &&
+            params.customerName!.isNotEmpty) ||
+        (showCustomerPhone &&
+            params.customerPhone != null &&
+            params.customerPhone!.isNotEmpty &&
+            !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) ||
+        (showPayment &&
+            params.paymentMethod != null &&
+            params.paymentMethod!.isNotEmpty) ||
+        (showCustomerAddress &&
+            params.customerAddress != null &&
+            params.customerAddress!.isNotEmpty) ||
+        (showComment &&
+            params.orderComment != null &&
+            params.orderComment!.isNotEmpty) ||
+        (showDeliveryMethod &&
+            params.deliveryMethod != null &&
+            params.deliveryMethod!.isNotEmpty);
+
+    if (!hasVisibleCustomerData) {
+      return;
+    }
 
     // Use horizontal bilingual format for labels in dual language mode
     final customerLabel = isDualLanguage
@@ -623,8 +668,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
             isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig, 'showPayment', null, null, "الدفع:", "Payment:")
-        : _getLabel(displayConfig, 'showPayment', null,
+            displayConfig, paymentConfigKey, null, null, "الدفع:", "Payment:")
+        : _getLabel(displayConfig, paymentConfigKey, null,
             isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(displayConfig, 'showCustomerAddress',
@@ -633,13 +678,20 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
             isEnglish ? "Address:" : "العنوان:");
     final commentLabel = isDualLanguage
         ? _getBilingualLabelHorizontal(
-            displayConfig, 'showComment', null, null, "تعليق:", "Comment:")
-        : _getLabel(displayConfig, 'showComment', null,
+            displayConfig, commentConfigKey, null, null, "تعليق:", "Comment:")
+        : _getLabel(displayConfig, commentConfigKey, null,
             isEnglish ? "Comment:" : "تعليق:");
+    final deliveryLabel = isDualLanguage
+        ? _getBilingualLabelHorizontal(displayConfig, 'showDeliveryMethod',
+            null, null, "التوصيل:", "Delivery:")
+        : _getLabel(displayConfig, 'showDeliveryMethod', null,
+            isEnglish ? "Delivery:" : "التوصيل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
-      if (params.customerName != null && params.customerName!.isNotEmpty) {
+      if (showCustomerName &&
+          params.customerName != null &&
+          params.customerName!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(customerLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
@@ -648,7 +700,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-        if (params.customerPhone != null &&
+      if (showCustomerPhone &&
+          params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -673,7 +726,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
+      if (showPayment &&
+          params.paymentMethod != null &&
+          params.paymentMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(paymentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
@@ -682,7 +737,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerAddress != null &&
+      if (showCustomerAddress &&
+          params.customerAddress != null &&
           params.customerAddress!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(addressLabel,
@@ -692,7 +748,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.orderComment != null && params.orderComment!.isNotEmpty) {
+      if (showComment &&
+          params.orderComment != null &&
+          params.orderComment!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(commentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
@@ -700,9 +758,22 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left, scale: scale),
         ]));
       }
+
+      if (showDeliveryMethod &&
+          params.deliveryMethod != null &&
+          params.deliveryMethod!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(deliveryLabel,
+              weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.deliveryMethod!,
+              weight: 0.65, align: TextAlign.left, scale: scale),
+        ]));
+      }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
-      if (params.customerName != null && params.customerName!.isNotEmpty) {
+      if (showCustomerName &&
+          params.customerName != null &&
+          params.customerName!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.customerName!,
               weight: 0.65, align: TextAlign.left, scale: scale),
@@ -711,7 +782,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-        if (params.customerPhone != null &&
+      if (showCustomerPhone &&
+          params.customerPhone != null &&
           params.customerPhone!.isNotEmpty &&
           !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) {
         final bool maskPhone =
@@ -730,7 +802,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
+      if (showPayment &&
+          params.paymentMethod != null &&
+          params.paymentMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.paymentMethod!,
               weight: 0.65, align: TextAlign.left, scale: scale),
@@ -739,7 +813,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.orderComment != null && params.orderComment!.isNotEmpty) {
+      if (showComment &&
+          params.orderComment != null &&
+          params.orderComment!.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(params.orderComment!,
               weight: 0.65, align: TextAlign.left, scale: scale),
@@ -748,7 +824,19 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (params.customerAddress != null &&
+      if (showDeliveryMethod &&
+          params.deliveryMethod != null &&
+          params.deliveryMethod!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(params.deliveryMethod!,
+              weight: 0.65, align: TextAlign.left, scale: scale),
+          ReceiptTableColumn(deliveryLabel,
+              weight: 0.35, align: TextAlign.right, isBold: true, scale: scale),
+        ]));
+      }
+
+      if (showCustomerAddress &&
+          params.customerAddress != null &&
           params.customerAddress!.isNotEmpty) {
         rows.add(TextRow(params.customerAddress!, scale: 0.9));
       }
@@ -768,7 +856,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     bool isEnglish,
   ) {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Extract labels with fallbacks
     // For dual language mode, we use stacked headers (Arabic on top, English below)
@@ -1107,7 +1196,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1347,25 +1437,26 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showAmountInWords']?.visible == true) {
       rows.add(SpacingRow(_itemGap));
 
-      String amountInWords;
-
       if (isDualLanguage) {
         final arabicText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'ar');
         final englishText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'en');
 
-        amountInWords = '$arabicText فقط.\n$englishText Only.';
+        rows.add(TextRow('$arabicText فقط.',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
+        rows.add(TextRow('$englishText Only.',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
       } else {
-        final language = params.billDocumentConfig.language ?? 'en';
+        final language =
+            (params.billDocumentConfig.language ?? 'en').toLowerCase();
         final amountText = AmountHelper().convertNumberToWords(total,
             currency: currency, language: language);
         final suffix = language == 'ar' ? ' فقط.' : ' Only.';
-        amountInWords = '$amountText$suffix';
-      }
 
-      rows.add(
-          TextRow(amountInWords, scale: is58mm ? 0.7 : 0.85, isBold: true));
+        rows.add(TextRow('$amountText$suffix',
+            scale: is58mm ? 0.7 : 0.85, isBold: true));
+      }
     }
 
     // Items Count
@@ -1432,7 +1523,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     rows.add(SpacingRow(_itemGap));
     rows.add(StandardThinDividerRow());
@@ -1514,7 +1606,8 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
   ) {
     rows.add(SpacingRow(_sectionGap));
 
-    final bool isDualLanguage = params.billDocumentConfig.language == 'ar';
+    final bool isDualLanguage =
+      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     // QR Code - Use ZATCA QR if credentials available, otherwise fallback to payment QR
     if (displayConfig?['showQRCode']?.visible == true) {
@@ -1531,7 +1624,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         qrData = zatcaHelper.generateQrForInvoice(
           sellerName: params.zatcaCompanyName,
           vatNumber: params.zatcaVatNumber,
-          invoiceDate: params.orderDate,
+          invoiceDate: params.orderDate, // Pass true UTC ISO string
           totalAmount: params.totalAmountAsDouble,
           vatAmount: params.totalTax,
         );
@@ -1623,20 +1716,46 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Order Number (with visibility check)
-    if (displayConfig?['showOrderNumber']?.visible != false) {
-      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
+    // Order Number Display (Footer only)
+    final bool showFooterInvoice =
+        displayConfig?['showOrderNumberInFooter']?.visible == true;
+
+    if (showFooterInvoice) {
+      // Extract number sequence (e.g., "1149" from "INV-1149")
       final regex = RegExp(r'[1-9]\d*');
       final match = regex.firstMatch(params.orderNumber);
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
 
-      // Use number_prefix from document configuration as the invoice prefix
-      final String invoicePrefix =
-          params.billDocumentConfig.numberPrefix ?? 'INV-';
+      final String lang = params.billDocumentConfig.language ?? 'en';
+
+      // Determine prefix and style based on which setting is active
+      String prefixKey =
+          showFooterInvoice ? 'showOrderNumberInFooter' : 'showInvoiceNumber';
+      if (showFooterInvoice &&
+          displayConfig?['showOrderNumberInFooter']?.value == null) {
+        // Fallback to general prefix if footer value is null
+        prefixKey = 'showInvoiceNumber';
+      }
+
+      final String invoicePrefix = _getDisplayValue(
+        displayConfig?[prefixKey]?.value ??
+            displayConfig?['showInvoicePrefix']?.value,
+        params.billDocumentConfig.numberPrefix ??
+            displayConfig?['showInvoicePrefix']?.defaultValue,
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
+      );
 
       rows.add(SpacingRow(3));
-      rows.add(TextRow('$invoicePrefix$strippedNumber', scale: 0.8));
+      if (showFooterInvoice) {
+        rows.add(SpacingRow(5));
+        rows.add(StandardThinDividerRow());
+        rows.add(SpacingRow(5));
+        rows.add(TextRow('$invoicePrefix $strippedNumber',
+            scale: 0.85, isBold: true));
+      } else {
+        rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.85));
+      }
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -1894,7 +2013,18 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     }
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final codec = await ui.instantiateImageCodec(response.bodyBytes);
         final fi = await codec.getNextFrame();
@@ -1919,7 +2049,6 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     }
     return null;
   }
-
 }
 
 /// Thin solid line divider for Standard theme

@@ -15,11 +15,16 @@ class DashboardProvider {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
-    final url = Uri.parse(APPUrl.dashBoardUrl);
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.dashBoardUrl).replace(queryParameters: queryParameters);
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
@@ -42,11 +47,16 @@ class DashboardProvider {
   }
 
   Future<List<GraphData>> fetchGraphData(String accessToken) async {
-    final url =
-        Uri.parse(APPUrl.dashBoardGraphUrl); // Replace with actual endpoint
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.dashBoardGraphUrl).replace(queryParameters: queryParameters); // Replace with actual endpoint
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -107,11 +117,18 @@ class DashboardProvider {
   // New API methods for dashboard data
   Future<DashboardOverview> fetchDashboardOverview(
       String accessToken, String startDate, String endDate) async {
-    final url = Uri.parse(
-        '${APPUrl.companyOverview}?start_date=$startDate&end_date=$endDate');
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {
+      'start_date': startDate,
+      'end_date': endDate,
+    };
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.companyOverview).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -151,10 +168,15 @@ class DashboardProvider {
 
   Future<OrdersPerMonth> fetchOrdersPerMonth(
       String accessToken, int year) async {
-    final url = Uri.parse('${APPUrl.ordersGraph}?year=$year');
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {'year': year.toString()};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.ordersGraph).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -194,10 +216,15 @@ class DashboardProvider {
 
   Future<CustomersPerMonth> fetchCustomersPerMonth(
       String accessToken, int year) async {
-    final url = Uri.parse('${APPUrl.customersGraph}?year=$year');
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {'year': year.toString()};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.customersGraph).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -237,11 +264,18 @@ class DashboardProvider {
 
   Future<ExecutivesOverview> fetchExecutivesOverview(
       String accessToken, String startDate, String endDate) async {
-    final url = Uri.parse(
-        '${APPUrl.executivesOverview}?start_date=$startDate&end_date=$endDate');
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {
+      'start_date': startDate,
+      'end_date': endDate,
+    };
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.executivesOverview).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -281,18 +315,19 @@ class DashboardProvider {
 
   Future<SalesGraph> fetchExecutiveSalesGraph(String accessToken, String period,
       String startDate, String endDate) async {
-    String urlStr;
-    if (period == 'today' || period == 'week') {
-      urlStr = '${APPUrl.salesGraph}?period=$period';
-    } else {
-      urlStr =
-          '${APPUrl.salesGraph}?period=$period&start_date=$startDate&end_date=$endDate';
-    }
-
-    final url = Uri.parse(urlStr);
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {'period': period};
+    if (period != 'today' && period != 'week') {
+      queryParameters['start_date'] = startDate;
+      queryParameters['end_date'] = endDate;
+    }
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.salesGraph).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -333,7 +368,7 @@ class DashboardProvider {
   Future<Map<String, dynamic>> listCartItnes(BuildContext context) async {
     // debugPrint("dashbaord");
 
-    final url = Uri.parse(
+    final baseUri = Uri.parse(
         "https://safai.enke.ae/api/carts/list-cart-items?customer_id=5");
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -342,6 +377,13 @@ class DashboardProvider {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+    final Map<String, String> queryParams =
+        Map<String, String>.from(baseUri.queryParameters);
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = baseUri.replace(queryParameters: queryParams);
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer 8|bTQHp0upEnGCgNEwbYo0bdhLLEg3CKBSvU6QPJe5',
@@ -367,11 +409,18 @@ class DashboardProvider {
 
   Future<SuppliersOverview> fetchSuppliersOverview(
       String accessToken, String startDate, String endDate) async {
-    final url = Uri.parse(
-        '${APPUrl.suppliersOverview}?start_date=$startDate&end_date=$endDate');
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {
+      'start_date': startDate,
+      'end_date': endDate,
+    };
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.suppliersOverview).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -411,11 +460,18 @@ class DashboardProvider {
 
   Future<SuppliersPurchaseGraph> fetchSuppliersPurchaseGraph(
       String accessToken, String startDate, String endDate) async {
-    final url = Uri.parse(
-        '${APPUrl.suppliersPurchaseGraph}?start_date=$startDate&end_date=$endDate');
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {
+      'start_date': startDate,
+      'end_date': endDate,
+    };
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.suppliersPurchaseGraph).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -456,11 +512,18 @@ class DashboardProvider {
 
   Future<SupplierTransactionsGraph> fetchSupplierTransactionsGraph(
       String accessToken, String startDate, String endDate) async {
-    final url = Uri.parse(
-        '${APPUrl.supplierTransactionsGraph}?start_date=$startDate&end_date=$endDate');
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final Map<String, String> queryParameters = {
+      'start_date': startDate,
+      'end_date': endDate,
+    };
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.supplierTransactionsGraph).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -501,15 +564,23 @@ class DashboardProvider {
 
   Future<SupplierCreditBalanceGraph> fetchSupplierCreditBalance(
       String accessToken, String startDate, String endDate) async {
-    final url = Uri.parse(
+    final baseUri = Uri.parse(
         '${APPUrl.supplierCreditBalance}?start_date=$startDate&end_date=$endDate');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Preserve existing params and add store_id when available
+    final queryParams = Map<String, String>.from(baseUri.queryParameters);
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = baseUri.replace(queryParameters: queryParams);
 
     debugPrint('Fetching supplier credit balance from: $url');
 

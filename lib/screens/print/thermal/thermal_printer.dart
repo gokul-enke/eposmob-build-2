@@ -19,10 +19,12 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/utils/arabic_printer_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:image/image.dart' as img;
@@ -132,10 +134,11 @@ class ThermalPrinter {
 
     final displayConfig = billDocumentConfig.displayConfiguration?.options;
     _printerUtils.debugPrintTemplateSettings(displayConfig);
+    final normalizedLanguage = (billDocumentConfig.language ?? '').toLowerCase();
+    final bool isArabicLanguage = normalizedLanguage == 'ar';
 
     // Template selection
-    if (billDocumentConfig.language == 'ar' ||
-        billDocumentConfig.language == 'bilingual') {
+    if (normalizedLanguage == 'ar' || normalizedLanguage == 'bilingual') {
       _totalsBuilder = BilingualTotalsBuilder();
     } else {
       _totalsBuilder = TotalsSectionBuilder();
@@ -157,6 +160,8 @@ class ThermalPrinter {
         paperSize = PaperSize.mm80;
       } else if (selectedPaperSize == '58mm') {
         paperSize = PaperSize.mm58;
+      } else if (selectedPaperSize == '112mm') {
+        paperSize = PaperSize.mm80;
       } else {
         paperSize = PaperSize.mm80;
       }
@@ -273,6 +278,7 @@ class ThermalPrinter {
           isFromLocalStorage,
           selectedFontType,
           displayConfig,
+          isArabic: isArabicLanguage,
         );
       } else {
         // Amount in words when no returns
@@ -282,6 +288,7 @@ class ThermalPrinter {
             generator,
             double.parse(formattedTotal),
             selectedFontType,
+            isArabic: isArabicLanguage,
           );
         }
 
@@ -301,30 +308,58 @@ class ThermalPrinter {
 
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
-        final paymentGatewaysProvider =
-            Provider.of<PaymentGatewaysProvider>(context, listen: false);
-        final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
-            .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
-                orElse: () => PaymentGateway(
-                      id: 0,
-                      name: "",
-                      code: "",
-                      label: "",
-                      link: "",
-                      image: "",
-                      status: "",
-                      isWebActive: 0,
-                      isAndroidActive: 0,
-                      isIosActive: 0,
-                      contactEmail: "",
-                      contactPhone: "",
-                      createdAt: "",
-                      updatedAt: "",
-                    ));
+        // Check for ZATCA credentials first
+        final prefs = await SharedPreferences.getInstance();
+        final zatcaVatNumber = prefs.getString('zatca_vat_number');
+        final zatcaCompanyName = prefs.getString('zatca_company_name');
+        final bool hasZatcaCredentials = zatcaVatNumber != null &&
+            zatcaVatNumber.isNotEmpty &&
+            zatcaCompanyName != null &&
+            zatcaCompanyName.isNotEmpty;
 
-        debugPrint("Building QR code...");
-        bytes += _qrCodeBuilder.build(generator, manualPaymentGateway.link,
-            formattedTotal, orderNumber, displayConfig, selectedFontType);
+        if (hasZatcaCredentials) {
+          debugPrint(
+              '[ThermalPrinter] ZATCA credentials found, generating ZATCA QR (ESC/POS)');
+          final zatcaHelper = ZatcaQrHelper();
+          final totalAmount = double.tryParse(formattedTotal) ?? 0.0;
+          final qrData = zatcaHelper.generateQrForInvoice(
+            sellerName: zatcaCompanyName,
+            vatNumber: zatcaVatNumber,
+            invoiceDate: orderDate, // Pass true UTC ISO string
+            totalAmount: totalAmount,
+            vatAmount: totalTax,
+          );
+          if (qrData.isNotEmpty) {
+            debugPrint('Building ZATCA QR code...');
+            bytes += _qrCodeBuilder.build(generator, qrData, formattedTotal,
+                orderNumber, displayConfig, selectedFontType);
+          }
+        } else {
+          final paymentGatewaysProvider =
+              Provider.of<PaymentGatewaysProvider>(context, listen: false);
+          final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+              .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+                  orElse: () => PaymentGateway(
+                        id: 0,
+                        name: "",
+                        code: "",
+                        label: "",
+                        link: "",
+                        image: "",
+                        status: "",
+                        isWebActive: 0,
+                        isAndroidActive: 0,
+                        isIosActive: 0,
+                        contactEmail: "",
+                        contactPhone: "",
+                        createdAt: "",
+                        updatedAt: "",
+                      ));
+
+          debugPrint("Building payment QR code...");
+          bytes += _qrCodeBuilder.build(generator, manualPaymentGateway.link,
+              formattedTotal, orderNumber, displayConfig, selectedFontType);
+        }
       }
 
       // Date/time and barcode
@@ -431,7 +466,7 @@ class ThermalPrinter {
       // Use language from config if available, fallback to current app locale
       final configLanguage = billDocumentConfig.language;
       final isEnglish = configLanguage != null
-          ? configLanguage == 'en'
+          ? configLanguage.toLowerCase() == 'en'
           : LocalizationService.locale.languageCode == 'en';
 
       final textDirection = isEnglish ? TextDirection.ltr : TextDirection.rtl;
@@ -439,7 +474,11 @@ class ThermalPrinter {
           "Language: ${isEnglish ? 'English' : 'Arabic'} (Source: ${configLanguage != null ? 'Config' : 'App Locale'}) ($textDirection)");
 
       // Setup print parameters
-      final double printWidth = selectedPaperSize == '58mm' ? 384.0 : 576.0;
+        final double printWidth = selectedPaperSize == '58mm'
+          ? 384.0
+          : selectedPaperSize == '112mm'
+            ? 832.0
+            : 576.0;
       // Dynamic font size: larger for 80mm to maintain proportional appearance
       final double baseFontSize = selectedPaperSize == '80mm' ? 28.0 : 20.0;
 
@@ -1166,7 +1205,7 @@ class ThermalPrinter {
       // Amount in Words
       if (displayConfig?['showAmountInWords']?.visible == true) {
         final amountInWords =
-            '${AmountHelper().convertNumberToWords(total)} Only.';
+            '${AmountHelper().convertNumberToWords(total, language: isEnglish ? 'en' : 'ar')}${isEnglish ? ' Only.' : ' فقط.'}';
         part1Rows.add(TextRow(amountInWords, scale: 0.9, isBold: true));
         part1Rows.add(DividerRow());
       }
@@ -1261,44 +1300,82 @@ class ThermalPrinter {
 
       part2Rows.add(SpacingRow(10));
 
+      // Calculate total tax from cart items (needed for ZATCA QR)
+      double totalTax = 0.0;
+      for (var item in cartItems) {
+        if (isFromLocalStorage) {
+          totalTax +=
+              double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+        } else {
+          totalTax += double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+        }
+      }
+
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
-        final paymentGatewaysProvider =
-            Provider.of<PaymentGatewaysProvider>(context, listen: false);
-        final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
-            .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
-                orElse: () => PaymentGateway(
-                      id: 0,
-                      name: "",
-                      code: "",
-                      label: "",
-                      link: "",
-                      image: "",
-                      status: "",
-                      isWebActive: 0,
-                      isAndroidActive: 0,
-                      isIosActive: 0,
-                      contactEmail: "",
-                      contactPhone: "",
-                      createdAt: "",
-                      updatedAt: "",
-                    ));
+        final prefs = await SharedPreferences.getInstance();
+        final zatcaVatNumber = prefs.getString('zatca_vat_number');
+        final zatcaCompanyName = prefs.getString('zatca_company_name');
+        final bool hasZatcaCredentials = zatcaVatNumber != null &&
+            zatcaVatNumber.isNotEmpty &&
+            zatcaCompanyName != null &&
+            zatcaCompanyName.isNotEmpty;
 
-        String qrData = manualPaymentGateway.link;
-        if (qrData.isNotEmpty) {
-          if (qrData.contains('{formattedTotal}') ||
-              qrData.contains('{orderNumber}')) {
-            qrData = qrData
-                .replaceAll('{formattedTotal}', formattedTotal)
-                .replaceAll('{orderNumber}', orderNumber);
-          } else if (qrData.contains('@')) {
-            qrData =
-                'upi://pay?pa=$qrData&am=$formattedTotal&tn=$orderNumber&cu=INR';
+        String qrData = '';
+        String qrMessage;
+
+        if (hasZatcaCredentials) {
+          debugPrint(
+              '[ThermalPrinter] ZATCA credentials found, generating ZATCA QR (image)');
+          final zatcaHelper = ZatcaQrHelper();
+          final totalAmount = double.tryParse(formattedTotal) ?? 0.0;
+          qrData = zatcaHelper.generateQrForInvoice(
+            sellerName: zatcaCompanyName,
+            vatNumber: zatcaVatNumber,
+            invoiceDate: orderDate, // Pass true UTC ISO string
+            totalAmount: totalAmount,
+            vatAmount: totalTax,
+          );
+          qrMessage = isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية';
+        } else {
+          final paymentGatewaysProvider =
+              Provider.of<PaymentGatewaysProvider>(context, listen: false);
+          final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+              .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+                  orElse: () => PaymentGateway(
+                        id: 0,
+                        name: "",
+                        code: "",
+                        label: "",
+                        link: "",
+                        image: "",
+                        status: "",
+                        isWebActive: 0,
+                        isAndroidActive: 0,
+                        isIosActive: 0,
+                        contactEmail: "",
+                        contactPhone: "",
+                        createdAt: "",
+                        updatedAt: "",
+                      ));
+
+          qrData = manualPaymentGateway.link;
+          if (qrData.isNotEmpty) {
+            if (qrData.contains('{formattedTotal}') ||
+                qrData.contains('{orderNumber}')) {
+              qrData = qrData
+                  .replaceAll('{formattedTotal}', formattedTotal)
+                  .replaceAll('{orderNumber}', orderNumber);
+            } else if (qrData.contains('@')) {
+              qrData =
+                  'upi://pay?pa=$qrData&am=$formattedTotal&tn=$orderNumber&cu=INR';
+            }
           }
-
-          // Use dynamic QR message from config
-          final qrMessage = displayConfig?['showQRCode']?.value as String? ??
+          qrMessage = displayConfig?['showQRCode']?.value as String? ??
               (isEnglish ? 'Scan to Pay' : 'امسح للدفع');
+        }
+
+        if (qrData.isNotEmpty) {
           part2Rows.add(TextRow(qrMessage, isBold: true, scale: 0.9));
           part2Rows.add(QrRow(qrData, size: 200));
         }
@@ -1473,7 +1550,17 @@ class ThermalPrinter {
     debugPrint("[LOGO_DEBUG] Fetching network logo from: $fullUrl");
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final image = img.decodeImage(response.bodyBytes);
         if (image != null) {
@@ -1510,7 +1597,17 @@ class ThermalPrinter {
     debugPrint("[LOGO_DEBUG] Fetching network UI logo from: $fullUrl");
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final Uint8List bytes = response.bodyBytes;
         final ui.Codec codec = await ui.instantiateImageCodec(bytes);

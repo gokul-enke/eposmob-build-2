@@ -46,6 +46,7 @@ class RoleProvider extends ChangeNotifier {
       // Get current user role from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       _currentUserRole = prefs.getString('userRole');
+      final int? activeStoreId = prefs.getInt('active_store_id');
       debugPrint("🔧 RoleProvider: Current user role: $_currentUserRole");
 
       debugPrint("🔧 RoleProvider: Making API request...");
@@ -56,8 +57,15 @@ class RoleProvider extends ChangeNotifier {
         throw const HttpException("API key not found. Please restart the app.");
       }
 
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.listRoles)
+          .replace(queryParameters: queryParameters);
+
       final response = await http.get(
-        Uri.parse(APPUrl.listRoles),
+        url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

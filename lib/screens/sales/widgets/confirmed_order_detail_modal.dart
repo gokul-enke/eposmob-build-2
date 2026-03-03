@@ -524,6 +524,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         paymentMethod: order.paymentMethod,
         customerAlternatePhone: order.alternatePhone,
         orderComment: order.comment,
+        deliveryMethod: order.deliveryMethod,
         paidAmount: paidAmount,
         isDefaultCustomer:
             _isDefaultCustomerPhone(context, order.customerPhone),
@@ -549,6 +550,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               paymentMethod: order.paymentMethod,
               customerAlternatePhone: order.alternatePhone,
               orderComment: order.comment,
+                deliveryMethod: order.deliveryMethod,
               paidAmount: paidAmount,
               isDefaultCustomer:
                   _isDefaultCustomerPhone(context, order.customerPhone),

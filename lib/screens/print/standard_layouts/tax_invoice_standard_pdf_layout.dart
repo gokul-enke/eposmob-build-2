@@ -1,0 +1,946 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:open_file/open_file.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/string_helper.dart';
+import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
+import 'package:pos_machine/utils/zatca_qr_helper.dart';
+import 'package:pos_machine/resources/localization_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/resources/app_url.dart';
+import 'standard_pdf_layout.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+
+/// Tax Invoice PDF layout — formal ZATCA-compliant bilingual template.
+///
+/// Pixel-perfect match to the reference design with exact font sizes,
+/// spacing, and section structure.
+class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
+  @override
+  String get layoutId => 'tax_invoice';
+
+  @override
+  String get displayName => 'Tax Invoice';
+
+  // ── Font cache ──────────────────────────────────────────────────────
+  static pw.Font? _arabicFont;
+  static pw.Font? _arabicFontBold;
+
+  Future<pw.Font> _loadArabicFont() async {
+    if (_arabicFont != null) return _arabicFont!;
+    final fontData =
+        await rootBundle.load('assets/fonts/NotoSansArabic-Regular.ttf');
+    _arabicFont = pw.Font.ttf(fontData);
+    return _arabicFont!;
+  }
+
+  Future<pw.Font> _loadArabicFontBold() async {
+    if (_arabicFontBold != null) return _arabicFontBold!;
+    final fontData =
+        await rootBundle.load('assets/fonts/NotoSansArabic-Bold.ttf');
+    _arabicFontBold = pw.Font.ttf(fontData);
+    return _arabicFontBold!;
+  }
+
+  // ── File helpers ────────────────────────────────────────────────────
+  Future<Directory> _getEposDirectory() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final epos = Directory('${dir.path}/epos');
+      if (!await epos.exists()) await epos.create(recursive: true);
+      return epos;
+    } catch (_) {
+      return await getTemporaryDirectory();
+    }
+  }
+
+  Future<void> _handleWindowsPdf(File file) async {
+    try {
+      await Process.run('cmd', ['/c', 'start', '', file.path]);
+    } catch (e) {
+      debugPrint('Error opening PDF on Windows: $e');
+    }
+  }
+
+  Future<pw.MemoryImage?> _fetchNetworkPdfImage(String? url) async {
+    if (url == null || url.isEmpty) return null;
+    String fullUrl;
+    if (url.startsWith('http')) {
+      fullUrl = url;
+    } else if (url.startsWith('logos/')) {
+      fullUrl = '${APPUrl.baseURL}/storage/$url';
+    } else {
+      fullUrl = url.startsWith('/')
+          ? '${APPUrl.baseURL}$url'
+          : '${APPUrl.baseURL}/$url';
+    }
+    try {
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
+      if (response.statusCode == 200) {
+        return pw.MemoryImage(response.bodyBytes);
+      }
+    } catch (e) {
+      debugPrint('[TaxInvoice] Error fetching logo: $e');
+    }
+    return null;
+  }
+
+  // ── Public interface ────────────────────────────────────────────────
+  @override
+  Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
+    final pdf = await buildPdfDocument(params);
+    final sanitized = params.orderNumber.replaceAll('/', '_');
+    final output = await _getEposDirectory();
+    final file = File('${output.path}/TaxInvoice_$sanitized.pdf');
+    await file.writeAsBytes(await pdf.save());
+
+    if (Platform.isWindows) {
+      await _handleWindowsPdf(file);
+    } else {
+      try {
+        await OpenFile.open(file.path);
+      } catch (e) {
+        debugPrint('Error opening PDF: $e');
+      }
+    }
+  }
+
+  @override
+  Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
+    final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
+
+    // ── Providers & Config ──────────────────────────────────────────
+    final appSettings =
+        Provider.of<AppSettingsProvider>(params.context, listen: false)
+            .appSettings;
+    final currency = appSettings?.currency ?? '';
+    final config = params.billDocumentConfig;
+    final dc = config.displayConfiguration?.options;
+    final pageFormat = PdfPageFormat.a4;
+
+    // ── Fonts & RTL ─────────────────────────────────────────────────
+    final font = await _loadArabicFont();
+    final fontBold = await _loadArabicFontBold();
+    final configLang = config.language;
+    final isRtl = configLang != null
+        ? configLang == 'ar'
+        : LocalizationService.locale.languageCode == 'ar';
+    final textDir = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+
+    // ══════════════════════════════════════════════════════════════════
+    // EXACT FONT SIZES from reference image
+    // ══════════════════════════════════════════════════════════════════
+    // Store name: 16pt bold
+    final storeNameStyle = pw.TextStyle(
+        font: fontBold, fontSize: 16, fontWeight: pw.FontWeight.bold);
+    // Store address/contact lines: 9pt regular
+    final storeInfoStyle =
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: 9);
+    // "Tax Invoice" title: 22pt bold
+    final taxInvoiceTitleStyle = pw.TextStyle(
+        font: fontBold, fontSize: 22, fontWeight: pw.FontWeight.bold);
+    // "فاتورة ضريبية" Arabic subtitle: 18pt bold
+    final taxInvoiceArabicStyle = pw.TextStyle(
+        font: fontBold, fontSize: 18, fontWeight: pw.FontWeight.bold);
+    // VAT No line: 10pt bold
+    final vatNoStyle = pw.TextStyle(
+        font: fontBold, fontSize: 10, fontWeight: pw.FontWeight.bold);
+    // "الرقم الضريبي" under VAT: 9pt regular
+    final vatNoArabicStyle =
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: 9);
+    // Invoice details table text: 9pt
+    final tableInfoStyle =
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: 9);
+    final tableInfoBold = pw.TextStyle(
+        font: fontBold, fontSize: 9, fontWeight: pw.FontWeight.bold);
+    // Invoice From/To labels: 8pt
+    final fromToLabel =
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: 8);
+    final fromToValue = pw.TextStyle(
+        font: fontBold, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final fromToHeader = pw.TextStyle(
+        font: fontBold, fontSize: 9, fontWeight: pw.FontWeight.bold);
+    // Items table header: 8pt bold
+    final itemsHeaderStyle = pw.TextStyle(
+        font: fontBold, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    // Items table body: 9pt
+    final itemsBodyStyle =
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: 9);
+    // Footer text: 9pt
+    final footerStyle =
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: 9);
+    final footerBold = pw.TextStyle(
+        font: fontBold, fontSize: 9, fontWeight: pw.FontWeight.bold);
+    // Signature text: 10pt bold
+    final signatureStyle = pw.TextStyle(
+        font: fontBold, fontSize: 10, fontWeight: pw.FontWeight.bold);
+
+    // ── Logo ────────────────────────────────────────────────────────
+    pw.MemoryImage? logoImage;
+    if (config.showLogo == 1 && config.logo != null) {
+      logoImage = await _fetchNetworkPdfImage(config.logo.toString());
+    }
+
+    // ── Tax totals ──────────────────────────────────────────────────
+    double totalTax = 0.0;
+    double totalExclTax = 0.0;
+    for (var item in params.cartItems) {
+      double iTax = 0.0, iTotal = 0.0;
+      if (params.isFromLocalStorage) {
+        iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+        iTotal = double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0;
+      } else if (item is Map) {
+        iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+        iTotal = double.tryParse(item['total_price']?.toString() ??
+                item['totalPrice']?.toString() ??
+                '0') ??
+            0.0;
+      } else {
+        try {
+          iTax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+          iTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0;
+        } catch (_) {}
+      }
+      totalTax += iTax;
+      totalExclTax += (iTotal - iTax);
+    }
+    final totalAmount = double.tryParse(params.formattedTotal) ?? 0.0;
+    final discountAmountValue =
+        double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
+    final double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
+
+    // ── ZATCA QR ────────────────────────────────────────────────────
+    String qrData = '';
+    final hasZatca = params.zatcaVatNumber?.isNotEmpty == true &&
+        params.zatcaCompanyName?.isNotEmpty == true;
+    if (hasZatca) {
+      qrData = ZatcaQrHelper().generateQrForInvoice(
+        sellerName: params.zatcaCompanyName!,
+        vatNumber: params.zatcaVatNumber!,
+        invoiceDate: params.orderDate,
+        totalAmount: totalAmount,
+        vatAmount: totalTax,
+      );
+    }
+
+    // ── Config helpers ──────────────────────────────────────────────
+    String _cfgVal(String key, String fallback) {
+      final v = dc?[key]?.value as String?;
+      return (v != null && v.isNotEmpty) ? v : fallback;
+    }
+
+    bool _cfgVisible(String key) => dc?[key]?.visible == true;
+
+    // ── Store info from config ──────────────────────────────────────
+    final storeName = _cfgVal('showStoreName', config.header ?? 'STORE NAME');
+    final storeDesc = _cfgVal('showDescription', config.subheader ?? '');
+    final storeAddress = _cfgVal('showStoreAddress', '');
+    final storeFssai = _cfgVal('showFssaiInfo', '');
+    final storeTel = _cfgVal('showTel', params.customerCareNumber);
+    final storeEmail = _cfgVal('showEmail', params.customerCareEmail);
+    final extraHeading1 = _cfgVal('showExtraHeading1', '');
+    final extraHeading2 = _cfgVal('showExtraHeading2', '');
+
+    // Invoice number with prefix + stripping
+    final prefix = config.numberPrefix ?? '';
+    final invRegex = RegExp(r'[1-9]\d*');
+    final invMatch = invRegex.firstMatch(params.orderNumber);
+    final strippedOrderNumber =
+        invMatch != null ? invMatch.group(0)! : params.orderNumber;
+    final invoiceNumber = '$prefix$strippedOrderNumber';
+
+    // ── Date parsing ────────────────────────────────────────────────
+    String displayDate = params.orderDate;
+    String displayTime = '';
+    try {
+      final dt = DateTime.parse(params.orderDate);
+      displayDate = DateHelper.formatDate(dt);
+      displayTime = DateFormat('hh:mm:ss a').format(dt);
+    } catch (_) {}
+
+    // ── Customer info ───────────────────────────────────────────────
+    final bool isDefault = params.isDefaultCustomer;
+    final bool hideDefaultPhone = params.hideDefaultCustomerPhone;
+    final custName =
+        params.customerName ?? (isRtl ? 'عميل' : 'Walk-in Customer');
+    final custPhone = (isDefault && hideDefaultPhone)
+        ? null
+        : (params.customerPhone != null
+            ? (_cfgVisible('showCustomerPhoneMasked')
+                ? StringHelper.maskStringShowLast4(params.customerPhone!)
+                : params.customerPhone)
+            : null);
+    final custAddress = params.customerAddress;
+    final custAltPhone = params.customerAlternatePhone;
+
+    // ══════════════════════════════════════════════════════════════════
+    // BUILD PDF — exact reference layout
+    // ══════════════════════════════════════════════════════════════════
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: pageFormat,
+        textDirection: textDir,
+        margin:
+            const pw.EdgeInsets.only(left: 40, right: 40, top: 30, bottom: 30),
+        footer: (ctx) => pw.Center(
+          child: pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+              style: pw.TextStyle(font: font, fontSize: 7)),
+        ),
+        build: (pw.Context ctx) {
+          return [
+            // ═══════════════════════════════════════════════════════
+            // SECTION 1: TOP HEADER
+            // Left: Company info | Right: Tax Invoice + VAT
+            // ═══════════════════════════════════════════════════════
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // ── Left: Company information ──
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      if (logoImage != null) ...[
+                        pw.Container(height: 40, child: pw.Image(logoImage)),
+                        pw.SizedBox(height: 3),
+                      ],
+                      if (_cfgVisible('showStoreName'))
+                        pw.Text(storeName, style: storeNameStyle),
+                      if (_cfgVisible('showDescription') &&
+                          storeDesc.isNotEmpty)
+                        pw.Text(storeDesc, style: storeInfoStyle),
+                      if (_cfgVisible('showStoreAddress') &&
+                          storeAddress.isNotEmpty)
+                        pw.Text(storeAddress, style: storeInfoStyle),
+                      if (_cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                        pw.Text(storeFssai, style: storeInfoStyle),
+                      if (_cfgVisible('showExtraHeading1') &&
+                          extraHeading1.isNotEmpty)
+                        pw.Text(extraHeading1, style: storeInfoStyle),
+                      if (_cfgVisible('showExtraHeading2') &&
+                          extraHeading2.isNotEmpty)
+                        pw.Text(extraHeading2, style: storeInfoStyle),
+                      if (_cfgVisible('showEmail') && storeEmail.isNotEmpty)
+                        pw.Text('Email: $storeEmail', style: storeInfoStyle),
+                      if (_cfgVisible('showTel') && storeTel.isNotEmpty)
+                        pw.Text('Mob: $storeTel', style: storeInfoStyle),
+                    ],
+                  ),
+                ),
+                // ── Right: Tax Invoice title ──
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('Tax Invoice', style: taxInvoiceTitleStyle),
+                    pw.Text('فاتورة ضريبية',
+                        style: taxInvoiceArabicStyle,
+                        textDirection: pw.TextDirection.rtl),
+                    if (params.zatcaVatNumber?.isNotEmpty == true) ...[
+                      pw.SizedBox(height: 2),
+                      pw.Text('VAT No: ${params.zatcaVatNumber}',
+                          style: vatNoStyle),
+                      pw.Text('الرقم الضريبي',
+                          style: vatNoArabicStyle,
+                          textDirection: pw.TextDirection.rtl),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // ═══════════════════════════════════════════════════════
+            // SECTION 2: INVOICE DETAILS TABLE + QR CODE
+            // ═══════════════════════════════════════════════════════
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Invoice details table
+                pw.Expanded(
+                  flex: 3,
+                  child: pw.Table(
+                    border: pw.TableBorder.all(width: 0.5),
+                    children: [
+                      // Header row (bilingual)
+                      pw.TableRow(children: [
+                        _paddedCell(
+                            pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Text('Invoice Number', style: tableInfoBold),
+                                pw.Text('رقم الفاتورة',
+                                    style: tableInfoStyle,
+                                    textDirection: pw.TextDirection.rtl),
+                              ],
+                            ),
+                            8),
+                        _paddedCell(
+                            pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Text('Invoice Date', style: tableInfoBold),
+                                pw.Text('تاريخ الفاتورة',
+                                    style: tableInfoStyle,
+                                    textDirection: pw.TextDirection.rtl),
+                              ],
+                            ),
+                            8),
+                        _paddedCell(
+                            pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Text('Invoice Type', style: tableInfoBold),
+                                pw.Text('نوع الفاتورة',
+                                    style: tableInfoStyle,
+                                    textDirection: pw.TextDirection.rtl),
+                              ],
+                            ),
+                            8),
+                      ]),
+                      // Values row
+                      pw.TableRow(children: [
+                        _paddedCell(
+                            pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Text(invoiceNumber, style: tableInfoStyle),
+                                if (_cfgVisible('showTokenNumber') &&
+                                    params.tokenNumber != null &&
+                                    params.tokenNumber!.isNotEmpty)
+                                  pw.Text(
+                                      '${_cfgVal('showTokenNumber', 'Token - ')}${params.tokenNumber}',
+                                      style: tableInfoStyle),
+                              ],
+                            ),
+                            8),
+                        _paddedCell(
+                            pw.Text(displayDate, style: tableInfoStyle), 8),
+                        _paddedCell(
+                            pw.Text(
+                                params.paymentMethod == 'CASH'
+                                    ? 'Cash'
+                                    : 'Credit',
+                                style: tableInfoStyle),
+                            8),
+                      ]),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 15),
+                // QR Code (guarded by showQRCode visibility)
+                if (_cfgVisible('showQRCode') && qrData.isNotEmpty)
+                  pw.Container(
+                    width: 80,
+                    height: 80,
+                    child: pw.BarcodeWidget(
+                      barcode: pw.Barcode.qrCode(),
+                      data: qrData,
+                      width: 80,
+                      height: 80,
+                    ),
+                  ),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // ═══════════════════════════════════════════════════════
+            // SECTION 3: INVOICE FROM / INVOICE TO
+            // Two bordered boxes side by side
+            // ═══════════════════════════════════════════════════════
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // ── INVOICE FROM ──
+                pw.Expanded(
+                  child: pw.Container(
+                    decoration:
+                        pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        // Header row
+                        pw.Container(
+                          width: double.infinity,
+                          padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 4),
+                          child: pw.Row(
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('Invoice From', style: fromToHeader),
+                              pw.Text('فاتورة من',
+                                  style: fromToHeader,
+                                  textDirection: pw.TextDirection.rtl),
+                            ],
+                          ),
+                        ),
+                        pw.Divider(height: 0, thickness: 0.5),
+                        // Field rows
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: pw.Column(
+                            children: [
+                              _fromToRow('Name :', storeName, 'إسم :',
+                                  fromToLabel, fromToValue),
+                              if (storeAddress.isNotEmpty)
+                                _fromToRow('Street name :', storeAddress,
+                                    'اسم الشارع :', fromToLabel, fromToValue),
+                              if (storeFssai.isNotEmpty)
+                                _fromToRow('FSSAI :', storeFssai, 'حيحي :',
+                                    fromToLabel, fromToValue),
+                              if (params.zatcaVatNumber?.isNotEmpty == true)
+                                _fromToRow('VAT No :', params.zatcaVatNumber!,
+                                    'رقم الضريبة :', fromToLabel, fromToValue),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // ── INVOICE TO ──
+                pw.Expanded(
+                  child: pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(
+                        top: const pw.BorderSide(width: 0.5),
+                        bottom: const pw.BorderSide(width: 0.5),
+                        right: const pw.BorderSide(width: 0.5),
+                      ),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        // Header row
+                        pw.Container(
+                          width: double.infinity,
+                          padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 4),
+                          child: pw.Row(
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('Invoice To', style: fromToHeader),
+                              pw.Text('فاتورة إلى',
+                                  style: fromToHeader,
+                                  textDirection: pw.TextDirection.rtl),
+                            ],
+                          ),
+                        ),
+                        pw.Divider(height: 0, thickness: 0.5),
+                        // Field rows
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: pw.Column(
+                            children: [
+                              if (_cfgVisible('showCustomerName'))
+                                _fromToRow('Name :', custName, 'إسم :',
+                                    fromToLabel, fromToValue),
+                              if (_cfgVisible('showCustomerAddress') &&
+                                  custAddress != null &&
+                                  custAddress.isNotEmpty)
+                                _fromToRow('Address :', custAddress, 'عنوان :',
+                                    fromToLabel, fromToValue),
+                              if (_cfgVisible('showCustomerPhone') &&
+                                  custPhone != null)
+                                _fromToRow('Phone :', custPhone, 'هاتف :',
+                                    fromToLabel, fromToValue),
+                              if (_cfgVisible('showCustomerPhone') &&
+                                  custAltPhone != null &&
+                                  custAltPhone.isNotEmpty)
+                                _fromToRow('Alt Phone :', custAltPhone,
+                                    'هاتف بديل :', fromToLabel, fromToValue),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // ═══════════════════════════════════════════════════════
+            // SECTION 4: ITEMS TABLE
+            // Bilingual headers, bordered, exact column widths
+            // ═══════════════════════════════════════════════════════
+            _buildItemsTable(
+                params, dc, config, itemsHeaderStyle, itemsBodyStyle),
+            pw.SizedBox(height: 15),
+
+            // ═══════════════════════════════════════════════════════
+            // SECTION 5: FOOTER  (Amount in Words + Totals)
+            // ═══════════════════════════════════════════════════════
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Left side: Amount in Words, Delivery, Payment, etc.
+                pw.Expanded(
+                  flex: 5,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      if (_cfgVisible('showAmountInWords'))
+                        pw.RichText(
+                          text: pw.TextSpan(children: [
+                            pw.TextSpan(
+                                text: 'Amount in Words: ', style: footerBold),
+                            pw.TextSpan(
+                                text:
+                                    '${AmountHelper().convertNumberToWords(totalAmount, currency: currency)} Only',
+                                style: footerStyle),
+                          ]),
+                        ),
+                      if (_cfgVisible('showDate'))
+                        pw.Text(
+                            'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
+                            style: pw.TextStyle(
+                                font: font, fontBold: fontBold, fontSize: 7)),
+                      if (_cfgVisible('showPayment') &&
+                          params.paymentMethod != null)
+                        pw.Text('Payment Method: ${params.paymentMethod}',
+                            style: pw.TextStyle(
+                                font: font, fontBold: fontBold, fontSize: 7)),
+                      if (params.orderComment != null &&
+                          params.orderComment!.isNotEmpty)
+                        pw.Text(
+                            '${isRtl ? 'تعليق:' : 'Comment:'} ${params.orderComment}',
+                            style: footerStyle),
+                      if (params.deliveryMethod != null &&
+                          params.deliveryMethod!.isNotEmpty)
+                        pw.Text(
+                            '${isRtl ? 'التوصيل:' : 'Delivery:'} ${params.deliveryMethod}',
+                            style: footerStyle),
+                      // Customer Paid Amount
+                      if (_cfgVisible('showCustomerPaidAmount') &&
+                          params.paidAmount != null)
+                        pw.Text(
+                            '${_cfgVal('showCustomerPaidAmount', isRtl ? 'المبلغ المدفوع' : 'Paid Amt')}: ${params.paidAmount!.toStringAsFixed(2)}',
+                            style: footerStyle),
+                      // Customer Current Balance
+                      if (_cfgVisible('showCustomerCurrentBalance') &&
+                          params.customerCurrentBalance != null)
+                        pw.Text(
+                            '${_cfgVal('showCustomerCurrentBalance', isRtl ? 'الرصيد الحالي' : 'Cur Bal')}: ${params.customerCurrentBalance!.toStringAsFixed(2)}',
+                            style: footerStyle),
+                    ],
+                  ),
+                ),
+                // Right side: Totals table
+                pw.Expanded(
+                  flex: 3,
+                  child: pw.Table(
+                    border: pw.TableBorder.all(width: 0.5),
+                    children: [
+                      if (dc?['showMRPTotal']?.visible != false)
+                        _totalsRow('Total (Exc VAT)',
+                            totalExclTax.toStringAsFixed(2), footerStyle),
+                      if (dc?['showDiscount']?.visible != false &&
+                          discountAmountValue > 0)
+                        _totalsRow(
+                            'Discount',
+                            discountAmountValue.toStringAsFixed(2),
+                            footerStyle),
+                      if (dc?['showTax']?.visible != false)
+                        _totalsRow('Total VAT', totalTax.toStringAsFixed(2),
+                            footerStyle),
+                      if (dc?['showNetAmount']?.visible != false)
+                        _totalsRow('Total (Inc VAT)',
+                            totalAmount.toStringAsFixed(2), footerBold),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 8),
+
+            // ═══════════════════════════════════════════════════════
+            // ITEMS COUNT
+            // ═══════════════════════════════════════════════════════
+            if (_cfgVisible('showItemsCount'))
+              pw.Text(
+                '${_cfgVal('showItemsCount', isRtl ? 'العدد' : 'Items')}: ${params.cartItems.length}',
+                style: footerStyle,
+              ),
+
+            // ═══════════════════════════════════════════════════════
+            // YOU SAVED
+            // ═══════════════════════════════════════════════════════
+            if (_cfgVisible('showSaved') && saved > 0)
+              pw.Text(
+                '${_cfgVal('showSaved', isRtl ? 'لقد وفرت:' : 'You Saved:')} ${saved.toStringAsFixed(2)}',
+                style: footerBold,
+              ),
+
+            pw.SizedBox(height: 8),
+
+            // ═══════════════════════════════════════════════════════
+            // TERMS & CONDITIONS
+            // ═══════════════════════════════════════════════════════
+            if (_cfgVisible('showTermsConditions')) ...[
+              pw.Text(
+                _cfgVal('showTermsConditions', ''),
+                style:
+                    pw.TextStyle(font: font, fontBold: fontBold, fontSize: 7),
+              ),
+              pw.SizedBox(height: 8),
+            ],
+
+            // ═══════════════════════════════════════════════════════
+            // THANK YOU MESSAGE
+            // ═══════════════════════════════════════════════════════
+            if (_cfgVisible('showThankYouMessage'))
+              pw.Center(
+                child: pw.Text(
+                  _cfgVal(
+                      'showThankYouMessage',
+                      isRtl
+                          ? 'شكراً لتسوقكم معنا'
+                          : 'Thank you for your business'),
+                  style: footerBold,
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            pw.SizedBox(height: 30),
+
+            // ═══════════════════════════════════════════════════════
+            // SECTION 6: SIGNATURES
+            // ═══════════════════════════════════════════════════════
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                    'Receiver: ............................................',
+                    style: signatureStyle),
+                pw.Text(
+                    'Sales Man: ............................................',
+                    style: signatureStyle),
+              ],
+            ),
+          ];
+        },
+      ),
+    );
+
+    return pdf;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // PRIVATE HELPERS
+  // ══════════════════════════════════════════════════════════════════
+
+  /// Padded table cell.
+  pw.Widget _paddedCell(pw.Widget child, double p) {
+    return pw.Padding(padding: pw.EdgeInsets.all(p), child: child);
+  }
+
+  /// Invoice From/To field row: "Label : Value      ArabicLabel"
+  pw.Widget _fromToRow(String label, String value, String arLabel,
+      pw.TextStyle normal, pw.TextStyle bold) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
+      child: pw.Row(
+        children: [
+          pw.SizedBox(width: 65, child: pw.Text(label, style: normal)),
+          pw.Expanded(child: pw.Text(value, style: bold)),
+          pw.SizedBox(
+            width: 65,
+            child: pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Text(arLabel,
+                  style: normal, textDirection: pw.TextDirection.rtl),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Totals table row.
+  pw.TableRow _totalsRow(String label, String value, pw.TextStyle style) {
+    return pw.TableRow(children: [
+      pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: pw.Text(label, style: style)),
+      pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Text(value, style: style))),
+    ]);
+  }
+
+  /// Build the items table with bilingual headers.
+  pw.Widget _buildItemsTable(
+    ReceiptLayoutParams params,
+    Map<String, DisplayOption>? dc,
+    dynamic config,
+    pw.TextStyle headerStyle,
+    pw.TextStyle bodyStyle,
+  ) {
+    bool _col(String key) => dc?[key]?.visible == true;
+
+    final showSL = _col('showSLNumber');
+    final showItems = _col('showParticulars');
+    final showQty = _col('showQty');
+    final showRate = _col('showRate');
+    final showDiscount = _col('showDiscount');
+    final showTax = _col('showTaxHeader');
+    final showTotal = _col('showTotal');
+
+    // Fixed column widths matching the reference image proportions
+    final Map<int, pw.TableColumnWidth> colWidths = {};
+    int ci = 0;
+    if (showSL) colWidths[ci++] = const pw.FlexColumnWidth(0.6);
+    if (showItems) colWidths[ci++] = const pw.FlexColumnWidth(3.5);
+    if (showQty) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showRate) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showDiscount) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    // Taxable amount
+    colWidths[ci++] = const pw.FlexColumnWidth(1.2);
+    if (showTax) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showTotal) colWidths[ci++] = const pw.FlexColumnWidth(1.3);
+
+    // Bilingual header cell
+    pw.Widget hdr(String en, String ar) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 5),
+        child: pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(en, style: headerStyle, textAlign: pw.TextAlign.center),
+              if (ar.isNotEmpty)
+                pw.Text(ar,
+                    style: headerStyle,
+                    textDirection: pw.TextDirection.rtl,
+                    textAlign: pw.TextAlign.center),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Build header cells
+    final hdrs = <pw.Widget>[];
+    if (showSL) hdrs.add(hdr('S\nNo:', ''));
+    if (showItems) hdrs.add(hdr('Description', 'البيان'));
+    if (showQty) hdrs.add(hdr('Qty', 'كمية'));
+    if (showRate) hdrs.add(hdr('Rate', 'مجموع'));
+    if (showDiscount) hdrs.add(hdr('Discount', 'خصم'));
+    // Taxable Amount always shown
+    hdrs.add(hdr('Taxable\nAmt', 'المبلغ\nالخاضع'));
+    if (showTax) hdrs.add(hdr('VAT (15%)', 'الضريبة'));
+    if (showTotal) hdrs.add(hdr('Total (Inc\nVat)', 'الأجمالي'));
+
+    // Build data rows
+    final rows = <pw.TableRow>[];
+    for (int i = 0; i < params.cartItems.length; i++) {
+      final item = params.cartItems[i];
+      String name = '';
+      double qty = 0, unitPrice = 0, iDiscount = 0, iTax = 0, iTotal = 0;
+
+      if (params.isFromLocalStorage) {
+        name = item['productName']?.toString() ?? '';
+        qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+        unitPrice = double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0;
+        iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
+        iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0;
+        iTotal = double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0;
+      } else if (item is Map) {
+        name = item['product_name']?.toString() ??
+            item['productName']?.toString() ??
+            '';
+        qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+        unitPrice = double.tryParse(item['unit_price']?.toString() ??
+                item['unitPrice']?.toString() ??
+                '0') ??
+            0;
+        iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
+        iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0;
+        iTotal = double.tryParse(item['total_price']?.toString() ??
+                item['totalPrice']?.toString() ??
+                '0') ??
+            0;
+      } else {
+        try {
+          name = item.productName ?? '';
+          qty = double.tryParse(item.quantity?.toString() ?? '0') ?? 0;
+          unitPrice = double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0;
+          iTax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0;
+          iTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0;
+        } catch (_) {}
+        try {
+          iDiscount =
+              double.tryParse(item.discountAmount?.toString() ?? '0') ?? 0;
+        } catch (_) {}
+      }
+
+      double taxableAmt = iTotal - iTax;
+
+      final cells = <pw.Widget>[];
+      if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
+      if (showItems) {
+        cells.add(_dataCell(name, bodyStyle, align: pw.Alignment.centerLeft));
+      }
+      if (showQty) {
+        cells.add(_dataCell(qty.toStringAsFixed(3), bodyStyle));
+      }
+      if (showRate) {
+        cells.add(_dataCell(unitPrice.toStringAsFixed(2), bodyStyle));
+      }
+      if (showDiscount) {
+        cells.add(_dataCell(iDiscount.toStringAsFixed(2), bodyStyle));
+      }
+      // Taxable amount
+      cells.add(_dataCell(taxableAmt.toStringAsFixed(2), bodyStyle));
+      if (showTax) {
+        cells.add(_dataCell(iTax.toStringAsFixed(2), bodyStyle));
+      }
+      if (showTotal) {
+        cells.add(_dataCell(iTotal.toStringAsFixed(2), bodyStyle));
+      }
+
+      rows.add(pw.TableRow(children: cells));
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(width: 0.5),
+      columnWidths: colWidths,
+      children: [
+        pw.TableRow(children: hdrs),
+        ...rows,
+      ],
+    );
+  }
+
+  /// Data cell for items table.
+  pw.Widget _dataCell(String text, pw.TextStyle style,
+      {pw.Alignment align = pw.Alignment.center}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      child: pw.Align(alignment: align, child: pw.Text(text, style: style)),
+    );
+  }
+}

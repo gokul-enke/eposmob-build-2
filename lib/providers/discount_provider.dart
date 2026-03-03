@@ -38,10 +38,10 @@ class DiscountProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = Uri.parse(APPUrl.listDiscounts);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
       String? accessToken = prefs.getString('access_token');
+      final int? activeStoreId = prefs.getInt('active_store_id');
 
       if (apiKey == null || apiKey.isEmpty) {
         debugPrint('🎫 ⚠️ No API key found, skipping fetch.');
@@ -50,6 +50,14 @@ class DiscountProvider with ChangeNotifier {
         notifyListeners();
         return;
       }
+
+      // Build URL with store_id parameter
+      final Map<String, String> queryParams = {};
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.listDiscounts)
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
       final headers = {
         'Content-Type': 'application/json',

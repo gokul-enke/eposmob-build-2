@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -54,6 +55,12 @@ class StoreSessionProvider extends ChangeNotifier {
     _setStatus('Saving your selection...');
 
     final sharedPrefProvider = context.read<SharedPreferenceProvider>();
+    final previousActiveStoreId = await sharedPrefProvider.getActiveStoreId();
+    final selectedStoreId = store.storeId;
+    final didStoreChange = previousActiveStoreId != null &&
+        selectedStoreId != null &&
+        previousActiveStoreId != selectedStoreId;
+
     await sharedPrefProvider.saveActiveStoreId(store.storeId ?? 0);
     _activeStore = store;
     _setStatus('Preparing environment for ${store.storeName ?? "store"}...');
@@ -72,6 +79,29 @@ class StoreSessionProvider extends ChangeNotifier {
     final deliveryMethodsProvider = context.read<DeliveryMethodsProvider>();
 
     try {
+      if (didStoreChange) {
+        // Log store change (always)
+        debugPrint(
+          '🔄 [Store] Store changed: $previousActiveStoreId → $selectedStoreId. Clearing local data...',
+        );
+
+        // Show UI status only in debug mode
+        if (kDebugMode) {
+          await _updateStatus('Store changed. Clearing local data cache...');
+        }
+
+        // Always clear local data
+        await localProductProvider.clearAllLocalData();
+        await categoryProvider.clearAllCategories();
+        await docConfigProvider.clearAllCaches();
+
+        // Show UI status only in debug mode
+        if (kDebugMode) {
+          await _updateStatus('Local cache cleared for new store sync.');
+        }
+        debugPrint('✅ [Store] Local data cleared for store: $selectedStoreId');
+      }
+
       await _updateStatus('Loading user permissions...');
       try {
         await roleProvider.fetchRoles(context);
@@ -132,7 +162,7 @@ class StoreSessionProvider extends ChangeNotifier {
 
       await _updateStatus('Refreshing product categories...');
       try {
-        await categoryProvider.listAllCategory();
+        await categoryProvider.listAllCategory(force: true);
         final categoryCount = categoryProvider.categoryList?.length ?? 0;
         await _updateStatus('Categories ready: $categoryCount found.');
       } catch (e) {

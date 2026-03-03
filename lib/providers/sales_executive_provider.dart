@@ -99,12 +99,20 @@ class SalesExecutiveProvider extends ChangeNotifier {
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
+      final int? activeStoreId = prefs.getInt('active_store_id');
 
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
+
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.listSalesExecutives).replace(queryParameters: queryParameters);
+
       final response = await http.get(
-        Uri.parse(APPUrl.listSalesExecutives),
+        url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -280,6 +288,16 @@ class SalesExecutiveProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         try {
           final jsonData = json.decode(response.body);
+          
+          // Validate data structure before parsing
+          if (jsonData is! Map<String, dynamic>) {
+            throw FormatException('Response is not a valid JSON object');
+          }
+          
+          if (jsonData['data'] != null && jsonData['data'] is! List) {
+            throw FormatException('Data field is not a list');
+          }
+          
           SalesExecutiveReportModel reportModel =
               SalesExecutiveReportModel.fromJson(jsonData);
 
@@ -293,7 +311,8 @@ class SalesExecutiveProvider extends ChangeNotifier {
           return jsonData;
         } catch (parseError) {
           debugPrint('❌ JSON parsing error: $parseError');
-          _reportError = 'Failed to parse response data';
+          debugPrint('❌ Response body: ${response.body}');
+          _reportError = 'Failed to parse response data: $parseError';
           _isReportLoading = false;
           notifyListeners();
 

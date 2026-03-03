@@ -7134,6 +7134,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
+    String? deliveryMethod,
     bool isDefaultCustomer = false,
     String? netExcTax,
   }) async {
@@ -7161,6 +7162,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
+      deliveryMethod: deliveryMethod,
       isDefaultCustomer: isDefaultCustomer,
       netExcTax: netExcTax,
     );
@@ -7190,6 +7192,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
+            deliveryMethod: deliveryMethod,
             isDefaultCustomer: isDefaultCustomer,
             netExcTax: netExcTax,
           ),
@@ -7298,7 +7301,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 discountAmount:
                     orderDetails.data!.priceSummary?.discount?.toString() ??
                         "0.00",
-                orderDate: DateHelper.formatInputToDisplay(orderDate),
+                orderDate: orderDate,
                 orderNumber: orderDetails.data!.orderNumber ?? "",
                 tokenNumber: orderDetails.data?.tokenNumber,
                 customerName: customerName,
@@ -7312,6 +7315,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
+                deliveryMethod: orderDetails.data?.deliveryMethodName,
                 isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                         context,
                         listen: false)

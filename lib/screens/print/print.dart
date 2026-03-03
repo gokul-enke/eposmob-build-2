@@ -16,9 +16,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/print_standard.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/layouts/layouts.dart';
+import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -40,9 +40,12 @@ class PrintPage extends StatefulWidget {
   final double? customerCurrentBalance;
   final double? paidAmount;
   final String? orderComment;
+  final String? deliveryMethod;
   final String? customerAlternatePhone;
   final String? paymentMethod;
-  final Map<String, dynamic>? paymentBreakdown; // Added for multi-payment support
+  final String? customerVatNumber;
+  final Map<String, dynamic>?
+      paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
   final String? netExcTax;
 
@@ -66,8 +69,10 @@ class PrintPage extends StatefulWidget {
     this.customerCurrentBalance,
     this.paidAmount,
     this.orderComment,
+    this.deliveryMethod,
     this.customerAlternatePhone,
     this.paymentMethod,
+    this.customerVatNumber,
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
@@ -78,7 +83,8 @@ class PrintPage extends StatefulWidget {
 
   /// Auto-print with default printer without showing UI
   /// Returns true if printing succeeded, false if no printer or failed
-  static Future<bool> autoPrint(BuildContext context, {
+  static Future<bool> autoPrint(
+    BuildContext context, {
     required List<dynamic> cartItems,
     String? storeName,
     required String formattedTotal,
@@ -97,8 +103,10 @@ class PrintPage extends StatefulWidget {
     double? customerCurrentBalance,
     double? paidAmount,
     String? orderComment,
+    String? deliveryMethod,
     String? customerAlternatePhone,
     String? paymentMethod,
+    String? customerVatNumber,
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
@@ -123,11 +131,14 @@ class PrintPage extends StatefulWidget {
         ),
       );
 
-      debugPrint('[PrintPage] Auto-printing with default printer: ${selectedPrinter.deviceName}');
+      debugPrint(
+          '[PrintPage] Auto-printing with default printer: ${selectedPrinter.deviceName}');
 
       // Load document config from cache (NO API CALL - instant!)
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
-      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
 
       if (appSettings == null) {
@@ -144,15 +155,17 @@ class PrintPage extends StatefulWidget {
 
       // Try multiple config name patterns to find cached config
       if (hasReturns) {
-        billDocumentConfig = docConfigProvider.getCachedConfig("Sales and Return Bill") ??
-                               docConfigProvider.getCachedConfig("sales_and_return_bill");
+        billDocumentConfig =
+            docConfigProvider.getCachedConfig("Sales and Return Bill") ??
+                docConfigProvider.getCachedConfig("sales_and_return_bill");
       } else {
         billDocumentConfig = docConfigProvider.getCachedConfig("Bill") ??
-                               docConfigProvider.getCachedConfig("bill");
+            docConfigProvider.getCachedConfig("bill");
       }
 
       if (billDocumentConfig == null) {
-        debugPrint('[PrintPage] Document config not found in cache. Printing not possible.');
+        debugPrint(
+            '[PrintPage] Document config not found in cache. Printing not possible.');
         return false;
       }
 
@@ -198,8 +211,10 @@ class PrintPage extends StatefulWidget {
         customerCurrentBalance: customerCurrentBalance,
         paidAmount: paidAmount,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
+        customerVatNumber: customerVatNumber,
         paymentBreakdown: paymentBreakdown,
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
@@ -209,40 +224,12 @@ class PrintPage extends StatefulWidget {
       );
 
       // Print
-      if (paperSize == '80mm' || paperSize == '58mm') {
+      if (paperSize == '112mm' || paperSize == '80mm' || paperSize == '58mm') {
         await layout.printThermal(params);
       } else {
-        final standardPrinter = StandardPrinter(context);
-        await standardPrinter.generateAndPrintPDF(
-          selectedPrinter: selectedPrinter,
-          cartItems: cartItems,
-          formattedTotal: formattedTotal,
-          savedTotal: savedTotal,
-          discountAmount: discountAmount,
-          orderDate: orderDate,
-          orderNumber: orderNumber,
-          tokenNumber: tokenNumber,
-          isFromLocalStorage: isFromLocalStorage,
-          selectedPaperSize: paperSize,
-          billDocumentConfig: billDocumentConfig,
-          customerCareNumber: appSettings.customerCarePhone,
-          customerCareEmail: appSettings.customerCareEmail,
-          customerName: customerName,
-          customerPhone: customerPhone,
-          customerEmail: customerEmail,
-          customerAddress: customerAddress,
-          orderReturns: orderReturns,
-          customerOldBalance: customerOldBalance,
-          customerCurrentBalance: customerCurrentBalance,
-          paidAmount: paidAmount,
-          orderComment: orderComment,
-          customerAlternatePhone: customerAlternatePhone,
-          paymentMethod: paymentMethod,
-          zatcaVatNumber: zatcaVatNumber,
-          zatcaCompanyName: zatcaCompanyName,
-          isDefaultCustomer: isDefaultCustomer,
-          hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
-        );
+        // Use StandardPdfLayoutFactory for A4/A5 printing
+        final standardLayout = StandardPdfLayoutFactory.getLayout(theme);
+        await standardLayout.generateAndPrintPdf(params);
       }
 
       debugPrint('[PrintPage] Auto-print successful');
@@ -253,7 +240,8 @@ class PrintPage extends StatefulWidget {
     }
   }
 
-  static Future<String> _getReceiptThemeStatic(DocumentConfig? billDocumentConfig, SharedPreferences prefs) async {
+  static Future<String> _getReceiptThemeStatic(
+      DocumentConfig? billDocumentConfig, SharedPreferences prefs) async {
     final localTheme = prefs.getString('billing_receipt_theme');
 
     if (localTheme != null && localTheme.isNotEmpty) {
@@ -286,7 +274,7 @@ class _PrintPageState extends State<PrintPage> {
   static const Color textSecondaryColor = Color(0xFF7F8C8D);
   static const Color backgroundColor = Color(0xFFF5F6FA);
 
-  final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
+  final List<String> paperSizes = ['112mm', '80mm', '58mm', 'A5', 'A4'];
 
   @override
   void initState() {
@@ -531,11 +519,12 @@ class _PrintPageState extends State<PrintPage> {
 
       // Use cached config directly (NO API CALL - instant!)
       if (hasReturns) {
-        _billDocumentConfig = docConfigProvider.getCachedConfig("Sales and Return Bill") ??
-                               docConfigProvider.getCachedConfig("sales_and_return_bill");
+        _billDocumentConfig =
+            docConfigProvider.getCachedConfig("Sales and Return Bill") ??
+                docConfigProvider.getCachedConfig("sales_and_return_bill");
       } else {
         _billDocumentConfig = docConfigProvider.getCachedConfig("Bill") ??
-                               docConfigProvider.getCachedConfig("bill");
+            docConfigProvider.getCachedConfig("bill");
       }
 
       if (_billDocumentConfig == null) {
@@ -545,7 +534,8 @@ class _PrintPageState extends State<PrintPage> {
             ? docConfigProvider.getDocumentConfig("Sales and Return Bill")
             : docConfigProvider.getDocumentConfig("Bill");
       } else {
-        debugPrint("✅ Document config loaded from cache: ${_billDocumentConfig?.type}");
+        debugPrint(
+            "✅ Document config loaded from cache: ${_billDocumentConfig?.type}");
       }
 
       setState(() {
@@ -628,7 +618,9 @@ class _PrintPageState extends State<PrintPage> {
       return;
     }
 
-    if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
+    if (selectedPaperSize == '112mm' ||
+        selectedPaperSize == '80mm' ||
+        selectedPaperSize == '58mm') {
       await _printThermalReceipt(customerCareNumber, customerCareEmail);
     } else {
       await _generateAndPrintPDF(customerCareNumber, customerCareEmail);
@@ -640,16 +632,17 @@ class _PrintPageState extends State<PrintPage> {
     // Get theme with priority: Local SharedPreferences > API fallback
     final theme = await _getReceiptTheme();
     final layout = ReceiptLayoutFactory.getLayout(theme);
-    
+
     debugPrint("[PrintPage] Using receipt theme: $theme");
-    
+
     // Fetch ZATCA credentials for Saudi Arabia e-invoicing
     final sharedPrefProvider = SharedPreferenceProvider();
     final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
     final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
-    
+
     if (zatcaVatNumber != null && zatcaCompanyName != null) {
-      debugPrint("[PrintPage] ZATCA credentials found - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
+      debugPrint(
+          "[PrintPage] ZATCA credentials found - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
     } else {
       debugPrint("[PrintPage] No ZATCA credentials found, using standard QR");
     }
@@ -658,7 +651,7 @@ class _PrintPageState extends State<PrintPage> {
         Provider.of<AppSettingsProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
-    
+
     // Create params object for the layout
     final params = ReceiptLayoutParams(
       context: context,
@@ -684,8 +677,10 @@ class _PrintPageState extends State<PrintPage> {
       customerCurrentBalance: widget.customerCurrentBalance,
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
+      deliveryMethod: widget.deliveryMethod,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
+      customerVatNumber: widget.customerVatNumber,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
@@ -693,7 +688,7 @@ class _PrintPageState extends State<PrintPage> {
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
     );
-    
+
     // Print using the selected layout
     await layout.printThermal(params);
   }
@@ -702,20 +697,20 @@ class _PrintPageState extends State<PrintPage> {
   Future<String> _getReceiptTheme() async {
     final prefs = await SharedPreferences.getInstance();
     final localTheme = prefs.getString('billing_receipt_theme');
-    
+
     // Priority: Local setting takes precedence
     if (localTheme != null && localTheme.isNotEmpty) {
       debugPrint("[PrintPage] Using local theme preference: $localTheme");
       return localTheme;
     }
-    
+
     // Fallback to API theme from document config
     final apiTheme = _billDocumentConfig?.activeTheme;
     if (apiTheme != null && apiTheme.isNotEmpty) {
       debugPrint("[PrintPage] Using API theme: $apiTheme");
       return apiTheme;
     }
-    
+
     // Default to classic
     debugPrint("[PrintPage] No theme set, using default: classic");
     return 'classic';
@@ -723,11 +718,11 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
-    final standardPrinter = StandardPrinter(context);
-    final appSettingsProvider =
-      Provider.of<AppSettingsProvider>(context, listen: false);
-    final bool hideDefaultCustomerPhone =
-      appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
+    // Get theme with priority: Local SharedPreferences > API fallback
+    final theme = await _getReceiptTheme();
+    final standardLayout = StandardPdfLayoutFactory.getLayout(theme);
+
+    debugPrint("[PrintPage] Using standard PDF theme: $theme");
 
     // Fetch ZATCA credentials for Saudi Arabia e-invoicing
     final sharedPrefProvider = SharedPreferenceProvider();
@@ -735,13 +730,22 @@ class _PrintPageState extends State<PrintPage> {
     final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
     if (zatcaVatNumber != null && zatcaCompanyName != null) {
-      debugPrint("[PrintPage] ZATCA credentials found for PDF - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
+      debugPrint(
+          "[PrintPage] ZATCA credentials found for PDF - VAT: $zatcaVatNumber, Company: $zatcaCompanyName");
     } else {
-      debugPrint("[PrintPage] No ZATCA credentials found for PDF, using standard QR");
+      debugPrint(
+          "[PrintPage] No ZATCA credentials found for PDF, using standard QR");
     }
 
-    await standardPrinter.generateAndPrintPDF(
-      selectedPrinter: selectedPrinter,
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final bool hideDefaultCustomerPhone =
+        appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
+
+    // Create params object for the layout
+    final params = ReceiptLayoutParams(
+      context: context,
+      selectedPrinter: selectedPrinter!,
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
       savedTotal: widget.savedTotal,
@@ -751,25 +755,32 @@ class _PrintPageState extends State<PrintPage> {
       tokenNumber: widget.tokenNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
-      billDocumentConfig: _billDocumentConfig,
+      billDocumentConfig: _billDocumentConfig!,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
       customerName: widget.customerName,
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
-      orderReturns: widget.orderReturns, // Add this line
+      orderReturns: widget.orderReturns,
       customerOldBalance: widget.customerOldBalance,
       customerCurrentBalance: widget.customerCurrentBalance,
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
+      deliveryMethod: widget.deliveryMethod,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
+      customerVatNumber: widget.customerVatNumber,
+      paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
+      netExcTax: widget.netExcTax,
     );
+
+    // Print using the selected standard PDF layout
+    await standardLayout.generateAndPrintPdf(params);
   }
 
   Future<void> _loadDefaultPaperSize() async {
@@ -979,30 +990,30 @@ class _PrintPageState extends State<PrintPage> {
                                   : null,
                             ),
                             child: ListTile(
-                            leading: Icon(
-                              Icons.print,
-                              color: isSelected
-                                  ? primaryColor
-                                  : textSecondaryColor,
-                              size: 28,
-                            ),
-                            title: Text(
-                              printer.deviceName ?? 'Unknown device',
-                              style: TextStyle(
-                                color: textPrimaryColor,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                fontSize: 16,
+                              leading: Icon(
+                                Icons.print,
+                                color: isSelected
+                                    ? primaryColor
+                                    : textSecondaryColor,
+                                size: 28,
                               ),
-                            ),
-                            subtitle: Text(
-                              printer.address ?? '',
-                              style: const TextStyle(
-                                color: textSecondaryColor,
-                                fontSize: 14,
+                              title: Text(
+                                printer.deviceName ?? 'Unknown device',
+                                style: TextStyle(
+                                  color: textPrimaryColor,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 16,
+                                ),
                               ),
-                            ),
+                              subtitle: Text(
+                                printer.address ?? '',
+                                style: const TextStyle(
+                                  color: textSecondaryColor,
+                                  fontSize: 14,
+                                ),
+                              ),
                               trailing: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: isSelected

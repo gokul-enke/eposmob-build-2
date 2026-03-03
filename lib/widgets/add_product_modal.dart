@@ -58,8 +58,11 @@ class _AddProductWithBarcodeModalState
   final FocusNode _quantityFocusNode = FocusNode();
   final FocusNode _sellingPriceFocusNode = FocusNode();
   final FocusNode _purchasePriceFocusNode = FocusNode();
+  final FocusNode _unitFocusNode = FocusNode();
+  final FocusNode _categoryFocusNode = FocusNode();
 
   bool isLoading = false;
+  bool isSaveAndCreateLoading = false;
   bool isBarcodeGenerating = false;
   String? selectedUnit;
   Category? selectedCategory;
@@ -89,6 +92,8 @@ class _AddProductWithBarcodeModalState
       _quantityFocusNode,
       _sellingPriceFocusNode,
       _purchasePriceFocusNode,
+      _unitFocusNode,
+      _categoryFocusNode,
     ];
 
     for (final node in allFocusNodes) {
@@ -124,8 +129,11 @@ class _AddProductWithBarcodeModalState
     _quantityFocusNode.dispose();
     _sellingPriceFocusNode.dispose();
     _purchasePriceFocusNode.dispose();
+    _unitFocusNode.dispose();
+    _categoryFocusNode.dispose();
 
     isLoading = false;
+    isSaveAndCreateLoading = false;
     selectedUnit = null;
     selectedCategory = null;
     isValidatedOnce = false;
@@ -161,8 +169,7 @@ class _AddProductWithBarcodeModalState
     if (languages.isEmpty) return null;
 
     try {
-      return languages
-          .firstWhere((lang) => lang.code.toLowerCase() == 'en');
+      return languages.firstWhere((lang) => lang.code.toLowerCase() == 'en');
     } catch (_) {
       return languages.first;
     }
@@ -363,8 +370,9 @@ class _AddProductWithBarcodeModalState
                 ),
                 const SizedBox(height: 16),
 
-                // Row 1: Product Name, Barcode
+                // Row 1: Product Name, Barcode, Category
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: _buildTextField(
@@ -380,18 +388,6 @@ class _AddProductWithBarcodeModalState
                     Expanded(
                       child: _buildBarcodeField(size),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildLanguageFields(size, languageProvider),
-                const SizedBox(height: 12),
-
-                // Row 2: Unit, Category
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildUnitDropdown(size, unitList),
-                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _buildCategoryDropdown(size, categoryList),
@@ -399,21 +395,15 @@ class _AddProductWithBarcodeModalState
                   ],
                 ),
                 const SizedBox(height: 12),
+                _buildLanguageFields(size, languageProvider),
+                const SizedBox(height: 12),
 
-                // Row 3: MRP, Purchase Price
+                // Row 2: Unit, Purchase Price, Max Sale Price / MRP
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: _buildTextField(
-                        "Max Sale Price / MRP",
-                        _productMRPController,
-                        TextInputType.number,
-                        size,
-                        isRequired: false,
-                        inputFormatter: FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
-                        focusNode: _mrpFocusNode,
-                      ),
+                      child: _buildUnitDropdown(size, unitList),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -428,12 +418,26 @@ class _AddProductWithBarcodeModalState
                         focusNode: _purchasePriceFocusNode,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildTextField(
+                        "Max Sale Price / MRP",
+                        _productMRPController,
+                        TextInputType.number,
+                        size,
+                        isRequired: false,
+                        inputFormatter: FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        focusNode: _mrpFocusNode,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // Row 4: Selling Price, Quantity
+                // Row 3: Selling Price, Quantity, Empty
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: _buildTextField(
@@ -459,6 +463,10 @@ class _AddProductWithBarcodeModalState
                             RegExp(r'^\d*\.?\d{0,2}$')),
                         focusNode: _quantityFocusNode,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: SizedBox.shrink(),
                     ),
                   ],
                 ),
@@ -490,12 +498,49 @@ class _AddProductWithBarcodeModalState
                       ),
                     ),
                     const SizedBox(width: 10),
+                    // Save and Create Button
+                    SizedBox(
+                      width: 140,
+                      height: 40,
+                      child: ElevatedButton(
+                        onPressed: (isLoading || isSaveAndCreateLoading)
+                            ? null
+                            : () => _submitForm(keepOpen: true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(color: ColorManager.kPrimaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: isSaveAndCreateLoading
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      ColorManager.kPrimaryColor),
+                                ),
+                              )
+                            : Text(
+                                "Save and Create",
+                                style: TextStyle(
+                                  color: ColorManager.kPrimaryColor,
+                                  fontSize: FontSize.s12,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     // Add Product Button
                     SizedBox(
                       width: 120,
                       height: 40,
                       child: ElevatedButton(
-                        onPressed: isLoading ? null : _submitForm,
+                        onPressed: (isLoading || isSaveAndCreateLoading)
+                            ? null
+                            : () => _submitForm(keepOpen: false),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: ColorManager.kPrimaryColor,
                           shape: RoundedRectangleBorder(
@@ -513,7 +558,7 @@ class _AddProductWithBarcodeModalState
                                 ),
                               )
                             : const Text(
-                                "Add Product",
+                                "Save",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: FontSize.s12,
@@ -581,6 +626,8 @@ class _AddProductWithBarcodeModalState
             controller: controller,
             focusNode: focusNode,
             keyboardType: keyboardType,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             inputFormatters: inputFormatter != null ? [inputFormatter] : null,
             cursorColor: ColorManager.kPrimaryColor,
             onTap: () {
@@ -656,6 +703,8 @@ class _AddProductWithBarcodeModalState
                   controller: _productBarcodeController,
                   focusNode: _barcodeFocusNode,
                   readOnly: widget.barcode != null,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   cursorColor: ColorManager.kPrimaryColor,
                   onTap: () {
                     _unfocusAllExcept(_barcodeFocusNode);
@@ -739,8 +788,7 @@ class _AddProductWithBarcodeModalState
       );
     }
 
-    if (languageProvider.error != null &&
-        languageProvider.languages.isEmpty) {
+    if (languageProvider.error != null && languageProvider.languages.isEmpty) {
       return Row(
         children: [
           Expanded(
@@ -834,6 +882,8 @@ class _AddProductWithBarcodeModalState
                   controller: controller,
                   textDirection:
                       language.isRtl ? TextDirection.rtl : TextDirection.ltr,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   cursorColor: ColorManager.kPrimaryColor,
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -855,9 +905,8 @@ class _AddProductWithBarcodeModalState
               child: Tooltip(
                 message: 'Translate',
                 child: ElevatedButton(
-                  onPressed: isTranslating
-                      ? null
-                      : () => _translateLanguage(language),
+                  onPressed:
+                      isTranslating ? null : () => _translateLanguage(language),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: ColorManager.kPrimaryColor,
                     padding: EdgeInsets.zero,
@@ -938,6 +987,7 @@ class _AddProductWithBarcodeModalState
         ),
         const SizedBox(height: 4),
         CustomDropDownWithSearch<String>(
+          focusNode: _unitFocusNode,
           title: "",
           hintText: "Choose Product Unit",
           value: selectedUnit,
@@ -995,6 +1045,7 @@ class _AddProductWithBarcodeModalState
         ),
         const SizedBox(height: 4),
         CustomDropDownWithSearch<Category>(
+          focusNode: _categoryFocusNode,
           title: "",
           hintText: "Select Category",
           value: selectedCategory,
@@ -1022,7 +1073,7 @@ class _AddProductWithBarcodeModalState
   }
 
   // Submit form
-  Future<void> _submitForm() async {
+  Future<void> _submitForm({bool keepOpen = false}) async {
     setState(() {
       isValidatedOnce = true;
     });
@@ -1034,7 +1085,11 @@ class _AddProductWithBarcodeModalState
     if (isFormValid && isUnitValid && isCategoryValid) {
       formKey.currentState!.save();
       setState(() {
-        isLoading = true;
+        if (keepOpen) {
+          isSaveAndCreateLoading = true;
+        } else {
+          isLoading = true;
+        }
       });
 
       try {
@@ -1082,15 +1137,22 @@ class _AddProductWithBarcodeModalState
 
           try {
             final returnedProduct = GetProduct.fromJson(result['data']);
-            Navigator.pop(context, {
-              'product': returnedProduct,
-              'initialQuantity': _productQuantityController.text,
-            });
+            if (!keepOpen) {
+              Navigator.pop(context, {
+                'product': returnedProduct,
+                'initialQuantity': _productQuantityController.text,
+              });
+            }
           } catch (_) {
-            Navigator.pop(context, {
-              'product': result['data'],
-              'initialQuantity': _productQuantityController.text,
-            });
+            if (!keepOpen) {
+              Navigator.pop(context, {
+                'product': result['data'],
+                'initialQuantity': _productQuantityController.text,
+              });
+            }
+          }
+          if (keepOpen) {
+            _resetFormFields();
           }
           showScaffold(context: context, message: 'Product added successfully');
         } else {
@@ -1132,7 +1194,11 @@ class _AddProductWithBarcodeModalState
         debugPrint("Error in product creation: $e");
       } finally {
         setState(() {
-          isLoading = false;
+          if (keepOpen) {
+            isSaveAndCreateLoading = false;
+          } else {
+            isLoading = false;
+          }
         });
       }
     } else {
@@ -1141,5 +1207,24 @@ class _AddProductWithBarcodeModalState
         message: 'Please fill all required fields correctly',
       );
     }
+  }
+
+  void _resetFormFields() {
+    _productBarcodeController.clear();
+    _productNameController.clear();
+    _productMRPController.clear();
+    _productQuantityController.text = '0';
+    _productSellingPriceController.clear();
+    _productPurchasePriceController.clear();
+    for (var controller in _languageNameControllers.values) {
+      if (controller != _productNameController) {
+        controller.clear();
+      }
+    }
+    setState(() {
+      selectedUnit = null;
+      selectedCategory = null;
+      isValidatedOnce = false;
+    });
   }
 }

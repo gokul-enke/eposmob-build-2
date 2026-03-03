@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -133,6 +134,7 @@ class StandardPrinter {
     double? customerCurrentBalance,
     required double? paidAmount,
     String? orderComment,
+    String? deliveryMethod,
     String? customerAlternatePhone,
     String? paymentMethod,
     // ZATCA fields for Saudi Arabia e-invoicing
@@ -329,7 +331,7 @@ class StandardPrinter {
       // Determine text direction based on configuration or app language
       final configLanguage = billDocumentConfig.language;
       final isRtl = configLanguage != null
-          ? configLanguage == 'ar'
+          ? configLanguage.toLowerCase() == 'ar'
           : LocalizationService.locale.languageCode == 'ar';
 
       final textDirection = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
@@ -514,7 +516,8 @@ class StandardPrinter {
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: isRtl
                           ? [
-                              if (updatedSettings?['showInvoiceNumber']?.visible ==
+                              if (updatedSettings?['showInvoiceNumber']
+                                      ?.visible ==
                                   true)
                                 pw.Text(
                                     (billDocumentConfig.numberPrefix != null &&
@@ -525,7 +528,8 @@ class StandardPrinter {
                                             ? 'رقم: $orderNumber'
                                             : 'No: $orderNumber'),
                                     style: subheaderStyle),
-                              if (updatedSettings?['showInvoiceTitle']?.visible ==
+                              if (updatedSettings?['showInvoiceTitle']
+                                      ?.visible ==
                                   true)
                                 pw.Text(
                                     (updatedSettings?['showInvoiceTitle']?.value
@@ -534,14 +538,16 @@ class StandardPrinter {
                                             true
                                         ? updatedSettings!['showInvoiceTitle']!
                                             .value as String
-                                        : (billDocumentConfig.header?.isNotEmpty ==
+                                        : (billDocumentConfig
+                                                    .header?.isNotEmpty ==
                                                 true
                                             ? billDocumentConfig.header!
                                             : (isRtl ? 'فاتورة' : 'INVOICE')),
                                     style: subheaderStyle),
                             ]
                           : [
-                              if (updatedSettings?['showInvoiceTitle']?.visible ==
+                              if (updatedSettings?['showInvoiceTitle']
+                                      ?.visible ==
                                   true)
                                 pw.Text(
                                     (updatedSettings?['showInvoiceTitle']?.value
@@ -550,12 +556,14 @@ class StandardPrinter {
                                             true
                                         ? updatedSettings!['showInvoiceTitle']!
                                             .value as String
-                                        : (billDocumentConfig.header?.isNotEmpty ==
+                                        : (billDocumentConfig
+                                                    .header?.isNotEmpty ==
                                                 true
                                             ? billDocumentConfig.header!
                                             : (isRtl ? 'فاتورة' : 'INVOICE')),
                                     style: subheaderStyle),
-                              if (updatedSettings?['showInvoiceNumber']?.visible ==
+                              if (updatedSettings?['showInvoiceNumber']
+                                      ?.visible ==
                                   true)
                                 pw.Text(
                                     (billDocumentConfig.numberPrefix != null &&
@@ -571,7 +579,7 @@ class StandardPrinter {
                     // Token Number - display right after invoice number in big font (same as store name)
                     // Only show if showTokenNumber is explicitly enabled (default: false)
                     if (updatedSettings?['showTokenNumber']?.visible == true &&
-                        tokenNumber != null && 
+                        tokenNumber != null &&
                         tokenNumber.isNotEmpty)
                       pw.Text(
                         tokenNumber,
@@ -694,7 +702,7 @@ class StandardPrinter {
                                 : (isRtl
                                     ? 'المبلغ بالكلمات:'
                                     : 'Amount in words:'),
-                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency)} Only.',
+                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                             summaryStyle,
                             isRtl: isRtl,
                           ),
@@ -779,6 +787,17 @@ class StandardPrinter {
               pw.SizedBox(height: 5),
             ],
 
+            if (deliveryMethod != null && deliveryMethod.isNotEmpty) ...[
+              pw.SizedBox(height: 5),
+              _buildLabelValueRow(
+                isRtl ? 'التوصيل:' : 'Delivery:',
+                deliveryMethod,
+                summaryStyle,
+                isRtl: isRtl,
+              ),
+              pw.SizedBox(height: 5),
+            ],
+
             // Footer section - compact design
             pw.Column(
               children: [
@@ -788,6 +807,7 @@ class StandardPrinter {
                     zatcaVatNumber: zatcaVatNumber,
                     zatcaCompanyName: zatcaCompanyName,
                     orderDate: orderDate,
+                    isFromLocalStorage: isFromLocalStorage,
                     formattedTotal: formattedTotal,
                     totalTax: totalTax,
                     manualPaymentGateway: manualPaymentGateway,
@@ -1535,6 +1555,7 @@ class StandardPrinter {
     required String? zatcaVatNumber,
     required String? zatcaCompanyName,
     required String orderDate,
+    required bool isFromLocalStorage,
     required String formattedTotal,
     required double totalTax,
     required PaymentGateway manualPaymentGateway,
@@ -1554,16 +1575,16 @@ class StandardPrinter {
         zatcaCompanyName.isNotEmpty;
 
     if (hasZatcaCredentials) {
-      debugPrint('[StandardPrinter] ZATCA credentials found, generating ZATCA QR');
+      debugPrint(
+          '[StandardPrinter] ZATCA credentials found, generating ZATCA QR');
 
       // Generate ZATCA Phase 1 compliant QR code
       final zatcaHelper = ZatcaQrHelper();
       final totalAmount = double.tryParse(formattedTotal) ?? 0.0;
-
       qrData = zatcaHelper.generateQrForInvoice(
         sellerName: zatcaCompanyName,
         vatNumber: zatcaVatNumber,
-        invoiceDate: orderDate,
+        invoiceDate: orderDate, // Pass true UTC ISO string
         totalAmount: totalAmount,
         vatAmount: totalTax,
       );
@@ -1588,11 +1609,10 @@ class StandardPrinter {
         }
       }
 
-      qrMessage = (updatedSettings?['showQRCode']?.value as String?)
-                  ?.isNotEmpty ==
-              true
-          ? updatedSettings!['showQRCode']!.value as String
-          : (isRtl ? 'امسح للدفع' : 'Scan to Pay');
+      qrMessage =
+          (updatedSettings?['showQRCode']?.value as String?)?.isNotEmpty == true
+              ? updatedSettings!['showQRCode']!.value as String
+              : (isRtl ? 'امسح للدفع' : 'Scan to Pay');
     }
 
     // Return empty container if no QR data
@@ -1759,13 +1779,11 @@ class StandardPrinter {
     List<pw.Widget> customerDetails = [];
 
     final bool maskPhone = displayConfig?['maskCustomerPhone']?.visible ?? true;
-    final bool shouldShowPhone =
-      customerPhone != null &&
-      customerPhone.isNotEmpty &&
-      !(isDefaultCustomer && hideDefaultCustomerPhone);
+    final bool shouldShowPhone = customerPhone != null &&
+        customerPhone.isNotEmpty &&
+        !(isDefaultCustomer && hideDefaultCustomerPhone);
 
-    if ((customerName != null && customerName.isNotEmpty) &&
-      shouldShowPhone) {
+    if ((customerName != null && customerName.isNotEmpty) && shouldShowPhone) {
       final String displayedPhone = maskPhone
           ? StringHelper.maskStringShowLast4(customerPhone)
           : customerPhone;
@@ -2348,7 +2366,7 @@ class StandardPrinter {
                       ? displayConfig!['showFinalAmountInWords']!.value
                           as String
                       : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                  '${AmountHelper().convertNumberToWords(finalTotal, currency: currency)} Only.',
+                    '${AmountHelper().convertNumberToWords(finalTotal, currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                   summaryStyle,
                   isRtl: isRtl,
                 ),
@@ -2465,6 +2483,7 @@ class StandardPrinter {
     double? customerCurrentBalance,
     double? paidAmount,
     String? orderComment,
+    String? deliveryMethod,
     String? customerAlternatePhone,
     String? paymentMethod,
     bool isDefaultCustomer = false,
@@ -2578,7 +2597,7 @@ class StandardPrinter {
       // Determine text direction based on configuration or app language
       final configLanguage = billDocumentConfig.language;
       final isRtl = configLanguage != null
-          ? configLanguage == 'ar'
+          ? configLanguage.toLowerCase() == 'ar'
           : LocalizationService.locale.languageCode == 'ar';
 
       final textDirection = isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr;
@@ -2948,6 +2967,21 @@ class StandardPrinter {
                   pw.SizedBox(height: 5),
                 ],
 
+                if (deliveryMethod != null && deliveryMethod.isNotEmpty) ...[
+                  pw.SizedBox(height: 5),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 8),
+                    child: _buildLabelValueRow(
+                      isRtl ? 'التوصيل:' : 'Delivery:',
+                      deliveryMethod,
+                      summaryStyle,
+                      isRtl: isRtl,
+                    ),
+                  ),
+                  pw.SizedBox(height: 5),
+                ],
+
                 // Total Summary section - ONLY when there are returns
                 if (orderReturns != null &&
                     (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
@@ -2982,7 +3016,7 @@ class StandardPrinter {
                           ? updatedSettings!['showAmountInWords']!.value
                               as String
                           : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency)} Only.',
+                        '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                       summaryStyle,
                       isRtl: isRtl,
                     ),
@@ -3011,7 +3045,7 @@ class StandardPrinter {
                       arabicFont: arabicFont,
                       arabicFontBold: arabicFontBold,
                     ),
-                ),
+                  ),
 
                 pw.SizedBox(height: 5), // Reduced from 10
 
@@ -3157,7 +3191,17 @@ class StandardPrinter {
     debugPrint("[LOGO_DEBUG] Fetching network logo for PDF from: $fullUrl");
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
+      final uri = Uri.parse(fullUrl);
+      final prefs = await SharedPreferences.getInstance();
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      
+      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+      final urlWithStore = uri.replace(queryParameters: queryParams);
+      
+      final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         debugPrint("[LOGO_DEBUG] Network logo fetched successfully for PDF");
         return pw.MemoryImage(response.bodyBytes);

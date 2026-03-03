@@ -4730,7 +4730,7 @@ class BillingPageState extends State<BillingPage>
                 discountAmount:
                     orderDetails.data!.priceSummary?.discount?.toString() ??
                         "0.00",
-                orderDate: DateHelper.formatInputToDisplay(orderDate),
+                orderDate: orderDate,
                 orderNumber: orderDetails.data!.orderNumber.toString(),
                 tokenNumber: orderDetails.data?.tokenNumber,
                 customerName: customerName,
@@ -4744,6 +4744,8 @@ class BillingPageState extends State<BillingPage>
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
+                deliveryMethod:
+                  orderDetails.data?.deliveryMethodName ?? deliveryMethod,
                 isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                         context,
                         listen: false)
@@ -6335,6 +6337,7 @@ class BillingPageState extends State<BillingPage>
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
+    String? deliveryMethod,
     bool isDefaultCustomer = false,
     String? netExcTax,
   }) async {
@@ -6362,6 +6365,7 @@ class BillingPageState extends State<BillingPage>
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
+      deliveryMethod: deliveryMethod,
       isDefaultCustomer: isDefaultCustomer,
       netExcTax: netExcTax,
     );
@@ -6391,6 +6395,7 @@ class BillingPageState extends State<BillingPage>
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
+            deliveryMethod: deliveryMethod,
             isDefaultCustomer: isDefaultCustomer,
             netExcTax: netExcTax,
           ),
@@ -6470,6 +6475,7 @@ class BillingPageState extends State<BillingPage>
           paymentMethod: savedOrder.paymentMethod,
           customerAlternatePhone: savedOrder.alternatePhone,
           orderComment: savedOrder.comment,
+            deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount:
               (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
                   ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)

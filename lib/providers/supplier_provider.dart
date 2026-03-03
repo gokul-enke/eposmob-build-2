@@ -222,18 +222,24 @@ class SupplierProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // Build URL with search parameter if supplierName is provided
-    String urlString = APPUrl.getSuppliers;
-    if (supplierName != null && supplierName.isNotEmpty) {
-      urlString += '?supplier_name=$supplierName';
-    }
-    final url = Uri.parse(urlString);
+    // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    final Map<String, String> queryParameters = {};
+    if (supplierName != null && supplierName.isNotEmpty) {
+      queryParameters['supplier_name'] = supplierName;
+    }
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.getSuppliers).replace(queryParameters: queryParameters);
+
     try {
       final response = await http.get(
         url,
@@ -287,43 +293,41 @@ class SupplierProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // Build URL with query parameters
-    String urlString = APPUrl.supplierTransactions;
-    List<String> queryParams = [];
-
-    if (supplierName != null && supplierName.isNotEmpty) {
-      queryParams.add('supplier_name=$supplierName');
-    }
-    if (supplierId != null && supplierId.isNotEmpty) {
-      queryParams.add('supplier_id=$supplierId');
-    }
-    if (transactionType != null && transactionType.isNotEmpty) {
-      queryParams.add('transaction_type=$transactionType');
-    }
-    if (fromDate != null && fromDate.isNotEmpty) {
-      queryParams.add('from_date=$fromDate');
-    }
-    if (toDate != null && toDate.isNotEmpty) {
-      queryParams.add('to_date=$toDate');
-    }
-    queryParams.add('list_all=${listAll.toString()}');
-    if (page != null && page > 0) {
-      queryParams.add('page=$page');
-    }
-
-    if (queryParams.isNotEmpty) {
-      urlString += '?${queryParams.join('&')}';
-    }
-
-    final url = Uri.parse(urlString);
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Build URL with query parameters
+    final Map<String, String> queryParameters = {};
+    if (supplierName != null && supplierName.isNotEmpty) {
+      queryParameters['supplier_name'] = supplierName;
+    }
+    if (supplierId != null && supplierId.isNotEmpty) {
+      queryParameters['supplier_id'] = supplierId;
+    }
+    if (transactionType != null && transactionType.isNotEmpty) {
+      queryParameters['transaction_type'] = transactionType;
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParameters['from_date'] = fromDate;
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParameters['to_date'] = toDate;
+    }
+    queryParameters['list_all'] = listAll.toString();
+    if (page != null && page > 0) {
+      queryParameters['page'] = page.toString();
+    }
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+
+    final url = Uri.parse(APPUrl.supplierTransactions).replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(

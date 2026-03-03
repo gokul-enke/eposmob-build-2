@@ -69,6 +69,7 @@ class MasterDataProvider with ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       _error = "API key not found. Please restart the app.";
@@ -78,7 +79,13 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     try {
-      final url = Uri.parse(APPUrl.getPaymentMethods);
+      final baseUri = Uri.parse(APPUrl.getPaymentMethods);
+      final queryParameters =
+          Map<String, String>.from(baseUri.queryParameters);
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = baseUri.replace(queryParameters: queryParameters);
       debugPrint('🔄 Fetching payment methods');
       debugPrint('📡 URL: $url');
 
@@ -142,7 +149,15 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     try {
-      final url = Uri.parse('${APPUrl.getMasterDataValues}?code=$code');
+      final baseUri = Uri.parse('${APPUrl.getMasterDataValues}?code=$code');
+      final queryParams = Map<String, String>.from(baseUri.queryParameters);
+
+      final int? activeStoreId = prefs.getInt('active_store_id');
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+
+      final url = baseUri.replace(queryParameters: queryParams);
       debugPrint('🔄 Fetching master data for code: $code');
       debugPrint('📡 URL: $url');
 

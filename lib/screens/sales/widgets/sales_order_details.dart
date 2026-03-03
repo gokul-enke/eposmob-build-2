@@ -358,10 +358,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   "0.00";
               String storeName =
                   orderDetailsModelData?.cart?.storeName ?? "Store";
-              // Format the date here to ensure it's displayed correctly in the print
-              // The API returns date already in timezone, so we just format it without conversion
-              String rawOrderDate = orderDetailsModelData?.orderDate ?? "";
-              String orderDate = DateHelper.formatInputToDisplay(rawOrderDate);
+                String orderDate = orderDetailsModelData?.orderDate ?? "";
 
               String? customerName = customerDetails?.name;
               String? customerPhone = customerDetails?.phone;
@@ -372,6 +369,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? customerAlternatePhone = customerDetails?.alternatePhone;
               String? paymentMethod =
                   orderDetailsModelData?.paymentDetails?.paymentMethod;
+                String? deliveryMethod =
+                  orderDetailsModelData?.deliveryMethodName;
 
               String? orderComment;
               if (orderDetailsModelData?.orderProps != null) {
@@ -431,6 +430,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 customerAlternatePhone: customerAlternatePhone,
                 paymentMethod: paymentMethod,
                 orderComment: orderComment,
+                deliveryMethod: deliveryMethod,
                 orderReturns: orderDetailsModelData?.orderReturns,
                 paidAmount: paidAmount > 0 ? paidAmount : null,
                 customerCurrentBalance: customerCurrentBalance,
@@ -459,6 +459,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       customerAlternatePhone: customerAlternatePhone,
                       paymentMethod: paymentMethod,
                       orderComment: orderComment,
+                      deliveryMethod: deliveryMethod,
                       orderReturns: orderDetailsModelData?.orderReturns,
                       paidAmount: paidAmount > 0 ? paidAmount : null,
                       customerCurrentBalance: customerCurrentBalance,
@@ -685,6 +686,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       String? customerAlternatePhone = customerDetails?.alternatePhone;
       String? paymentMethod =
           orderDetailsModelData?.paymentDetails?.paymentMethod;
+        String? deliveryMethod = orderDetailsModelData?.deliveryMethodName;
 
       String? orderComment;
       if (orderDetailsModelData?.orderProps != null) {
@@ -731,6 +733,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
       );
 
       Navigator.of(context, rootNavigator: true).pop();

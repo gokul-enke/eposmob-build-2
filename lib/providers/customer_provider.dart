@@ -234,9 +234,15 @@ class CustomerProvider extends ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    // Add store_id to query parameters
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
     }
 
     final url = Uri.parse(APPUrl.customerListUrl)
@@ -555,11 +561,16 @@ class CustomerProvider extends ChangeNotifier {
 
   Future<dynamic> findCustomerByPhone(
       String accessToken, String phoneNumber, BuildContext context) async {
-    final url =
-        Uri.parse('${APPUrl.customerListUrl}?filter_phone=$phoneNumber');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    
+    final Map<String, String> queryParameters = {'filter_phone': phoneNumber};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.customerListUrl).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -596,12 +607,16 @@ class CustomerProvider extends ChangeNotifier {
 
   Future<dynamic> findCustomerByName(
       String accessToken, String customerName, BuildContext context) async {
-    final url =
-        Uri.parse('${APPUrl.customerListUrl}?filter_name=$customerName');
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    
+    final Map<String, String> queryParameters = {'filter_name': customerName};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.customerListUrl).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -639,12 +654,16 @@ class CustomerProvider extends ChangeNotifier {
   Future<dynamic> fetchUserById(
       String accessToken, int userId, BuildContext context) async {
     debugPrint("fetchUserById API called for user ID: $userId");
-    final url = Uri.parse('${APPUrl.userDetailsUrl}/$userId');
-    debugPrint("fetchUserById URL: ${url.toString()}");
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    
+    final Map<String, String> queryParameters = {};
+    if (activeStoreId != null) {
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse('${APPUrl.userDetailsUrl}/$userId').replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");

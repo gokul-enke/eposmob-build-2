@@ -253,7 +253,7 @@ class LocalProductProvider extends ChangeNotifier {
   // Add pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
-  int _itemsPerPage = 10;
+  int _itemsPerPage = 20;
 
   // Getters for pagination
   int get currentPage => _currentPage;
@@ -806,9 +806,12 @@ class LocalProductProvider extends ChangeNotifier {
     int currentPage = 1;
     const int batchSize = 10; // Fetch 10 pages concurrently
     final prefsProvider = prefs_provider.SharedPreferenceProvider();
-    final lastSyncIso = refresh ? null : await prefsProvider.getLastProductSyncIso();
+    final lastSyncIso =
+        refresh ? null : await prefsProvider.getLastProductSyncIso();
     final syncEndIso = DateHelper.now().toUtc().toIso8601String();
-    final useDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
+    final requestedDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
+    final hasLocalBaseline = _products.isNotEmpty;
+    final useDelta = requestedDelta && hasLocalBaseline;
     int successResponses = 0;
 
     isLoading = true;
@@ -821,14 +824,24 @@ class LocalProductProvider extends ChangeNotifier {
       if (useDelta) {
         debugPrint(
             "🕒 [API] Delta sync enabled: updated_at_range=$lastSyncIso,$syncEndIso");
+      } else if (requestedDelta && !hasLocalBaseline) {
+        debugPrint(
+            "♻️ [API] Delta sync marker exists but local product baseline is empty. Switching to full product sync.");
       }
 
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
+      String? accessToken = prefs.getString('access_token');
+      final int? activeStoreId = prefs.getInt('active_store_id');
 
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
+      }
+
+      if (accessToken == null || accessToken.isEmpty) {
+        throw const HttpException(
+            "Access token not found. Please login again.");
       }
 
       bool hasMorePages = true;
@@ -846,6 +859,9 @@ class LocalProductProvider extends ChangeNotifier {
         final futures = <Future<http.Response>>[];
         for (int page = batchStartPage; page <= batchEndPage; page++) {
           final queryParams = <String, String>{'page': page.toString()};
+          if (activeStoreId != null) {
+            queryParams['store_id'] = activeStoreId.toString();
+          }
           if (useDelta) {
             queryParams['updated_at_range'] = "$lastSyncIso,$syncEndIso";
           }
@@ -864,6 +880,7 @@ class LocalProductProvider extends ChangeNotifier {
 
           futures.add(http.get(url, headers: {
             'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
             'X-Tenant': apiKey,
           }));
         }
@@ -913,6 +930,11 @@ class LocalProductProvider extends ChangeNotifier {
           } else {
             debugPrint(
                 '❌ [API] Page $pageNum failed: Status ${response.statusCode}');
+
+            if (response.statusCode == 401 || response.statusCode == 403) {
+              throw const HttpException("Unauthorized. Please login again.");
+            }
+
             emptyPageCount++;
           }
         }
@@ -1000,6 +1022,11 @@ class LocalProductProvider extends ChangeNotifier {
       startIndex,
       endIndex > _filteredProducts.length ? _filteredProducts.length : endIndex,
     );
+  }
+
+  /// Gets the starting serial number (from) for the current page
+  int get paginationFrom {
+    return ((_currentPage - 1) * _itemsPerPage) + 1;
   }
 
   /// Sets the current page
@@ -1870,8 +1897,8 @@ class LocalProductProvider extends ChangeNotifier {
   List<GetProduct> filterProductByBarcode({required String barCode}) {
     final normalizedBarcode = _normalizeBarcode(barCode);
     debugPrint("filterProductByBarcode $normalizedBarcode");
-    final filteredProducts =
-      List<GetProduct>.from(_productsByBarcode[normalizedBarcode] ?? const []);
+    final filteredProducts = List<GetProduct>.from(
+        _productsByBarcode[normalizedBarcode] ?? const []);
 
     // Check if any product was found before accessing .first
     if (filteredProducts.isNotEmpty) {

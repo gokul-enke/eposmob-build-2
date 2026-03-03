@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dropdown_with_search.dart';
+
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_store.dart';
@@ -165,26 +165,7 @@ class MobileFilters extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
-              child: _buildFilterField(
-                label: "Store",
-                child: BuildDropDownWithSearch<GetStoreModelData>(
-                  title: null,
-                  showName: false,
-                  hintText: 'Select Store',
-                  value: storeSelected,
-                  items: [
-                    GetStoreModelData(id: 0, name: 'All Stores'),
-                    ...storeList
-                  ],
-                  onChanged: onStoreChanged,
-                  displayText: (store) => store.name ?? 'Unknown Store',
-                  searchController: storeSearchController,
-                  height: 45,
-                  margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                ),
-              ),
-            ),
+            const Spacer(),
           ],
         ),
         const SizedBox(height: 12),

@@ -24,13 +24,23 @@ class GeneralSettingsProvider with ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    // Build URL with store_id parameter
+    final Map<String, String> queryParams = {};
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
+    final url = Uri.parse(APPUrl.getGeneralSettings)
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
       final response =
-          await http.get(Uri.parse(APPUrl.getGeneralSettings), headers: {
+          await http.get(url, headers: {
         'X-Tenant': apiKey,
       });
 

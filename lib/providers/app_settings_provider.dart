@@ -26,14 +26,22 @@ class AppSettingsProvider extends ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
     try {
+      final Map<String, String> queryParameters = {};
+      if (activeStoreId != null) {
+        queryParameters['store_id'] = activeStoreId.toString();
+      }
+      final url = Uri.parse(APPUrl.getAppSettings)
+          .replace(queryParameters: queryParameters);
+
       final response =
-          await http.get(Uri.parse(APPUrl.getAppSettings), headers: {
+          await http.get(url, headers: {
         'X-Tenant': apiKey,
       });
 

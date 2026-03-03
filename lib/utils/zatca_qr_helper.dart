@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:convert/convert.dart';
+import 'package:intl/intl.dart';
 
 /// ZATCA Phase 1 QR Code Helper
 ///
@@ -105,15 +106,19 @@ class ZatcaQrHelper {
 
   /// Format DateTime to ZATCA-compliant ISO 8601 format
   ///
-  /// Format: "YYYY-MM-DDTHH:MM:SSZ" (UTC)
+  /// Format: "YYYY-MM-DDTHH:MM:SS+03:00" (Explicit Saudi local time offset)
   String _formatTimestamp(DateTime dateTime) {
-    final utc = dateTime.toUtc();
-    return '${utc.year.toString().padLeft(4, '0')}-'
-        '${utc.month.toString().padLeft(2, '0')}-'
-        '${utc.day.toString().padLeft(2, '0')}T'
-        '${utc.hour.toString().padLeft(2, '0')}:'
-        '${utc.minute.toString().padLeft(2, '0')}:'
-        '${utc.second.toString().padLeft(2, '0')}Z';
+    // We explicitly append +03:00 (Saudi Arabia offset) because devices generating
+    // the QR code might be in different timezones (e.g. India +05:30).
+    // If we used .toUtc(), an Indian device parsing "20:37" would subtract 5.5 hours.
+    // By appending +03:00, we force validation apps to understand this is exactly
+    // the KSA timezone time matching the printed receipt.
+    return '${dateTime.year.toString().padLeft(4, '0')}-'
+        '${dateTime.month.toString().padLeft(2, '0')}-'
+        '${dateTime.day.toString().padLeft(2, '0')}T'
+        '${dateTime.hour.toString().padLeft(2, '0')}:'
+        '${dateTime.minute.toString().padLeft(2, '0')}:'
+        '${dateTime.second.toString().padLeft(2, '0')}Z';
   }
 
   /// Parse a ZATCA QR code data (for debugging/verification)
@@ -187,6 +192,33 @@ class ZatcaQrHelper {
   /// Generate QR code data from invoice details with validation
   ///
   /// Returns empty string if ZATCA credentials are not available or invalid
+  DateTime? _parseInvoiceTimestamp(String invoiceDate) {
+    final raw = invoiceDate.trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {}
+
+    final fallbackFormats = <String>[
+      'dd-MM-yyyy hh:mm:ss a',
+      'dd-MM-yyyy hh:mm a',
+      'dd-MM-yyyy HH:mm:ss',
+      'dd-MM-yyyy HH:mm',
+      'dd-MM-yyyy',
+    ];
+
+    for (final format in fallbackFormats) {
+      try {
+        return DateFormat(format).parse(raw);
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
   String generateQrForInvoice({
     required String? sellerName,
     required String? vatNumber,
@@ -205,13 +237,11 @@ class ZatcaQrHelper {
       return '';
     }
 
-    // Parse invoice date
-    DateTime timestamp;
-    try {
-      timestamp = DateTime.parse(invoiceDate);
-    } catch (e) {
-      debugPrint('[ZatcaQrHelper] Invalid date format, using current time');
-      timestamp = DateTime.now();
+    final parsedTimestamp = _parseInvoiceTimestamp(invoiceDate);
+    final timestamp = parsedTimestamp ?? DateTime.now();
+    if (parsedTimestamp == null) {
+      debugPrint(
+          '[ZatcaQrHelper] Invalid invoice date "$invoiceDate", using current time');
     }
 
     return generateZatcaQrData(

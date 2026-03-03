@@ -12,7 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_dropdown_with_search.dart';
+
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -22,6 +22,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
@@ -45,6 +46,7 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/mobile_order_card.dart';
 import 'widgets/mobile_filters.dart';
+import 'widgets/cancel_order_modal.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -304,6 +306,7 @@ class _SalesScreenState extends State<SalesScreen> {
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
       String? paymentMethod = orderData.paymentDetails?.paymentMethod;
+      String? deliveryMethod = orderData.deliveryMethodName;
 
       String? orderComment;
       if (orderData.orderProps != null) {
@@ -346,6 +349,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
       );
 
       // Close loading dialog
@@ -739,6 +743,7 @@ class _SalesScreenState extends State<SalesScreen> {
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
       String? paymentMethod = orderData.paymentDetails?.paymentMethod;
+      String? deliveryMethod = orderData.deliveryMethodName;
 
       String? orderComment;
       if (orderData.orderProps != null) {
@@ -779,6 +784,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
       );
 
       if (pdfFile == null) {
@@ -1074,6 +1080,10 @@ Powered by CloudPOS''',
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
 
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      final activeStoreId = storeSession.activeStore?.storeId?.toString();
+
       debugPrint(
           'Access Token Available: ${accessToken != null ? "Yes" : "No"}');
       debugPrint('Access Token Length: ${accessToken?.length ?? 0}');
@@ -1081,10 +1091,10 @@ Powered by CloudPOS''',
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
-      debugPrint('Calling fetchOrders with storeId: 1');
+      debugPrint('Calling fetchOrders with storeId: $activeStoreId');
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
-        storeId: 1,
+        filterStore: activeStoreId,
       );
       debugPrint('fetchOrders completed successfully');
     } catch (error, stackTrace) {
@@ -1113,6 +1123,10 @@ Powered by CloudPOS''',
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      final activeStoreId = storeSession.activeStore?.storeId?.toString();
+
       // Prepare filters
       final filters = {
         if (orderNumberController.text.isNotEmpty)
@@ -1127,8 +1141,7 @@ Powered by CloudPOS''',
           'filterPhone': phoneController.text.trim(),
         if (selectedDate != null)
           'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
-        if (storeController.text.isNotEmpty)
-          'filterStore': storeController.text.trim(),
+        if (activeStoreId != null) 'filterStore': activeStoreId,
         if (selectedStatus != null && selectedStatus != 'all')
           'filterStatus': selectedStatus!.trim(), // Add status filter
         'page': page.toString(),
@@ -1319,7 +1332,8 @@ Powered by CloudPOS''',
                 String formattedTotal = orderDetails
                         .data?.cart?.priceSummary?.netPayable
                         ?.toString() ??
-                    orderDetails.data?.cart?.priceSummary?.netTotal.toString() ??
+                    orderDetails.data?.cart?.priceSummary?.netTotal
+                        .toString() ??
                     "0.00";
                 String? savedTotal = orderDetails
                     .data?.cart?.priceSummary?.savedTotal
@@ -1342,128 +1356,138 @@ Powered by CloudPOS''',
                     orderDetails.data?.customerDetails?.alternatePhone;
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
+                String? deliveryMethod = orderDetails.data?.deliveryMethodName;
 
-              String? orderComment;
-              if (orderDetails.data?.orderProps != null) {
-                try {
-                  final commentProp =
-                      orderDetails.data!.orderProps!.firstWhere(
-                    (prop) => prop.propsCode == "COMMENT",
-                    orElse: () => OrderDetailsModelDataOrderProp(),
-                  );
-                  orderComment = commentProp.propsValue;
-                } catch (e) {
-                  debugPrint("Error extracting order comment: $e");
-                }
-              }
-
-              // Calculate Paid Amount and Payment Breakdown
-              double paidAmount = 0.0;
-              Map<String, dynamic> paymentBreakdown = {};
-              
-              if (orderDetails.data?.payments != null) {
-                // If payments map is available, use it directly
-                orderDetails.data!.payments!.forEach((key, value) {
-                  double amount = double.tryParse(value.toString()) ?? 0.0;
-                  paidAmount += amount;
-                  if (amount > 0) {
-                    paymentBreakdown[key] = amount;
-                  }
-                });
-              } else if (orderDetails.data?.paymentStatus?.toLowerCase() == 'paid') {
-                // Fallback: If paid but no breakdown, assume full amount paid via paymentMethod
-                paidAmount = double.tryParse(formattedTotal) ?? 0.0;
-                
-                if (paymentMethod != null && paymentMethod.isNotEmpty) {
-                  // If multiple methods (comma separated), we can't split amount accurately
-                  // so we just list them. But for PrintPage we need a map.
-                  // If it's a single method, assign full amount.
-                  if (!paymentMethod.contains(',')) {
-                    paymentBreakdown[paymentMethod] = paidAmount;
-                  } else {
-                    // Multiple methods but no breakdown amounts available.
-                    // We can't populate paymentBreakdown accurately.
-                    // The PrintPage will fall back to displaying paymentMethod string.
+                String? orderComment;
+                if (orderDetails.data?.orderProps != null) {
+                  try {
+                    final commentProp =
+                        orderDetails.data!.orderProps!.firstWhere(
+                      (prop) => prop.propsCode == "COMMENT",
+                      orElse: () => OrderDetailsModelDataOrderProp(),
+                    );
+                    orderComment = commentProp.propsValue;
+                  } catch (e) {
+                    debugPrint("Error extracting order comment: $e");
                   }
                 }
-              }
 
-              // Calculate Balance from orderProps
-              double? customerCurrentBalance;
-              if (orderDetails.data?.orderProps != null) {
-                try {
-                  final balanceProp =
-                      orderDetails.data!.orderProps!.firstWhere(
-                    (prop) => prop.propsCode == "BALANCE",
-                    orElse: () => OrderDetailsModelDataOrderProp(),
-                  );
-                  if (balanceProp.propsValue != null) {
-                    customerCurrentBalance =
-                        double.tryParse(balanceProp.propsValue.toString());
+                // Calculate Paid Amount and Payment Breakdown
+                double paidAmount = 0.0;
+                Map<String, dynamic> paymentBreakdown = {};
+
+                if (orderDetails.data?.payments != null) {
+                  // If payments map is available, use it directly
+                  orderDetails.data!.payments!.forEach((key, value) {
+                    double amount = double.tryParse(value.toString()) ?? 0.0;
+                    paidAmount += amount;
+                    if (amount > 0) {
+                      paymentBreakdown[key] = amount;
+                    }
+                  });
+                } else if (orderDetails.data?.paymentStatus?.toLowerCase() ==
+                    'paid') {
+                  // Fallback: If paid but no breakdown, assume full amount paid via paymentMethod
+                  paidAmount = double.tryParse(formattedTotal) ?? 0.0;
+
+                  if (paymentMethod != null && paymentMethod.isNotEmpty) {
+                    // If multiple methods (comma separated), we can't split amount accurately
+                    // so we just list them. But for PrintPage we need a map.
+                    // If it's a single method, assign full amount.
+                    if (!paymentMethod.contains(',')) {
+                      paymentBreakdown[paymentMethod] = paidAmount;
+                    } else {
+                      // Multiple methods but no breakdown amounts available.
+                      // We can't populate paymentBreakdown accurately.
+                      // The PrintPage will fall back to displaying paymentMethod string.
+                    }
                   }
-                } catch (e) {
-                  debugPrint("Error extracting balance: $e");
                 }
-              }
 
-              // Try auto-print with default printer first
-              final autoPrintSuccess = await PrintPage.autoPrint(
-                context,
-                storeName: storeName,
-                cartItems: orderDetails.data?.cart?.cartItems ?? [],
-                formattedTotal: formattedTotal,
-                savedTotal: savedTotal,
-                discountAmount: discountAmount,
-                orderDate: orderDate,
-                orderNumber: orderDetails.data!.orderNumber.toString(),
-                tokenNumber: orderDetails.data?.tokenNumber,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                customerEmail: customerEmail,
-                customerAddress: customerAddress,
-                customerAlternatePhone: customerAlternatePhone,
-                paymentMethod: paymentMethod,
-                paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
-                orderComment: orderComment,
-                orderReturns: orderDetails.data?.orderReturns,
-                paidAmount: paidAmount > 0 ? paidAmount : null,
-                customerCurrentBalance: customerCurrentBalance,
-                isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-              );
+                // Calculate Balance from orderProps
+                double? customerCurrentBalance;
+                if (orderDetails.data?.orderProps != null) {
+                  try {
+                    final balanceProp =
+                        orderDetails.data!.orderProps!.firstWhere(
+                      (prop) => prop.propsCode == "BALANCE",
+                      orElse: () => OrderDetailsModelDataOrderProp(),
+                    );
+                    if (balanceProp.propsValue != null) {
+                      customerCurrentBalance =
+                          double.tryParse(balanceProp.propsValue.toString());
+                    }
+                  } catch (e) {
+                    debugPrint("Error extracting balance: $e");
+                  }
+                }
 
-              // Only show print page if auto-print failed
-              if (!autoPrintSuccess && mounted) {
-                Navigator.push(
+                // Try auto-print with default printer first
+                final autoPrintSuccess = await PrintPage.autoPrint(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => PrintPage(
-                      storeName: storeName,
-                      cartItems: orderDetails.data?.cart?.cartItems ?? [],
-                      formattedTotal: formattedTotal,
-                      savedTotal: savedTotal,
-                      discountAmount: discountAmount,
-                      orderDate: orderDate,
-                      orderNumber: orderDetails.data!.orderNumber.toString(),
-                      tokenNumber: orderDetails.data?.tokenNumber,
-                      customerName: customerName,
-                      customerPhone: customerPhone,
-                      customerEmail: customerEmail,
-                      customerAddress: customerAddress,
-                      customerAlternatePhone: customerAlternatePhone,
-                      paymentMethod: paymentMethod,
-                      paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
-                      orderComment: orderComment,
-                      orderReturns: orderDetails.data?.orderReturns,
-                      paidAmount: paidAmount > 0 ? paidAmount : null,
-                      customerCurrentBalance: customerCurrentBalance,
-                      isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                      netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-                    ),
-                  ),
+                  storeName: storeName,
+                  cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                  formattedTotal: formattedTotal,
+                  savedTotal: savedTotal,
+                  discountAmount: discountAmount,
+                  orderDate: orderDate,
+                  orderNumber: orderDetails.data!.orderNumber.toString(),
+                  tokenNumber: orderDetails.data?.tokenNumber,
+                  customerName: customerName,
+                  customerPhone: customerPhone,
+                  customerEmail: customerEmail,
+                  customerAddress: customerAddress,
+                  customerAlternatePhone: customerAlternatePhone,
+                  paymentMethod: paymentMethod,
+                  paymentBreakdown:
+                      paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+                  orderComment: orderComment,
+                  deliveryMethod: deliveryMethod,
+                  orderReturns: orderDetails.data?.orderReturns,
+                  paidAmount: paidAmount > 0 ? paidAmount : null,
+                  customerCurrentBalance: customerCurrentBalance,
+                  isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                  netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
+                      ?.toString(),
                 );
-              }
 
+                // Only show print page if auto-print failed
+                if (!autoPrintSuccess && mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PrintPage(
+                        storeName: storeName,
+                        cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                        formattedTotal: formattedTotal,
+                        savedTotal: savedTotal,
+                        discountAmount: discountAmount,
+                        orderDate: orderDate,
+                        orderNumber: orderDetails.data!.orderNumber.toString(),
+                        tokenNumber: orderDetails.data?.tokenNumber,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        customerEmail: customerEmail,
+                        customerAddress: customerAddress,
+                        customerAlternatePhone: customerAlternatePhone,
+                        paymentMethod: paymentMethod,
+                        paymentBreakdown: paymentBreakdown.isNotEmpty
+                            ? paymentBreakdown
+                            : null,
+                        orderComment: orderComment,
+                        deliveryMethod: deliveryMethod,
+                        orderReturns: orderDetails.data?.orderReturns,
+                        paidAmount: paidAmount > 0 ? paidAmount : null,
+                        customerCurrentBalance: customerCurrentBalance,
+                        isDefaultCustomer:
+                            _isDefaultCustomerPhone(customerPhone),
+                        netExcTax: orderDetails
+                            .data?.cart!.priceSummary?.netExcTax
+                            ?.toString(),
+                      ),
+                    ),
+                  );
+                }
               }
             } catch (error) {
               debugPrint(error.toString());
@@ -1810,6 +1834,60 @@ Powered by CloudPOS''',
                             }
                           },
                         ),
+                        ListTile(
+                          leading: const CircleAvatar(
+                            radius: 18,
+                            backgroundColor:
+                                Color(0x1AE53E3E), // ~10% opacity red
+                            child: Icon(Icons.cancel_outlined,
+                                color: Color(0xFFE53E3E)),
+                          ),
+                          title: const Text('Cancel Order'),
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            if (!context.mounted) return;
+                            showDialog(
+                              context: context,
+                              builder: (dialogCtx) => CancelOrderModal(
+                                onConfirm: (paymentMethodId) async {
+                                  try {
+                                    final authModel = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false);
+                                    final salesProvider =
+                                        Provider.of<SalesProvider>(context,
+                                            listen: false);
+
+                                    await salesProvider.cancelOrder(
+                                      accessToken: authModel.token ?? "",
+                                      orderId: order.id.toString(),
+                                      paymentMethod: paymentMethodId,
+                                    );
+
+                                    if (context.mounted) {
+                                      showScaffold(
+                                        context: context,
+                                        message: "Order cancelled successfully",
+                                      );
+                                      // Refresh orders
+                                      salesProvider.fetchOrders(
+                                        accessToken: authModel.token ?? "",
+                                        page: salesProvider.currentPage,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message: "Failed to cancel order: $e",
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
                         // ListTile(
                         //   leading: const CircleAvatar(
                         //     radius: 18,
@@ -1903,7 +1981,7 @@ Powered by CloudPOS''',
             ),
             child: Table(
               columnWidths: const {
-                0: FixedColumnWidth(1), // SI No
+                0: FixedColumnWidth(60), // SI No
                 1: FlexColumnWidth(2), // Order #
                 2: FlexColumnWidth(3), // Customer
                 3: FlexColumnWidth(2), // Date
@@ -1947,7 +2025,7 @@ Powered by CloudPOS''',
                   scrollDirection: Axis.vertical,
                   child: Table(
                     columnWidths: const {
-                      0: FixedColumnWidth(1), // SI No
+                      0: FixedColumnWidth(60), // SI No
                       1: FlexColumnWidth(2), // Order #
                       2: FlexColumnWidth(3), // Customer
                       3: FlexColumnWidth(2), // Date
@@ -1964,7 +2042,10 @@ Powered by CloudPOS''',
                         ListOrderModelData order = entry.value;
                         PriceSummary priceSummary =
                             order.priceSummary ?? PriceSummary();
-
+                        
+                        // Calculate serial number based on pagination
+                        int serialNumber = provider.paginationFrom + index;
+                        
                         return TableRow(
                           decoration: BoxDecoration(
                             color: index % 2 == 0
@@ -1974,7 +2055,7 @@ Powered by CloudPOS''',
                           children: [
                             SizedBox(
                               height: 55, // Set your desired row height here
-                              child: _buildTableCell("${index + 1}"),
+                              child: _buildTableCell("$serialNumber"),
                             ),
                             SizedBox(
                               height: 55,
@@ -2398,74 +2479,6 @@ Powered by CloudPOS''',
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 15),
-
-                                  // Store
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Store",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        BuildDropDownWithSearch<
-                                            GetStoreModelData>(
-                                          title:
-                                              null, // Remove title since we're handling it manually
-                                          showName:
-                                              false, // Don't show the built-in title
-                                          hintText: 'Select Store',
-                                          value: storeSelected,
-                                          items: [
-                                            GetStoreModelData(
-                                                id: 0,
-                                                name:
-                                                    'All Stores'), // Add "All Stores" option
-                                            ...storeList!
-                                          ],
-                                          onChanged: (GetStoreModelData?
-                                              storeModelData) {
-                                            setState(() {
-                                              if (storeModelData?.id == 0) {
-                                                // Handle "All Stores" selection
-                                                storeSelected = null;
-                                                storeController.clear();
-                                              } else {
-                                                storeSelected = storeModelData;
-                                                if (storeModelData != null) {
-                                                  storeController.text =
-                                                      storeModelData.id
-                                                          .toString();
-                                                } else {
-                                                  storeController.clear();
-                                                }
-                                              }
-                                            });
-                                            searchOrders(1);
-                                          },
-                                          displayText: (store) =>
-                                              store.name ?? 'Unknown Store',
-                                          searchController:
-                                              storeSearchController,
-                                          height: 45,
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 0, vertical: 0),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-// Add this in your filter section (after the Store filter or wherever you prefer)
                                   const SizedBox(width: 15),
 
 // Status Filter
