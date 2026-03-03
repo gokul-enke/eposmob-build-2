@@ -62,6 +62,7 @@ class APPUrl {
   static String logoutUrl = '$baseURL/api/v1/user/signout';
   static String dashBoardUrl = '$baseURL/api/v1/dashboard';
   static String dashBoardGraphUrl = '$baseURL/api/v1/dashboard/orders';
+  static String salesStatsUrl = '$baseURL/api/v1/dashboard/sales-stats';
   static String addCustomerUrl = '$baseURL/api/v1/customer/add-customer';
   static String updateCustomerUrl = '$baseURL/api/v1/customer/customer-edit';
   // static String customerListUrl = '$baseURL/api/v1/sales/list-customer';
@@ -199,12 +200,13 @@ class APPUrl {
   static String getCompanyaccounts =
       '$baseURL/api/v1/accounts/company-accounts';
 
-  static String companyOverview = '$baseURL/api/v1/dashboard/company-overview';
   static String ordersGraph = '$baseURL/api/v1/dashboard/orders-graph';
   static String customersGraph = '$baseURL/api/v1/dashboard/customers-graph';
   static String executivesOverview =
       '$baseURL/api/v1/dashboard/executives-overview';
   static String salesGraph = '$baseURL/api/v1/dashboard/executive-sales-graph';
+  static String customerStats = '$baseURL/api/v1/dashboard/customer-stats';
+  static String productsStats = '$baseURL/api/v1/dashboard/products-stats';
 
   // ZATCA endpoints
   static String zatcaPhase1InvoicePrint =

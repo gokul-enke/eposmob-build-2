@@ -1319,7 +1319,8 @@ Powered by CloudPOS''',
                 String formattedTotal = orderDetails
                         .data?.cart?.priceSummary?.netPayable
                         ?.toString() ??
-                    orderDetails.data?.cart?.priceSummary?.netTotal.toString() ??
+                    orderDetails.data?.cart?.priceSummary?.netTotal
+                        .toString() ??
                     "0.00";
                 String? savedTotal = orderDetails
                     .data?.cart?.priceSummary?.savedTotal
@@ -1343,127 +1344,134 @@ Powered by CloudPOS''',
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
 
-              String? orderComment;
-              if (orderDetails.data?.orderProps != null) {
-                try {
-                  final commentProp =
-                      orderDetails.data!.orderProps!.firstWhere(
-                    (prop) => prop.propsCode == "COMMENT",
-                    orElse: () => OrderDetailsModelDataOrderProp(),
-                  );
-                  orderComment = commentProp.propsValue;
-                } catch (e) {
-                  debugPrint("Error extracting order comment: $e");
-                }
-              }
-
-              // Calculate Paid Amount and Payment Breakdown
-              double paidAmount = 0.0;
-              Map<String, dynamic> paymentBreakdown = {};
-              
-              if (orderDetails.data?.payments != null) {
-                // If payments map is available, use it directly
-                orderDetails.data!.payments!.forEach((key, value) {
-                  double amount = double.tryParse(value.toString()) ?? 0.0;
-                  paidAmount += amount;
-                  if (amount > 0) {
-                    paymentBreakdown[key] = amount;
-                  }
-                });
-              } else if (orderDetails.data?.paymentStatus?.toLowerCase() == 'paid') {
-                // Fallback: If paid but no breakdown, assume full amount paid via paymentMethod
-                paidAmount = double.tryParse(formattedTotal) ?? 0.0;
-                
-                if (paymentMethod != null && paymentMethod.isNotEmpty) {
-                  // If multiple methods (comma separated), we can't split amount accurately
-                  // so we just list them. But for PrintPage we need a map.
-                  // If it's a single method, assign full amount.
-                  if (!paymentMethod.contains(',')) {
-                    paymentBreakdown[paymentMethod] = paidAmount;
-                  } else {
-                    // Multiple methods but no breakdown amounts available.
-                    // We can't populate paymentBreakdown accurately.
-                    // The PrintPage will fall back to displaying paymentMethod string.
+                String? orderComment;
+                if (orderDetails.data?.orderProps != null) {
+                  try {
+                    final commentProp =
+                        orderDetails.data!.orderProps!.firstWhere(
+                      (prop) => prop.propsCode == "COMMENT",
+                      orElse: () => OrderDetailsModelDataOrderProp(),
+                    );
+                    orderComment = commentProp.propsValue;
+                  } catch (e) {
+                    debugPrint("Error extracting order comment: $e");
                   }
                 }
-              }
 
-              // Calculate Balance from orderProps
-              double? customerCurrentBalance;
-              if (orderDetails.data?.orderProps != null) {
-                try {
-                  final balanceProp =
-                      orderDetails.data!.orderProps!.firstWhere(
-                    (prop) => prop.propsCode == "BALANCE",
-                    orElse: () => OrderDetailsModelDataOrderProp(),
-                  );
-                  if (balanceProp.propsValue != null) {
-                    customerCurrentBalance =
-                        double.tryParse(balanceProp.propsValue.toString());
+                // Calculate Paid Amount and Payment Breakdown
+                double paidAmount = 0.0;
+                Map<String, dynamic> paymentBreakdown = {};
+
+                if (orderDetails.data?.payments != null) {
+                  // If payments map is available, use it directly
+                  orderDetails.data!.payments!.forEach((key, value) {
+                    double amount = double.tryParse(value.toString()) ?? 0.0;
+                    paidAmount += amount;
+                    if (amount > 0) {
+                      paymentBreakdown[key] = amount;
+                    }
+                  });
+                } else if (orderDetails.data?.paymentStatus?.toLowerCase() ==
+                    'paid') {
+                  // Fallback: If paid but no breakdown, assume full amount paid via paymentMethod
+                  paidAmount = double.tryParse(formattedTotal) ?? 0.0;
+
+                  if (paymentMethod != null && paymentMethod.isNotEmpty) {
+                    // If multiple methods (comma separated), we can't split amount accurately
+                    // so we just list them. But for PrintPage we need a map.
+                    // If it's a single method, assign full amount.
+                    if (!paymentMethod.contains(',')) {
+                      paymentBreakdown[paymentMethod] = paidAmount;
+                    } else {
+                      // Multiple methods but no breakdown amounts available.
+                      // We can't populate paymentBreakdown accurately.
+                      // The PrintPage will fall back to displaying paymentMethod string.
+                    }
                   }
-                } catch (e) {
-                  debugPrint("Error extracting balance: $e");
                 }
-              }
 
-              // Try auto-print with default printer first
-              final autoPrintSuccess = await PrintPage.autoPrint(
-                context,
-                storeName: storeName,
-                cartItems: orderDetails.data?.cart?.cartItems ?? [],
-                formattedTotal: formattedTotal,
-                savedTotal: savedTotal,
-                discountAmount: discountAmount,
-                orderDate: orderDate,
-                orderNumber: orderDetails.data!.orderNumber.toString(),
-                tokenNumber: orderDetails.data?.tokenNumber,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                customerEmail: customerEmail,
-                customerAddress: customerAddress,
-                customerAlternatePhone: customerAlternatePhone,
-                paymentMethod: paymentMethod,
-                paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
-                orderComment: orderComment,
-                orderReturns: orderDetails.data?.orderReturns,
-                paidAmount: paidAmount > 0 ? paidAmount : null,
-                customerCurrentBalance: customerCurrentBalance,
-                isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-              );
+                // Calculate Balance from orderProps
+                double? customerCurrentBalance;
+                if (orderDetails.data?.orderProps != null) {
+                  try {
+                    final balanceProp =
+                        orderDetails.data!.orderProps!.firstWhere(
+                      (prop) => prop.propsCode == "BALANCE",
+                      orElse: () => OrderDetailsModelDataOrderProp(),
+                    );
+                    if (balanceProp.propsValue != null) {
+                      customerCurrentBalance =
+                          double.tryParse(balanceProp.propsValue.toString());
+                    }
+                  } catch (e) {
+                    debugPrint("Error extracting balance: $e");
+                  }
+                }
 
-              // Only show print page if auto-print failed
-              if (!autoPrintSuccess && mounted) {
-                Navigator.push(
+                // Try auto-print with default printer first
+                final autoPrintSuccess = await PrintPage.autoPrint(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => PrintPage(
-                      storeName: storeName,
-                      cartItems: orderDetails.data?.cart?.cartItems ?? [],
-                      formattedTotal: formattedTotal,
-                      savedTotal: savedTotal,
-                      discountAmount: discountAmount,
-                      orderDate: orderDate,
-                      orderNumber: orderDetails.data!.orderNumber.toString(),
-                      tokenNumber: orderDetails.data?.tokenNumber,
-                      customerName: customerName,
-                      customerPhone: customerPhone,
-                      customerEmail: customerEmail,
-                      customerAddress: customerAddress,
-                      customerAlternatePhone: customerAlternatePhone,
-                      paymentMethod: paymentMethod,
-                      paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
-                      orderComment: orderComment,
-                      orderReturns: orderDetails.data?.orderReturns,
-                      paidAmount: paidAmount > 0 ? paidAmount : null,
-                      customerCurrentBalance: customerCurrentBalance,
-                      isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                      netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax?.toString(),
-                    ),
-                  ),
+                  storeName: storeName,
+                  cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                  formattedTotal: formattedTotal,
+                  savedTotal: savedTotal,
+                  discountAmount: discountAmount,
+                  orderDate: orderDate,
+                  orderNumber: orderDetails.data!.orderNumber.toString(),
+                  tokenNumber: orderDetails.data?.tokenNumber,
+                  customerName: customerName,
+                  customerPhone: customerPhone,
+                  customerEmail: customerEmail,
+                  customerAddress: customerAddress,
+                  customerAlternatePhone: customerAlternatePhone,
+                  paymentMethod: paymentMethod,
+                  paymentBreakdown:
+                      paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+                  orderComment: orderComment,
+                  orderReturns: orderDetails.data?.orderReturns,
+                  paidAmount: paidAmount > 0 ? paidAmount : null,
+                  customerCurrentBalance: customerCurrentBalance,
+                  isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                  netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
+                      ?.toString(),
                 );
-              }
 
+                // Only show print page if auto-print failed
+                if (!autoPrintSuccess && mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PrintPage(
+                        storeName: storeName,
+                        cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                        formattedTotal: formattedTotal,
+                        savedTotal: savedTotal,
+                        discountAmount: discountAmount,
+                        orderDate: orderDate,
+                        orderNumber: orderDetails.data!.orderNumber.toString(),
+                        tokenNumber: orderDetails.data?.tokenNumber,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        customerEmail: customerEmail,
+                        customerAddress: customerAddress,
+                        customerAlternatePhone: customerAlternatePhone,
+                        paymentMethod: paymentMethod,
+                        paymentBreakdown: paymentBreakdown.isNotEmpty
+                            ? paymentBreakdown
+                            : null,
+                        orderComment: orderComment,
+                        orderReturns: orderDetails.data?.orderReturns,
+                        paidAmount: paidAmount > 0 ? paidAmount : null,
+                        customerCurrentBalance: customerCurrentBalance,
+                        isDefaultCustomer:
+                            _isDefaultCustomerPhone(customerPhone),
+                        netExcTax: orderDetails
+                            .data?.cart!.priceSummary?.netExcTax
+                            ?.toString(),
+                      ),
+                    ),
+                  );
+                }
               }
             } catch (error) {
               debugPrint(error.toString());
@@ -1962,9 +1970,6 @@ Powered by CloudPOS''',
                       ...provider.orders.asMap().entries.map((entry) {
                         int index = entry.key;
                         ListOrderModelData order = entry.value;
-                        PriceSummary priceSummary =
-                            order.priceSummary ?? PriceSummary();
-
                         return TableRow(
                           decoration: BoxDecoration(
                             color: index % 2 == 0
@@ -2011,7 +2016,7 @@ Powered by CloudPOS''',
                                           .appSettings?.currency ??
                                       'INR';
                                   return _buildTableCell(
-                                      "$currency ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}");
+                                      "$currency ${AmountHelper.formatAmount(order.grantTotal ?? 0.0)}");
                                 },
                               ),
                             ),
