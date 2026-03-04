@@ -2092,7 +2092,7 @@ Powered by CloudPOS''',
                                           .appSettings?.currency ??
                                       'INR';
                                   return _buildTableCell(
-                                      "$currency ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}");
+                                      "$currency ${AmountHelper.formatAmount(order.grantTotal ?? 0.0)}");
                                 },
                               ),
                             ),

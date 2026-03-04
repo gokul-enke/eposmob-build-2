@@ -3,18 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:websafe_svg/websafe_svg.dart';
 
 import '../../models/dashboard.dart';
 import '../../models/dashboard_api.dart';
 import '../../providers/dashboard_provider.dart';
-import '../../resources/asset_manager.dart';
+import '../../providers/app_settings_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -41,6 +39,9 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   CustomersPerMonth? customersPerMonthData;
   ExecutivesOverview? executivesOverview;
   SalesGraph? executiveSalesGraph;
+  SalesStats? salesStats;
+  CustomerStats? customerStats;
+  ProductStats? productStats;
 
   // Dummy data for demonstration
   final List<String> recentTransactions = [
@@ -89,43 +90,90 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       // Fetch all dashboard data
       final dashboardProvider = DashboardProvider();
 
-      // Fetch dashboard overview
-      final overview = await dashboardProvider.fetchDashboardOverview(
-          accessToken, startDate, endDate);
+      // Variables to store fetched data
+      DashboardOverview? overview;
+      OrdersPerMonth? ordersPerMonth;
+      CustomersPerMonth? customersPerMonth;
+      ExecutivesOverview? executives;
+      SalesGraph? executiveSalesGraph;
+      SalesStats? stats;
+      CustomerStats? customerStats;
+      ProductStats? productStats;
 
-      // Fetch orders per month
-      final ordersPerMonth =
-          await dashboardProvider.fetchOrdersPerMonth(accessToken, currentYear);
+      // Try fetching each endpoint individually so one failure doesn't stop the whole load
+      // Note: We are using the main dashboard API for the core overview data.
 
-      // Fetch customers per month
-      final customersPerMonth = await dashboardProvider.fetchCustomersPerMonth(
-          accessToken, currentYear);
-
-      // Fetch executives overview
-      final executivesOverview = await dashboardProvider
-          .fetchExecutivesOverview(accessToken, startDate, endDate);
-
-      // Fetch executive sales graph (using 'week' as default period)
-      final executiveSalesGraph = await dashboardProvider
-          .fetchExecutiveSalesGraph(accessToken, 'week', startDate, endDate);
-
-      // Update state with fetched data
-      setState(() {
-        dashboardOverview = overview;
-        ordersPerMonthData = ordersPerMonth;
-        customersPerMonthData = customersPerMonth;
-        this.executivesOverview = executivesOverview;
-        this.executiveSalesGraph = executiveSalesGraph;
-      });
-    } catch (error) {
-      // In case of error, we'll continue with existing dummy data
-      debugPrint('Error fetching new dashboard data: $error');
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: 'Failed to load dashboard data: $error',
-        );
+      try {
+        ordersPerMonth = await dashboardProvider.fetchOrdersPerMonth(
+            accessToken, currentYear);
+      } catch (e) {
+        debugPrint('Orders per month failed: $e');
       }
+
+      try {
+        customersPerMonth = await dashboardProvider.fetchCustomersPerMonth(
+            accessToken, currentYear);
+      } catch (e) {
+        debugPrint('Customers per month failed: $e');
+      }
+
+      try {
+        executives = await dashboardProvider.fetchExecutivesOverview(
+            accessToken, startDate, endDate);
+      } catch (e) {
+        debugPrint('Executives overview failed: $e');
+      }
+
+      try {
+        executiveSalesGraph = await dashboardProvider.fetchExecutiveSalesGraph(
+            accessToken, 'week', startDate, endDate);
+      } catch (e) {
+        debugPrint('Executive sales graph failed: $e');
+      }
+
+      try {
+        stats = await dashboardProvider.fetchSalesStats(accessToken);
+      } catch (e) {
+        debugPrint('Sales stats failed: $e');
+      }
+
+      try {
+        customerStats = await dashboardProvider.fetchCustomerStats(
+            accessToken, 'today', startDate, endDate);
+      } catch (e) {
+        debugPrint('Customer stats failed: $e');
+      }
+
+      try {
+        productStats = await dashboardProvider.fetchProductStats(accessToken);
+      } catch (e) {
+        debugPrint('Product stats failed: $e');
+      }
+
+      // Update state with whatever data we successfully fetched
+      if (mounted) {
+        setState(() {
+          // Only set dummy data if no data has been successfully fetched from any endpoint
+          if (dashBoardModelData == null &&
+              salesStats == null &&
+              dashboardOverview == null) {
+            _setDummyDashboardData();
+          }
+
+          if (ordersPerMonth != null) ordersPerMonthData = ordersPerMonth;
+          if (customersPerMonth != null)
+            customersPerMonthData = customersPerMonth;
+          if (executives != null) executivesOverview = executives;
+          if (executiveSalesGraph != null)
+            this.executiveSalesGraph = executiveSalesGraph;
+          if (stats != null) this.salesStats = stats;
+          if (customerStats != null) this.customerStats = customerStats;
+          if (productStats != null) this.productStats = productStats;
+        });
+      }
+    } catch (error) {
+      // General safety catch
+      debugPrint('Unexpected error in fetchNewDashboardData: $error');
     }
   }
 
@@ -150,8 +198,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
               .format(now.subtract(const Duration(days: 7)));
           break;
         case "month":
-          startDate = DateFormat('yyyy-MM-dd')
-              .format(DateTime(now.year, now.month, 1));
+          startDate =
+              DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
           break;
         default:
           startDate = DateFormat('yyyy-MM-dd')
@@ -182,9 +230,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     }
   }
 
-
   Future<void> fetchGraphData() async {
-
     setState(() {
       isLoading = true;
     });
@@ -225,7 +271,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     chartData = graphData.reversed.take(5).toList().reversed.toList();
   }
 
-  void getDashBoardDetails() async {
+  Future<void> getDashBoardDetails() async {
     try {
       setState(() {
         isInitLoading = true;
@@ -233,55 +279,143 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
 
-      DashboardProvider()
-          .dashbaord(accessToken ?? "", context)
-          .then((response) {
-        if (response["status"] == "success") {
-          setState(() {
-            DashBoardModel dashBoardModel = DashBoardModel.fromJson(response);
-            dashBoardModelData = dashBoardModel.data;
-            totalSales = dashBoardModelData!.totalSales;
-          });
-        } else {
-          // Use dummy data for demonstration
-          _setDummyDashboardData();
-        }
-      }).catchError((error) {
+      if (accessToken == null) {
         _setDummyDashboardData();
-      });
+        return;
+      }
+
+      final response =
+          await DashboardProvider().dashbaord(accessToken, context);
+
+      if (response != null && response["status"] == "success") {
+        setState(() {
+          DashBoardModel dashBoardModel = DashBoardModel.fromJson(response);
+          dashBoardModelData = dashBoardModel.data;
+          totalSales = dashBoardModelData?.totalSales;
+        });
+      } else {
+        _setDummyDashboardData();
+      }
     } catch (error) {
+      debugPrint('Error in getDashBoardDetails: $error');
       _setDummyDashboardData();
     } finally {
-      setState(() {
-        isInitLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isInitLoading = false;
+        });
+      }
     }
   }
 
   void _setDummyDashboardData() {
     // Create dummy data for demonstration
     setState(() {
+      // 1. Dashboard Overview Dummy
+      dashboardOverview = DashboardOverview(
+        bankAccount:
+            BankAccount(receivedAmount: 1250000.0, sentAmount: 450000.0),
+        cashAccount: CashAccount(receivedAmount: 85400.0, sentAmount: 12000.0),
+        products: ProductsData(
+            total: 450, addedToday: 5, addedWeek: 23, addedMonth: 89),
+        revenue: RevenueData(totalSales: 2450000.0),
+        customers: CustomersData(newCustomers: 12, totalCustomers: 1250),
+        orders: OrdersData(newOrders: 45, totalOrders: 5670),
+      );
+
+      // 2. Legacy Total Sales Dummy
       totalSales = TotalSales(
         today: PeriodStats(
-          totalSales: 45,
-          totalAmount: 12500.50,
-          totalCustomers: 28,
-        ),
+            totalSales: 45, totalAmount: 12500.50, totalCustomers: 28),
         week: PeriodStats(
-          totalSales: 234,
-          totalAmount: 65780.25,
-          totalCustomers: 156,
-        ),
+            totalSales: 234, totalAmount: 65780.25, totalCustomers: 156),
         month: PeriodStats(
-          totalSales: 1045,
-          totalAmount: 345600.75,
-          totalCustomers: 678,
-        ),
+            totalSales: 1045, totalAmount: 345600.75, totalCustomers: 678),
         year: PeriodStats(
-          totalSales: 12450,
-          totalAmount: 4567890.50,
-          totalCustomers: 8234,
-        ),
+            totalSales: 12450, totalAmount: 4567890.50, totalCustomers: 8234),
+      );
+
+      // 3. Orders per Month Dummy
+      ordersPerMonthData = OrdersPerMonth(ordersPerMonth: [
+        MonthlyData(month: 'Jan', count: 450),
+        MonthlyData(month: 'Feb', count: 520),
+        MonthlyData(month: 'Mar', count: 610),
+        MonthlyData(month: 'Apr', count: 580),
+      ]);
+
+      // 4. Product Stats Dummy
+      productStats = ProductStats(
+        totalProducts: 450,
+        activeProducts: 420,
+        inactiveProducts: 30,
+        sellableProducts: 400,
+        purchasableProducts: 350,
+        taxableProducts: 450,
+        nonTaxableProducts: 0,
+        totalCategory: 15,
+        sellableCategory: 12,
+        purchasableCategory: 10,
+        taxableCategory: 15,
+        nonTaxableCategory: 0,
+        productsInStock: 380,
+        totalProductsStockQty: 4500,
+        lowStock: 12,
+      );
+
+      // 5. Customer Stats Dummy
+      customerStats = CustomerStats(
+        period: 'today',
+        totalCustomers: 1250,
+        debitCustomers: 45,
+        creditCustomers: 120,
+        crucialCustomers: 15,
+      );
+
+      // 6. Executive Sales Graph Dummy
+      executiveSalesGraph = SalesGraph(
+        period: 'week',
+        salesGraph: List.generate(7, (index) {
+          return GraphDataPoint(
+            day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index],
+            amount: 1500 + (index * 200),
+          );
+        }),
+        totalSales: 8500,
+      );
+
+      // 7. Executives Overview Dummy
+      executivesOverview = ExecutivesOverview(
+        totalExecutives: 5,
+        salesExecutivesGraph: [
+          SalesExecutiveGraph(
+            executiveId: 1,
+            executiveName: "John Doe",
+            sales: [SalesData(date: "2024-03-01", amount: 1500)],
+          ),
+          SalesExecutiveGraph(
+            executiveId: 2,
+            executiveName: "Jane Smith",
+            sales: [SalesData(date: "2024-03-01", amount: 2400)],
+          ),
+        ],
+      );
+
+      // 8. Sales Stats Dummy
+      salesStats = SalesStats(
+        data: {
+          "total_sales": 5670,
+          "total_amount": 2450000.0,
+          "daily_average": 81666.0,
+        },
+        deliveryMethod: [
+          {"method": "Pickup", "count": 2450},
+          {"method": "Delivery", "count": 3220},
+        ],
+        payments: [
+          {"method": "Cash", "amount": 1250000.0},
+          {"method": "Card", "amount": 1000000.0},
+          {"method": "Online", "amount": 200000.0},
+        ],
       );
     });
   }
@@ -321,6 +455,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     const SizedBox(height: 20),
                     _buildSalesOverview(),
                     const SizedBox(height: 20),
+                    _buildWorksTeam(),
+                    const SizedBox(height: 20),
 
                     // _buildAdditionalStats(),
                     // const SizedBox(height: 20),
@@ -351,16 +487,18 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                   ColorManager.textColor,
                 ),
               ),
-              // const SizedBox(height: 4),
-              // Text(
-              //   "Welcome back! Here's your business overview",
-              //   style: buildCustomStyle(
-              //     FontWeightManager.medium,
-              //     FontSize.s12,
-              //     0.10,
-              //     Colors.grey[600]!,
-              //   ),
-              // ),
+              const SizedBox(height: 4),
+              Text(
+                dashBoardModelData?.profileDetails?.isNotEmpty == true
+                    ? "Welcome, ${dashBoardModelData!.profileDetails![0].name}!"
+                    : "Welcome back!",
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.10,
+                  Colors.grey[600]!,
+                ),
+              ),
             ],
           ),
           Row(
@@ -378,6 +516,18 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
               //     color: Colors.white,
               //   ),
               // ),
+              const SizedBox(width: 12),
+              IconButton(
+                onPressed: () {
+                  getDashBoardDetails();
+                  fetchNewDashboardData();
+                  fetchGraphData();
+                },
+                icon: Icon(
+                  Icons.refresh,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
               const SizedBox(width: 12),
               BuildBoxShadowContainer(
                 padding: const EdgeInsets.all(12),
@@ -441,6 +591,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
               setState(() {
                 value = newValue?.toLowerCase() ?? "today";
               });
+              fetchGraphDataForPeriod(value);
             },
             dropdownColor: Colors.white,
             menuMaxHeight: 200,
@@ -653,37 +804,45 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                       _buildCompanyAccountCard(
                           "Total Products",
                           "All Products",
-                          dashboardOverview != null
-                              ? dashboardOverview!.products.total.toString()
-                              : "0",
+                          productStats != null
+                              ? productStats!.totalProducts.toString()
+                              : dashboardOverview != null
+                                  ? dashboardOverview!.products.total.toString()
+                                  : "0",
                           ColorManager.kPrimaryColor,
                           Icons.inventory),
                       _buildCompanyAccountCard(
-                          "Added Today",
-                          "Today's Additions",
-                          dashboardOverview != null
-                              ? dashboardOverview!.products.addedToday
-                                  .toString()
+                          "Active Products",
+                          "Currently Selling",
+                          productStats != null
+                              ? productStats!.activeProducts.toString()
                               : "0",
                           ColorManager.kMagentha,
                           Icons.check_circle),
                       _buildCompanyAccountCard(
-                          "Added This Week",
-                          "Weekly Additions",
-                          dashboardOverview != null
-                              ? dashboardOverview!.products.addedWeek.toString()
+                          "Low Stock",
+                          "Needs Attention",
+                          productStats != null
+                              ? productStats!.lowStock.toString()
                               : "0",
                           ColorManager.kOrange,
                           Icons.warning),
                       _buildCompanyAccountCard(
-                          "Added This Month",
-                          "Monthly Additions",
-                          dashboardOverview != null
-                              ? dashboardOverview!.products.addedMonth
-                                  .toString()
+                          "Total Stock Qty",
+                          "Overall Inventory",
+                          productStats != null
+                              ? productStats!.totalProductsStockQty.toString()
                               : "0",
                           ColorManager.kBlue,
-                          Icons.calendar_month),
+                          Icons.inventory_2),
+                      _buildCompanyAccountCard(
+                          "Sellable Products",
+                          "Ready for Sale",
+                          productStats != null
+                              ? productStats!.sellableProducts.toString()
+                              : "0",
+                          ColorManager.kGreen,
+                          Icons.sell),
                     ],
                   ),
                 ),
@@ -857,40 +1016,50 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                       _buildCompanyAccountCard(
                           "Total Customers",
                           "All Customers",
-                          dashboardOverview != null
-                              ? dashboardOverview!.customers.totalCustomers
-                                  .toString()
-                              : "0",
+                          customerStats != null
+                              ? customerStats!.totalCustomers.toString()
+                              : dashboardOverview != null
+                                  ? dashboardOverview!.customers.totalCustomers
+                                      .toString()
+                                  : "0",
                           ColorManager.kPrimaryColor,
                           Icons.people),
                       _buildCompanyAccountCard(
-                          "New Customers",
-                          "This Month",
-                          dashboardOverview != null
-                              ? dashboardOverview!.customers.newCustomers
-                                  .toString()
+                          "Debit Customers",
+                          "Pending Payments",
+                          customerStats != null
+                              ? customerStats!.debitCustomers.toString()
                               : "0",
                           ColorManager.kMagentha,
-                          Icons.person_add),
+                          Icons.money_off),
                       _buildCompanyAccountCard(
-                          "New Customers",
-                          "This Month",
-                          dashboardOverview != null
-                              ? dashboardOverview!.customers.newCustomers
-                                  .toString()
+                          "Credit Customers",
+                          "Balance Available",
+                          customerStats != null
+                              ? customerStats!.creditCustomers.toString()
                               : "0",
                           ColorManager.kOrange,
-                          Icons.check_circle),
+                          Icons.account_balance_wallet),
                       _buildCompanyAccountCard(
-                          "Returning Customers",
-                          "Repeat Buyers",
-                          dashboardOverview != null
-                              ? (dashboardOverview!.customers.totalCustomers -
-                                      dashboardOverview!.customers.newCustomers)
-                                  .toString()
+                          "Crucial Customers",
+                          "VVIP Clients",
+                          customerStats != null
+                              ? customerStats!.crucialCustomers.toString()
                               : "0",
                           ColorManager.kBlue,
-                          Icons.autorenew),
+                          Icons.star),
+                      _buildCompanyAccountCard(
+                          "New Customers",
+                          "Added Today",
+                          customerStats != null &&
+                                  customerStats!.period == 'today'
+                              ? "N/A"
+                              : dashboardOverview != null
+                                  ? dashboardOverview!.customers.newCustomers
+                                      .toString()
+                                  : "0",
+                          ColorManager.kGreen,
+                          Icons.person_add),
                     ],
                   ),
                 ),
@@ -1262,6 +1431,307 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   }
 
   Widget _buildSalesOverviewChart() {
+    if (value != 'year' &&
+        executiveSalesGraph != null &&
+        executiveSalesGraph!.salesGraph.isNotEmpty) {
+      final salesData = executiveSalesGraph!.salesGraph;
+
+      // Find max value for Y scaling
+      double maxY = salesData
+          .map((data) => data.amount.toDouble())
+          .reduce((a, b) => a > b ? a : b);
+      double maxYValue = (maxY * 1.2);
+      maxYValue = maxYValue < 10 ? 10 : maxYValue;
+
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SizedBox(
+          height: 200,
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawHorizontalLine: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (val) => FlLine(
+                  color: Colors.grey[300]!,
+                  strokeWidth: 1,
+                ),
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    getTitlesWidget: (val, meta) => Text(
+                      val.toInt().toString(),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (val, meta) {
+                      int index = val.toInt();
+                      if (index >= 0 && index < salesData.length) {
+                        String label = '';
+                        if (value == 'today') {
+                          label = salesData[index].time ?? '';
+                        } else if (value == 'week') {
+                          label = salesData[index].day ?? '';
+                        } else {
+                          label = salesData[index].date ?? '';
+                        }
+                        return Text(
+                          label,
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.grey),
+                        );
+                      }
+                      return const Text('');
+                    },
+                  ),
+                ),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              borderData: FlBorderData(show: false),
+              minY: 0,
+              maxY: maxYValue,
+              lineBarsData: [
+                LineChartBarData(
+                  spots: salesData.asMap().entries.map((entry) {
+                    return FlSpot(
+                        entry.key.toDouble(), entry.value.amount.toDouble());
+                  }).toList(),
+                  isCurved: true,
+                  color: ColorManager.kPrimaryColor,
+                  barWidth: 3,
+                  dotData: const FlDotData(show: true),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (ordersPerMonthData != null &&
+        ordersPerMonthData!.ordersPerMonth.isNotEmpty &&
+        value == 'year') {
+      final orders = ordersPerMonthData!.ordersPerMonth;
+      final customers = customersPerMonthData?.customersPerMonth ?? [];
+
+      // Find max value across both datasets for Y scaling
+      int maxOrders =
+          orders.fold(0, (max, entry) => entry.count > max ? entry.count : max);
+      int maxCustomers = customers.fold(
+          0, (max, entry) => entry.count > max ? entry.count : max);
+      double maxYValue =
+          (maxOrders > maxCustomers ? maxOrders : maxCustomers) * 1.2;
+      maxYValue = maxYValue < 10 ? 10 : maxYValue;
+
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SizedBox(
+          height: 200,
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawHorizontalLine: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (val) => FlLine(
+                  color: Colors.grey[300]!,
+                  strokeWidth: 1,
+                ),
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    getTitlesWidget: (val, meta) => Text(
+                      val.toInt().toString(),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (val, meta) {
+                      int index = val.toInt();
+                      if (index >= 0 && index < orders.length) {
+                        return Text(
+                          orders[index].month,
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.grey),
+                        );
+                      }
+                      return const Text('');
+                    },
+                  ),
+                ),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              borderData: FlBorderData(show: false),
+              minY: 0,
+              maxY: maxYValue,
+              lineBarsData: [
+                // Orders Line
+                LineChartBarData(
+                  spots: orders.asMap().entries.map((entry) {
+                    return FlSpot(
+                        entry.key.toDouble(), entry.value.count.toDouble());
+                  }).toList(),
+                  isCurved: true,
+                  color: ColorManager.kPrimaryColor,
+                  barWidth: 3,
+                  dotData: const FlDotData(show: true),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                  ),
+                ),
+                // Customers Line
+                if (customers.isNotEmpty)
+                  LineChartBarData(
+                    spots: customers.asMap().entries.map((entry) {
+                      return FlSpot(
+                          entry.key.toDouble(), entry.value.count.toDouble());
+                    }).toList(),
+                    isCurved: true,
+                    color: ColorManager.kOrange,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: ColorManager.kOrange.withOpacity(0.1),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (salesStats != null) {
+      final data = salesStats!.data;
+      final double posOrders =
+          double.tryParse(data["4"]?.toString() ?? "0") ?? 0.0;
+      final double webOrders =
+          double.tryParse(data["5"]?.toString() ?? "0") ?? 0.0;
+      final double kioskOrders =
+          double.tryParse(data["6"]?.toString() ?? "0") ?? 0.0;
+
+      final double maxVal =
+          [posOrders, webOrders, kioskOrders].reduce((a, b) => a > b ? a : b);
+      final double maxYVal = maxVal > 0 ? (maxVal * 1.2) : 10.0;
+
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SizedBox(
+          height: 200,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: maxYVal,
+              barTouchData: BarTouchData(enabled: true),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (double value, TitleMeta meta) {
+                      switch (value.toInt()) {
+                        case 0:
+                          return const Text('POS',
+                              style: TextStyle(fontSize: 10));
+                        case 1:
+                          return const Text('Web',
+                              style: TextStyle(fontSize: 10));
+                        case 2:
+                          return const Text('Kiosk',
+                              style: TextStyle(fontSize: 10));
+                        default:
+                          return const Text('');
+                      }
+                    },
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              gridData: FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              barGroups: [
+                BarChartGroupData(
+                  x: 0,
+                  barRods: [
+                    BarChartRodData(
+                      toY: posOrders,
+                      color: ColorManager.kPrimaryColor,
+                      width: 16,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ],
+                ),
+                BarChartGroupData(
+                  x: 1,
+                  barRods: [
+                    BarChartRodData(
+                      toY: webOrders,
+                      color: ColorManager.kOrange,
+                      width: 16,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ],
+                ),
+                BarChartGroupData(
+                  x: 2,
+                  barRods: [
+                    BarChartRodData(
+                      toY: kioskOrders,
+                      color: ColorManager.kMagentha,
+                      width: 16,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (graphData.isEmpty) {
       _generateDummyData();
     }
@@ -1599,7 +2069,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   }
 
   Widget _buildSalesCard(String title, Color color, IconData icon) {
-    String value = _getSalesValue(title);
+    String valueText = _getSalesValue(title);
     String subtitle = _getCardSubtitle(title);
 
     return BuildBoxShadowContainer(
@@ -1652,14 +2122,23 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             ],
           ),
           const SizedBox(height: 5),
-          Text(
-            value,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s20,
-              0.38,
-              ColorManager.textColor,
-            ),
+          Consumer<AppSettingsProvider>(
+            builder: (context, settings, child) {
+              String displayValue = valueText;
+              if (title == "Amount" || title == "Revenue") {
+                final currency = settings.appSettings?.currency ?? 'INR';
+                displayValue = "$currency $valueText";
+              }
+              return Text(
+                displayValue,
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s20,
+                  0.38,
+                  ColorManager.textColor,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 4),
           Row(
@@ -1801,9 +2280,9 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       case "Products":
         return "In Stock";
       case "Revenue":
-        return "Net Income";
+        return "Overall Total";
       case "Orders":
-        return "Completed";
+        return "Overall Count";
       default:
         return "";
     }
@@ -1834,24 +2313,118 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
 
     switch (title) {
       case "Count":
-        return periodStats.totalSales?.toString() ?? "0";
+        return periodStats.totalSales?.toInt().toString() ?? "0";
       case "Amount":
         return "${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       case "Products":
-        return Provider.of<LocalProductProvider>(context, listen: true)
-            .products
-            .length
+        return (dashBoardModelData?.totalProducts ??
+                Provider.of<LocalProductProvider>(context, listen: true)
+                    .products
+                    .length)
             .toString();
 
       case "Revenue":
-        return "${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
+        return "${NumberFormat('#,##,###.##').format(totalSales!.total ?? 0)}";
       case "Orders":
-        return "${(periodStats.totalSales ?? 0) + 15}";
+        return "${totalSales!.count ?? 0}";
       default:
         return "0";
     }
+  }
+
+  Widget _buildWorksTeam() {
+    final teamMembers = dashBoardModelData?.profileDetails ?? [];
+    if (teamMembers.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Works Team",
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s15,
+                0.23,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: teamMembers.length,
+            itemBuilder: (context, index) {
+              final member = teamMembers[index];
+              return BuildBoxShadowContainer(
+                margin: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
+                width: 280,
+                circleRadius: 8,
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor:
+                          ColorManager.kPrimaryColor.withOpacity(0.1),
+                      child: Text(
+                        member.name?.isNotEmpty == true
+                            ? member.name![0].toUpperCase()
+                            : "?",
+                        style: TextStyle(color: ColorManager.kPrimaryColor),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            member.name ?? "Unknown",
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.10,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          Text(
+                            member.email ?? "",
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s12,
+                              0.10,
+                              Colors.grey[600]!,
+                            ),
+                          ),
+                          Text(
+                            member.phone ?? "",
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.10,
+                              ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
 

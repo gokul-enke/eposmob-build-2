@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:websafe_svg/websafe_svg.dart';
 
 import '../../models/dashboard.dart';
 import '../../models/dashboard_api.dart';
 import '../../providers/dashboard_provider.dart';
-import '../../resources/asset_manager.dart';
 import '../../resources/color_manager.dart';
+import '../../providers/app_settings_provider.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 
@@ -42,6 +40,9 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   CustomersPerMonth? customersPerMonthData;
   ExecutivesOverview? executivesOverview;
   SalesGraph? executiveSalesGraph;
+  SalesStats? salesStats;
+  CustomerStats? customerStats;
+  ProductStats? productStats;
 
   // Sales graph period
   String salesGraphPeriod = 'today';
@@ -57,7 +58,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     super.initState();
     debugPrint('=== SalesExecutiveDashboard initState called ===');
     debugPrint('Starting initial data fetching...');
-    fetchDataForPeriod('month'); // Fetch data for month by default to show some data
+    fetchDataForPeriod(
+        'month'); // Fetch data for month by default to show some data
     debugPrint('=== Initial data fetching initiated ===');
   }
 
@@ -108,12 +110,11 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
               .format(now.subtract(const Duration(days: 7)));
           break;
         case "month":
-          startDate = DateFormat('yyyy-MM-dd')
-              .format(DateTime(now.year, now.month, 1));
+          startDate =
+              DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
           break;
         case "year":
-          startDate =
-              DateFormat('yyyy-MM-dd').format(DateTime(now.year, 1, 1));
+          startDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, 1, 1));
           currentYear = now.year;
           break;
         default:
@@ -137,33 +138,89 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
           }
         }
 
-        // Fetch new dashboard overview data
+        // Fetch new dashboard overview data (Removed due to backend issue)
         final dashboardProvider = DashboardProvider();
-        final overview = await dashboardProvider.fetchDashboardOverview(
-            accessToken, startDate, endDate);
-        cachedOverviewData[period] = overview;
 
-        debugPrint('Cached data for period: $period');
+        // Define local variables for fetched data
+        DashboardOverview? overview;
+        OrdersPerMonth? ordersPerMonth;
+        CustomersPerMonth? customersPerMonth;
+        SalesStats? stats;
+        SalesGraph? graph;
+        CustomerStats? customerStats;
+        ProductStats? productStats;
+
+        try {
+          ordersPerMonth = await dashboardProvider.fetchOrdersPerMonth(
+              accessToken, currentYear);
+        } catch (e) {
+          debugPrint('Orders per month failed: $e');
+        }
+
+        try {
+          customersPerMonth = await dashboardProvider.fetchCustomersPerMonth(
+              accessToken, currentYear);
+        } catch (e) {
+          debugPrint('Customers per month failed: $e');
+        }
+
+        try {
+          stats = await dashboardProvider.fetchSalesStats(accessToken);
+        } catch (e) {
+          debugPrint('Sales stats failed: $e');
+        }
+
+        // Fetch graph data for the period
+        String apiPeriod = 'week';
+        if (period == 'today') apiPeriod = 'day';
+        if (period == 'week') apiPeriod = 'week';
+        if (period == 'month') apiPeriod = 'month';
+
+        try {
+          graph = await dashboardProvider.fetchExecutiveSalesGraph(
+              accessToken, apiPeriod, startDate, endDate);
+        } catch (e) {
+          debugPrint('Executive sales graph failed: $e');
+        }
+
+        try {
+          customerStats = await dashboardProvider.fetchCustomerStats(
+              accessToken, apiPeriod, startDate, endDate);
+        } catch (e) {
+          debugPrint('Customer stats failed: $e');
+        }
+
+        try {
+          productStats = await dashboardProvider.fetchProductStats(accessToken);
+        } catch (e) {
+          debugPrint('Product stats failed: $e');
+        }
 
         // Update state with the newly fetched data
-        setState(() {
-          dashBoardModelData = cachedDashboardData[period];
-          totalSales = cachedTotalSales[period];
-          dashboardOverview = cachedOverviewData[period];
-          value = period;
-          isInitialLoading = false;
-        });
-      } catch (error) {
-        debugPrint('Error fetching data for period $period: $error');
         if (mounted) {
-          showScaffoldError(
-            context: context,
-            message: 'Failed to load dashboard data: $error',
-          );
+          setState(() {
+            dashBoardModelData = cachedDashboardData[period];
+            totalSales = cachedTotalSales[period];
+            dashboardOverview = overview; // Will be null
+            ordersPerMonthData = ordersPerMonth;
+            customersPerMonthData = customersPerMonth;
+            salesStats = stats;
+            this.executiveSalesGraph = graph;
+            this.customerStats = customerStats;
+            this.productStats = productStats;
+            value = period;
+            isInitialLoading = false;
+            isLoading = false;
+          });
         }
-        setState(() {
-          isInitialLoading = false;
-        });
+      } catch (error) {
+        debugPrint('Unexpected error in fetchDataForPeriod: $error');
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+            isInitialLoading = false;
+          });
+        }
       }
 
       debugPrint('=== PERIOD DATA FETCHING COMPLETE ===');
@@ -232,6 +289,10 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     const SizedBox(height: 20),
                     _buildCustomersBySalesExecutive(),
                     const SizedBox(height: 20),
+                    _buildProductOverview(),
+                    const SizedBox(height: 20),
+                    _buildWorksTeam(),
+                    const SizedBox(height: 20),
                     _buildSalesGraphByPeriod(),
                     const SizedBox(height: 20),
                     // _buildAdditionalStats(),
@@ -263,16 +324,18 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                   ColorManager.textColor,
                 ),
               ),
-              // const SizedBox(height: 4),
-              // Text(
-              //   "Welcome back! Here's your sales overview",
-              //   style: buildCustomStyle(
-              //     FontWeightManager.medium,
-              //     FontSize.s12,
-              //     0.10,
-              //     Colors.grey[600]!,
-              //   ),
-              // ),
+              const SizedBox(height: 4),
+              Text(
+                dashBoardModelData?.profileDetails?.isNotEmpty == true
+                    ? "Welcome, ${dashBoardModelData!.profileDetails![0].name}!"
+                    : "Welcome back!",
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.10,
+                  Colors.grey[600]!,
+                ),
+              ),
             ],
           ),
           Row(
@@ -290,6 +353,16 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
               //     color: Colors.white,
               //   ),
               // ),
+              const SizedBox(width: 12),
+              IconButton(
+                onPressed: () {
+                  fetchDataForPeriod(value);
+                },
+                icon: Icon(
+                  Icons.refresh,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
               const SizedBox(width: 12),
               BuildBoxShadowContainer(
                 padding: const EdgeInsets.all(12),
@@ -434,14 +507,13 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                         "Customers", ColorManager.kOrange, Icons.people),
                     _buildSalesCard(
                         "Products", ColorManager.kBlue, Icons.inventory),
-                    _buildSalesCard("Revenue", const Color(0xFF4CAF50),
-                        Icons.trending_up),
-                    _buildSalesCard("Orders", const Color(0xFF9C27B0),
-                        Icons.shopping_cart),
+                    _buildSalesCard(
+                        "Revenue", const Color(0xFF4CAF50), Icons.trending_up),
+                    _buildSalesCard(
+                        "Orders", const Color(0xFF9C27B0), Icons.shopping_cart),
                   ],
                 ),
               ),
-
             ],
           ),
         ),
@@ -505,8 +577,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -542,7 +613,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           Icons.shopping_cart),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -596,8 +666,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -623,7 +692,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           bankSentValue, ColorManager.kBlue, Icons.call_made),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -723,8 +791,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -754,7 +821,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           Icons.trending_up),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -908,74 +974,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildCustomersBySalesExecutive() {
-    debugPrint(
-        'Building Customers section. Data available: ${dashboardOverview != null}');
-
-    // Get period-specific data
-    String newCustomersValue = "0";
-    String totalCustomersValue = "0";
-    String activeCustomersValue = "0";
-    String returningCustomersValue = "0";
-
-    if (dashboardOverview != null) {
-      newCustomersValue = dashboardOverview!.customers.newCustomers.toString();
-      totalCustomersValue =
-          dashboardOverview!.customers.totalCustomers.toString();
-
-      // Calculate period-specific values based on the filter
-      switch (value) {
-        case "today":
-          activeCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.15)
-                  .toInt()
-                  .toString();
-          returningCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.85)
-                  .toInt()
-                  .toString();
-          break;
-        case "week":
-          activeCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.35)
-                  .toInt()
-                  .toString();
-          returningCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.65)
-                  .toInt()
-                  .toString();
-          break;
-        case "month":
-          activeCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.50)
-                  .toInt()
-                  .toString();
-          returningCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.50)
-                  .toInt()
-                  .toString();
-          break;
-        case "year":
-          activeCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.75)
-                  .toInt()
-                  .toString();
-          returningCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.25)
-                  .toInt()
-                  .toString();
-          break;
-        default:
-          activeCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.15)
-                  .toInt()
-                  .toString();
-          returningCustomersValue =
-              (dashboardOverview!.customers.totalCustomers * 0.85)
-                  .toInt()
-                  .toString();
-      }
-    }
-
     return Column(
       children: [
         Padding(
@@ -1000,38 +998,115 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
                       _buildCompanyAccountCard(
-                          "New Customers",
-                          "Added Today",
-                          newCustomersValue,
-                          ColorManager.kPrimaryColor,
-                          Icons.person_add),
-                      _buildCompanyAccountCard(
                           "Total Customers",
                           "All Time",
-                          totalCustomersValue,
-                          ColorManager.kMagentha,
+                          customerStats != null
+                              ? customerStats!.totalCustomers.toString()
+                              : "0",
+                          ColorManager.kPrimaryColor,
                           Icons.people),
                       _buildCompanyAccountCard(
-                          "Active Customers",
-                          "This Period",
-                          activeCustomersValue,
-                          ColorManager.kOrange,
-                          Icons.person),
+                          "Debit Customers",
+                          "Pending Payments",
+                          customerStats != null
+                              ? customerStats!.debitCustomers.toString()
+                              : "0",
+                          ColorManager.kMagentha,
+                          Icons.money_off),
                       _buildCompanyAccountCard(
-                          "Returning",
-                          "Repeat Customers",
-                          returningCustomersValue,
+                          "Credit Customers",
+                          "Balance Available",
+                          customerStats != null
+                              ? customerStats!.creditCustomers.toString()
+                              : "0",
+                          ColorManager.kOrange,
+                          Icons.account_balance_wallet),
+                      _buildCompanyAccountCard(
+                          "Crucial Customers",
+                          "VVIP Clients",
+                          customerStats != null
+                              ? customerStats!.crucialCustomers.toString()
+                              : "0",
                           ColorManager.kBlue,
-                          Icons.autorenew),
+                          Icons.star),
                     ],
                   ),
-                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductOverview() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Product Overview",
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s15,
+                0.23,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 180,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    shrinkWrap: true,
+                    children: [
+                      _buildCompanyAccountCard(
+                          "Total Products",
+                          "All Products",
+                          productStats != null
+                              ? productStats!.totalProducts.toString()
+                              : "0",
+                          ColorManager.kPrimaryColor,
+                          Icons.inventory),
+                      _buildCompanyAccountCard(
+                          "Active Products",
+                          "Currently Selling",
+                          productStats != null
+                              ? productStats!.activeProducts.toString()
+                              : "0",
+                          ColorManager.kMagentha,
+                          Icons.check_circle),
+                      _buildCompanyAccountCard(
+                          "Low Stock",
+                          "Needs Attention",
+                          productStats != null
+                              ? productStats!.lowStock.toString()
+                              : "0",
+                          ColorManager.kOrange,
+                          Icons.warning),
+                      _buildCompanyAccountCard(
+                          "Total Stock Qty",
+                          "Overall Inventory",
+                          productStats != null
+                              ? productStats!.totalProductsStockQty.toString()
+                              : "0",
+                          ColorManager.kBlue,
+                          Icons.inventory_2),
+                    ],
+                  ),
               ),
             ],
           ),
@@ -1226,6 +1301,214 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildSalesOverviewChart() {
+    if (ordersPerMonthData != null &&
+        ordersPerMonthData!.ordersPerMonth.isNotEmpty) {
+      final orders = ordersPerMonthData!.ordersPerMonth;
+      final customers = customersPerMonthData?.customersPerMonth ?? [];
+
+      // Find max value across both datasets for Y scaling
+      int maxOrders =
+          orders.fold(0, (max, entry) => entry.count > max ? entry.count : max);
+      int maxCustomers = customers.fold(
+          0, (max, entry) => entry.count > max ? entry.count : max);
+      double maxYValue =
+          (maxOrders > maxCustomers ? maxOrders : maxCustomers) * 1.2;
+      maxYValue = maxYValue < 10 ? 10 : maxYValue;
+
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SizedBox(
+          height: 200,
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawHorizontalLine: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: Colors.grey[300]!,
+                  strokeWidth: 1,
+                ),
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      int index = value.toInt();
+                      if (index >= 0 && index < orders.length) {
+                        return Text(
+                          orders[index].month,
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.grey),
+                        );
+                      }
+                      return const Text('');
+                    },
+                  ),
+                ),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              borderData: FlBorderData(show: false),
+              minY: 0,
+              maxY: maxYValue,
+              lineBarsData: [
+                // Orders Line
+                LineChartBarData(
+                  spots: orders.asMap().entries.map((entry) {
+                    return FlSpot(
+                        entry.key.toDouble(), entry.value.count.toDouble());
+                  }).toList(),
+                  isCurved: true,
+                  color: ColorManager.kPrimaryColor,
+                  barWidth: 3,
+                  dotData: const FlDotData(show: true),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                  ),
+                ),
+                // Customers Line
+                if (customers.isNotEmpty)
+                  LineChartBarData(
+                    spots: customers.asMap().entries.map((entry) {
+                      return FlSpot(
+                          entry.key.toDouble(), entry.value.count.toDouble());
+                    }).toList(),
+                    isCurved: true,
+                    color: ColorManager.kOrange,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: ColorManager.kOrange.withOpacity(0.1),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (salesStats != null) {
+      final data = salesStats!.data;
+      final double posOrders =
+          double.tryParse(data["4"]?.toString() ?? "0") ?? 0.0;
+      final double webOrders =
+          double.tryParse(data["5"]?.toString() ?? "0") ?? 0.0;
+      final double kioskOrders =
+          double.tryParse(data["6"]?.toString() ?? "0") ?? 0.0;
+
+      final double maxVal =
+          [posOrders, webOrders, kioskOrders].reduce((a, b) => a > b ? a : b);
+      final double maxYVal = maxVal > 0 ? (maxVal * 1.2) : 10.0;
+
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SizedBox(
+          height: 200,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: maxYVal,
+              barTouchData: BarTouchData(enabled: true),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (double value, TitleMeta meta) {
+                      switch (value.toInt()) {
+                        case 0:
+                          return const Text('POS',
+                              style: TextStyle(fontSize: 10));
+                        case 1:
+                          return const Text('Web',
+                              style: TextStyle(fontSize: 10));
+                        case 2:
+                          return const Text('Kiosk',
+                              style: TextStyle(fontSize: 10));
+                        default:
+                          return const Text('');
+                      }
+                    },
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              gridData: FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              barGroups: [
+                BarChartGroupData(
+                  x: 0,
+                  barRods: [
+                    BarChartRodData(
+                      toY: posOrders,
+                      color: ColorManager.kPrimaryColor,
+                      width: 16,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ],
+                ),
+                BarChartGroupData(
+                  x: 1,
+                  barRods: [
+                    BarChartRodData(
+                      toY: webOrders,
+                      color: ColorManager.kOrange,
+                      width: 16,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ],
+                ),
+                BarChartGroupData(
+                  x: 2,
+                  barRods: [
+                    BarChartRodData(
+                      toY: kioskOrders,
+                      color: ColorManager.kMagentha,
+                      width: 16,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (graphData.isEmpty) {
       _generateDummyData();
     }
@@ -1395,54 +1678,86 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             ),
             titlesData: FlTitlesData(
               show: true,
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 30,
+                  reservedSize: 32,
+                  interval: 1,
                   getTitlesWidget: (double value, TitleMeta meta) {
-                    if (value.toInt() >= 0 &&
-                        value.toInt() < salesData.length) {
-                      // Display appropriate label based on period
-                      String label = '';
-                      switch (salesGraphPeriod) {
-                        case 'today':
-                          label = salesData[value.toInt()].time ?? '';
-                          break;
-                        case 'week':
-                          label = salesData[value.toInt()].day ?? '';
-                          break;
-                        case 'month':
-                          label = salesData[value.toInt()].date ?? '';
-                          break;
-                        default:
-                          label = salesData[value.toInt()].time ?? '';
-                      }
-                      debugPrint('Bottom title at index $value: $label');
-                      return Text(
-                        label,
-                        style: TextStyle(
-                          color: ColorManager.textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
-                      );
+                    final int index = value.toInt();
+                    if (index < 0 || index >= salesData.length) {
+                      return const SizedBox();
                     }
-                    return const SizedBox();
+                    // Show every Nth label to prevent overlap
+                    int step = salesData.length <= 7
+                        ? 1
+                        : salesData.length <= 14
+                            ? 2
+                            : 3;
+                    if (index % step != 0) {
+                      return const SizedBox();
+                    }
+                    // Display appropriate label based on period
+                    String label = '';
+                    switch (salesGraphPeriod) {
+                      case 'today':
+                        label = salesData[index].time ?? '';
+                        break;
+                      case 'week':
+                        label = salesData[index].day ?? '';
+                        break;
+                      case 'month':
+                        label = salesData[index].date ?? '';
+                        break;
+                      default:
+                        label = salesData[index].time ?? '';
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          color: ColorManager.textColor,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 9,
+                        ),
+                      ),
+                    );
                   },
                 ),
               ),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 40,
+                  reservedSize: 48,
                   getTitlesWidget: (double value, TitleMeta meta) {
-                    debugPrint('Left title value: $value');
-                    return Text(
-                      '${NumberFormat('#,##').format(value.toInt())}',
-                      style: TextStyle(
-                        color: ColorManager.textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
+                    // Skip min/max edge labels to avoid clipping
+                    if (value == meta.min || value == meta.max) {
+                      return const SizedBox();
+                    }
+                    String label;
+                    if (value >= 1000000) {
+                      label = '${(value / 1000000).toStringAsFixed(1)}M';
+                    } else if (value >= 1000) {
+                      label = '${(value / 1000).toStringAsFixed(1)}K';
+                    } else {
+                      label = value.toInt().toString();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          color: ColorManager.textColor,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 10,
+                        ),
                       ),
                     );
                   },
@@ -1495,7 +1810,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildSalesCard(String title, Color color, IconData icon) {
-    String value = _getSalesValue(title);
+    String valueText = _getSalesValue(title);
     String subtitle = _getCardSubtitle(title);
 
     return BuildBoxShadowContainer(
@@ -1548,14 +1863,23 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             ],
           ),
           const SizedBox(height: 5),
-          Text(
-            value,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s20,
-              0.38,
-              ColorManager.textColor,
-            ),
+          Consumer<AppSettingsProvider>(
+            builder: (context, settings, child) {
+              String displayValue = valueText;
+              if (title == "Amount" || title == "Revenue") {
+                final currency = settings.appSettings?.currency ?? 'INR';
+                displayValue = "$currency $valueText";
+              }
+              return Text(
+                displayValue,
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s20,
+                  0.38,
+                  ColorManager.textColor,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 4),
           Row(
@@ -1697,9 +2021,9 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       case "Products":
         return "In Stock";
       case "Revenue":
-        return "Net Income";
+        return "Overall Total";
       case "Orders":
-        return "Completed";
+        return "Overall Count";
       default:
         return "";
     }
@@ -1730,63 +2054,177 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     switch (title) {
       case "Count":
-        return periodStats.totalSales?.toString() ?? "0";
+        return periodStats.totalSales?.toInt().toString() ?? "0";
       case "Amount":
         return "${NumberFormat('#,##,###.##').format(periodStats.totalAmount ?? 0)}";
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       case "Products":
-        return Provider.of<LocalProductProvider>(context, listen: true)
-            .products
-            .length
+        return (dashBoardModelData?.totalProducts ??
+                Provider.of<LocalProductProvider>(context, listen: true)
+                    .products
+                    .length)
             .toString();
 
       case "Revenue":
-        return "${NumberFormat('#,##,###').format((periodStats.totalAmount ?? 0) * 0.85)}";
+        return "${NumberFormat('#,##,###.##').format(totalSales!.total ?? 0)}";
       case "Orders":
-        return "${(periodStats.totalSales ?? 0) + 15}";
+        return "${totalSales!.count ?? 0}";
       default:
         return "0";
     }
   }
 
+  Widget _buildWorksTeam() {
+    final teamMembers = dashBoardModelData?.profileDetails ?? [];
+    if (teamMembers.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Works Team",
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s15,
+                0.23,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: teamMembers.length,
+            itemBuilder: (context, index) {
+              final member = teamMembers[index];
+              return BuildBoxShadowContainer(
+                margin: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
+                width: 280,
+                circleRadius: 8,
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor:
+                          ColorManager.kPrimaryColor.withOpacity(0.1),
+                      child: Text(
+                        member.name?.isNotEmpty == true
+                            ? member.name![0].toUpperCase()
+                            : "?",
+                        style: TextStyle(color: ColorManager.kPrimaryColor),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            member.name ?? "Unknown",
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.10,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          Text(
+                            member.email ?? "",
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s12,
+                              0.10,
+                              Colors.grey[600]!,
+                            ),
+                          ),
+                          Text(
+                            member.phone ?? "",
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.10,
+                              ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> fetchGraphDataForPeriod(String period) async {
     debugPrint('=== FETCHING GRAPH DATA FOR PERIOD: $period ===');
     setState(() {
-      debugPrint('isLoading state set to true');
       isLoading = true;
     });
 
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint(
-          'Access token available for graph data: ${accessToken != null}');
-      if (accessToken != null) {
-        final data = await DashboardProvider().fetchGraphData(accessToken);
-        debugPrint('Graph data fetched. Count: ${data.length}');
-        setState(() {
-          debugPrint('Updating graph data state');
-          graphData = data.cast<GraphData>();
-          chartData = data.reversed
-              .take(5)
-              .toList()
-              .reversed
-              .cast<GraphData>()
-              .toList();
-          debugPrint(
-              'Graph data processed. graphData count: ${graphData.length}, chartData count: ${chartData.length}');
-        });
-      } else {
-        debugPrint('ERROR: No access token for graph data');
+      if (accessToken == null) return;
+
+      // Get date range based on the period
+      final DateTime now = DateTime.now();
+      String startDate;
+      String endDate = DateFormat('yyyy-MM-dd').format(now);
+
+      switch (period) {
+        case "today":
+          startDate = DateFormat('yyyy-MM-dd').format(now);
+          break;
+        case "week":
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7)));
+          break;
+        case "month":
+          startDate =
+              DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
+          break;
+        default:
+          startDate = DateFormat('yyyy-MM-dd')
+              .format(now.subtract(const Duration(days: 7)));
       }
+
+      // Map UI period to API period parameter
+      String apiPeriod = 'week';
+      if (period == 'today') apiPeriod = 'day';
+      if (period == 'week') apiPeriod = 'week';
+      if (period == 'month') apiPeriod = 'month';
+
+      final dashboardProvider = DashboardProvider();
+      final graph = await dashboardProvider.fetchExecutiveSalesGraph(
+          accessToken, apiPeriod, startDate, endDate);
+
+      setState(() {
+        this.executiveSalesGraph = graph;
+      });
     } catch (error) {
       debugPrint('Error fetching graph data: $error');
-      // Generate dummy data for demonstration
-      _generateDummyData();
+      // If error occurs, we could fall back to old graph data or dummy
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to load graph data: $error',
+        );
+      }
     } finally {
       setState(() {
-        debugPrint('isLoading state set to false');
         isLoading = false;
       });
       debugPrint('=== GRAPH DATA FETCH COMPLETE ===');
