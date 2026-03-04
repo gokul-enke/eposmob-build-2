@@ -8,6 +8,7 @@ import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -346,6 +347,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
           : null;
 
+      // Parse multi-payment JSON into human-readable names and breakdown
+      final parsedPayment = PaymentHelper.parseLocalMultiPayment(
+          context, order.paymentMethod);
+      final String? displayPaymentMethod = parsedPayment?.paymentMethodDisplay
+          ?? order.paymentMethod;
+      final Map<String, dynamic>? paymentBreakdown =
+          parsedPayment?.paymentBreakdown;
+
       // Try auto-print with default printer first
       debugPrint("🖨️ Attempting auto-print for confirmed order #${order.orderNumber}");
       final autoPrintSuccess = await PrintPage.autoPrint(
@@ -360,7 +369,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         isFromLocalStorage: true,
         customerName: order.customerName,
         customerPhone: order.customerPhone,
-        paymentMethod: order.paymentMethod,
+        paymentMethod: displayPaymentMethod,
+        paymentBreakdown: paymentBreakdown,
         customerAlternatePhone: order.alternatePhone,
         orderComment: order.comment,
         deliveryMethod: order.deliveryMethod,
@@ -384,7 +394,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               isFromLocalStorage: true,
               customerName: order.customerName,
               customerPhone: order.customerPhone,
-              paymentMethod: order.paymentMethod,
+              paymentMethod: displayPaymentMethod,
+              paymentBreakdown: paymentBreakdown,
               customerAlternatePhone: order.alternatePhone,
               orderComment: order.comment,
               deliveryMethod: order.deliveryMethod,
@@ -655,15 +666,32 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             Map<String, dynamic> multiPaymentData = json.decode(paymentMethod);
             if (multiPaymentData['isMultiPayment'] == true) {
               // Extract multi-payment data
-              paymentMethods =
+              final selectedMethods =
                   List<String>.from(multiPaymentData['methods'] ?? []);
               Map<String, dynamic> amounts =
                   Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
 
+              // API expects numeric payment-method IDs only.
+              // Filter out non-numeric entries (e.g., DEBIT/customer-credit marker).
+              paymentMethods = selectedMethods
+                  .where((methodId) => RegExp(r'^\d+$').hasMatch(methodId))
+                  .toList();
+
+              // Also include numeric amount-keys that may be missing from methods list.
+              for (final entry in amounts.entries) {
+                final methodId = entry.key.toString();
+                if (RegExp(r'^\d+$').hasMatch(methodId) &&
+                    !paymentMethods.contains(methodId)) {
+                  final amount = double.tryParse(entry.value.toString()) ?? 0;
+                  if (amount > 0) {
+                    paymentMethods.add(methodId);
+                  }
+                }
+              }
+
               paidMethods = [];
-              
-              // Iterate through the selected methods and get their amounts
-              // This handles both dynamic IDs (e.g., "1", "2") and legacy strings ("CASH", "CARD")
+
+              // Build paid_methods only for numeric method IDs with positive amounts.
               for (String methodId in paymentMethods) {
                 final amountStr = amounts[methodId]?.toString();
                 if (amountStr != null && amountStr != "0" && amountStr.isNotEmpty) {

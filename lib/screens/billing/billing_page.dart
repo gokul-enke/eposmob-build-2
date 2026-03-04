@@ -14,6 +14,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -4262,10 +4263,6 @@ class BillingPageState extends State<BillingPage>
 
         final List<String> methodsForStorage =
             List<String>.from(selectedPaymentMethods);
-        if (_toCustomerCreditEnabled &&
-            (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
-          methodsForStorage.add(debitId);
-        }
 
         Map<String, dynamic> multiPaymentData = {
           "methods": methodsForStorage,
@@ -6451,6 +6448,14 @@ class BillingPageState extends State<BillingPage>
           Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
+      // Parse multi-payment JSON into human-readable names and breakdown
+      final parsedPayment = PaymentHelper.parseLocalMultiPayment(
+          context, savedOrder.paymentMethod);
+      final String? displayPaymentMethod = parsedPayment?.paymentMethodDisplay
+          ?? savedOrder.paymentMethod;
+      final Map<String, dynamic>? paymentBreakdown =
+          parsedPayment?.paymentBreakdown;
+
       Future<bool> printOnce() {
         return _printOrderDetailsWithFallback(
           storeName: storeName,
@@ -6472,7 +6477,8 @@ class BillingPageState extends State<BillingPage>
           isFromLocalStorage: true,
           customerName: savedOrder.customerName,
           customerPhone: savedOrder.customerPhone,
-          paymentMethod: savedOrder.paymentMethod,
+          paymentMethod: displayPaymentMethod,
+          paymentBreakdown: paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
           orderComment: savedOrder.comment,
             deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
