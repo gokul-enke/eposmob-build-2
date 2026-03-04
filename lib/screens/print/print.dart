@@ -179,7 +179,6 @@ class PrintPage extends StatefulWidget {
 
       // Get receipt theme
       final theme = await _getReceiptThemeStatic(billDocumentConfig, prefs);
-      final layout = ReceiptLayoutFactory.getLayout(theme);
 
       // Fetch ZATCA credentials
       final sharedPrefProvider = SharedPreferenceProvider();
@@ -225,6 +224,7 @@ class PrintPage extends StatefulWidget {
 
       // Print
       if (paperSize == '112mm' || paperSize == '80mm' || paperSize == '58mm') {
+        final layout = ReceiptLayoutFactory.getLayout(theme);
         await layout.printThermal(params);
       } else {
         // Use StandardPdfLayoutFactory for A4/A5 printing
