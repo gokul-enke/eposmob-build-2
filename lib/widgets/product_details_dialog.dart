@@ -5,10 +5,13 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/models/language.dart';
+import 'package:pos_machine/newcomponents/custom_container_box.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/newcomponents/custom_text_fields.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
@@ -72,6 +75,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _taxController; // Restore tax controller
   late TextEditingController _purchasePriceController;
   late TextEditingController _rackController;
+  final Map<int, TextEditingController> _languageNameControllers = {};
+  final Map<int, bool> _languageTranslating = {};
+  bool _languagesRequested = false;
 
   String? _selectedCategoryId;
   Stock? _editableStock;
@@ -105,6 +111,180 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     } else if (widget.barcode != null) {
       _fetchProductByBarcode(widget.barcode!);
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLanguages();
+    });
+  }
+
+  Future<void> _fetchLanguages() async {
+    if (_languagesRequested) return;
+    _languagesRequested = true;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+
+    await languageProvider.fetchLanguages(accessToken: accessToken);
+
+    if (!mounted) return;
+
+    if (languageProvider.error != null) {
+      showScaffoldError(
+        context: context,
+        message: languageProvider.error!,
+      );
+    }
+
+    _syncLanguageNameControllersFromProduct();
+    setState(() {});
+  }
+
+  void _retryFetchLanguages() {
+    _languagesRequested = false;
+    _fetchLanguages();
+  }
+
+  Language? _getBaseLanguage(List<Language> languages) {
+    if (languages.isEmpty) return null;
+    try {
+      return languages.firstWhere((lang) => lang.code.toLowerCase() == 'en');
+    } catch (_) {
+      return languages.first;
+    }
+  }
+
+  String _extractTranslatedName(dynamic names, Language language) {
+    if (names == null) return '';
+    final String targetCode = language.code.toLowerCase();
+
+    if (names is Map) {
+      final direct = names[targetCode] ?? names[language.code];
+      if (direct != null) {
+        if (direct is String) return direct;
+        if (direct is Map) {
+          final fromMap = direct['name'] ?? direct['value'];
+          if (fromMap != null) return fromMap.toString();
+        }
+      }
+
+      for (final value in names.values) {
+        if (value is Map) {
+          final code = value['code']?.toString().toLowerCase() ??
+              value['language_code']?.toString().toLowerCase();
+          final languageId = value['language_id']?.toString();
+          if (code == targetCode || languageId == language.id.toString()) {
+            final name = value['name'] ?? value['value'];
+            if (name != null) return name.toString();
+          }
+        }
+      }
+    }
+
+    if (names is List) {
+      for (final value in names) {
+        if (value is Map) {
+          final code = value['code']?.toString().toLowerCase() ??
+              value['language_code']?.toString().toLowerCase();
+          final languageId = value['language_id']?.toString();
+          if (code == targetCode || languageId == language.id.toString()) {
+            final name = value['name'] ?? value['value'];
+            if (name != null) return name.toString();
+          }
+        }
+      }
+    }
+
+    return '';
+  }
+
+  void _syncLanguageNameControllersFromProduct() {
+    if (selectedProduct == null) return;
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+    final activeLanguages = languageProvider.languages
+        .where((language) => language.active)
+        .toList(growable: false);
+
+    for (final language in activeLanguages) {
+      final controller = _languageNameControllers.putIfAbsent(
+        language.id,
+        () => TextEditingController(),
+      );
+      final translatedName =
+          _extractTranslatedName(selectedProduct!.names, language);
+      if (translatedName.isNotEmpty || controller.text.isEmpty) {
+        controller.text = translatedName;
+      }
+      _languageTranslating.putIfAbsent(language.id, () => false);
+    }
+  }
+
+  Future<void> _translateLanguage(Language language) async {
+    final baseText = _nameController.text.trim();
+    if (baseText.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Please enter Product Name before translating.',
+      );
+      return;
+    }
+
+    if (_languageTranslating[language.id] == true) return;
+
+    setState(() {
+      _languageTranslating[language.id] = true;
+    });
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+
+    final translated = await languageProvider.translateText(
+      accessToken: accessToken,
+      targetLang: language.code,
+      text: baseText,
+    );
+
+    if (!mounted) return;
+
+    if (translated != null && translated.isNotEmpty) {
+      _languageNameControllers.putIfAbsent(
+          language.id, () => TextEditingController());
+      _languageNameControllers[language.id]!.text = translated;
+      showScaffold(
+        context: context,
+        message: 'Translated to ${language.name}',
+      );
+    } else {
+      showScaffoldError(
+        context: context,
+        message: 'Translation failed. Please try again.',
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _languageTranslating[language.id] = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _buildProductNamesPayload(
+      List<Language> languages) {
+    final payload = <Map<String, dynamic>>[];
+    for (final language in languages) {
+      final text = _languageNameControllers[language.id]?.text.trim() ?? '';
+      if (text.isNotEmpty) {
+        payload.add({
+          'language_id': language.id,
+          'name': text,
+        });
+      }
+    }
+    return payload;
   }
 
   Future<void> _fetchProductByBarcode(String barcode) async {
@@ -258,6 +438,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _selectedRackId = null;
 
     _resolveUnitAndRackSelection();
+    _syncLanguageNameControllersFromProduct();
     _controllersInitialized = true;
   }
 
@@ -323,6 +504,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final String? accessToken = authModel.token;
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+    final activeLanguages = languageProvider.languages
+        .where((language) => language.active)
+        .toList(growable: false);
+    final productNames = _buildProductNamesPayload(activeLanguages);
 
     if (accessToken == null || accessToken.isEmpty) {
       if (mounted) {
@@ -359,6 +546,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         purchasePrice: purchasePriceForApi,
         categoryId: resolvedCategoryId,
         rackNumber: rackForApi,
+        productNames: productNames.isNotEmpty ? productNames : null,
         accessToken: accessToken,
       );
 
@@ -445,7 +633,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ? product.purchasePrice
             : updatedPurchasePrice,
         attachment: product.attachment,
-        names: product.names,
+        names: productNames.isNotEmpty ? productNames : product.names,
         productProps: product.productProps,
         weightInfo: product.weightInfo,
         stock: product.stock,
@@ -503,7 +691,140 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _taxController.dispose(); // Restore dispose
     _purchasePriceController.dispose();
     _rackController.dispose();
+    for (final controller in _languageNameControllers.values) {
+      controller.dispose();
+    }
+    _languageNameControllers.clear();
+    _languageTranslating.clear();
     super.dispose();
+  }
+
+  Widget _buildLanguageFields(
+    Size size,
+    double fieldHeight,
+    double fieldWidth,
+    LanguageProvider languageProvider,
+  ) {
+    if (languageProvider.isLoading && languageProvider.languages.isEmpty) {
+      return Row(
+        children: [
+          const SizedBox(
+            height: 16,
+            width: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Loading languages...',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.20,
+              ColorManager.textColor.withOpacity(0.7),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (languageProvider.error != null && languageProvider.languages.isEmpty) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(
+              languageProvider.error!,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.20,
+                Colors.red[700]!,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _retryFetchLanguages,
+            child: const Text('Retry'),
+          ),
+        ],
+      );
+    }
+
+    final languages = languageProvider.languages
+        .where((lang) => lang.active)
+        .toList(growable: false);
+    final baseLanguage = _getBaseLanguage(languages);
+    final extraLanguages = languages
+        .where((lang) => baseLanguage == null || lang.id != baseLanguage.id)
+        .toList(growable: false);
+
+    if (extraLanguages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Initialize controllers for all languages
+    for (final language in extraLanguages) {
+      _languageNameControllers.putIfAbsent(
+        language.id,
+        () => TextEditingController(
+          text: _extractTranslatedName(selectedProduct?.names, language),
+        ),
+      );
+      _languageTranslating.putIfAbsent(language.id, () => false);
+    }
+
+    if (extraLanguages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    const double horizontalGap = 12;
+
+    // Group languages into rows of 3
+    final List<Widget> rows = [];
+    for (int i = 0; i < extraLanguages.length; i += 3) {
+      final end = (i + 3).clamp(0, extraLanguages.length);
+      final rowLanguages = extraLanguages.sublist(i, end);
+
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...rowLanguages.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final language = entry.value;
+                final controller = _languageNameControllers[language.id]!;
+
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: idx > 0 ? horizontalGap : 0),
+                    child: _buildEditLanguageField(
+                      size,
+                      language,
+                      controller,
+                      fieldHeight,
+                    ),
+                  ),
+                );
+              }),
+              // Padding for incomplete rows
+              ...List.generate(
+                3 - rowLanguages.length,
+                (i) => const Expanded(child: SizedBox.shrink()),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        ...rows,
+      ],
+    );
   }
 
   Widget _buildDetailRow(String label, String value) {
@@ -540,6 +861,96 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildEditLanguageField(
+    Size size,
+    Language language,
+    TextEditingController controller,
+    double fieldHeight,
+  ) {
+    final isTranslating = _languageTranslating[language.id] ?? false;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Product Name (${language.name})',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: CustomBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.only(left: 12),
+                height: fieldHeight,
+                child: TextFormField(
+                  controller: controller,
+                  textDirection:
+                      language.isRtl ? TextDirection.rtl : TextDirection.ltr,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                  cursorColor: ColorManager.kPrimaryColor,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    ColorManager.textColor.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              height: fieldHeight,
+              width: fieldHeight,
+              child: Tooltip(
+                message: 'Translate',
+                child: ElevatedButton(
+                  onPressed:
+                      isTranslating ? null : () => _translateLanguage(language),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ColorManager.kPrimaryColor,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                  ),
+                  child: isTranslating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.translate,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -862,6 +1273,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final categories = (categoryProvider.category ?? [])
         .where((category) => category.categoryId != null)
         .toList();
+    final languageProvider = Provider.of<LanguageProvider>(context);
     final purchaseProvider = Provider.of<PurchaseProvider>(context);
     final unitOptions = (purchaseProvider.getUnitList ?? {})
         .entries
@@ -907,7 +1319,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         child: LayoutBuilder(
           builder: (context, constraints) {
             const double horizontalGap = 12;
-            const double verticalGap = 12;
+            const double verticalGap = 2;
             final double availableWidth = constraints.maxWidth;
             final double fieldWidth = availableWidth > 0
                 ? (availableWidth - (horizontalGap * 2)) / 3
@@ -918,214 +1330,224 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: fieldWidth,
-                        child: buildColumnWidgetForTextFields(
-                          controller: _nameController,
-                          size: size,
-                          title: 'Product Name',
-                          hintText: 'Enter product name',
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
                           width: fieldWidth,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          readOnly: false,
-                          validator: (value) =>
-                              value == null || value.trim().isEmpty
-                                  ? 'Required'
-                                  : null,
-                          onchanged: (value) {
-                            if (value == null) return;
-                            final slug = value
-                                .trim()
-                                .toLowerCase()
-                                .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-                                .replaceAll(RegExp(r'-+'), '-')
-                                .replaceAll(RegExp(r'^-|-$'), '');
-                            _slugController.text = slug;
-                          },
+                          child: buildColumnWidgetForTextFields(
+                            controller: _nameController,
+                            size: size,
+                            title: 'Product Name',
+                            hintText: 'Enter product name',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                    ? 'Required'
+                                    : null,
+                            onchanged: (value) {
+                              if (value == null) return;
+                              final slug = value
+                                  .trim()
+                                  .toLowerCase()
+                                  .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+                                  .replaceAll(RegExp(r'-+'), '-')
+                                  .replaceAll(RegExp(r'^-|-$'), '');
+                              _slugController.text = slug;
+                            },
+                          ),
                         ),
-                      ),
-                      spacing(),
-                      SizedBox(
-                        width: fieldWidth,
-                        child: buildColumnWidgetForTextFields(
-                          controller: _slugController,
-                          size: size,
-                          title: 'Slug',
-                          hintText: 'Enter slug',
+                        spacing(),
+                        SizedBox(
                           width: fieldWidth,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          readOnly: false,
-                          validator: (value) =>
-                              value == null || value.trim().isEmpty
-                                  ? 'Required'
-                                  : null,
+                          child: buildColumnWidgetForTextFields(
+                            controller: _slugController,
+                            size: size,
+                            title: 'Slug',
+                            hintText: 'Enter slug',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                    ? 'Required'
+                                    : null,
+                          ),
                         ),
-                      ),
-                      spacing(),
-                      SizedBox(
-                        width: fieldWidth,
-                        child: buildColumnWidgetForTextFields(
-                          controller: _barcodeController,
-                          size: size,
-                          title: 'Barcode',
-                          hintText: 'Enter barcode',
+                        spacing(),
+                        SizedBox(
                           width: fieldWidth,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          readOnly: false,
+                          child: buildColumnWidgetForTextFields(
+                            controller: _barcodeController,
+                            size: size,
+                            title: 'Barcode',
+                            hintText: 'Enter barcode',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: verticalGap),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: fieldWidth,
-                        child: CustomDropDownWithSearch<Category>(
-                          title: 'Category',
-                          hintText: 'Select category',
-                          value: selectedCategory,
-                          items: categories,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          onChanged: (category) {
-                            setState(() {
-                              _selectedCategoryId =
-                                  category?.categoryId?.toString();
-                            });
-                          },
-                          displayText: (category) =>
-                              category.categoryName ?? 'Unknown',
-                          isRequired: true,
+                      ],
+                    ),
+                    const SizedBox(height: verticalGap),
+                    _buildLanguageFields(
+                      size,
+                      fieldHeight,
+                      fieldWidth,
+                      languageProvider,
+                    ),
+                    const SizedBox(height: verticalGap),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
                           width: fieldWidth,
-                          searchHintText: 'Search category...',
-                          autofocus: false,
+                          child: CustomDropDownWithSearch<Category>(
+                            title: 'Category',
+                            hintText: 'Select category',
+                            value: selectedCategory,
+                            items: categories,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            onChanged: (category) {
+                              setState(() {
+                                _selectedCategoryId =
+                                    category?.categoryId?.toString();
+                              });
+                            },
+                            displayText: (category) =>
+                                category.categoryName ?? 'Unknown',
+                            isRequired: true,
+                            width: fieldWidth,
+                            searchHintText: 'Search category...',
+                            autofocus: false,
+                          ),
                         ),
-                      ),
-                      spacing(),
-                      SizedBox(
-                        width: fieldWidth,
-                        child: CustomDropDownWithSearch<_DropdownOption>(
-                          title: 'Unit',
-                          hintText: 'Select unit',
-                          value: selectedUnitOption,
-                          items: unitOptions,
-                          onChanged: (option) {
-                            setState(() {
-                              _selectedUnitId = option?.id;
-                              _unitController.text = option?.label ?? '';
-                            });
-                          },
-                          displayText: (option) => option.label,
-                          isRequired: true,
+                        spacing(),
+                        SizedBox(
                           width: fieldWidth,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          searchHintText: 'Search unit...',
-                          autofocus: false,
+                          child: CustomDropDownWithSearch<_DropdownOption>(
+                            title: 'Unit',
+                            hintText: 'Select unit',
+                            value: selectedUnitOption,
+                            items: unitOptions,
+                            onChanged: (option) {
+                              setState(() {
+                                _selectedUnitId = option?.id;
+                                _unitController.text = option?.label ?? '';
+                              });
+                            },
+                            displayText: (option) => option.label,
+                            isRequired: true,
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            searchHintText: 'Search unit...',
+                            autofocus: false,
+                          ),
                         ),
-                      ),
-                      spacing(),
-                      SizedBox(
-                        width: fieldWidth,
-                        child: buildColumnWidgetForTextFields(
-                          controller: _priceController,
-                          size: size,
-                          title: 'Price',
-                          hintText: 'Enter price',
+                        spacing(),
+                        SizedBox(
                           width: fieldWidth,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          readOnly: false,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
+                          child: buildColumnWidgetForTextFields(
+                            controller: _priceController,
+                            size: size,
+                            title: 'Price',
+                            hintText: 'Enter price',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: verticalGap),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: fieldWidth,
-                        child: buildColumnWidgetForTextFields(
-                          controller: _mrpController,
-                          size: size,
-                          title: 'MRP',
-                          hintText: 'Enter MRP',
+                      ],
+                    ),
+                    const SizedBox(height: verticalGap),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
                           width: fieldWidth,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          readOnly: false,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
+                          child: buildColumnWidgetForTextFields(
+                            controller: _mrpController,
+                            size: size,
+                            title: 'MRP',
+                            hintText: 'Enter MRP',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
                         ),
-                      ),
-                      spacing(),
-                      SizedBox(
-                        width: fieldWidth,
-                        child: buildColumnWidgetForTextFields(
-                          controller: _purchasePriceController,
-                          size: size,
-                          title: 'Purchase Price',
-                          hintText: 'Enter purchase price',
+                        spacing(),
+                        SizedBox(
                           width: fieldWidth,
-                          height: fieldHeight,
-                          margin: EdgeInsets.zero,
-                          readOnly: false,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
+                          child: buildColumnWidgetForTextFields(
+                            controller: _purchasePriceController,
+                            size: size,
+                            title: 'Purchase Price',
+                            hintText: 'Enter purchase price',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
                         ),
-                      ),
-                      spacing(),
-                      // SizedBox(
-                      //   width: fieldWidth,
-                      //   child: CustomDropDownWithSearch<_DropdownOption>(
-                      //     title: 'Rack',
-                      //     hintText: 'Select rack',
-                      //     value: selectedRackOption,
-                      //     items: rackOptions,
-                      //     onChanged: (option) {
-                      //       setState(() {
-                      //         _selectedRackId = option?.id;
-                      //         _rackController.text = option?.label ?? '';
-                      //       });
-                      //     },
-                      //     displayText: (option) => option.label,
-                      //     isRequired: false,
-                      //     width: fieldWidth,
-                      //     height: fieldHeight,
-                      //     margin: EdgeInsets.zero,
-                      //     searchHintText: 'Search rack...',
-                      //     autofocus: false,
-                      //   ),
-                      // ),
-                    ],
-                  ),
-                  const SizedBox(height: verticalGap),
-                  // if (product.stock != null && product.stock!.isNotEmpty)
-                  //   Text(
-                  //     'Price and MRP changes apply to all stock entries for this product.',
-                  //     style: buildCustomStyle(
-                  //       FontWeightManager.medium,
-                  //       FontSize.s12,
-                  //       0.20,
-                  //       ColorManager.textColor.withOpacity(0.7),
-                  //     ),
-                  //   ),
-                  // const SizedBox(height: 12),
-                ],
+                        spacing(),
+                        // SizedBox(
+                        //   width: fieldWidth,
+                        //   child: CustomDropDownWithSearch<_DropdownOption>(
+                        //     title: 'Rack',
+                        //     hintText: 'Select rack',
+                        //     value: selectedRackOption,
+                        //     items: rackOptions,
+                        //     onChanged: (option) {
+                        //       setState(() {
+                        //         _selectedRackId = option?.id;
+                        //         _rackController.text = option?.label ?? '';
+                        //       });
+                        //     },
+                        //     displayText: (option) => option.label,
+                        //     isRequired: false,
+                        //     width: fieldWidth,
+                        //     height: fieldHeight,
+                        //     margin: EdgeInsets.zero,
+                        //     searchHintText: 'Search rack...',
+                        //     autofocus: false,
+                        //   ),
+                        // ),
+                      ],
+                    ),
+                    const SizedBox(height: verticalGap),
+                    // if (product.stock != null && product.stock!.isNotEmpty)
+                    //   Text(
+                    //     'Price and MRP changes apply to all stock entries for this product.',
+                    //     style: buildCustomStyle(
+                    //       FontWeightManager.medium,
+                    //       FontSize.s12,
+                    //       0.20,
+                    //       ColorManager.textColor.withOpacity(0.7),
+                    //     ),
+                    //   ),
+                    // const SizedBox(height: 12),
+                  ],
+                ),
               ),
             );
           },

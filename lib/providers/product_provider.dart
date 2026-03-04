@@ -30,6 +30,7 @@ class ProductProvider extends ChangeNotifier {
     double? purchasePrice,
     int? categoryId,
     int? rackNumber,
+    List<Map<String, dynamic>>? productNames,
     required String accessToken,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -58,6 +59,8 @@ class ProductProvider extends ChangeNotifier {
       'unit': unit,
       if (unitId != null && unitId.isNotEmpty) 'unit_id': unitId,
       if (rackNumber != null) 'rack_number': rackNumber,
+      if (productNames != null && productNames.isNotEmpty)
+        'product_names': productNames,
     }..removeWhere((key, value) {
         if (value == null) return true;
         if (value is String) {
