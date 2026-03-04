@@ -577,8 +577,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -614,7 +613,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           Icons.shopping_cart),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -668,8 +666,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -695,7 +692,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           bankSentValue, ColorManager.kBlue, Icons.call_made),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -795,8 +791,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -826,7 +821,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           Icons.trending_up),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -1004,8 +998,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -1043,7 +1036,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           Icons.star),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -1077,8 +1069,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Center(
-                  child: ListView(
+                child: ListView(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
                     children: [
@@ -1116,7 +1107,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                           Icons.inventory_2),
                     ],
                   ),
-                ),
               ),
             ],
           ),
@@ -1688,54 +1678,86 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             ),
             titlesData: FlTitlesData(
               show: true,
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 30,
+                  reservedSize: 32,
+                  interval: 1,
                   getTitlesWidget: (double value, TitleMeta meta) {
-                    if (value.toInt() >= 0 &&
-                        value.toInt() < salesData.length) {
-                      // Display appropriate label based on period
-                      String label = '';
-                      switch (salesGraphPeriod) {
-                        case 'today':
-                          label = salesData[value.toInt()].time ?? '';
-                          break;
-                        case 'week':
-                          label = salesData[value.toInt()].day ?? '';
-                          break;
-                        case 'month':
-                          label = salesData[value.toInt()].date ?? '';
-                          break;
-                        default:
-                          label = salesData[value.toInt()].time ?? '';
-                      }
-                      debugPrint('Bottom title at index $value: $label');
-                      return Text(
-                        label,
-                        style: TextStyle(
-                          color: ColorManager.textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
-                      );
+                    final int index = value.toInt();
+                    if (index < 0 || index >= salesData.length) {
+                      return const SizedBox();
                     }
-                    return const SizedBox();
+                    // Show every Nth label to prevent overlap
+                    int step = salesData.length <= 7
+                        ? 1
+                        : salesData.length <= 14
+                            ? 2
+                            : 3;
+                    if (index % step != 0) {
+                      return const SizedBox();
+                    }
+                    // Display appropriate label based on period
+                    String label = '';
+                    switch (salesGraphPeriod) {
+                      case 'today':
+                        label = salesData[index].time ?? '';
+                        break;
+                      case 'week':
+                        label = salesData[index].day ?? '';
+                        break;
+                      case 'month':
+                        label = salesData[index].date ?? '';
+                        break;
+                      default:
+                        label = salesData[index].time ?? '';
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          color: ColorManager.textColor,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 9,
+                        ),
+                      ),
+                    );
                   },
                 ),
               ),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 40,
+                  reservedSize: 48,
                   getTitlesWidget: (double value, TitleMeta meta) {
-                    debugPrint('Left title value: $value');
-                    return Text(
-                      '${NumberFormat('#,##').format(value.toInt())}',
-                      style: TextStyle(
-                        color: ColorManager.textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
+                    // Skip min/max edge labels to avoid clipping
+                    if (value == meta.min || value == meta.max) {
+                      return const SizedBox();
+                    }
+                    String label;
+                    if (value >= 1000000) {
+                      label = '${(value / 1000000).toStringAsFixed(1)}M';
+                    } else if (value >= 1000) {
+                      label = '${(value / 1000).toStringAsFixed(1)}K';
+                    } else {
+                      label = value.toInt().toString();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          color: ColorManager.textColor,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 10,
+                        ),
                       ),
                     );
                   },
