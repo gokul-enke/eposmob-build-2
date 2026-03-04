@@ -122,7 +122,7 @@ class ListOrderModelData {
             ? null
             : DateTime.tryParse(json["order_date"]),
         orderNumber: json["order_number"],
-        grantTotal: json["grant_total"],
+        grantTotal: json["grand_total"],
         paymentStatus: json["payment_status"],
         status: json["status"],
         customerName: json["customer_name"],

@@ -1,7 +1,7 @@
 class APPUrl {
-    static const String defaultBaseURL = String.fromEnvironment('BASE_URL',
-            defaultValue: 'https://eeezeeerp.cloudposai.com');
-    static String baseURL = defaultBaseURL;
+  static const String defaultBaseURL = String.fromEnvironment('BASE_URL',
+      defaultValue: 'https://eeezeeerp.cloudposai.com');
+  static String baseURL = defaultBaseURL;
   static const String findDomainUrl =
       'https://cloudposai.com/api/v1/find-domain';
 
@@ -74,6 +74,7 @@ class APPUrl {
   static String get logoutUrl => '$baseURL/api/v1/user/signout';
   static String get dashBoardUrl => '$baseURL/api/v1/dashboard';
   static String get dashBoardGraphUrl => '$baseURL/api/v1/dashboard/orders';
+  static String get salesStatsUrl => '$baseURL/api/v1/dashboard/sales-stats';
   static String get addCustomerUrl => '$baseURL/api/v1/customer/add-customer';
   static String get updateCustomerUrl =>
       '$baseURL/api/v1/customer/customer-edit';
@@ -230,6 +231,8 @@ class APPUrl {
       '$baseURL/api/v1/dashboard/executives-overview';
   static String get salesGraph =>
       '$baseURL/api/v1/dashboard/executive-sales-graph';
+  static String get customerStats => '$baseURL/api/v1/dashboard/customer-stats';
+  static String get productsStats => '$baseURL/api/v1/dashboard/products-stats';
 
   static String get zatcaPhase1InvoicePrint =>
       '$baseURL/api/v1/zatca/phase1/invoice/print';

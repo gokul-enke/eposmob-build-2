@@ -58,7 +58,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           cachedSuppliersPurchaseGraph.containsKey(period) &&
           cachedSupplierTransactionsGraph.containsKey(period) &&
           cachedSupplierCreditBalanceGraph.containsKey(period)) {
-        debugPrint('Data already cached for period: $period, using cached data');
+        debugPrint(
+            'Data already cached for period: $period, using cached data');
         setState(() {
           suppliersOverview = cachedSuppliersOverview[period];
           suppliersPurchaseGraph = cachedSuppliersPurchaseGraph[period];
@@ -99,8 +100,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               .format(now.subtract(const Duration(days: 7)));
           break;
         case "month":
-          startDate = DateFormat('yyyy-MM-dd')
-              .format(DateTime(now.year, now.month, 1));
+          startDate =
+              DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
           break;
         case "year":
           startDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, 1, 1));
@@ -110,23 +111,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
               .format(now.subtract(const Duration(days: 30)));
       }
 
+      // Map UI period to API period parameter
+      String apiPeriod = 'week';
+      if (period == 'today') apiPeriod = 'day';
+      if (period == 'week') apiPeriod = 'week';
+      if (period == 'month') apiPeriod = 'month';
+      if (period == 'year') apiPeriod = 'year';
+
       // Fetch supplier dashboard data for this period
       try {
         final dashboardProvider = DashboardProvider();
 
         // Fetch suppliers overview
         final suppliersOverview = await dashboardProvider
-            .fetchSuppliersOverview(accessToken, startDate, endDate);
+            .fetchSuppliersOverview(accessToken, apiPeriod, startDate, endDate);
         cachedSuppliersOverview[period] = suppliersOverview;
 
         // Fetch suppliers purchase graph
-        final suppliersPurchaseGraph = await dashboardProvider
-            .fetchSuppliersPurchaseGraph(accessToken, startDate, endDate);
+        final suppliersPurchaseGraph =
+            await dashboardProvider.fetchSuppliersPurchaseGraph(
+                accessToken, apiPeriod, startDate, endDate);
         cachedSuppliersPurchaseGraph[period] = suppliersPurchaseGraph;
 
         // Fetch supplier transactions graph
-        final supplierTransactionsGraph = await dashboardProvider
-            .fetchSupplierTransactionsGraph(accessToken, startDate, endDate);
+        final supplierTransactionsGraph =
+            await dashboardProvider.fetchSupplierTransactionsGraph(
+                accessToken, apiPeriod, startDate, endDate);
         cachedSupplierTransactionsGraph[period] = supplierTransactionsGraph;
 
         // Fetch supplier credit balance graph

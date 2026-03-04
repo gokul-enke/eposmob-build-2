@@ -34,10 +34,12 @@ class DashBoardModel {
 class DashBoardModelData {
   final List<ProfileDetail>? profileDetails;
   final TotalSales? totalSales;
+  final int? totalProducts;
 
   DashBoardModelData({
     this.profileDetails,
     this.totalSales,
+    this.totalProducts,
   });
 
   factory DashBoardModelData.fromJson(Map<String, dynamic> json) =>
@@ -49,6 +51,7 @@ class DashBoardModelData {
         totalSales: json["total_sales"] == null
             ? null
             : TotalSales.fromJson(json["total_sales"]),
+        totalProducts: json["total_products"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -56,6 +59,7 @@ class DashBoardModelData {
             ? []
             : List<dynamic>.from(profileDetails!.map((x) => x.toJson())),
         "total_sales": totalSales?.toJson(),
+        "total_products": totalProducts,
       };
 }
 
@@ -111,10 +115,12 @@ class TotalSales {
         month:
             json["month"] == null ? null : PeriodStats.fromJson(json["month"]),
         year: json["year"] == null ? null : PeriodStats.fromJson(json["year"]),
-        count: json["count"],
-        total: json["total"] is String
-            ? double.parse(json["total"])
-            : json["total"].toDouble(),
+        count: json["count"] ?? 0,
+        total: json["total"] == null
+            ? 0.0
+            : (json["total"] is String
+                ? double.parse(json["total"])
+                : json["total"].toDouble()),
       );
 
   Map<String, dynamic> toJson() => {
@@ -139,13 +145,17 @@ class PeriodStats {
   });
 
   factory PeriodStats.fromJson(Map<String, dynamic> json) => PeriodStats(
-        totalSales: json["total_sales"] is String
-            ? double.parse(json["total_sales"])
-            : json["total_sales"].toDouble(),
-        totalCustomers: json["total_customers"],
-        totalAmount: json["total_amount"] is String
-            ? double.parse(json["total_amount"])
-            : json["total_amount"].toDouble(),
+        totalSales: json["total_sales"] == null
+            ? 0.0
+            : (json["total_sales"] is String
+                ? double.parse(json["total_sales"])
+                : json["total_sales"].toDouble()),
+        totalCustomers: json["total_customers"] ?? 0,
+        totalAmount: json["total_amount"] == null
+            ? 0.0
+            : (json["total_amount"] is String
+                ? double.parse(json["total_amount"])
+                : json["total_amount"].toDouble()),
       );
 
   Map<String, dynamic> toJson() => {

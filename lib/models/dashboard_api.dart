@@ -667,3 +667,109 @@ class CreditBalanceGraphData {
     );
   }
 }
+
+class SalesStats {
+  final Map<String, dynamic> data;
+  final List<dynamic> deliveryMethod;
+  final List<dynamic> payments;
+
+  SalesStats({
+    required this.data,
+    required this.deliveryMethod,
+    required this.payments,
+  });
+
+  factory SalesStats.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> responseData =
+        json['data'] as Map<String, dynamic>? ?? {};
+
+    return SalesStats(
+      data: responseData,
+      deliveryMethod: responseData['delivery_method'] as List? ?? [],
+      payments: responseData['payments'] as List? ?? [],
+    );
+  }
+}
+
+class CustomerStats {
+  final String period;
+  final int totalCustomers;
+  final int debitCustomers;
+  final int creditCustomers;
+  final int crucialCustomers;
+
+  CustomerStats({
+    required this.period,
+    required this.totalCustomers,
+    required this.debitCustomers,
+    required this.creditCustomers,
+    required this.crucialCustomers,
+  });
+
+  factory CustomerStats.fromJson(Map<String, dynamic> json) {
+    return CustomerStats(
+      period: json['data']?['period'] as String? ?? 'today',
+      totalCustomers: json['data']?['total_customers'] as int? ?? 0,
+      debitCustomers: json['data']?['debit_customers'] as int? ?? 0,
+      creditCustomers: json['data']?['credit_customers'] as int? ?? 0,
+      crucialCustomers: json['data']?['crucial_customers'] as int? ?? 0,
+    );
+  }
+}
+
+class ProductStats {
+  final int totalProducts;
+  final int activeProducts;
+  final int inactiveProducts;
+  final int sellableProducts;
+  final int purchasableProducts;
+  final int taxableProducts;
+  final int nonTaxableProducts;
+  final int totalCategory;
+  final int sellableCategory;
+  final int purchasableCategory;
+  final int taxableCategory;
+  final int nonTaxableCategory;
+  final int productsInStock;
+  final int totalProductsStockQty;
+  final int lowStock;
+
+  ProductStats({
+    required this.totalProducts,
+    required this.activeProducts,
+    required this.inactiveProducts,
+    required this.sellableProducts,
+    required this.purchasableProducts,
+    required this.taxableProducts,
+    required this.nonTaxableProducts,
+    required this.totalCategory,
+    required this.sellableCategory,
+    required this.purchasableCategory,
+    required this.taxableCategory,
+    required this.nonTaxableCategory,
+    required this.productsInStock,
+    required this.totalProductsStockQty,
+    required this.lowStock,
+  });
+
+  factory ProductStats.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? {};
+    return ProductStats(
+      totalProducts: data['total_products'] as int? ?? 0,
+      activeProducts: data['active_products'] as int? ?? 0,
+      inactiveProducts: data['inactive_products'] as int? ?? 0,
+      sellableProducts: data['sellable_products'] as int? ?? 0,
+      purchasableProducts: data['purchasable_products'] as int? ?? 0,
+      taxableProducts: data['taxable_products'] as int? ?? 0,
+      nonTaxableProducts: data['non_taxable_products'] as int? ?? 0,
+      totalCategory: data['total_category'] as int? ?? 0,
+      sellableCategory: data['sellable_category'] as int? ?? 0,
+      purchasableCategory: data['purchasable_category'] as int? ?? 0,
+      taxableCategory: data['taxable_category'] as int? ?? 0,
+      nonTaxableCategory: data['non_taxable_category'] as int? ?? 0,
+      productsInStock: data['products_in_stock'] as int? ?? 0,
+      totalProductsStockQty: data['total_products_stock_qty'] as int? ?? 0,
+      lowStock: data['low_stock'] as int? ?? 0,
+    );
+  }
+}
