@@ -24,6 +24,8 @@ class AppSettings {
   final bool posPrintDoubleBill;
   final bool skipCustomerSelection;
   final bool hideDefaultPhone;
+  final String freeDeliveryMinimumAmount;
+  final bool freeDeliveryMinimumAmountEnabled;
 
   AppSettings({
     required this.barcodeSales,
@@ -49,6 +51,8 @@ class AppSettings {
     required this.posPrintDoubleBill,
     required this.skipCustomerSelection,
     required this.hideDefaultPhone,
+    required this.freeDeliveryMinimumAmount,
+    required this.freeDeliveryMinimumAmountEnabled,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -124,8 +128,11 @@ class AppSettings {
           settingsMap['POS_PRINT_DOUBLE_BILL']?['status'] ?? false,
       skipCustomerSelection:
           settingsMap['SKIP_CUSTOMER_SELECTION']?['status'] ?? false,
-        hideDefaultPhone:
-          settingsMap['HIDE_DEFAULT_PHONE']?['status'] ?? true,
+      hideDefaultPhone: settingsMap['HIDE_DEFAULT_PHONE']?['status'] ?? true,
+      freeDeliveryMinimumAmount:
+          settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['value'] ?? "",
+        freeDeliveryMinimumAmountEnabled:
+          settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['status'] ?? false,
     );
   }
 
@@ -263,6 +270,12 @@ class AppSettings {
           "code": "HIDE_DEFAULT_PHONE",
           "value": "",
           "status": hideDefaultPhone.toString(),
+        },
+        {
+          "name": "Free Delivery Minimum Amount",
+          "code": "FREE_DELIVERY_MINIMUM_AMOUNT",
+          "value": freeDeliveryMinimumAmount.toString(),
+          "status": freeDeliveryMinimumAmount.isNotEmpty ? "true" : "false",
         },
       ],
     };

@@ -190,6 +190,7 @@ class BillingPageState extends State<BillingPage>
   String? deliveryDate;
   String? deliveryTime;
   String? deliveryAddress;
+  double? _selectedDeliveryCharge;
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -3971,6 +3972,7 @@ class BillingPageState extends State<BillingPage>
         deliveryDate = null;
         deliveryTime = null;
         deliveryAddress = null;
+        _selectedDeliveryCharge = null;
         // Clear delivery comment and car number
         _commentController.clear();
         _carNumberController.clear();
@@ -4627,6 +4629,7 @@ class BillingPageState extends State<BillingPage>
         discountAmount: priceSummary.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       )
           .then((response) async {
         debugPrint(
@@ -4971,6 +4974,7 @@ class BillingPageState extends State<BillingPage>
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -5178,6 +5182,7 @@ class BillingPageState extends State<BillingPage>
           deliveryAddress: deliveryAddress ?? "",
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
+          initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
           onDeliveryUpdated:
               (method, methodId, carNo, comment, date, time, address) {
             setState(() {
@@ -5188,6 +5193,11 @@ class BillingPageState extends State<BillingPage>
               deliveryDate = date;
               deliveryTime = time;
               deliveryAddress = address;
+            });
+          },
+          onDeliveryChargeUpdated: (deliveryCharge) {
+            setState(() {
+              _selectedDeliveryCharge = deliveryCharge;
             });
           },
 
@@ -5644,6 +5654,52 @@ class BillingPageState extends State<BillingPage>
     return cashAmount + cardAmount + upiAmount + codAmount;
   }
 
+  double _getDeliveryChargeForOrder() {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final isDeliveryChargeEnabled =
+        appSettingsProvider.appSettings?.freeDeliveryMinimumAmountEnabled ??
+            false;
+
+    if (!isDeliveryChargeEnabled) {
+      return 0.0;
+    }
+
+    final minimumAmount = double.tryParse(
+            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
+                '') ??
+        0.0;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final netAmount =
+        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+
+    if (minimumAmount > 0 && netAmount >= minimumAmount) {
+      return 0.0;
+    }
+
+    if (_selectedDeliveryCharge != null) {
+      return _selectedDeliveryCharge!;
+    }
+
+    if (deliveryMethod.isEmpty) {
+      return 0.0;
+    }
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if ((deliveryMethodId.isNotEmpty && method.id == deliveryMethodId) ||
+          method.name == deliveryMethod) {
+        return method.basePrice ?? 0.0;
+      }
+    }
+
+    return 0.0;
+  }
+
   List<String> _getSelectedPaymentMethods() {
     List<String> methods = [];
 
@@ -6092,6 +6148,7 @@ class BillingPageState extends State<BillingPage>
           setState(() {
             deliveryMethod = method;
             deliveryMethodId = methodId;
+            _selectedDeliveryCharge = null;
             _carNumberController.text = carNumber;
             _commentController.text = comment;
             deliveryDate = selectedDate;
@@ -6261,6 +6318,7 @@ class BillingPageState extends State<BillingPage>
       }
 
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      _selectedDeliveryCharge = null;
 
       // Find name for the ID
       String defaultName = "Store Takeaway";
@@ -6613,6 +6671,7 @@ class BillingPageState extends State<BillingPage>
       // iconColor = 1; // Default to cash
       deliveryMethod = "Store Takeaway";
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      _selectedDeliveryCharge = null;
 
       // Clear all controllers
       coupenCodeTextController.clear();
@@ -6705,6 +6764,7 @@ class BillingPageState extends State<BillingPage>
     // Set initial default values
     deliveryMethod = "Store Takeaway";
     deliveryMethodId = "11"; // Updated to match API response
+    _selectedDeliveryCharge = null;
 
     // Listen for delivery methods to be loaded and update default
     WidgetsBinding.instance.addPostFrameCallback((_) {

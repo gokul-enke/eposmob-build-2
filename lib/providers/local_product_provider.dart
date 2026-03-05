@@ -806,9 +806,12 @@ class LocalProductProvider extends ChangeNotifier {
     int currentPage = 1;
     const int batchSize = 10; // Fetch 10 pages concurrently
     final prefsProvider = prefs_provider.SharedPreferenceProvider();
-    final lastSyncIso =
-        refresh ? null : await prefsProvider.getLastProductSyncIso();
-    final syncEndIso = DateHelper.now().toUtc().toIso8601String();
+    final lastSyncRaw =
+      refresh ? null : await prefsProvider.getLastProductSyncIso();
+    final lastSyncIso = (lastSyncRaw == null || lastSyncRaw.isEmpty)
+      ? null
+      : DateHelper.normalizeToApiDateTime(lastSyncRaw);
+    final syncEndIso = DateHelper.formatForApiDateTime();
     final requestedDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
     final hasLocalBaseline = _products.isNotEmpty;
     final useDelta = requestedDelta && hasLocalBaseline;

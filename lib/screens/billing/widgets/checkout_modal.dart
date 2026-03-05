@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // Re-enabled for .tr translations
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/delivery_method.dart';
 // import 'package:pos_machine/resources/color_manager.dart'; // Unused
 import 'package:pos_machine/resources/font_manager.dart';
 // import 'package:pos_machine/resources/style_manager.dart'; // Unused
@@ -39,6 +40,7 @@ class CheckoutModal extends StatefulWidget {
   final String deliveryAddress;
   final String? deliveryDate;
   final String? deliveryTime;
+  final double initialDeliveryCharge;
 
   // Payment State
   final bool isCashSelected;
@@ -77,6 +79,7 @@ class CheckoutModal extends StatefulWidget {
 
   final Function(String method, String methodId, String carNo, String comment,
       String? date, String? time, String address)? onDeliveryUpdated;
+  final Function(double deliveryCharge)? onDeliveryChargeUpdated;
 
   final Function(
       bool isCash,
@@ -130,6 +133,7 @@ class CheckoutModal extends StatefulWidget {
     this.deliveryAddress = "",
     this.deliveryDate,
     this.deliveryTime,
+    this.initialDeliveryCharge = 0.0,
     required this.couponCode,
     required this.flatDiscount,
     required this.percentageDiscount,
@@ -141,6 +145,7 @@ class CheckoutModal extends StatefulWidget {
     required this.onAddNewCustomer,
     required this.onDiscountApplied,
     this.onDeliveryUpdated,
+    this.onDeliveryChargeUpdated,
     required this.onPaymentUpdated,
     required this.onConfirmOrder,
     required this.onConfirmAndPrint,
@@ -177,6 +182,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   // Local Delivery State
   late String _lDeliveryMethod;
   late String _lDeliveryMethodId;
+  String? _selectedDeliveryPriceId;
+  double? _selectedDeliveryCharge;
   late TextEditingController _lCarNumberController;
   late TextEditingController _lCommentController;
   late TextEditingController _lAddressController;
@@ -258,6 +265,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     // Initialize Local Delivery State
     _lDeliveryMethod = widget.deliveryMethod;
     _lDeliveryMethodId = widget.deliveryMethodId;
+    _selectedDeliveryCharge = widget.initialDeliveryCharge;
     _lCarNumberController = TextEditingController(text: widget.carNumber);
     _lCommentController = TextEditingController(text: widget.deliveryComment);
     _lAddressController = TextEditingController(text: widget.deliveryAddress);
@@ -424,7 +432,78 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
   }
 
+  double _getFreeDeliveryMinimumAmount() {
+    final settings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final rawValue = settings?.freeDeliveryMinimumAmount.trim() ?? '';
+    return double.tryParse(rawValue) ?? 0.0;
+  }
+
+  double _getCurrentNetAmount() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    return localProductProvider.priceSummary?.netTotal ?? widget.cartTotal;
+  }
+
+  bool _isFreeDeliveryMinimumAmountEnabled() {
+    final settings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    return settings?.freeDeliveryMinimumAmountEnabled ?? false;
+  }
+
+  bool _shouldApplyDeliveryCharge() {
+    if (!_isFreeDeliveryMinimumAmountEnabled()) {
+      return false;
+    }
+
+    final minimumAmount = _getFreeDeliveryMinimumAmount();
+    if (minimumAmount <= 0) {
+      return true;
+    }
+    return _getCurrentNetAmount() < minimumAmount;
+  }
+
+  double _getEffectiveDeliveryCharge() {
+    if (!_shouldApplyDeliveryCharge()) {
+      return 0.0;
+    }
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    DeliveryMethod? selectedMethod;
+    if (_lDeliveryMethod.isNotEmpty || _lDeliveryMethodId.isNotEmpty) {
+      for (final method in deliveryMethodsProvider.deliveryMethods) {
+        if ((_lDeliveryMethodId.isNotEmpty && method.id == _lDeliveryMethodId) ||
+            method.name == _lDeliveryMethod) {
+          selectedMethod = method;
+          break;
+        }
+      }
+    }
+
+    return _selectedDeliveryCharge ?? selectedMethod?.basePrice ?? 0.0;
+  }
+
   void _handleDeliveryUpdate() {
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    double resolvedCharge = _selectedDeliveryCharge ?? 0.0;
+
+    if (_lDeliveryMethod.isNotEmpty &&
+        (_selectedDeliveryCharge == null || _selectedDeliveryCharge! <= 0)) {
+      for (final method in deliveryMethodsProvider.deliveryMethods) {
+        if (method.name == _lDeliveryMethod || method.id == _lDeliveryMethodId) {
+          resolvedCharge = method.basePrice ?? 0.0;
+          break;
+        }
+      }
+    }
+
+    if (!_shouldApplyDeliveryCharge()) {
+      resolvedCharge = 0.0;
+    }
+
     if (widget.onDeliveryUpdated != null) {
       final dateValue = _lSelectedDeliveryDate != null
           ? _lSelectedDeliveryDate!.toIso8601String()
@@ -441,6 +520,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         timeValue,
         _lAddressController.text,
       );
+    }
+
+    if (widget.onDeliveryChargeUpdated != null) {
+      widget.onDeliveryChargeUpdated!(resolvedCharge);
     }
   }
 
@@ -921,6 +1004,32 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   child: SingleChildScrollView(
                     child: Consumer<DeliveryMethodsProvider>(
                       builder: (context, provider, child) {
+                      final appSettings =
+                        Provider.of<AppSettingsProvider>(context,
+                              listen: false)
+                            .appSettings;
+                        final isDeliveryChargeDataEnabled =
+                          appSettings?.freeDeliveryMinimumAmountEnabled ??
+                            false;
+                      final currency = appSettings?.currency ?? 'SAR';
+                      final minimumAmount =
+                        double.tryParse(appSettings
+                              ?.freeDeliveryMinimumAmount
+                              .trim() ??
+                            '') ??
+                          0.0;
+                      final localProductProvider =
+                        Provider.of<LocalProductProvider>(context,
+                          listen: false);
+                      final netAmount =
+                        localProductProvider.priceSummary?.netTotal ??
+                          widget.cartTotal;
+                      final shouldApplyDeliveryCharge =
+                        isDeliveryChargeDataEnabled &&
+                          (minimumAmount <= 0
+                            ? true
+                            : netAmount < minimumAmount);
+
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -946,15 +1055,37 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     setState(() {
                                       _lDeliveryMethod = method.name;
                                       _lDeliveryMethodId = method.id;
+                                      if (method.prices.isEmpty) {
+                                        _selectedDeliveryPriceId = null;
+                                        _selectedDeliveryCharge = 0.0;
+                                      } else {
+                                        final existingPrice = method.prices
+                                            .where((p) =>
+                                                p.id == _selectedDeliveryPriceId)
+                                            .toList();
+                                        if (existingPrice.isNotEmpty) {
+                                          _selectedDeliveryCharge =
+                                              existingPrice.first.price;
+                                        } else {
+                                          _selectedDeliveryPriceId =
+                                              method.prices.first.id;
+                                          _selectedDeliveryCharge =
+                                              method.prices.first.price;
+                                        }
+                                      }
+
+                                      if (!shouldApplyDeliveryCharge) {
+                                        _selectedDeliveryCharge = 0.0;
+                                      }
                                     });
                                     _handleDeliveryUpdate();
                                   },
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
-                                    width: 105,
-                                    height: 90,
+                                    width: 118,
+                                    height: 104,
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 10, horizontal: 8),
+                                        vertical: 8, horizontal: 8),
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? ColorManager.kPrimaryColor
@@ -969,8 +1100,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                       ),
                                     ),
                                     child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           method.name == "Store Takeaway"
@@ -986,7 +1116,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               ? ColorManager.kPrimaryColor
                                               : Colors.grey.shade700,
                                         ),
-                                        const SizedBox(height: 6),
+                                        const SizedBox(height: 5),
                                         Text(
                                           method.name.tr,
                                           textAlign: TextAlign.center,
@@ -1003,12 +1133,151 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                                 : Colors.black87,
                                           ),
                                         ),
+                                        if (isDeliveryChargeDataEnabled) ...[
+                                          const SizedBox(height: 5),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF059669)
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              method.prices.isNotEmpty &&
+                                                      shouldApplyDeliveryCharge
+                                                  ? '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}'
+                                                  : 'free'.tr,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: buildCustomStyle(
+                                                FontWeightManager.semiBold,
+                                                FontSize.s9,
+                                                0.0,
+                                                const Color(0xFF059669),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
                                 );
                               }).toList(),
                             ),
+                            if (_lDeliveryMethod.isNotEmpty &&
+                                isDeliveryChargeDataEnabled) ...[
+                              const SizedBox(height: 12),
+                              Builder(builder: (context) {
+                                DeliveryMethod? selectedMethod;
+                                for (final method in provider.deliveryMethods) {
+                                  if (method.name == _lDeliveryMethod) {
+                                    selectedMethod = method;
+                                    break;
+                                  }
+                                }
+
+                                if (selectedMethod == null ||
+                                    selectedMethod.prices.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                if (!shouldApplyDeliveryCharge) {
+                                  return Text(
+                                    minimumAmount > 0
+                                        ? 'Free delivery applied for orders above $currency ${minimumAmount.toStringAsFixed(2)}'
+                                        : 'free'.tr,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s11,
+                                      0.12,
+                                      const Color(0xFF059669),
+                                    ),
+                                  );
+                                }
+
+                                final effectiveSelectedPriceId =
+                                    _selectedDeliveryPriceId ??
+                                        selectedMethod.prices.first.id;
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Delivery charges',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.12,
+                                        Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children:
+                                          selectedMethod.prices.map((price) {
+                                        final isPriceSelected =
+                                            price.id == effectiveSelectedPriceId;
+
+                                        return OutlinedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _selectedDeliveryPriceId =
+                                                  price.id;
+                                              _selectedDeliveryCharge =
+                                                  price.price;
+                                            });
+                                            _handleDeliveryUpdate();
+                                          },
+                                          style: OutlinedButton.styleFrom(
+                                            side: BorderSide(
+                                              color: isPriceSelected
+                                                  ? const Color(0xFF059669)
+                                                  : const Color(0xFF059669),
+                                              width: isPriceSelected ? 2 : 1.5,
+                                            ),
+                                            backgroundColor: isPriceSelected
+                                                ? const Color(0xFF059669)
+                                                : Colors.white,
+                                            foregroundColor: isPriceSelected
+                                                ? Colors.white
+                                                : const Color(0xFF059669),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 10),
+                                            minimumSize: const Size(0, 44),
+                                            tapTargetSize:
+                                                MaterialTapTargetSize.shrinkWrap,
+                                            visualDensity:
+                                                const VisualDensity(
+                                                    horizontal: 0,
+                                                    vertical: 0),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '$currency ${price.price.toStringAsFixed(2)}',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.bold,
+                                              FontSize.s12,
+                                              0.0,
+                                              isPriceSelected
+                                                  ? Colors.white
+                                                  : const Color(0xFF059669),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                );
+                              }),
+                            ],
                             if (Provider.of<AppSettingsProvider>(context,
                                   listen: false)
                                 .appSettings
@@ -1623,7 +1892,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   Widget _buildPaymentStep() {
     final discountAmount = _localFlatDiscount +
         (widget.cartTotal * _localPercentageDiscount / 100);
-    final effectiveTotal = widget.cartTotal - discountAmount;
+    final effectiveTotal =
+      (widget.cartTotal - discountAmount) + _getEffectiveDeliveryCharge();
 
     final bool anyMethodSelected = _lIsCashSelected ||
         _lIsCardSelected ||
@@ -1772,6 +2042,35 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
                 fontSize: large ? 18 : 14,
                 color: color)),
+      ],
+    );
+  }
+
+  Widget _buildDeliveryChargeRow() {
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'SAR';
+
+    final effectiveDeliveryCharge = _getEffectiveDeliveryCharge();
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('Delivery Charge',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              color: Colors.black87,
+            )),
+        Text(
+            '$currency ${effectiveDeliveryCharge.toStringAsFixed(2)}',
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: effectiveDeliveryCharge > 0
+                    ? const Color(0xFF8B5CF6)
+                    : const Color(0xFF059669))),
       ],
     );
   }
@@ -1938,10 +2237,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
         final taxAmount = priceSummary.totalTax;
 
         // Final effective total (rounded if enabled)
-        final effectiveTotal =
+        final baseEffectiveTotal =
             appSettingsProvider.appSettings?.priceRoundOff == true
                 ? AmountHelper.roundOffAmount(priceSummary.netTotal)
                 : priceSummary.netTotal;
+        final effectiveTotal =
+          baseEffectiveTotal + _getEffectiveDeliveryCharge();
 
         final totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
             (double.tryParse(_lCardAmount) ?? 0) +
@@ -2077,6 +2378,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         _buildSummaryRow(
                             'Tax', taxAmount, const Color(0xFF64748B),
                             labelColor: const Color(0xFF64748B)),
+                        if (hasDelivery &&
+                            _isFreeDeliveryMinimumAmountEnabled()) ...[
+                          const SizedBox(height: 10),
+                          _buildDeliveryChargeRow(),
+                        ],
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           child: Divider(

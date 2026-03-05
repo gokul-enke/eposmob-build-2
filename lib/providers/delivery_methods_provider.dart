@@ -33,6 +33,61 @@ class DeliveryMethodsProvider with ChangeNotifier {
     // Removed direct fetch to prevent early crashes or unauthorized requests
   }
 
+  List<DeliveryMethod> _parseDeliveryMethods(dynamic rawData) {
+    final List<DeliveryMethod> parsedMethods = [];
+
+    if (rawData is List) {
+      for (final item in rawData) {
+        if (item is Map<String, dynamic>) {
+          final id = item['id']?.toString();
+          final name = item['name']?.toString();
+          final code = item['code']?.toString();
+
+          if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
+            // Parse prices array if available
+            final List<DeliveryPrice> prices = [];
+            if (item['prices'] is List) {
+              for (final priceItem in item['prices']) {
+                if (priceItem is Map<String, dynamic>) {
+                  try {
+                    prices.add(DeliveryPrice.fromJson(priceItem));
+                  } catch (e) {
+                    debugPrint('Error parsing delivery price: $e');
+                  }
+                }
+              }
+            }
+
+            parsedMethods.add(DeliveryMethod(
+              id: id,
+              name: name,
+              code: code,
+              prices: prices,
+            ));
+          }
+        }
+      }
+      return parsedMethods;
+    }
+
+    if (rawData is Map<String, dynamic>) {
+      rawData.forEach((key, value) {
+        if (value is String) {
+          parsedMethods.add(DeliveryMethod.fromJson(key, value));
+        } else if (value is Map<String, dynamic>) {
+          final id = value['id']?.toString() ?? key;
+          final name = value['name']?.toString() ?? value['label']?.toString();
+
+          if (name != null && name.isNotEmpty) {
+            parsedMethods.add(DeliveryMethod(id: id, name: name));
+          }
+        }
+      });
+    }
+
+    return parsedMethods;
+  }
+
   Future<void> fetchDeliveryMethods() async {
     _isLoading = true;
     notifyListeners();
@@ -70,12 +125,7 @@ class DeliveryMethodsProvider with ChangeNotifier {
         final data = json.decode(response.body);
 
         if (data['status'] == 'success') {
-          _deliveryMethods = [];
-          final methods = data['data'] as Map<String, dynamic>;
-
-          methods.forEach((key, value) {
-            _deliveryMethods.add(DeliveryMethod.fromJson(key, value));
-          });
+          _deliveryMethods = _parseDeliveryMethods(data['data']);
         } else {
           // Handle other statuses if necessary
           throw Exception(data['message']);
