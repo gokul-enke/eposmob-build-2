@@ -154,7 +154,8 @@ class MobileOrderCard extends StatelessWidget {
                     showDialog(
                       context: context,
                       builder: (dialogCtx) => CancelOrderModal(
-                        onConfirm: (paymentMethodId) async {
+                        onConfirm: (paymentMethodId,
+                            deliveryChargeRefundable) async {
                           try {
                             final authModel =
                                 Provider.of<AuthModel>(context, listen: false);
@@ -166,6 +167,8 @@ class MobileOrderCard extends StatelessWidget {
                               accessToken: authModel.token ?? "",
                               orderId: order.id.toString(),
                               paymentMethod: paymentMethodId,
+                              deliveryChargeRefundable:
+                                  deliveryChargeRefundable,
                             );
 
                             if (context.mounted) {

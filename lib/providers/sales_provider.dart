@@ -694,6 +694,7 @@ class SalesProvider with ChangeNotifier {
     required String accessToken,
     required String orderId,
     required String paymentMethod,
+    required bool deliveryChargeRefundable,
   }) async {
     final url = Uri.parse(APPUrl.cancelOrderUrl);
 
@@ -714,12 +715,15 @@ class SalesProvider with ChangeNotifier {
       body: jsonEncode({
         'order_id': int.tryParse(orderId) ?? orderId,
         'refund_method': int.tryParse(paymentMethod) ?? paymentMethod,
+        'delivery_charge_refundable': deliveryChargeRefundable,
       }),
     );
 
     debugPrint("accessToken $accessToken");
     debugPrint("orderId $orderId");
     debugPrint("paymentMethod $paymentMethod");
+    debugPrint(
+      "deliveryChargeRefundable $deliveryChargeRefundable");
     debugPrint("response.statusCode ${response.statusCode}");
     debugPrint("response.body ${response.body}");
 

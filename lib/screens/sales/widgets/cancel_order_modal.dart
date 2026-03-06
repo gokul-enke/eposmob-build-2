@@ -9,7 +9,8 @@ import 'package:pos_machine/models/master_data.dart';
 import 'package:provider/provider.dart';
 
 class CancelOrderModal extends StatefulWidget {
-  final Function(String paymentMethodId) onConfirm;
+  final Function(String paymentMethodId, bool deliveryChargeRefundable)
+      onConfirm;
 
   const CancelOrderModal({
     super.key,
@@ -23,6 +24,7 @@ class CancelOrderModal extends StatefulWidget {
 class _CancelOrderModalState extends State<CancelOrderModal> {
   String? _selectedPaymentMethodId;
   bool _isLoading = true;
+  bool _deliveryChargeRefundable = true;
 
   @override
   void initState() {
@@ -124,6 +126,48 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                       );
                     },
                   ),
+            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Switch.adaptive(
+                  value: _deliveryChargeRefundable,
+                  activeColor: ColorManager.kPrimaryColor,
+                  onChanged: (value) {
+                    setState(() {
+                      _deliveryChargeRefundable = value;
+                    });
+                  },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Delivery Charge Refundable",
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.27,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Turn off to exclude the delivery charge from the refund.",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s12,
+                          0.27,
+                          ColorManager.textColor.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 24),
             Row(
               children: [
@@ -153,7 +197,10 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                     onPressed: () {
                       if (_selectedPaymentMethodId != null) {
                         Navigator.of(context).pop();
-                        widget.onConfirm(_selectedPaymentMethodId!);
+                        widget.onConfirm(
+                          _selectedPaymentMethodId!,
+                          _deliveryChargeRefundable,
+                        );
                       } else {
                         showScaffoldError(
                           context: context,

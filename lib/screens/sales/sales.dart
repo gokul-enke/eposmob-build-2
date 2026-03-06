@@ -1849,7 +1849,8 @@ Powered by CloudPOS''',
                             showDialog(
                               context: context,
                               builder: (dialogCtx) => CancelOrderModal(
-                                onConfirm: (paymentMethodId) async {
+                                onConfirm: (paymentMethodId,
+                                    deliveryChargeRefundable) async {
                                   try {
                                     final authModel = Provider.of<AuthModel>(
                                         context,
@@ -1862,6 +1863,8 @@ Powered by CloudPOS''',
                                       accessToken: authModel.token ?? "",
                                       orderId: order.id.toString(),
                                       paymentMethod: paymentMethodId,
+                                      deliveryChargeRefundable:
+                                          deliveryChargeRefundable,
                                     );
 
                                     if (context.mounted) {
