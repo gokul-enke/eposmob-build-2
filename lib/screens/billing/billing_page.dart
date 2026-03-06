@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -178,10 +177,6 @@ class BillingPageState extends State<BillingPage>
   List<CustomerListModelData> _currentCustomerOptions = [];
   final double _customerItemHeight = 48.0; // Height for customer list items
 
-  // Add this variable to track internet connectivity
-  bool _hasInternet = true;
-  StreamSubscription? _internetSubscription;
-
   // Add flag to track if customer was manually selected
   bool _isCustomerManuallySelected = false;
 
@@ -194,6 +189,9 @@ class BillingPageState extends State<BillingPage>
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
+
+  bool get _hasInternet =>
+      Provider.of<BillingProvider>(context, listen: false).hasInternet;
 
   VoidCallback? _appSettingsDebugListener;
   VoidCallback? _deliveryMethodListener;
@@ -359,7 +357,6 @@ class BillingPageState extends State<BillingPage>
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
-    _internetSubscription?.cancel(); // Cancel the subscription
 
     // Remove sales executive listener
     try {
@@ -419,47 +416,24 @@ class BillingPageState extends State<BillingPage>
 
   // Function to initialize the connectivity listener
   void _initConnectivityListener() async {
-    try {
-      // Check initial connectivity status
-      final hasConnection = await InternetConnection().hasInternetAccess;
-      if (mounted) {
-        setState(() {
-          _hasInternet = hasConnection;
-        });
-      }
+    Provider.of<BillingProvider>(context, listen: false)
+        .initConnectivityListener(
+      onConnectivityChanged: (message) {
+        if (!mounted) return;
 
-      // Listen for connectivity changes
-      _internetSubscription =
-          InternetConnection().onStatusChange.listen((InternetStatus status) {
-        final isConnected = status == InternetStatus.connected;
-        if (mounted) {
-          setState(() {
-            _hasInternet = isConnected;
-          });
-
-          // Optional: Show feedback when connectivity changes
-          if (!isConnected) {
-            showScaffoldError(
-              context: context,
-              message: 'billing.internet_lost'.tr,
-            );
-          } else {
-            showScaffold(
-              context: context,
-              message: 'billing.internet_restored'.tr,
-            );
-          }
+        if (message.contains('No internet')) {
+          showScaffoldError(
+            context: context,
+            message: 'billing.internet_lost'.tr,
+          );
+        } else {
+          showScaffold(
+            context: context,
+            message: 'billing.internet_restored'.tr,
+          );
         }
-      });
-    } catch (e) {
-      debugPrint('Error initializing connectivity listener: $e');
-      // Fallback to assuming connection is available
-      if (mounted) {
-        setState(() {
-          _hasInternet = true;
-        });
-      }
-    }
+      },
+    );
   }
 
   // Rehydrate all UI state from the provider's current order
@@ -1179,6 +1153,7 @@ class BillingPageState extends State<BillingPage>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
+    context.watch<BillingProvider>().hasInternet;
 
     // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
     final currentOrder =

@@ -15,6 +15,7 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -73,6 +74,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _unitController;
   late TextEditingController _priceController;
   late TextEditingController _mrpController;
+  late TextEditingController _quantityController;
   late TextEditingController _taxController; // Restore tax controller
   late TextEditingController _purchasePriceController;
   late TextEditingController _rackController;
@@ -102,6 +104,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController = TextEditingController();
     _priceController = TextEditingController();
     _mrpController = TextEditingController();
+    _quantityController = TextEditingController();
     _purchasePriceController = TextEditingController();
     _taxController = TextEditingController(); // Init tax controller
     _rackController = TextEditingController();
@@ -420,6 +423,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.text = product.unit ?? '';
     _priceController.text = _valueToString(product.price?.price);
     _mrpController.text = _valueToString(product.mrp);
+    _quantityController.text = '';
     // 🔧 FIX: Revert to Tax Rate (Percentage) as requested
     // We display the static rate, no longer the calculated amount
     _taxController.text = _valueToString(product.totalTaxRate);
@@ -479,6 +483,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final String updatedUnit = _unitController.text.trim();
     final String updatedPriceString = _priceController.text.trim();
     final String updatedMrpString = _mrpController.text.trim();
+    final String updatedQuantityString = _quantityController.text.trim();
     final String updatedPurchasePrice = _purchasePriceController.text.trim();
     final String updatedRack = _rackController.text.trim();
 
@@ -492,6 +497,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final double? purchasePriceForApi = updatedPurchasePrice.isEmpty
         ? double.tryParse(product.purchasePrice ?? '')
         : double.tryParse(updatedPurchasePrice);
+    final num? quantityForApi = updatedQuantityString.isEmpty
+        ? null
+        : num.tryParse(updatedQuantityString);
 
     final double updatedPriceValue = priceForApi;
     final double updatedMrpValue = mrpForApi;
@@ -548,6 +556,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         purchasePrice: purchasePriceForApi,
         categoryId: resolvedCategoryId,
         rackNumber: rackForApi,
+        quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
         accessToken: accessToken,
       );
@@ -690,6 +699,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
+    _quantityController.dispose();
     _taxController.dispose(); // Restore dispose
     _purchasePriceController.dispose();
     _rackController.dispose();
@@ -1333,7 +1343,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           builder: (context, constraints) {
             const double horizontalGap = 12;
             const double verticalGap = 2;
-            final double availableWidth = constraints.maxWidth;
+            const double contentHorizontalPadding = 16;
+            final double availableWidth =
+                constraints.maxWidth > contentHorizontalPadding
+                    ? constraints.maxWidth - contentHorizontalPadding
+                    : constraints.maxWidth;
             final double fieldWidth = availableWidth > 0
                 ? (availableWidth - (horizontalGap * 2)) / 3
                 : size.width / 3.5;
@@ -1491,6 +1505,23 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        SizedBox(
+                          width: fieldWidth,
+                          child: buildColumnWidgetForTextFields(
+                            controller: _quantityController,
+                            size: size,
+                            title: 'Quantity',
+                            hintText: 'Enter quantity',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: false,
+                            ),
+                          ),
+                        ),
+                        spacing(),
                         SizedBox(
                           width: fieldWidth,
                           child: buildColumnWidgetForTextFields(
@@ -1673,9 +1704,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               height: 28,
               width: 28,
               decoration: BoxDecoration(
-                color: canEdit
-                    ? ColorManager.kPrimaryColor
-                    : Colors.grey.shade400,
+                color:
+                    canEdit ? ColorManager.kPrimaryColor : Colors.grey.shade400,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Icon(
@@ -1921,9 +1951,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             if (!mounted) return;
 
                             if (success) {
-                              final num? updatedQty =
-                                  num.tryParse(quantityController.text.trim()) ??
-                                      stock.quantity;
+                              final num? updatedQty = num.tryParse(
+                                      quantityController.text.trim()) ??
+                                  stock.quantity;
                               setState(() {
                                 _editedStockRows[stock.id!] = Stock(
                                   id: stock.id,

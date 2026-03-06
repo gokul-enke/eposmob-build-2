@@ -219,6 +219,21 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.remove('last_product_sync_iso');
   }
 
+  Future<void> saveManualOfflineMode(bool enabled) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('manual_offline_mode', enabled);
+  }
+
+  Future<bool> getManualOfflineMode() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('manual_offline_mode') ?? false;
+  }
+
+  Future<void> clearManualOfflineMode() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('manual_offline_mode');
+  }
+
   // ==================== ZATCA METHODS ====================
 
   /// Save ZATCA VAT number for Saudi Arabia e-invoicing
