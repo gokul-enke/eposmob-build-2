@@ -64,6 +64,8 @@ class _AddProductWithBarcodeModalState
   bool isLoading = false;
   bool isSaveAndCreateLoading = false;
   bool isBarcodeGenerating = false;
+  bool _isCheckingDuplicateBarcode = false;
+  String? _confirmedDuplicateBarcode;
   String? selectedUnit;
   Category? selectedCategory;
   bool isValidatedOnce = false;
@@ -77,6 +79,8 @@ class _AddProductWithBarcodeModalState
     // Set default quantity value to 0 when opening the modal
     _productQuantityController.text = '0';
     super.initState();
+
+    _barcodeFocusNode.addListener(_handleBarcodeFocusChange);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLanguages();
@@ -101,6 +105,325 @@ class _AddProductWithBarcodeModalState
         node.unfocus();
       }
     }
+  }
+
+  void _handleBarcodeFocusChange() {
+    if (!_barcodeFocusNode.hasFocus) {
+      _ensureBarcodeDuplicateConfirmed();
+    }
+  }
+
+  List<GetProduct> _findExistingProductsByBarcode(String barcode) {
+    final trimmedBarcode = barcode.trim();
+    if (trimmedBarcode.isEmpty) {
+      return const <GetProduct>[];
+    }
+
+    return Provider.of<LocalProductProvider>(context, listen: false)
+        .filterProductByBarcode(barCode: trimmedBarcode);
+  }
+
+  Future<bool> _ensureBarcodeDuplicateConfirmed() async {
+    final barcode = _productBarcodeController.text.trim();
+    if (barcode.isEmpty) {
+      _confirmedDuplicateBarcode = null;
+      return true;
+    }
+
+    if (_confirmedDuplicateBarcode == barcode || _isCheckingDuplicateBarcode) {
+      return true;
+    }
+
+    final existingProducts = _findExistingProductsByBarcode(barcode);
+    if (existingProducts.isEmpty) {
+      _confirmedDuplicateBarcode = null;
+      return true;
+    }
+
+    _isCheckingDuplicateBarcode = true;
+    try {
+      final shouldContinue = await _showDuplicateBarcodeDialog(
+        barcode: barcode,
+        existingProducts: existingProducts,
+      );
+
+      if (!mounted) {
+        return false;
+      }
+
+      if (shouldContinue) {
+        setState(() {
+          _confirmedDuplicateBarcode = barcode;
+        });
+        return true;
+      }
+
+      setState(() {
+        _productBarcodeController.clear();
+        _confirmedDuplicateBarcode = null;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _barcodeFocusNode.requestFocus();
+        }
+      });
+      return false;
+    } finally {
+      _isCheckingDuplicateBarcode = false;
+    }
+  }
+
+  Future<bool> _showDuplicateBarcodeDialog({
+    required String barcode,
+    required List<GetProduct> existingProducts,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final size = MediaQuery.of(dialogContext).size;
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: size.width * 0.55,
+              maxHeight: size.height * 0.7,
+            ),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Duplicate Barcode Found',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s20,
+                          0.30,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black54),
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      splashRadius: 20,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'There is already a product with the same barcode. Do you want to continue?',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s13,
+                    0.27,
+                    ColorManager.textColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Barcode: $barcode',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.27,
+                    Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: existingProducts.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final product = existingProducts[index];
+                      return _buildExistingProductCard(product);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    SizedBox(
+                      width: 110,
+                      height: 40,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: ColorManager.kPrimaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: ColorManager.kPrimaryColor,
+                            fontSize: FontSize.s12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 130,
+                      height: 40,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ColorManager.kPrimaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Continue',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: FontSize.s12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
+  Widget _buildExistingProductCard(GetProduct product) {
+    final categoryName = product.category?.name?.trim();
+    final sellingPrice = product.price?.price?.toString().trim();
+    final mrp = product.mrp?.toString().trim();
+    final unit = product.unit?.trim();
+    final availableQuantity = _getAvailableQuantity(product);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            product.productName?.trim().isNotEmpty == true
+                ? product.productName!.trim()
+                : 'Unnamed Product',
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s14,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            runSpacing: 8,
+            spacing: 14,
+            children: [
+              _buildProductDetailItem('Barcode', product.barcode ?? '-'),
+              _buildProductDetailItem(
+                  'Category',
+                  categoryName != null && categoryName.isNotEmpty
+                      ? categoryName
+                      : '-'),
+              _buildProductDetailItem(
+                  'Selling Price',
+                  sellingPrice != null && sellingPrice.isNotEmpty
+                      ? sellingPrice
+                      : '-'),
+              _buildProductDetailItem(
+                  'MRP', mrp != null && mrp.isNotEmpty ? mrp : '-'),
+              _buildProductDetailItem(
+                  'Unit', unit != null && unit.isNotEmpty ? unit : '-'),
+              _buildProductDetailItem('Available Qty', availableQuantity),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductDetailItem(String label, String value) {
+    return SizedBox(
+      width: 150,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.27,
+              Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getAvailableQuantity(GetProduct product) {
+    final stockQuantity = product.stock?.fold<num>(
+      0,
+      (sum, stock) => sum + (stock.quantity ?? 0),
+    );
+
+    if (stockQuantity != null && stockQuantity > 0) {
+      return stockQuantity % 1 == 0
+          ? stockQuantity.toInt().toString()
+          : stockQuantity.toString();
+    }
+
+    final available = product.numberOfProductsAvailable?.trim();
+    if (available != null && available.isNotEmpty) {
+      return available;
+    }
+
+    return '-';
   }
 
   @override
@@ -704,7 +1027,21 @@ class _AddProductWithBarcodeModalState
                   focusNode: _barcodeFocusNode,
                   readOnly: widget.barcode != null,
                   textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                  onChanged: (_) {
+                    if (_confirmedDuplicateBarcode != null) {
+                      setState(() {
+                        _confirmedDuplicateBarcode = null;
+                      });
+                    }
+                  },
+                  onFieldSubmitted: (_) async {
+                    final canContinue =
+                        await _ensureBarcodeDuplicateConfirmed();
+                    if (!mounted || !canContinue) {
+                      return;
+                    }
+                    FocusScope.of(context).nextFocus();
+                  },
                   cursorColor: ColorManager.kPrimaryColor,
                   onTap: () {
                     _unfocusAllExcept(_barcodeFocusNode);
@@ -1083,6 +1420,11 @@ class _AddProductWithBarcodeModalState
     bool isCategoryValid = selectedCategory != null;
 
     if (isFormValid && isUnitValid && isCategoryValid) {
+      final canContinue = await _ensureBarcodeDuplicateConfirmed();
+      if (!canContinue) {
+        return;
+      }
+
       formKey.currentState!.save();
       setState(() {
         if (keepOpen) {
@@ -1222,6 +1564,7 @@ class _AddProductWithBarcodeModalState
       }
     }
     setState(() {
+      _confirmedDuplicateBarcode = null;
       selectedUnit = null;
       selectedCategory = null;
       isValidatedOnce = false;

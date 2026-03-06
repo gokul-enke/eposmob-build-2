@@ -564,6 +564,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       final String successMessage = response['message']?.toString() ??
           'Product details updated successfully.';
 
+      await localProductProvider.fetchProductsFromAPI();
+
       ProductPrice? updatedProductPrice;
       if (product.price != null) {
         updatedProductPrice = ProductPrice(
@@ -654,11 +656,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         hsnCode: product.hsnCode,
       );
 
-      localProductProvider.updateProduct(updatedProduct);
+      final GetProduct resolvedUpdatedProduct =
+          localProductProvider.getProductById(int.parse(productId)) ??
+              updatedProduct;
+
+      localProductProvider.updateProduct(resolvedUpdatedProduct);
 
       final updatedTaxValue = double.tryParse(_taxController.text) ?? 0.0;
       localProductProvider.updateProductPricingInCart(
-        updatedProduct.productId ?? 0,
+        resolvedUpdatedProduct.productId ?? 0,
         updatedPriceValue,
         updatedMrpValue,
         updatedTaxValue,
@@ -666,7 +672,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
       if (!mounted) return;
       setState(() {
-        selectedProduct = updatedProduct;
+        selectedProduct = resolvedUpdatedProduct;
         _controllersInitialized = false;
         _initializeControllersIfNeeded();
         _isSaving = false;
@@ -1553,7 +1559,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                 decimal: true),
                           ),
                         ),
-                        spacing(),
                         // SizedBox(
                         //   width: fieldWidth,
                         //   child: CustomDropDownWithSearch<_DropdownOption>(

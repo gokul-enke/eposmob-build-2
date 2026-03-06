@@ -35,6 +35,15 @@ class DeliveryMethod {
       name: name,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'code': code,
+      'prices': prices.map((price) => price.toJson()).toList(),
+    };
+  }
 }
 
 class DeliveryPrice {
@@ -60,5 +69,15 @@ class DeliveryPrice {
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'delivery_method_id': deliveryMethodId,
+      'price': price,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
   }
 }
