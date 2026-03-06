@@ -561,7 +561,8 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Divider(height: 0, thickness: 0.5),
                         // Field rows — extended with Building No, City, etc.
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(4),
+                          padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
                           child: pw.Column(children: fromFieldRows),
                         ),
                       ],
@@ -600,7 +601,8 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Divider(height: 0, thickness: 0.5),
                         // Field rows — extended with Building No, City, etc.
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(4),
+                          padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
                           child: pw.Column(children: toFieldRows),
                         ),
                       ],
@@ -790,10 +792,11 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   pw.Widget _fromToRow(String label, String value, String arLabel,
       pw.TextStyle normal, pw.TextStyle bold) {
     return pw.SizedBox(
-      height: 15,
+      height: 9,
       child: pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(vertical: 0.4),
+        padding: const pw.EdgeInsets.symmetric(vertical: 0),
         child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             pw.SizedBox(
               width: 52,
@@ -802,6 +805,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 style: normal,
                 maxLines: 1,
                 overflow: pw.TextOverflow.clip,
+                softWrap: false,
               ),
             ),
             pw.Expanded(
@@ -810,6 +814,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 style: bold,
                 maxLines: 1,
                 overflow: pw.TextOverflow.clip,
+                softWrap: false,
               ),
             ),
             pw.SizedBox(
@@ -822,6 +827,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   textDirection: pw.TextDirection.rtl,
                   maxLines: 1,
                   overflow: pw.TextOverflow.clip,
+                  softWrap: false,
                 ),
               ),
             ),
