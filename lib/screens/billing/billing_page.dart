@@ -2794,7 +2794,7 @@ class BillingPageState extends State<BillingPage>
           const Divider(thickness: 2),
           BuildPaymentRow(
             amount:
-                "$currency ${AmountHelper.roundOffAmount(localProductProvider.cartTotal)}",
+                "$currency ${AmountHelper.formatAmount(_getEffectiveOrderTotal())}",
             title: "billing.total_payable".tr,
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
@@ -2944,9 +2944,12 @@ class BillingPageState extends State<BillingPage>
 
     // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
     final _ = localProductProvider.cartTotal;
+    final footerPriceSummary = _getFooterPriceSummaryWithDeliveryCharge(
+      localProductProvider.priceSummary,
+    );
 
     return CheckoutFooter(
-      priceSummary: localProductProvider.priceSummary,
+      priceSummary: footerPriceSummary,
       currency: currency,
       taxNames: taxNames,
       totalPaid: _getTotalPaidAmount(),
@@ -2998,6 +3001,9 @@ class BillingPageState extends State<BillingPage>
 
     // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
     final _ = localProductProvider.cartTotal;
+    final footerPriceSummary = _getFooterPriceSummaryWithDeliveryCharge(
+      localProductProvider.priceSummary,
+    );
 
     // Calculate total paid and balance
     double totalPaid = _getTotalPaidAmount();
@@ -3021,7 +3027,7 @@ class BillingPageState extends State<BillingPage>
         const SizedBox(height: 5),
         // Use the reusable CheckoutFooter widget
         CheckoutFooter(
-          priceSummary: localProductProvider.priceSummary,
+          priceSummary: footerPriceSummary,
           currency: currency,
           taxNames: taxNames,
           totalPaid: totalPaid,
@@ -3066,19 +3072,45 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  // Helper method to get formatted total
-  String _getFormattedTotal() {
+  PriceSummary? _getFooterPriceSummaryWithDeliveryCharge(
+      PriceSummary? summary) {
+    if (summary == null) {
+      return null;
+    }
+
+    final deliveryCharge = _getDeliveryChargeForOrder();
+
+    return PriceSummary(
+      discount: summary.discount,
+      netPayable: summary.netPayable + deliveryCharge,
+      subTotal: summary.subTotal,
+      totalTax: summary.totalTax,
+      netTotal: summary.netTotal,
+      flatDiscount: summary.flatDiscount,
+      percentageDiscount: summary.percentageDiscount,
+      originalSubTotal: summary.originalSubTotal,
+    );
+  }
+
+  double _getEffectiveOrderTotal() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
-    if (appSettingsProvider.appSettings?.priceRoundOff == true) {
-      double roundedTotal = localProductProvider.getRoundedTotal(context);
-      return AmountHelper.formatAmount(roundedTotal);
-    }
+    final baseTotal =
+        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
 
-    return AmountHelper.formatAmount(localProductProvider.cartTotal);
+    final roundedOrBaseTotal = appSettingsProvider.appSettings?.priceRoundOff == true
+        ? AmountHelper.roundOffAmount(baseTotal)
+        : baseTotal;
+
+    return roundedOrBaseTotal + _getDeliveryChargeForOrder();
+  }
+
+  // Helper method to get formatted total
+  String _getFormattedTotal() {
+    return AmountHelper.formatAmount(_getEffectiveOrderTotal());
   }
 
   Widget _buildMobileNumberInput({
@@ -5199,6 +5231,7 @@ class BillingPageState extends State<BillingPage>
             setState(() {
               _selectedDeliveryCharge = deliveryCharge;
             });
+            _updateBalanceAmount();
           },
 
           // Payment State
@@ -5533,7 +5566,8 @@ class BillingPageState extends State<BillingPage>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-    double cartTotal = localProductProvider.cartTotal;
+    final _ = localProductProvider.cartTotal;
+    double cartTotal = _getEffectiveOrderTotal();
 
     // For balance calculation, only include actual cash payments (not debit/store credit)
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
@@ -5658,8 +5692,7 @@ class BillingPageState extends State<BillingPage>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final isDeliveryChargeEnabled =
-        appSettingsProvider.appSettings?.freeDeliveryMinimumAmountEnabled ??
-            false;
+      appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
 
     if (!isDeliveryChargeEnabled) {
       return 0.0;
@@ -6002,6 +6035,7 @@ class BillingPageState extends State<BillingPage>
     // _hasOpenedPaymentModalOnce = true; // Moved to onPaymentMethodSelected to ensure it only sets when user actually applies
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final effectiveTotal = _getEffectiveOrderTotal();
 
     // Prepare initial amounts
     String initialCash = _cashAmountController.text;
@@ -6018,8 +6052,8 @@ class BillingPageState extends State<BillingPage>
         (double.tryParse(initialDebit) ?? 0) > 0;
 
     // If no amount is entered yet, auto-fill the selected method with the full total
-    if (!hasAnyAmount && localProductProvider.cartTotal > 0) {
-      String totalStr = localProductProvider.cartTotal.toStringAsFixed(2);
+    if (!hasAnyAmount && effectiveTotal > 0) {
+      String totalStr = effectiveTotal.toStringAsFixed(2);
       if (_isCashSelected) {
         initialCash = totalStr;
       } else if (_isCardSelected) {
@@ -6046,7 +6080,7 @@ class BillingPageState extends State<BillingPage>
         !_isDebitSelected) {
       autoSelectCash = true;
       if (initialCash.isEmpty || double.tryParse(initialCash) == 0) {
-        initialCash = localProductProvider.cartTotal.toStringAsFixed(2);
+        initialCash = effectiveTotal.toStringAsFixed(2);
       }
     }
 
@@ -6064,7 +6098,7 @@ class BillingPageState extends State<BillingPage>
         initialCodAmount: initialCod,
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
-        cartTotal: localProductProvider.cartTotal,
+        cartTotal: effectiveTotal,
         customerPrevBalance: selectedCustomer?.balance ?? 0.0,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,

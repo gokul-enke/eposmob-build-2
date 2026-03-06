@@ -2725,6 +2725,12 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
   String _orderComment = "";
   bool _hasOpenedPaymentModalOnce = false;
+  String _deliveryMethod = "Store Takeaway";
+  String _deliveryMethodId = "";
+  String _deliveryAddress = "";
+  String? _deliveryDate;
+  String? _deliveryTime;
+  double? _selectedDeliveryCharge;
 
   // Expose current comment to parent (RestaurantPage) for new order flow
   String get orderComment => _orderComment;
@@ -3128,30 +3134,11 @@ class _OrderPanelState extends State<_OrderPanel> {
       cartItems = _selectedOrder['order_items'];
     }
 
-    // Calculate order total dynamically from cart items
-    double orderTotal = 0.0;
-    for (var item in cartItems) {
-      final quantity =
-          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
-              item['price']?.toString() ??
-              item['product_price']?.toString() ??
-              '0') ??
-          0.0;
-      orderTotal += quantity * unitPrice;
-    }
-
-    // If we still have zero total, try getting it from order total as fallback
-    if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
-      orderTotal =
-          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
-              0.0;
-    }
-
-    // Apply discounts if any
-    double totalDiscountAmount =
-        _flatDiscount + (orderTotal * _percentageDiscount / 100);
-    orderTotal = orderTotal - totalDiscountAmount;
+    // Calculate effective total (discount + delivery charge)
+    final rawOrderTotal = _calculateOrderTotal();
+    final totalDiscountAmount =
+      _flatDiscount + (rawOrderTotal * _percentageDiscount / 100);
+    double orderTotal = _getEffectiveOrderTotal();
 
     debugPrint(
         '💰 Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
@@ -4224,6 +4211,14 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       // Reset payment modal flag
       _hasOpenedPaymentModalOnce = false;
+
+      // Reset delivery state
+      _deliveryMethod = "Store Takeaway";
+      _deliveryMethodId = "";
+      _deliveryAddress = "";
+      _deliveryDate = null;
+      _deliveryTime = null;
+      _selectedDeliveryCharge = null;
     });
     debugPrint('✅ Order editing state cleared');
   }
@@ -4263,6 +4258,14 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     // Reset payment modal flag
     _hasOpenedPaymentModalOnce = false;
+
+    // Reset delivery state
+    _deliveryMethod = "Store Takeaway";
+    _deliveryMethodId = "";
+    _deliveryAddress = "";
+    _deliveryDate = null;
+    _deliveryTime = null;
+    _selectedDeliveryCharge = null;
 
     debugPrint('✅ Order editing state cleared');
   }
@@ -4400,6 +4403,28 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       setState(() {
         _orderComment = loadedComment ?? '';
+      });
+
+      // Load delivery information if available
+      final loadedDeliveryMethodId =
+          order['delivery_method_id']?.toString() ?? _getDefaultDeliveryMethodId();
+      final loadedDeliveryMethodName =
+          order['delivery_method_name']?.toString() ??
+              order['delivery_method']?.toString() ??
+              "Store Takeaway";
+      final loadedDeliveryDate = order['delivery_date']?.toString();
+      final loadedDeliveryTime = order['delivery_time']?.toString();
+      final loadedDeliveryAddress = order['address']?.toString() ?? '';
+      final loadedDeliveryCharge =
+          double.tryParse(order['delivery_charge']?.toString() ?? '');
+
+      setState(() {
+        _deliveryMethodId = loadedDeliveryMethodId;
+        _deliveryMethod = loadedDeliveryMethodName;
+        _deliveryDate = loadedDeliveryDate;
+        _deliveryTime = loadedDeliveryTime;
+        _deliveryAddress = loadedDeliveryAddress;
+        _selectedDeliveryCharge = loadedDeliveryCharge;
       });
 
       // Load discount information if available
@@ -4615,6 +4640,63 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
+  double _getDiscountedOrderTotalWithoutDelivery() {
+    final orderTotal = _calculateOrderTotal();
+    final totalDiscountAmount =
+        _flatDiscount + (orderTotal * _percentageDiscount / 100);
+    final discountedTotal = orderTotal - totalDiscountAmount;
+    return discountedTotal < 0 ? 0.0 : discountedTotal;
+  }
+
+  bool _isfreeDeliveryMinimumAmount() {
+    final settings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    return settings?.freeDeliveryEnabled ?? false;
+  }
+
+  double _getFreeDeliveryMinimumAmount() {
+    final settings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final rawValue = settings?.freeDeliveryMinimumAmount.trim() ?? '';
+    return double.tryParse(rawValue) ?? 0.0;
+  }
+
+  double _getDeliveryChargeForOrder() {
+    if (!_isfreeDeliveryMinimumAmount()) {
+      return 0.0;
+    }
+
+    final minimumAmount = _getFreeDeliveryMinimumAmount();
+    final discountedTotal = _getDiscountedOrderTotalWithoutDelivery();
+    if (minimumAmount > 0 && discountedTotal >= minimumAmount) {
+      return 0.0;
+    }
+
+    if (_selectedDeliveryCharge != null) {
+      return _selectedDeliveryCharge!;
+    }
+
+    final effectiveDeliveryMethodId =
+        _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId();
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if ((effectiveDeliveryMethodId.isNotEmpty &&
+              method.id == effectiveDeliveryMethodId) ||
+          (_deliveryMethod.isNotEmpty && method.name == _deliveryMethod)) {
+        return method.basePrice ?? 0.0;
+      }
+    }
+
+    return 0.0;
+  }
+
+  double _getEffectiveOrderTotal() {
+    return _getDiscountedOrderTotalWithoutDelivery() + _getDeliveryChargeForOrder();
+  }
+
   Widget _buildPaymentSummary() {
     if (_selectedOrder == null) {
       return const SizedBox.shrink();
@@ -4687,7 +4769,9 @@ class _OrderPanelState extends State<_OrderPanel> {
     final flatDiscountAmount = _flatDiscount;
     final percentageDiscountAmount = (orderTotal * _percentageDiscount / 100);
     final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-    final finalOrderTotal = orderTotal - totalDiscountAmount;
+    final finalOrderTotalWithoutDelivery = orderTotal - totalDiscountAmount;
+    final deliveryCharge = _getDeliveryChargeForOrder();
+    final finalOrderTotal = finalOrderTotalWithoutDelivery + deliveryCharge;
 
     // Calculate balance using the same logic as billing_page.dart
     double cashBalance = 0.0;
@@ -4841,6 +4925,14 @@ class _OrderPanelState extends State<_OrderPanel> {
               '${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
               color: const Color(0xFFDC2626),
             ),
+            if (_isfreeDeliveryMinimumAmount())
+              _buildSummaryRow(
+                'Delivery Charge',
+                '${deliveryCharge.toStringAsFixed(2)}',
+                color: deliveryCharge > 0
+                    ? const Color(0xFF8B5CF6)
+                    : const Color(0xFF059669),
+              ),
             _buildSummaryRow(
               'Final Total',
               '${finalOrderTotal.toStringAsFixed(2)}',
@@ -4848,9 +4940,17 @@ class _OrderPanelState extends State<_OrderPanel> {
               isBold: true,
             ),
           ] else ...[
+            if (_isfreeDeliveryMinimumAmount())
+              _buildSummaryRow(
+                'Delivery Charge',
+                '${deliveryCharge.toStringAsFixed(2)}',
+                color: deliveryCharge > 0
+                    ? const Color(0xFF8B5CF6)
+                    : const Color(0xFF059669),
+              ),
             _buildSummaryRow(
               'Final Total',
-              '${orderTotal.toStringAsFixed(2)}',
+              '${(orderTotal + deliveryCharge).toStringAsFixed(2)}',
               color: const Color(0xFF059669),
               isBold: true,
             ),
@@ -6283,7 +6383,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Apply discounts
     double totalDiscountAmount =
         _flatDiscount + (orderTotal * _percentageDiscount / 100);
-    double finalOrderTotal = orderTotal - totalDiscountAmount;
+    double finalOrderTotal =
+      (orderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -6387,10 +6488,43 @@ class _OrderPanelState extends State<_OrderPanel> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
+        final deliveryMethodsProvider =
+            Provider.of<DeliveryMethodsProvider>(context, listen: false);
+        final deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
+
         return CheckoutModal(
           cartTotal: _calculateOrderTotal(),
           availableCustomers: _customers,
           selectedCustomer: _selectedCustomer,
+          hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
+
+          // Delivery State
+          enableDelivery: deliveryEnabled,
+          deliveryMethod:
+              _deliveryMethod.isNotEmpty ? _deliveryMethod : "Store Takeaway",
+          deliveryMethodId:
+              _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId(),
+          deliveryComment: _orderComment,
+          deliveryAddress: _deliveryAddress,
+          deliveryDate: _deliveryDate,
+          deliveryTime: _deliveryTime,
+          initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
+          onDeliveryUpdated:
+              (method, methodId, carNo, comment, date, time, address) {
+            setState(() {
+              _deliveryMethod = method;
+              _deliveryMethodId = methodId;
+              _orderComment = comment;
+              _deliveryDate = date;
+              _deliveryTime = time;
+              _deliveryAddress = address;
+            });
+          },
+          onDeliveryChargeUpdated: (deliveryCharge) {
+            setState(() {
+              _selectedDeliveryCharge = deliveryCharge;
+            });
+          },
           
           // Payment State
           isCashSelected: _isCashSelected,
@@ -7503,7 +7637,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       final percentageDiscountAmount =
           (rawOrderTotal * _percentageDiscount / 100);
       final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-      final finalOrderTotal = rawOrderTotal - totalDiscountAmount;
+        final finalOrderTotal =
+          (rawOrderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
       final totalPrice = finalOrderTotal.toString();
       final transactionId = _transactionNumber.isNotEmpty
@@ -7659,13 +7794,16 @@ class _OrderPanelState extends State<_OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
-        deliveryMethodId: _getDefaultDeliveryMethodId(),
+        deliveryMethodId:
+          _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId(),
+        address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
         percentageDiscount:
             _percentageDiscount > 0 ? _percentageDiscount : null,
         discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
         toCustomerCredit: _toCustomerCreditEnabled,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       );
 
       debugPrint('\n📥 updateOrderAPI RESPONSE:');

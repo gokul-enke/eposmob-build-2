@@ -15,6 +15,7 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -84,6 +85,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   String? _selectedUnitId;
   String? _selectedRackId;
   bool _requestedUnitRackData = false;
+  final Map<int, Stock> _editedStockRows = {};
 
   @override
   void initState() {
@@ -1160,11 +1162,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       2: FlexColumnWidth(1.2),
                       3: FlexColumnWidth(1.2),
                       4: FlexColumnWidth(1.2),
-                      5: FlexColumnWidth(1.5),
-                      6: FlexColumnWidth(1.0),
-                      7: FlexColumnWidth(1.2),
+                      5: FlexColumnWidth(1.4),
+                      6: FlexColumnWidth(1.4),
+                      7: FlexColumnWidth(1.0),
                       8: FlexColumnWidth(1.2),
-                      9: FlexColumnWidth(1.0),
+                      9: FlexColumnWidth(1.2),
+                      10: FlexColumnWidth(1.2),
                     },
                     border: null,
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -1177,6 +1180,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           _buildStockTableHeader('MRP'),
                           _buildStockTableHeader('Purchase Price'),
                           _buildStockTableHeader('Supplier'),
+                          _buildStockTableHeader('Store Name'),
                           _buildStockTableHeader('SKU'),
                           _buildStockTableHeader('Date'),
                           _buildStockTableHeader('Expiry Date'),
@@ -1188,7 +1192,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 ),
                 ...product.stock!.asMap().entries.map((entry) {
                   final index = entry.key;
-                  final stock = entry.value;
+                  final originalStock = entry.value;
+                  final stock = originalStock.id != null
+                      ? (_editedStockRows[originalStock.id!] ?? originalStock)
+                      : originalStock;
                   return Container(
                     decoration: BoxDecoration(
                       color: index % 2 == 0
@@ -1202,11 +1209,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         2: FlexColumnWidth(1.2),
                         3: FlexColumnWidth(1.2),
                         4: FlexColumnWidth(1.2),
-                        5: FlexColumnWidth(1.5),
-                        6: FlexColumnWidth(1.0),
-                        7: FlexColumnWidth(1.2),
+                        5: FlexColumnWidth(1.4),
+                        6: FlexColumnWidth(1.4),
+                        7: FlexColumnWidth(1.0),
                         8: FlexColumnWidth(1.2),
-                        9: FlexColumnWidth(1.0),
+                        9: FlexColumnWidth(1.2),
+                        10: FlexColumnWidth(1.2),
                       },
                       border: null,
                       defaultVerticalAlignment:
@@ -1230,10 +1238,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                 ? '$currency ${stock.purchasePrice}'
                                 : 'N/A'),
                             _buildStockTableCell(stock.supplier ?? 'N/A'),
+                            _buildStockTableCell(stock.storeName ?? 'N/A'),
                             _buildStockTableCell(stock.sku ?? 'N/A'),
                             _buildStockTableCell(stock.date ?? 'N/A'),
                             _buildStockTableCell(stock.expiryDate ?? 'N/A'),
-                            _buildStockTableCell(stock.rack ?? 'N/A'),
+                            _buildRackTableCell(stock),
                           ],
                         ),
                       ],
@@ -1593,6 +1602,384 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStockEditField(
+    String label,
+    TextEditingController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.20,
+            ColorManager.textColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+        CustomBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 45,
+          child: TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            cursorColor: ColorManager.kPrimaryColor,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Enter $label',
+              hintStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.20,
+                ColorManager.textColor.withOpacity(0.5),
+              ),
+            ),
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.20,
+              ColorManager.textColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRackTableCell(Stock stock) {
+    final String rackText = (stock.rack ?? '').trim().isEmpty
+        ? 'N/A'
+        : (stock.rack ?? 'N/A');
+    final bool canEdit = stock.id != null;
+
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  rackText,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s13,
+                    0.18,
+                    Colors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: canEdit ? () => _showEditStockRowModal(stock) : null,
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Icon(
+                    Icons.edit,
+                    size: 16,
+                    color: canEdit
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditStockRowModal(Stock stock) {
+    if (stock.id == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Stock id missing. Unable to edit this row.',
+      );
+      return;
+    }
+
+    final TextEditingController retailPriceController =
+        TextEditingController(text: stock.price ?? '');
+    final TextEditingController mrpController =
+        TextEditingController(text: stock.mrp ?? '');
+    final TextEditingController purchasePriceController =
+        TextEditingController(text: stock.purchasePrice ?? '');
+    final TextEditingController quantityController =
+        TextEditingController(text: stock.quantity?.toString() ?? '0');
+    final TextEditingController rackController =
+        TextEditingController(text: stock.rack ?? '');
+
+    final purchaseProvider =
+        Provider.of<PurchaseProvider>(context, listen: false);
+    final rackMap = purchaseProvider.getMasterDataValues ?? {};
+    String? selectedRackId;
+
+    if ((stock.rack ?? '').isNotEmpty && rackMap.isNotEmpty) {
+      final match = rackMap.entries.firstWhere(
+        (entry) =>
+            entry.value.toLowerCase() == stock.rack!.toLowerCase() ||
+            entry.key == stock.rack,
+        orElse: () => const MapEntry('', ''),
+      );
+      if (match.key.isNotEmpty) {
+        selectedRackId = match.key;
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (statefulContext, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 8,
+              backgroundColor: Colors.white,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.55,
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Edit Stock',
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s20,
+                            0.20,
+                            Colors.black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.black),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStockEditField(
+                                    'Retail Price',
+                                    retailPriceController,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStockEditField(
+                                    'MRP',
+                                    mrpController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStockEditField(
+                                    'Purchase Price',
+                                    purchasePriceController,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStockEditField(
+                                    'Quantity',
+                                    quantityController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rack',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    FontSize.s12,
+                                    0.20,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                if (rackMap.isNotEmpty)
+                                  CustomDropDownWithSearch<_DropdownOption>(
+                                    hintText: 'Select rack',
+                                    value: selectedRackId != null
+                                        ? _DropdownOption(
+                                            id: selectedRackId!,
+                                            label:
+                                                rackMap[selectedRackId] ?? '',
+                                          )
+                                        : null,
+                                    items: rackMap.entries
+                                        .map((entry) => _DropdownOption(
+                                              id: entry.key,
+                                              label: entry.value,
+                                            ))
+                                        .toList(),
+                                    onChanged: (option) {
+                                      setDialogState(() {
+                                        selectedRackId = option?.id;
+                                        rackController.text =
+                                            option?.label ?? '';
+                                      });
+                                    },
+                                    displayText: (option) => option.label,
+                                    isRequired: false,
+                                    width: double.infinity,
+                                    height: 45,
+                                    margin: EdgeInsets.zero,
+                                    searchHintText: 'Search rack...',
+                                    autofocus: false,
+                                  )
+                                else
+                                  _buildStockEditField('Rack', rackController),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        CustomRoundButton(
+                          title: 'Cancel',
+                          boxColor: Colors.white,
+                          textColor: ColorManager.kPrimaryColor,
+                          borderColor: ColorManager.kPrimaryColor,
+                          fct: () => Navigator.pop(dialogContext),
+                          height: 42,
+                          width: 110,
+                          fontSize: FontSize.s12,
+                        ),
+                        const SizedBox(width: 12),
+                        CustomRoundButton(
+                          title: 'Update',
+                          boxColor: ColorManager.kPrimaryColor,
+                          textColor: Colors.white,
+                          fct: () async {
+                            final String? accessToken =
+                                Provider.of<AuthModel>(context, listen: false)
+                                    .token;
+                            if (accessToken == null || accessToken.isEmpty) {
+                              showScaffoldError(
+                                context: context,
+                                message: 'Authentication token is missing',
+                              );
+                              return;
+                            }
+
+                            showDialog(
+                              context: dialogContext,
+                              barrierDismissible: false,
+                              builder: (_) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+
+                            final bool success =
+                                await Provider.of<StockProvider>(
+                              context,
+                              listen: false,
+                            ).updateStockDetails(
+                              stockId: stock.id!,
+                              retailPrice: retailPriceController.text.trim(),
+                              mrp: mrpController.text.trim(),
+                              purchasePrice:
+                                  purchasePriceController.text.trim(),
+                              quantity: quantityController.text.trim(),
+                              rack: rackController.text.trim(),
+                              accessToken: accessToken,
+                            );
+
+                            if (mounted) {
+                              Navigator.of(dialogContext, rootNavigator: true)
+                                  .pop();
+                            }
+
+                            if (!mounted) return;
+
+                            if (success) {
+                              final num? updatedQty =
+                                  num.tryParse(quantityController.text.trim()) ??
+                                      stock.quantity;
+                              setState(() {
+                                _editedStockRows[stock.id!] = Stock(
+                                  id: stock.id,
+                                  productId: stock.productId,
+                                  storeName: stock.storeName,
+                                  supplier: stock.supplier,
+                                  quantity: updatedQty,
+                                  price: retailPriceController.text.trim(),
+                                  sku: stock.sku,
+                                  mrp: mrpController.text.trim(),
+                                  unit: stock.unit,
+                                  purchasePrice:
+                                      purchasePriceController.text.trim(),
+                                  date: stock.date,
+                                  expiryDate: stock.expiryDate,
+                                  rack: rackController.text.trim(),
+                                  hsnCode: stock.hsnCode,
+                                );
+                              });
+                              Navigator.pop(dialogContext);
+                              showScaffold(
+                                context: context,
+                                message: 'Stock updated successfully',
+                              );
+                            } else {
+                              showScaffoldError(
+                                context: context,
+                                message: 'Failed to update stock',
+                              );
+                            }
+                          },
+                          height: 42,
+                          width: 110,
+                          fontSize: FontSize.s12,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

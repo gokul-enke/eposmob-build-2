@@ -191,6 +191,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   String? deliveryDate;
   String? deliveryTime;
   String deliveryAddress = "";
+  double? _selectedDeliveryCharge;
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -1227,6 +1228,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryAddress: deliveryAddress,
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
+          initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
           onDeliveryUpdated:
               (method, methodId, carNo, comment, date, time, address) {
             setState(() {
@@ -1238,6 +1240,13 @@ class BillingPageState extends State<BillingPageRestaurant>
               deliveryTime = time;
               deliveryAddress = address;
             });
+            _updateBalanceAmount();
+          },
+          onDeliveryChargeUpdated: (deliveryCharge) {
+            setState(() {
+              _selectedDeliveryCharge = deliveryCharge;
+            });
+            _updateBalanceAmount();
           },
 
           // Payment State
@@ -1746,9 +1755,11 @@ class BillingPageState extends State<BillingPageRestaurant>
     // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
     // priceSummary is only updated when cartTotal getter is accessed
     final _ = localProductProvider.cartTotal;
+    final footerPriceSummary =
+        _getFooterPriceSummaryWithDeliveryCharge(localProductProvider.priceSummary);
 
     return CheckoutFooter(
-      priceSummary: localProductProvider.priceSummary,
+      priceSummary: footerPriceSummary,
       currency: currency,
       taxNames: taxNames,
       totalPaid: _getTotalPaidAmount(),
@@ -1786,6 +1797,26 @@ class BillingPageState extends State<BillingPageRestaurant>
           ),
         );
       },
+    );
+  }
+
+  PriceSummary? _getFooterPriceSummaryWithDeliveryCharge(
+      PriceSummary? summary) {
+    if (summary == null) {
+      return null;
+    }
+
+    final deliveryCharge = _getDeliveryChargeForOrder();
+
+    return PriceSummary(
+      discount: summary.discount,
+      netPayable: summary.netPayable + deliveryCharge,
+      subTotal: summary.subTotal,
+      totalTax: summary.totalTax,
+      netTotal: summary.netTotal,
+      flatDiscount: summary.flatDiscount,
+      percentageDiscount: summary.percentageDiscount,
+      originalSubTotal: summary.originalSubTotal,
     );
   }
 
@@ -2988,17 +3019,23 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   // Helper method to get formatted total
   String _getFormattedTotal() {
+    return AmountHelper.formatAmount(_getEffectiveOrderTotal());
+  }
+
+  double _getEffectiveOrderTotal() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
+    final baseTotal =
+        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+
     if (appSettingsProvider.appSettings?.priceRoundOff == true) {
-      double roundedTotal = localProductProvider.getRoundedTotal(context);
-      return AmountHelper.formatAmount(roundedTotal);
+      return AmountHelper.roundOffAmount(baseTotal) + _getDeliveryChargeForOrder();
     }
 
-    return AmountHelper.formatAmount(localProductProvider.cartTotal);
+    return baseTotal + _getDeliveryChargeForOrder();
   }
 
   Widget _buildMobileNumberInput({
@@ -4005,6 +4042,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         _commentController.clear();
         _carNumberController.clear();
         deliveryAddress = "";
+        _selectedDeliveryCharge = null;
 
         // Clear customer-related state completely
         mobileNumberText = "";
@@ -4646,6 +4684,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         discountAmount: priceSummary.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       )
           .then((response) async {
         debugPrint(
@@ -5029,6 +5068,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -5177,7 +5217,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-    double cartTotal = localProductProvider.cartTotal;
+    final _ = localProductProvider.cartTotal;
+    double cartTotal = _getEffectiveOrderTotal();
 
     // For balance calculation, only include actual cash payments (not debit/store credit)
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
@@ -5296,6 +5337,51 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Note: We don't include debit/toCustomerCredit in total paid amount
     // as it represents money going to customer credit, not money collected
     return cashAmount + cardAmount + upiAmount + codAmount;
+  }
+
+  double _getDeliveryChargeForOrder() {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final isDeliveryChargeEnabled =
+      appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
+
+    if (!isDeliveryChargeEnabled) {
+      return 0.0;
+    }
+
+    final minimumAmount = double.tryParse(
+            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
+                '') ??
+        0.0;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final netAmount =
+        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+
+    if (minimumAmount > 0 && netAmount >= minimumAmount) {
+      return 0.0;
+    }
+
+    if (_selectedDeliveryCharge != null) {
+      return _selectedDeliveryCharge!;
+    }
+
+    if (deliveryMethod.isEmpty) {
+      return 0.0;
+    }
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if ((deliveryMethodId.isNotEmpty && method.id == deliveryMethodId) ||
+          method.name == deliveryMethod) {
+        return method.basePrice ?? 0.0;
+      }
+    }
+
+    return 0.0;
   }
 
   List<String> _getSelectedPaymentMethods() {
@@ -5707,6 +5793,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       {VoidCallback? onAfterApply, String? customButtonTitle}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final effectiveTotal = _getEffectiveOrderTotal();
 
     // Prepare initial amounts
     String initialCash = _cashAmountController.text;
@@ -5723,8 +5810,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         (double.tryParse(initialDebit) ?? 0) > 0;
 
     // If no amount is entered yet, auto-fill the selected method with the full total
-    if (!hasAnyAmount && localProductProvider.cartTotal > 0) {
-      String totalStr = localProductProvider.cartTotal.toStringAsFixed(2);
+    if (!hasAnyAmount && effectiveTotal > 0) {
+      String totalStr = effectiveTotal.toStringAsFixed(2);
       if (_isCashSelected) {
         initialCash = totalStr;
       } else if (_isCardSelected) {
@@ -5751,7 +5838,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         !_isCodSelected) {
       autoSelectCash = true;
       if (initialCash.isEmpty || double.tryParse(initialCash) == 0) {
-        initialCash = localProductProvider.cartTotal.toStringAsFixed(2);
+        initialCash = effectiveTotal.toStringAsFixed(2);
       }
     }
 
@@ -5769,7 +5856,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialCodAmount: initialCod,
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
-        cartTotal: localProductProvider.cartTotal,
+        cartTotal: effectiveTotal,
         customerPrevBalance: selectedCustomer?.balance ?? 0.0,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,
@@ -5852,12 +5939,14 @@ class BillingPageState extends State<BillingPageRestaurant>
           setState(() {
             deliveryMethod = method;
             deliveryMethodId = methodId;
+            _selectedDeliveryCharge = null;
             _carNumberController.text = carNumber;
             _commentController.text = comment;
             deliveryDate = selectedDate;
             deliveryTime = selectedTime;
             deliveryAddress = address;
           });
+          _updateBalanceAmount();
         },
       ),
     );
@@ -6013,6 +6102,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      _selectedDeliveryCharge = null;
 
       // Find name for the ID
       String defaultName = "Store Takeaway";
@@ -6369,6 +6459,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       // iconColor = 1; // Default to cash
       deliveryMethod = "Store Takeaway";
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      _selectedDeliveryCharge = null;
 
       // Clear all controllers
       coupenCodeTextController.clear();
@@ -6461,6 +6552,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Set initial default values
     deliveryMethod = "Store Takeaway";
     deliveryMethodId = "11"; // Updated to match API response
+    _selectedDeliveryCharge = null;
 
     // Listen for delivery methods to be loaded and update default
     WidgetsBinding.instance.addPostFrameCallback((_) {

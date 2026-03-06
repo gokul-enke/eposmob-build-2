@@ -522,6 +522,7 @@ class Meta {
 class Stock {
   final int? id;
   final int? productId;
+  final String? storeName;
   final String? supplier;
   final num? quantity;
   final String? price;
@@ -537,6 +538,7 @@ class Stock {
   Stock({
     this.id,
     this.productId,
+    this.storeName,
     this.supplier,
     this.quantity,
     this.price,
@@ -555,6 +557,9 @@ class Stock {
         productId: json["product_id"] is String
             ? int.tryParse(json["product_id"])
             : json["product_id"],
+      storeName: json["store_name"]?.toString() ??
+        json["store"]?.toString() ??
+        json["storeName"]?.toString(),
         supplier: json["supplier"]?.toString(),
         quantity: (() {
           final q = json["quantity"];
@@ -583,6 +588,7 @@ class Stock {
   Map<String, dynamic> toJson() => {
         "id": id,
         "product_id": productId,
+      "store_name": storeName,
         "supplier": supplier,
         "quantity": quantity,
         "price": price,

@@ -445,14 +445,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return localProductProvider.priceSummary?.netTotal ?? widget.cartTotal;
   }
 
-  bool _isFreeDeliveryMinimumAmountEnabled() {
+  bool _isfreeDeliveryMinimumAmount() {
     final settings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    return settings?.freeDeliveryMinimumAmountEnabled ?? false;
+    return settings?.freeDeliveryEnabled ?? false;
   }
 
   bool _shouldApplyDeliveryCharge() {
-    if (!_isFreeDeliveryMinimumAmountEnabled()) {
+    if (!_isfreeDeliveryMinimumAmount()) {
       return false;
     }
 
@@ -1009,7 +1009,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               listen: false)
                             .appSettings;
                         final isDeliveryChargeDataEnabled =
-                          appSettings?.freeDeliveryMinimumAmountEnabled ??
+                          appSettings?.freeDeliveryEnabled ??
                             false;
                       final currency = appSettings?.currency ?? 'SAR';
                       final minimumAmount =
@@ -1059,18 +1059,36 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                         _selectedDeliveryPriceId = null;
                                         _selectedDeliveryCharge = 0.0;
                                       } else {
-                                        final existingPrice = method.prices
-                                            .where((p) =>
-                                                p.id == _selectedDeliveryPriceId)
-                                            .toList();
-                                        if (existingPrice.isNotEmpty) {
-                                          _selectedDeliveryCharge =
-                                              existingPrice.first.price;
+                                      final existingById = method.prices
+                                        .where((p) =>
+                                          p.id == _selectedDeliveryPriceId)
+                                        .toList();
+                                      if (existingById.isNotEmpty) {
+                                        _selectedDeliveryCharge =
+                                          existingById.first.price;
                                         } else {
-                                          _selectedDeliveryPriceId =
-                                              method.prices.first.id;
-                                          _selectedDeliveryCharge =
-                                              method.prices.first.price;
+                                        final existingByCharge =
+                                          _selectedDeliveryCharge == null
+                                            ? <DeliveryPrice>[]
+                                            : method.prices
+                                              .where((p) =>
+                                                (p.price -
+                                                    _selectedDeliveryCharge!)
+                                                  .abs() <
+                                                0.001)
+                                              .toList();
+
+                                        if (existingByCharge.isNotEmpty) {
+                                        _selectedDeliveryPriceId =
+                                          existingByCharge.first.id;
+                                        _selectedDeliveryCharge =
+                                          existingByCharge.first.price;
+                                        } else {
+                                        _selectedDeliveryPriceId =
+                                          method.prices.first.id;
+                                        _selectedDeliveryCharge =
+                                          method.prices.first.price;
+                                        }
                                         }
                                       }
 
@@ -1147,7 +1165,29 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                             child: Text(
                                               method.prices.isNotEmpty &&
                                                       shouldApplyDeliveryCharge
-                                                  ? '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}'
+                                                  ? (() {
+                                                      if (!isSelected) {
+                                                        return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
+                                                      }
+
+                                                      final selectedById =
+                                                          method.prices
+                                                              .where((p) =>
+                                                                  p.id ==
+                                                                  _selectedDeliveryPriceId)
+                                                              .toList();
+                                                      if (selectedById
+                                                          .isNotEmpty) {
+                                                        return '$currency ${selectedById.first.price.toStringAsFixed(2)}';
+                                                      }
+
+                                                      if (_selectedDeliveryCharge !=
+                                                          null) {
+                                                        return '$currency ${_selectedDeliveryCharge!.toStringAsFixed(2)}';
+                                                      }
+
+                                                      return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
+                                                    })()
                                                   : 'free'.tr,
                                               textAlign: TextAlign.center,
                                               maxLines: 1,
@@ -1179,8 +1219,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   }
                                 }
 
-                                if (selectedMethod == null ||
-                                    selectedMethod.prices.isEmpty) {
+                                final selectedDeliveryMethod = selectedMethod;
+
+                                if (selectedDeliveryMethod == null ||
+                                    selectedDeliveryMethod.prices.isEmpty) {
                                   return const SizedBox.shrink();
                                 }
 
@@ -1199,8 +1241,27 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 }
 
                                 final effectiveSelectedPriceId =
-                                    _selectedDeliveryPriceId ??
-                                        selectedMethod.prices.first.id;
+                                    (() {
+                                  if (_selectedDeliveryPriceId != null) {
+                                    final exists =
+                                        selectedDeliveryMethod.prices.any(
+                                        (p) => p.id == _selectedDeliveryPriceId);
+                                    if (exists) return _selectedDeliveryPriceId!;
+                                  }
+
+                                  if (_selectedDeliveryCharge != null) {
+                                    for (final price
+                                        in selectedDeliveryMethod.prices) {
+                                      if ((price.price - _selectedDeliveryCharge!)
+                                              .abs() <
+                                          0.001) {
+                                        return price.id;
+                                      }
+                                    }
+                                  }
+
+                                  return selectedDeliveryMethod.prices.first.id;
+                                })();
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1219,7 +1280,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                       spacing: 8,
                                       runSpacing: 8,
                                       children:
-                                          selectedMethod.prices.map((price) {
+                                            selectedDeliveryMethod.prices
+                                              .map((price) {
                                         final isPriceSelected =
                                             price.id == effectiveSelectedPriceId;
 
@@ -2379,7 +2441,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             'Tax', taxAmount, const Color(0xFF64748B),
                             labelColor: const Color(0xFF64748B)),
                         if (hasDelivery &&
-                            _isFreeDeliveryMinimumAmountEnabled()) ...[
+                            _isfreeDeliveryMinimumAmount()) ...[
                           const SizedBox(height: 10),
                           _buildDeliveryChargeRow(),
                         ],
