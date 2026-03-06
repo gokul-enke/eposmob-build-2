@@ -7,6 +7,9 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MasterDataProvider with ChangeNotifier {
+  static const String _paymentMethodsCacheKeyPrefix =
+      'payment_methods_cache';
+
   MasterData? _masterData;
   bool _isLoading = false;
   String? _error;
@@ -57,25 +60,35 @@ class MasterDataProvider with ChangeNotifier {
 
   /// Fetches payment methods from the API and caches them
   /// Returns a List of MasterDataValue objects
-  Future<List<MasterDataValue>?> fetchPaymentMethods() async {
+  Future<List<MasterDataValue>?> fetchPaymentMethods({
+    bool forceRefresh = false,
+  }) async {
     // Return cached data if available
-    if (_paymentMethods != null && _paymentMethods!.isNotEmpty) {
+    if (!forceRefresh && _paymentMethods != null && _paymentMethods!.isNotEmpty) {
       return _paymentMethods;
     }
-
-    _isLoadingPaymentMethods = true;
-    notifyListeners();
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
+    if (!forceRefresh) {
+      final cachedMethods = _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
+      if (cachedMethods != null && cachedMethods.isNotEmpty) {
+        _paymentMethods = cachedMethods;
+        return _paymentMethods;
+      }
+    }
+
+    _isLoadingPaymentMethods = true;
+    notifyListeners();
+
     if (apiKey == null || apiKey.isEmpty) {
       _error = "API key not found. Please restart the app.";
       _isLoadingPaymentMethods = false;
       notifyListeners();
-      return null;
+      return _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
     }
 
     try {
@@ -103,27 +116,78 @@ class MasterDataProvider with ChangeNotifier {
           final dataList = data['data'] as List<dynamic>? ?? [];
           _paymentMethods =
               dataList.map((item) => MasterDataValue.fromJson(item)).toList();
+          await _savePaymentMethodsToLocalCache(
+            prefs,
+            activeStoreId,
+            _paymentMethods!,
+          );
           debugPrint('✅ Payment methods fetched successfully');
           debugPrint('📋 Payment methods: $_paymentMethods');
           return _paymentMethods;
         } else {
           _error = data['message'] ?? 'Failed to fetch payment methods';
           debugPrint('❌ API returned error: $_error');
-          return null;
+          return _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
         }
       } else {
         _error = 'HTTP ${response.statusCode}: Failed to fetch payment methods';
         debugPrint('❌ HTTP Error: $_error');
-        return null;
+        return _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
       }
     } catch (error) {
       _error = 'Error fetching payment methods: $error';
       debugPrint('💥 Exception: $_error');
-      return null;
+      return _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
     } finally {
       _isLoadingPaymentMethods = false;
       notifyListeners();
     }
+  }
+
+  List<MasterDataValue>? _loadPaymentMethodsFromLocalCache(
+    SharedPreferences prefs,
+    int? activeStoreId,
+  ) {
+    final raw = prefs.getString(_paymentMethodsCacheKey(activeStoreId));
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = json.decode(raw) as List<dynamic>;
+      final cachedMethods = decoded
+          .map((item) => MasterDataValue.fromJson(item as Map<String, dynamic>))
+          .toList();
+      if (cachedMethods.isNotEmpty) {
+        debugPrint(
+            '📦 Loaded payment methods from local cache: ${cachedMethods.length}');
+      }
+      return cachedMethods;
+    } catch (error) {
+      debugPrint('❌ Failed to read cached payment methods: $error');
+      return null;
+    }
+  }
+
+  Future<void> _savePaymentMethodsToLocalCache(
+    SharedPreferences prefs,
+    int? activeStoreId,
+    List<MasterDataValue> methods,
+  ) async {
+    try {
+      await prefs.setString(
+        _paymentMethodsCacheKey(activeStoreId),
+        json.encode(methods.map((item) => item.toJson()).toList()),
+      );
+    } catch (error) {
+      debugPrint('❌ Failed to cache payment methods locally: $error');
+    }
+  }
+
+  String _paymentMethodsCacheKey(int? activeStoreId) {
+    return activeStoreId == null
+        ? _paymentMethodsCacheKeyPrefix
+        : '${_paymentMethodsCacheKeyPrefix}_$activeStoreId';
   }
 
   /// Clears payment methods cache to force re-fetch

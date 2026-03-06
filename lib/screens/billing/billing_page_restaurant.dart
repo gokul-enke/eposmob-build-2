@@ -1205,8 +1205,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Reload payment methods
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    masterDataProvider.clearPaymentMethodsCache();
-    final methods = await masterDataProvider.fetchPaymentMethods();
+    final methods =
+      await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
 
     if (methods != null && mounted) {
       final billingProvider =

@@ -293,8 +293,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final masterDataProvider =
           Provider.of<MasterDataProvider>(context, listen: false);
-      masterDataProvider.clearPaymentMethodsCache();
-      masterDataProvider.fetchPaymentMethods();
+      masterDataProvider.fetchPaymentMethods(forceRefresh: true);
       _applyDefaultPaymentMethod();
     });
   }

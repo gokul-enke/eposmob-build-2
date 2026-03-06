@@ -6457,8 +6457,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Reload payment methods and refresh BillingProvider method IDs
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    masterDataProvider.clearPaymentMethodsCache();
-    final methods = await masterDataProvider.fetchPaymentMethods();
+    final methods =
+      await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
 
     if (methods != null && mounted) {
       final billingProvider =
