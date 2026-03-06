@@ -1167,7 +1167,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       7: FlexColumnWidth(1.0),
                       8: FlexColumnWidth(1.2),
                       9: FlexColumnWidth(1.2),
-                      10: FlexColumnWidth(1.2),
+                      10: FlexColumnWidth(1.0),
+                      11: FlexColumnWidth(0.8),
                     },
                     border: null,
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -1185,6 +1186,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           _buildStockTableHeader('Date'),
                           _buildStockTableHeader('Expiry Date'),
                           _buildStockTableHeader('Rack'),
+                          _buildStockTableHeader('Action'),
                         ],
                       ),
                     ],
@@ -1214,7 +1216,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         7: FlexColumnWidth(1.0),
                         8: FlexColumnWidth(1.2),
                         9: FlexColumnWidth(1.2),
-                        10: FlexColumnWidth(1.2),
+                        10: FlexColumnWidth(1.0),
+                        11: FlexColumnWidth(0.8),
                       },
                       border: null,
                       defaultVerticalAlignment:
@@ -1242,6 +1245,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             _buildStockTableCell(stock.sku ?? 'N/A'),
                             _buildStockTableCell(stock.date ?? 'N/A'),
                             _buildStockTableCell(stock.expiryDate ?? 'N/A'),
+                            _buildStockTableCell(stock.rack ?? 'N/A'),
                             _buildRackTableCell(stock),
                           ],
                         ),
@@ -1655,9 +1659,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }
 
   Widget _buildRackTableCell(Stock stock) {
-    final String rackText = (stock.rack ?? '').trim().isEmpty
-        ? 'N/A'
-        : (stock.rack ?? 'N/A');
     final bool canEdit = stock.id != null;
 
     return TableCell(
@@ -1665,37 +1666,24 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
         child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  rackText,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s13,
-                    0.18,
-                    Colors.black,
-                  ),
-                ),
+          child: InkWell(
+            onTap: canEdit ? () => _showEditStockRowModal(stock) : null,
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              height: 28,
+              width: 28,
+              decoration: BoxDecoration(
+                color: canEdit
+                    ? ColorManager.kPrimaryColor
+                    : Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(6),
               ),
-              const SizedBox(width: 4),
-              InkWell(
-                onTap: canEdit ? () => _showEditStockRowModal(stock) : null,
-                borderRadius: BorderRadius.circular(14),
-                child: Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: Icon(
-                    Icons.edit,
-                    size: 16,
-                    color: canEdit
-                        ? ColorManager.kPrimaryColor
-                        : Colors.grey.shade400,
-                  ),
-                ),
+              child: const Icon(
+                Icons.edit,
+                size: 14,
+                color: Colors.white,
               ),
-            ],
+            ),
           ),
         ),
       ),
