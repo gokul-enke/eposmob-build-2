@@ -891,6 +891,7 @@ class CartProvider with ChangeNotifier {
       apiBodyData = {
         "items": items?.reversed.toList(),
         "phone": customerPhone,
+        if (customerId != null) "customer_id": customerId,
         "transaction_number": transactionId,
         "payment_method": paymentMethods,
         "paid_methods": finalPaidMethods,
@@ -907,6 +908,8 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,
@@ -917,6 +920,7 @@ class CartProvider with ChangeNotifier {
       apiBodyData = {
         "items": items?.reversed.toList(),
         "phone": customerPhone,
+        if (customerId != null) "customer_id": customerId,
         "transaction_number": transactionId,
         "payment_method": paymentMethod,
         "paid_amount": paidAmount,
@@ -933,6 +937,8 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,

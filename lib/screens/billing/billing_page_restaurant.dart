@@ -13,6 +13,7 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -549,30 +550,52 @@ class BillingPageState extends State<BillingPageRestaurant>
                 final Map<String, dynamic> amounts =
                     Map<String, dynamic>.from(multi['amounts'] ?? {});
 
-                if (methods.contains('CASH')) {
+                final billingProvider =
+                    Provider.of<BillingProvider>(context, listen: false);
+                final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
+                final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
+                final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
+                final codId = billingProvider.codPaymentMethodId ?? 'COD';
+
+                bool hasMethodOrAmount(List<String> candidates) {
+                  final hasMethod = methods.any(candidates.contains);
+                  final hasAmount = candidates.any((key) {
+                    final amount =
+                        double.tryParse((amounts[key] ?? '0').toString()) ?? 0;
+                    return amount > 0;
+                  });
+                  return hasMethod || hasAmount;
+                }
+
+                String firstAmount(List<String> candidates) {
+                  for (final key in candidates) {
+                    if (amounts.containsKey(key)) {
+                      return (amounts[key] ?? '0').toString();
+                    }
+                  }
+                  return '0';
+                }
+
+                if (hasMethodOrAmount(['CASH', cashId])) {
                   _isCashSelected = true;
-                  _cashAmountController.text =
-                      (amounts['CASH'] ?? '0').toString();
+                  _cashAmountController.text = firstAmount(['CASH', cashId]);
                 }
-                if (methods.contains('CARD')) {
+                if (hasMethodOrAmount(['CARD', cardId])) {
                   _isCardSelected = true;
-                  _cardAmountController.text =
-                      (amounts['CARD'] ?? '0').toString();
+                  _cardAmountController.text = firstAmount(['CARD', cardId]);
                 }
-                if (methods.contains('UPI')) {
+                if (hasMethodOrAmount(['UPI', upiId])) {
                   _isUpiSelected = true;
-                  _upiAmountController.text =
-                      (amounts['UPI'] ?? '0').toString();
+                  _upiAmountController.text = firstAmount(['UPI', upiId]);
                 }
-                if (methods.contains('DEBIT')) {
+                if (hasMethodOrAmount(['DEBIT'])) {
                   _isDebitSelected = true;
                   _debitAmountController.text =
                       (amounts['DEBIT'] ?? '0').toString();
                 }
-                if (methods.contains('COD')) {
+                if (hasMethodOrAmount(['COD', codId])) {
                   _isCodSelected = true;
-                  _codAmountController.text =
-                      (amounts['COD'] ?? '0').toString();
+                  _codAmountController.text = firstAmount(['COD', codId]);
                 }
               }
             } catch (e) {
@@ -580,11 +603,41 @@ class BillingPageState extends State<BillingPageRestaurant>
             }
           } else {
             // Single method
-            _isCashSelected = pm.toUpperCase() == 'CASH';
-            _isCardSelected = pm.toUpperCase() == 'CARD';
-            _isUpiSelected = pm.toUpperCase() == 'UPI';
-            _isCodSelected = pm.toUpperCase() == 'COD';
-            _isDebitSelected = pm.toUpperCase() == 'DEBIT';
+            final billingProvider =
+                Provider.of<BillingProvider>(context, listen: false);
+            final masterDataProvider =
+                Provider.of<MasterDataProvider>(context, listen: false);
+
+            final cashId = billingProvider.cashPaymentMethodId;
+            final cardId = billingProvider.cardPaymentMethodId;
+            final upiId = billingProvider.upiPaymentMethodId;
+            final codId = billingProvider.codPaymentMethodId;
+
+            String normalizedMethod = pm.toUpperCase();
+            final int? methodId = int.tryParse(pm);
+            if (methodId != null) {
+              final resolved = masterDataProvider.getPaymentMethodValue(methodId);
+              if (resolved != null && resolved.isNotEmpty) {
+                normalizedMethod = resolved.toUpperCase();
+              }
+            }
+
+            bool isMethodMatch(List<String> candidates) {
+              final upperCandidates =
+                  candidates.map((c) => c.toUpperCase()).toList(growable: false);
+              return upperCandidates.contains(normalizedMethod) ||
+                  upperCandidates.contains(pm.toUpperCase());
+            }
+
+            _isCashSelected =
+                isMethodMatch(['CASH', if (cashId != null) cashId]);
+            _isCardSelected =
+                isMethodMatch(['CARD', if (cardId != null) cardId]);
+            _isUpiSelected =
+                isMethodMatch(['UPI', if (upiId != null) upiId]);
+            _isCodSelected =
+                isMethodMatch(['COD', if (codId != null) codId]);
+            _isDebitSelected = isMethodMatch(['DEBIT']);
 
             final paid = currentOrder.paidAmount ?? '0.0';
             if (_isCashSelected) _cashAmountController.text = paid;
@@ -606,6 +659,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             currentOrder.deliveryMethod ?? "billing.store_takeaway".tr;
         deliveryMethodId =
             currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
+        _selectedDeliveryCharge = currentOrder.deliveryCharge;
         _commentController.text = currentOrder.comment ?? "";
         _carNumberController.text = currentOrder.carNumber ?? "";
         deliveryDate = currentOrder.deliveryDate;
@@ -628,6 +682,18 @@ class BillingPageState extends State<BillingPageRestaurant>
 
         // 6. Restore To Customer Credit flag
         _toCustomerCreditEnabled = currentOrder.toCustomerCredit ?? false;
+
+        _hasOpenedPaymentModalOnce = _isCashSelected ||
+            _isCardSelected ||
+            _isUpiSelected ||
+            _isCodSelected ||
+            _isDebitSelected ||
+            _toCustomerCreditEnabled ||
+            (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_debitAmountController.text) ?? 0) > 0;
       });
 
       // 7. Final UI Updates
@@ -4140,6 +4206,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryTime: deliveryTime, // Pass deliveryTime
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress, // Pass address
+          deliveryCharge: _getDeliveryChargeForOrder(),
           // context: context, // Pass context
         );
 
@@ -4190,6 +4257,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           context: context, // Pass context
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress, // Pass address
+          deliveryCharge: _getDeliveryChargeForOrder(),
         );
 
         showScaffold(
@@ -4282,164 +4350,84 @@ class BillingPageState extends State<BillingPageRestaurant>
       SavedOrder? orderToUse;
 
       if (currentOrder != null) {
-        // We're editing an existing order, move it to confirmed orders
         debugPrint(
-            "💾 Moving existing order to confirmed: ${currentOrder.orderNumber}");
-        orderToUse =
-            localProductProvider.moveToConfirmedOrders(currentOrder.id);
+            "💾 Updating saved order from current state: ${currentOrder.orderNumber}");
 
-        if (orderToUse != null) {
-          showScaffold(
-            context: context,
-            message: "billing.order_moved_confirmed".tr,
-          );
-        } else {
-          // If the order couldn't be moved (shouldn't happen), create a new confirmed order
-          debugPrint("💾 Creating new confirmed order (fallback)");
+        String? customerNameToSave = selectedCustomer?.name;
+        String? customerPhoneToSave =
+            selectedCustomerPhone ?? mobileNumberText;
 
-          // **FIX**: Properly determine customer info for phone-only orders
-          String? customerNameToSave = selectedCustomer?.name;
-          String? customerPhoneToSave =
-              selectedCustomerPhone ?? mobileNumberText;
+        final paymentData = _getPaymentMethodData();
+        localProductProvider.updateSavedOrder(
+          currentOrder.id,
+          customerName: customerNameToSave,
+          customerPhone: customerPhoneToSave,
+          comment: _commentController.text,
+          deliveryMethod: deliveryMethod,
+          customerId: selectedCustomerID,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: 'saved',
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
+          toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress,
+          deliveryCharge: _getDeliveryChargeForOrder(),
+        );
 
-          // Determine payment method and data using multi-payment JSON format
-          List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+        orderToUse = localProductProvider.findOrderById(currentOrder.id);
 
-          // Get payment method IDs from BillingProvider for consistency
-          final billingProvider =
-              Provider.of<BillingProvider>(context, listen: false);
-          final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
-          final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
-          final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
-          final codId = billingProvider.codPaymentMethodId ?? "COD";
-          // DEBIT is for customer credit/balance, not a standard payment method
-          const debitId = "DEBIT";
-
-          // Always use multi-payment JSON format for consistency with sync button
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              cashId: _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              cardId: _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              upiId: _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-              debitId: _debitAmountController.text.isNotEmpty
-                  ? _debitAmountController.text
-                  : "0",
-              codId: _codAmountController.text.isNotEmpty
-                  ? _codAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          String paymentMethod = json.encode(multiPaymentData);
-          String paidAmount = _getTotalPaidAmount().toString();
-
-          orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
-            customerName: customerNameToSave,
-            customerPhone: customerPhoneToSave,
-            comment: _commentController.text,
-            deliveryMethod: deliveryMethod,
-            // Include all API-compatible fields
-            customerId: selectedCustomerID,
-            paymentMethod: paymentMethod,
-            paidAmount: paidAmount,
-            balanceAmount: _balanceAmount.toString(),
-            transactionId: _transactionNumberController.text,
-            couponId: isCouponApplied ? coupenCodeTextController.text : null,
-            deliveryMethodId: deliveryMethodId,
-            carNumber: _carNumberController.text,
-            deliveryDate: deliveryDate, // Pass deliveryDate
-            deliveryTime: deliveryTime, // Pass deliveryTime
-            toCustomerCredit: _toCustomerCreditEnabled,
-            address: deliveryAddress, // Pass address
-          );
-
-          showScaffold(
-            context: context,
-            message: "billing.order_saved_confirmed".tr,
-          );
-        }
+        showScaffold(
+          context: context,
+          message: "billing.order_updated_success".tr,
+        );
       } else {
-        // Create a new confirmed order
-        debugPrint("💾 Creating new confirmed order");
+        debugPrint("💾 Creating new saved order for printing");
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
-        // Determine payment method and data using multi-payment JSON format
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+        final paymentData = _getPaymentMethodData();
 
-        // Get payment method IDs from BillingProvider for consistency
-        final billingProvider =
-            Provider.of<BillingProvider>(context, listen: false);
-        final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
-        final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
-        final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
-        final codId = billingProvider.codPaymentMethodId ?? "COD";
-        // DEBIT is for customer credit/balance, not a standard payment method
-        const debitId = "DEBIT";
-
-        // Always use multi-payment JSON format for consistency with sync button
-        Map<String, dynamic> multiPaymentData = {
-          "methods": selectedPaymentMethods,
-          "amounts": {
-            cashId: _cashAmountController.text.isNotEmpty
-                ? _cashAmountController.text
-                : "0",
-            cardId: _cardAmountController.text.isNotEmpty
-                ? _cardAmountController.text
-                : "0",
-            upiId: _upiAmountController.text.isNotEmpty
-                ? _upiAmountController.text
-                : "0",
-            debitId: _debitAmountController.text.isNotEmpty
-                ? _debitAmountController.text
-                : "0",
-            codId: _codAmountController.text.isNotEmpty
-                ? _codAmountController.text
-                : "0",
-          },
-          "isMultiPayment": true
-        };
-        String paymentMethod = json.encode(multiPaymentData);
-        String paidAmount = _getTotalPaidAmount().toString();
-
-        orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
+        orderToUse = localProductProvider.saveCurrentCartAsOrder(
           customerName: customerNameToSave,
           customerPhone: customerPhoneToSave,
           comment: _commentController.text,
           deliveryMethod: deliveryMethod,
           // Include all API-compatible fields
           customerId: selectedCustomerID,
-          paymentMethod: paymentMethod,
-          paidAmount: paidAmount,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
           balanceAmount: _balanceAmount.toString(),
           transactionId: _transactionNumberController.text,
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
+          status: 'saved',
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
+          context: context,
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress, // Pass address
+          deliveryCharge: _getDeliveryChargeForOrder(),
         );
 
         showScaffold(
           context: context,
-          message: "billing.order_saved_confirmed_alt".tr,
+          message: "billing.order_saved_success".tr,
         );
       }
 
       try {
-        // Print the order that was just confirmed
-        printFromSavedOrder(orderToUse);
+        if (orderToUse != null) {
+          await printFromSavedOrder(orderToUse);
+        }
       } catch (error) {
         debugPrint("Error printing saved order: ${error.toString()}");
       }
@@ -4447,17 +4435,15 @@ class BillingPageState extends State<BillingPageRestaurant>
       // KOT Print for all delivery methods
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
-      if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+      if ((appSettingsProvider.appSettings?.enableKOTPrint ?? true) &&
+          orderToUse != null) {
         List<LocalCartItem> kotCartItems = orderToUse.items;
         await _printKOT(orderToUse.orderNumber, kotCartItems,
           showTableLabel: false);
       }
 
       resetAutocomplete();
-      // Centralized clear
-      // Clear cart without restoring stock (order is confirmed)
-      localProductProvider.clearCartAfterOrder();
-      localProductProvider.clearCurrentOrder();
+      _clearCart();
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -5114,6 +5100,8 @@ class BillingPageState extends State<BillingPageRestaurant>
   // Multi-payment helper methods
   Map<String, String> _getPaymentMethodData() {
     List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+    final List<String> selectedMethodsForStorage =
+        List<String>.from(selectedPaymentMethods);
     String paymentMethod = "";
     String paidAmount = "";
 
@@ -5124,11 +5112,17 @@ class BillingPageState extends State<BillingPageRestaurant>
     final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
     final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
     final codId = billingProvider.codPaymentMethodId ?? "COD";
+    const debitId = 'DEBIT';
 
-    if (selectedPaymentMethods.length > 1) {
+    final double debitAmount = double.tryParse(_debitAmountController.text) ?? 0;
+    if (_toCustomerCreditEnabled && debitAmount > 0) {
+      selectedMethodsForStorage.add(debitId);
+    }
+
+    if (selectedMethodsForStorage.length > 1) {
       // Multi-payment: store as JSON with IDs as keys
       Map<String, dynamic> multiPaymentData = {
-        "methods": selectedPaymentMethods,
+        "methods": selectedMethodsForStorage,
         "amounts": {
           cashId: _cashAmountController.text.isNotEmpty
               ? _cashAmountController.text
@@ -5142,6 +5136,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           codId: _codAmountController.text.isNotEmpty
               ? _codAmountController.text
               : "0",
+          debitId: debitAmount > 0 ? _debitAmountController.text : '0',
         },
         "isMultiPayment": true
       };
@@ -5149,8 +5144,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       paidAmount = _getTotalPaidAmount().toString();
     } else {
       // Single payment method
-      if (selectedPaymentMethods.isNotEmpty) {
-        paymentMethod = selectedPaymentMethods.first;
+      if (selectedMethodsForStorage.isNotEmpty) {
+        paymentMethod = selectedMethodsForStorage.first;
         // Check by comparing with the stored IDs
         if (paymentMethod == cashId) {
           paidAmount = _cashAmountController.text;
@@ -5160,6 +5155,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           paidAmount = _upiAmountController.text;
         } else if (paymentMethod == codId) {
           paidAmount = _codAmountController.text;
+        } else if (paymentMethod == debitId) {
+          paidAmount = _debitAmountController.text;
         } else {
           // Fallback for legacy string checks
           if (_isCashSelected) {
@@ -6288,10 +6285,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
       Future<bool> printOnce() {
+        final parsedPayment = PaymentHelper.parseLocalMultiPayment(
+            context, savedOrder.paymentMethod);
         return _printOrderDetailsWithFallback(
           storeName: storeName,
           cartItems: cartItems,
-          formattedTotal: netTotal.toString(),
+          formattedTotal: savedOrder.total.toString(),
           savedTotal: youSaved.toString(),
           discountAmount: savedOrder.flatDiscount != null ||
                   savedOrder.percentageDiscount != null
@@ -6308,7 +6307,10 @@ class BillingPageState extends State<BillingPageRestaurant>
           isFromLocalStorage: true,
           customerName: savedOrder.customerName,
           customerPhone: savedOrder.customerPhone,
-          paymentMethod: savedOrder.paymentMethod,
+          customerAddress: savedOrder.address,
+          paymentMethod:
+              parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
+          paymentBreakdown: parsedPayment?.paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
           orderComment: savedOrder.comment,
             deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,

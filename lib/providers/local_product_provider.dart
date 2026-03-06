@@ -67,6 +67,7 @@ class SavedOrder {
   final String? tableId;
   final String? alternatePhone;
   final String? address;
+  final double? deliveryCharge;
 
   SavedOrder({
     required this.id,
@@ -96,6 +97,7 @@ class SavedOrder {
     this.tableId,
     this.alternatePhone,
     this.address,
+    this.deliveryCharge,
   });
 }
 
@@ -384,6 +386,7 @@ class LocalProductProvider extends ChangeNotifier {
           alternatePhone: hiveSavedOrder.alternatePhone,
           tableId: hiveSavedOrder.tableId,
           address: hiveSavedOrder.address,
+          deliveryCharge: hiveSavedOrder.deliveryCharge,
         ));
       }
       notifyListeners();
@@ -454,6 +457,7 @@ class LocalProductProvider extends ChangeNotifier {
           tableId: order.tableId,
           alternatePhone: order.alternatePhone,
           address: order.address,
+          deliveryCharge: order.deliveryCharge,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -571,6 +575,7 @@ class LocalProductProvider extends ChangeNotifier {
         tableId: hiveSavedOrder.tableId,
         alternatePhone: hiveSavedOrder.alternatePhone,
         address: hiveSavedOrder.address,
+        deliveryCharge: hiveSavedOrder.deliveryCharge,
       );
       _savedOrders.add(savedOrder);
       debugPrint(
@@ -691,6 +696,7 @@ class LocalProductProvider extends ChangeNotifier {
         tableId: order.tableId,
         alternatePhone: order.alternatePhone,
         address: order.address,
+        deliveryCharge: order.deliveryCharge,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -1933,6 +1939,7 @@ class LocalProductProvider extends ChangeNotifier {
     bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
     String? address,
+    double? deliveryCharge,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -1942,7 +1949,8 @@ class LocalProductProvider extends ChangeNotifier {
     final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
 
     // Calculate total with rounding if enabled
-    double total = context != null ? getRoundedTotal(context) : cartTotal;
+    final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;
+    double total = baseTotal + (deliveryCharge ?? 0.0);
 
     // Create a deep copy of cart items to prevent modification
     List<LocalCartItem> orderItems = _cartItems
@@ -1987,6 +1995,7 @@ class LocalProductProvider extends ChangeNotifier {
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
       address: address,
+      deliveryCharge: deliveryCharge,
     );
 
     // Add to confirmed orders list
@@ -2034,6 +2043,7 @@ class LocalProductProvider extends ChangeNotifier {
           percentageDiscount: order.percentageDiscount,
           toCustomerCredit: order.toCustomerCredit,
           address: order.address,
+          deliveryCharge: order.deliveryCharge,
         );
 
         // Add to confirmed orders
@@ -2114,6 +2124,7 @@ class LocalProductProvider extends ChangeNotifier {
     BuildContext? context, // Add context parameter
     String? tableId,
     String? address,
+    double? deliveryCharge,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -2121,6 +2132,7 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("  - Customer ID parameter: $customerId");
     debugPrint("  - Requested status: ${status ?? 'saved'}");
     debugPrint("  - TableId: $tableId");
+    debugPrint("  - Delivery Charge: ${deliveryCharge ?? 0.0}");
 
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as order");
@@ -2130,7 +2142,8 @@ class LocalProductProvider extends ChangeNotifier {
     final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
 
     // Calculate total with rounding if enabled
-    double total = context != null ? getRoundedTotal(context) : cartTotal;
+    final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;
+    double total = baseTotal + (deliveryCharge ?? 0.0);
 
     // Create a deep copy of cart items to prevent modification
     List<LocalCartItem> orderItems = _cartItems
@@ -2178,6 +2191,7 @@ class LocalProductProvider extends ChangeNotifier {
       alternatePhone: null, // Add if needed
       address:
           address, // Pass address if available, or update if passed as param
+      deliveryCharge: deliveryCharge,
     );
 
     // Add to saved orders list
@@ -2234,6 +2248,16 @@ class LocalProductProvider extends ChangeNotifier {
       _flatDiscount = order.flatDiscount ?? 0.0;
       _percentageDiscount = order.percentageDiscount ?? 0.0;
 
+      // Release any stock reserved by the current cart before switching drafts.
+      if (isStockEnabled) {
+        for (final cartItem in _cartItems) {
+          if (cartItem.selectedStock != null) {
+            _updateStockQuantity(
+                cartItem.selectedStock!, cartItem.quantity, "LOAD_ORDER_RELEASE");
+          }
+        }
+      }
+
       // Clear current cart
       _cartItems.clear();
 
@@ -2248,6 +2272,11 @@ class LocalProductProvider extends ChangeNotifier {
           taxRate: item.taxRate,
           selectedStock: item.selectedStock,
         ));
+
+        if (isStockEnabled && item.selectedStock != null) {
+          _updateStockQuantity(
+              item.selectedStock!, -item.quantity, "LOAD_ORDER_RESERVE");
+        }
       }
 
       // Set current order
@@ -2282,6 +2311,7 @@ class LocalProductProvider extends ChangeNotifier {
     bool? toCustomerCredit,
     String? tableId,
     String? address,
+    double? deliveryCharge,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -2298,7 +2328,8 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint(
           "  - Original order phone: '${_savedOrders[index].customerPhone}'");
       // Get current cart total
-      double total = cartTotal;
+        double total =
+          cartTotal + (deliveryCharge ?? _savedOrders[index].deliveryCharge ?? 0.0);
 
       // Create a copy of current cart items
       List<LocalCartItem> orderItems = _cartItems
@@ -2346,6 +2377,7 @@ class LocalProductProvider extends ChangeNotifier {
         tableId: tableId ?? _savedOrders[index].tableId,
         alternatePhone: _savedOrders[index].alternatePhone,
         address: address ?? _savedOrders[index].address,
+        deliveryCharge: deliveryCharge ?? _savedOrders[index].deliveryCharge,
       );
 
       // Update in list

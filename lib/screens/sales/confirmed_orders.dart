@@ -10,6 +10,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -705,6 +706,30 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                 }
               }
 
+              final billingProvider =
+                  Provider.of<BillingProvider>(context, listen: false);
+              final cashMethodId = billingProvider.cashPaymentMethodId;
+              final codMethodId = billingProvider.codPaymentMethodId;
+              final balanceAmountValue =
+                  double.tryParse(order.balanceAmount ?? '0') ?? 0.0;
+
+              if (balanceAmountValue > 0 && paidMethods.isNotEmpty) {
+                final adjustmentIndex = paidMethods.indexWhere((payment) {
+                  final methodId = payment['method']?.toString();
+                  return methodId == cashMethodId || methodId == codMethodId;
+                });
+
+                if (adjustmentIndex != -1) {
+                  final adjustedAmount =
+                      (paidMethods[adjustmentIndex]['amount'] as num).toDouble() -
+                          balanceAmountValue;
+                  paidMethods[adjustmentIndex] = {
+                    'method': paidMethods[adjustmentIndex]['method'],
+                    'amount': adjustedAmount > 0 ? adjustedAmount : 0.0,
+                  };
+                }
+              }
+
               // ✅ For multi-payment, EXPLICITLY set single payment fields to null
               paymentMethod = null;
               paidAmount = null;
@@ -760,6 +785,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           carNumber: order.carNumber,
           status:
               "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
+            deliveryDate: order.deliveryDate,
+            deliveryTime: order.deliveryTime,
           // Include discount data from saved order
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
@@ -768,6 +795,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                   ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
                   : 0.0),
           toCustomerCredit: order.toCustomerCredit,
+            address: order.address,
+            deliveryCharge: order.deliveryCharge,
         );
 
         // AFTER the API call completes, update the index

@@ -395,7 +395,12 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Text(extraHeading1, style: storeInfoStyle),
                       if (_cfgVisible('showExtraHeading2') &&
                           extraHeading2.isNotEmpty)
-                        pw.Text(extraHeading2, style: storeInfoStyle),
+                        pw.Text(
+                          extraHeading2,
+                          style: storeInfoStyle,
+                          textAlign: pw.TextAlign.left,
+                          textDirection: pw.TextDirection.ltr,
+                        ),
                       if (_cfgVisible('showEmail') && storeEmail.isNotEmpty)
                         pw.Text('Email: $storeEmail', style: storeInfoStyle),
                       if (_cfgVisible('showTel') && storeTel.isNotEmpty)
