@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -163,6 +164,14 @@ class BillingPageState extends State<BillingPage>
   bool _isSidebarVisible = true;
   int _selectedSidebarTab =
       1; // 0 for products, 1 for orders/categories - default to orders tab
+  double _sidebarWidthFraction = 0.26;
+  bool _isSidebarResizeHandleHovered = false;
+  bool _isSidebarResizing = false;
+
+  static const double _sidebarResizeHandleWidth = 14;
+  static const double _sidebarMinWidth = 250;
+  static const double _sidebarMaxWidth = 420;
+  static const double _mainContentMinWidth = 620;
 
   Timer? _debounceTimer;
 
@@ -320,7 +329,6 @@ class BillingPageState extends State<BillingPage>
         setState(() {});
       }
     });
-
   }
 
   @override
@@ -621,15 +629,17 @@ class BillingPageState extends State<BillingPage>
             String normalizedMethod = pm.toUpperCase();
             final int? methodId = int.tryParse(pm);
             if (methodId != null) {
-              final resolved = masterDataProvider.getPaymentMethodValue(methodId);
+              final resolved =
+                  masterDataProvider.getPaymentMethodValue(methodId);
               if (resolved != null && resolved.isNotEmpty) {
                 normalizedMethod = resolved.toUpperCase();
               }
             }
 
             bool isMethodMatch(List<String> candidates) {
-              final upperCandidates =
-                  candidates.map((c) => c.toUpperCase()).toList(growable: false);
+              final upperCandidates = candidates
+                  .map((c) => c.toUpperCase())
+                  .toList(growable: false);
               return upperCandidates.contains(normalizedMethod) ||
                   upperCandidates.contains(pm.toUpperCase());
             }
@@ -638,8 +648,7 @@ class BillingPageState extends State<BillingPage>
                 isMethodMatch(['CASH', if (cashId != null) cashId]);
             _isCardSelected =
                 isMethodMatch(['CARD', if (cardId != null) cardId]);
-            _isUpiSelected =
-                isMethodMatch(['UPI', if (upiId != null) upiId]);
+            _isUpiSelected = isMethodMatch(['UPI', if (upiId != null) upiId]);
             _isDebitSelected = isMethodMatch(['DEBIT']);
             _isCodSelected = isMethodMatch(['COD', if (codId != null) codId]);
 
@@ -722,7 +731,8 @@ class BillingPageState extends State<BillingPage>
   }) async {
     // Set loading flag - check for duplicate calls first
     if (_isLoadingCustomers && !forceRefresh) {
-      debugPrint("🛡️ _fetchCustomers() already in progress, skipping duplicate call");
+      debugPrint(
+          "🛡️ _fetchCustomers() already in progress, skipping duplicate call");
       return;
     }
 
@@ -754,7 +764,7 @@ class BillingPageState extends State<BillingPage>
 
     // Additional check: if the text field contains user-entered data that's not the sales executive's info, preserve it
     if (applyDefaultSelection &&
-      mobileNumberTextController.text.isNotEmpty &&
+        mobileNumberTextController.text.isNotEmpty &&
         !mobileNumberTextController.text.contains(
             "${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.name ?? ''} ${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.phone ?? ''}")) {
       debugPrint("🛡️ Text field contains user data, preserving manual entry");
@@ -912,7 +922,8 @@ class BillingPageState extends State<BillingPage>
 
   void _focusTextField() {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+    final customerProvider =
+        Provider.of<CustomerProvider>(context, listen: false);
     if ((customerProvider.allCustomers == null ||
             customerProvider.allCustomers!.isEmpty) &&
         accessToken != null &&
@@ -938,8 +949,7 @@ class BillingPageState extends State<BillingPage>
 
   void _handleKeyPress(KeyEvent event) {
     final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null &&
-        focusedContext.widget is EditableText) {
+    if (focusedContext != null && focusedContext.widget is EditableText) {
       return;
     }
 
@@ -1005,8 +1015,7 @@ class BillingPageState extends State<BillingPage>
 
     // If input is empty, do nothing.
     if (barcode.isEmpty) {
-      debugPrint(
-          "⚠️ [BillingPage.processBarcode] SKIPPING - Empty barcode");
+      debugPrint("⚠️ [BillingPage.processBarcode] SKIPPING - Empty barcode");
       debugPrint(
           "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END (SKIPPED) ==========\n");
       return;
@@ -1194,57 +1203,112 @@ class BillingPageState extends State<BillingPage>
             children: [
               // Main content
               Center(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Main content area
-                    Expanded(
-                      flex: _isSidebarVisible ? 3 : 4,
-                      child: BuildBoxShadowContainer(
-                        circleRadius: 10,
-                        margin: const EdgeInsets.only(
-                            left: 10, top: 10, bottom: 10, right: 10),
-                        child: Form(
-                          key: _formKey,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                _buildHeader(),
-                                const Divider(thickness: 1),
-                                _buildOrderHeader(
-                                  size: size,
-                                  barcodeController: barcodeController,
-                                  quantityController: quantityController,
-                                  unitPriceController: unitPriceController,
-                                  selectedProductIdController:
-                                      selectedProductIdController,
-                                  productProvider: productProvider,
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Expanded(
-                                        child: _buildCartItemsTable(size),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      _buildActionButtons(),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (!_isSidebarVisible) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildMainContent(
+                              size: size,
+                              productProvider: productProvider,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    final double usableWidth = math.max(
+                      constraints.maxWidth - _sidebarResizeHandleWidth,
+                      0,
+                    );
+                    final double sidebarWidth = _getClampedSidebarWidth(
+                      usableWidth,
+                      usableWidth * _sidebarWidthFraction,
+                    );
+                    final double mainContentWidth = math.max(
+                      usableWidth - sidebarWidth,
+                      0,
+                    );
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: mainContentWidth,
+                          child: _buildMainContent(
+                            size: size,
+                            productProvider: productProvider,
+                            margin: const EdgeInsets.only(
+                              left: 10,
+                              top: 10,
+                              bottom: 10,
+                              right: 4,
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                        _buildSidebarResizeHandle(usableWidth),
+                        SizedBox(
+                          width: sidebarWidth,
+                          child: _buildSidebar(
+                            margin: const EdgeInsets.only(
+                              left: 4,
+                              top: 10,
+                              bottom: 10,
+                              right: 10,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                    // Collapsible Sidebar
-                    if (_isSidebarVisible)
-                      Expanded(
-                        flex: 1,
-                        child: _buildSidebar(),
-                      ),
+  Widget _buildMainContent({
+    required Size size,
+    required GridSelectionProvider productProvider,
+    EdgeInsetsGeometry margin = const EdgeInsets.only(
+      left: 10,
+      top: 10,
+      bottom: 10,
+      right: 10,
+    ),
+  }) {
+    return BuildBoxShadowContainer(
+      circleRadius: 10,
+      margin: margin,
+      child: Form(
+        key: _formKey,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              _buildHeader(),
+              const Divider(thickness: 1),
+              _buildOrderHeader(
+                size: size,
+                barcodeController: barcodeController,
+                quantityController: quantityController,
+                unitPriceController: unitPriceController,
+                selectedProductIdController: selectedProductIdController,
+                productProvider: productProvider,
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: _buildCartItemsTable(size),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildActionButtons(),
                   ],
                 ),
               ),
@@ -1255,10 +1319,105 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  Widget _buildSidebar() {
+  double _getClampedSidebarWidth(double usableWidth, double desiredWidth) {
+    final double minWidth = math.min(_sidebarMinWidth, usableWidth * 0.4);
+    final double maxWidth = math.max(
+      minWidth,
+      math.min(
+        _sidebarMaxWidth,
+        usableWidth - _mainContentMinWidth,
+      ),
+    );
+
+    return desiredWidth.clamp(minWidth, maxWidth).toDouble();
+  }
+
+  Widget _buildSidebarResizeHandle(double usableWidth) {
+    final bool isActive = _isSidebarResizeHandleHovered || _isSidebarResizing;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) {
+        if (!mounted) return;
+        setState(() {
+          _isSidebarResizeHandleHovered = true;
+        });
+      },
+      onExit: (_) {
+        if (!mounted || _isSidebarResizing) return;
+        setState(() {
+          _isSidebarResizeHandleHovered = false;
+        });
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragStart: (_) {
+          setState(() {
+            _isSidebarResizing = true;
+            _isSidebarResizeHandleHovered = true;
+          });
+        },
+        onHorizontalDragUpdate: (details) {
+          final double currentWidth = _getClampedSidebarWidth(
+              usableWidth, usableWidth * _sidebarWidthFraction);
+          final double nextWidth = _getClampedSidebarWidth(
+              usableWidth, currentWidth - details.delta.dx);
+
+          setState(() {
+            _sidebarWidthFraction = nextWidth / usableWidth;
+          });
+        },
+        onHorizontalDragEnd: (_) {
+          setState(() {
+            _isSidebarResizing = false;
+          });
+        },
+        onHorizontalDragCancel: () {
+          setState(() {
+            _isSidebarResizing = false;
+            _isSidebarResizeHandleHovered = false;
+          });
+        },
+        child: SizedBox(
+          width: _sidebarResizeHandleWidth,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              width: isActive ? 6 : 2,
+              height: isActive ? 120 : 72,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? ColorManager.kPrimaryColor.withOpacity(0.65)
+                    : Colors.grey.withOpacity(0.22),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: ColorManager.kPrimaryColor.withOpacity(0.18),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar({
+    EdgeInsetsGeometry margin = const EdgeInsets.only(
+      top: 10,
+      bottom: 10,
+      right: 10,
+    ),
+  }) {
     return BuildBoxShadowContainer(
       circleRadius: 10,
-      margin: const EdgeInsets.only(top: 10, bottom: 10, right: 10),
+      margin: margin,
       child: Stack(
         children: [
           Column(
@@ -1405,9 +1564,11 @@ class BillingPageState extends State<BillingPage>
   Widget _buildProductTab() {
     return Consumer2<LocalProductProvider, SyncProvider>(
       builder: (context, localProductProvider, syncProvider, child) {
-        final bool hasProducts = localProductProvider.sellableProducts.isNotEmpty;
-        final bool isLoading =
-            localProductProvider.isLoading || syncProvider.isSyncing || _isResyncingProducts;
+        final bool hasProducts =
+            localProductProvider.sellableProducts.isNotEmpty;
+        final bool isLoading = localProductProvider.isLoading ||
+            syncProvider.isSyncing ||
+            _isResyncingProducts;
 
         if (hasProducts) {
           return const SideBarProductList();
@@ -1480,8 +1641,11 @@ class BillingPageState extends State<BillingPage>
                 ),
                 const SizedBox(height: 14),
                 CustomRoundButton(
-                  title: _isResyncingProducts ? 'Resyncing...' : 'Resync Products',
-                  fct: _isResyncingProducts ? () {} : _resyncProductsFromEmptyState,
+                  title:
+                      _isResyncingProducts ? 'Resyncing...' : 'Resync Products',
+                  fct: _isResyncingProducts
+                      ? () {}
+                      : _resyncProductsFromEmptyState,
                   width: 170,
                   height: 36,
                   fontSize: 11,
@@ -2277,8 +2441,8 @@ class BillingPageState extends State<BillingPage>
                           itemBuilder: (context, index) {
                             final item = cartItems[index];
                             return Container(
-                                    color: index == 0
-                                      ? Colors.green.withOpacity(0.32)
+                              color: index == 0
+                                  ? Colors.green.withOpacity(0.32)
                                   : (index % 2 == 0
                                       ? Colors.white
                                       : Colors.grey.shade50),
@@ -3041,8 +3205,10 @@ class BillingPageState extends State<BillingPage>
               ),
             );
           },
-          showTotalPaid: false, // We'll show this separately with quick access icons
-          showBalance: false,   // We'll show this separately with quick access icons
+          showTotalPaid:
+              false, // We'll show this separately with quick access icons
+          showBalance:
+              false, // We'll show this separately with quick access icons
         ),
       ],
     );
@@ -3074,12 +3240,13 @@ class BillingPageState extends State<BillingPage>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
-    final baseTotal =
-        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+    final baseTotal = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
 
-    final roundedOrBaseTotal = appSettingsProvider.appSettings?.priceRoundOff == true
-        ? AmountHelper.roundOffAmount(baseTotal)
-        : baseTotal;
+    final roundedOrBaseTotal =
+        appSettingsProvider.appSettings?.priceRoundOff == true
+            ? AmountHelper.roundOffAmount(baseTotal)
+            : baseTotal;
 
     return roundedOrBaseTotal + _getDeliveryChargeForOrder();
   }
@@ -3860,7 +4027,8 @@ class BillingPageState extends State<BillingPage>
           _buildActionButton(
             text: 'billing.save_order'.tr,
             color: ColorManager.kButtonYellow,
-            onPressed: () => _showCheckoutModal(actionMode: CheckoutActionMode.save),
+            onPressed: () =>
+                _showCheckoutModal(actionMode: CheckoutActionMode.save),
             isLoading: isLoadingSaveOrder,
           ),
           if (_hasInternet) ...[
@@ -4678,7 +4846,7 @@ class BillingPageState extends State<BillingPage>
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
                 deliveryMethod:
-                  orderDetails.data?.deliveryMethodName ?? deliveryMethod,
+                    orderDetails.data?.deliveryMethodName ?? deliveryMethod,
                 isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                         context,
                         listen: false)
@@ -5009,7 +5177,8 @@ class BillingPageState extends State<BillingPage>
     }
 
     // Double-check customerList is not empty, if it is, try fetching one more time
-    if ((customerList == null || customerList!.isEmpty) && !_isLoadingCustomers) {
+    if ((customerList == null || customerList!.isEmpty) &&
+        !_isLoadingCustomers) {
       final isEditingSavedOrder =
           Provider.of<LocalProductProvider>(context, listen: false)
                   .currentOrder !=
@@ -5026,7 +5195,7 @@ class BillingPageState extends State<BillingPage>
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
     final methods =
-      await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
+        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
 
     if (methods != null && mounted) {
       final billingProvider =
@@ -5052,18 +5221,17 @@ class BillingPageState extends State<BillingPage>
       );
     }
 
-    final hasExistingPaymentState =
-        _isCashSelected ||
-            _isCardSelected ||
-            _isUpiSelected ||
-            _isCodSelected ||
-            _isDebitSelected ||
-            _toCustomerCreditEnabled ||
-            (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
-            (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
-            (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
-            (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
-            (double.tryParse(_debitAmountController.text) ?? 0) > 0;
+    final hasExistingPaymentState = _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected ||
+        _toCustomerCreditEnabled ||
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_debitAmountController.text) ?? 0) > 0;
 
     // Apply default payment method only when no existing/rehydrated payment state exists
     if (!hasExistingPaymentState) {
@@ -5163,11 +5331,10 @@ class BillingPageState extends State<BillingPage>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-            confirmButtonTitle:
-              isSaveMode ? 'billing.save_order'.tr : 'Confirm',
-            printButtonTitle:
+          confirmButtonTitle: isSaveMode ? 'billing.save_order'.tr : 'Confirm',
+          printButtonTitle:
               isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
-            requireCheckoutCompletion: !isSaveMode,
+          requireCheckoutCompletion: !isSaveMode,
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -5259,8 +5426,7 @@ class BillingPageState extends State<BillingPage>
                 final byPhone = customerList!.firstWhere(
                   (customer) {
                     final customerPhone =
-                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ??
-                            '';
+                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
                     return customerPhone == normalizedAddedPhone;
                   },
                   orElse: () => CustomerListModelData(),
@@ -5304,7 +5470,8 @@ class BillingPageState extends State<BillingPage>
             _toCustomerCreditEnabled = toCredit;
 
             setState(() {
-              _hasOpenedPaymentModalOnce = true; // Mark as opened when payment is updated in modal
+              _hasOpenedPaymentModalOnce =
+                  true; // Mark as opened when payment is updated in modal
             });
 
             // Store payment method IDs in BillingProvider for later use
@@ -5392,7 +5559,8 @@ class BillingPageState extends State<BillingPage>
     final codId = billingProvider.codPaymentMethodId ?? "COD";
     const debitId = "DEBIT";
 
-    final double debitAmount = double.tryParse(_debitAmountController.text) ?? 0;
+    final double debitAmount =
+        double.tryParse(_debitAmountController.text) ?? 0;
     if (_toCustomerCreditEnabled && debitAmount > 0) {
       selectedMethodsForStorage.add(debitId);
     }
@@ -5593,7 +5761,7 @@ class BillingPageState extends State<BillingPage>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final isDeliveryChargeEnabled =
-      appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
+        appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
 
     if (!isDeliveryChargeEnabled) {
       return 0.0;
@@ -5606,8 +5774,8 @@ class BillingPageState extends State<BillingPage>
 
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
-    final netAmount =
-        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+    final netAmount = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
 
     if (minimumAmount > 0 && netAmount >= minimumAmount) {
       return 0.0;
@@ -6444,8 +6612,8 @@ class BillingPageState extends State<BillingPage>
       // Parse multi-payment JSON into human-readable names and breakdown
       final parsedPayment = PaymentHelper.parseLocalMultiPayment(
           context, savedOrder.paymentMethod);
-      final String? displayPaymentMethod = parsedPayment?.paymentMethodDisplay
-          ?? savedOrder.paymentMethod;
+      final String? displayPaymentMethod =
+          parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod;
       final Map<String, dynamic>? paymentBreakdown =
           parsedPayment?.paymentBreakdown;
 
@@ -6474,11 +6642,10 @@ class BillingPageState extends State<BillingPage>
           paymentBreakdown: paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
           orderComment: savedOrder.comment,
-            deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
-          paidAmount:
-              (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                  ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                  : null,
+          deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
+          paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+              ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+              : null,
           isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
         );
       }

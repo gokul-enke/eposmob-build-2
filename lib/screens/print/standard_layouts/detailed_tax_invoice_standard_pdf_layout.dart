@@ -88,13 +88,14 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         return pw.MemoryImage(response.bodyBytes);
@@ -153,50 +154,50 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // ══════════════════════════════════════════════════════════════════
     // EXACT FONT SIZES from reference image
     // ══════════════════════════════════════════════════════════════════
-    // Store name: 16pt bold
+    // Store name: 14pt bold
     final storeNameStyle = pw.TextStyle(
-      font: fontBold, fontSize: fs(14), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(12), fontWeight: pw.FontWeight.bold);
     // Store address/contact lines: 9pt regular
     final storeInfoStyle =
-      pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(8));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(8));
     // "Tax Invoice" title: 22pt bold
     final taxInvoiceTitleStyle = pw.TextStyle(
-      font: fontBold, fontSize: fs(16), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(16), fontWeight: pw.FontWeight.bold);
     // "فاتورة ضريبية" Arabic subtitle: 18pt bold
     final taxInvoiceArabicStyle = pw.TextStyle(
-      font: fontBold, fontSize: fs(13), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(13), fontWeight: pw.FontWeight.bold);
     // VAT No line: 10pt bold
     final vatNoStyle = pw.TextStyle(
-      font: fontBold, fontSize: fs(8), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(8), fontWeight: pw.FontWeight.bold);
     // "الرقم الضريبي" under VAT: 9pt regular
     final vatNoArabicStyle =
-      pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
     // Invoice details table text: 9pt
     final tableInfoStyle =
-      pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
     final tableInfoBold = pw.TextStyle(
-      font: fontBold, fontSize: fs(7), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(7), fontWeight: pw.FontWeight.bold);
     // Invoice From/To labels: 8pt
     final fromToLabel =
-      pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(6.5));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(6.5));
     final fromToValue = pw.TextStyle(
-      font: fontBold, fontSize: fs(6.5), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(6.5), fontWeight: pw.FontWeight.bold);
     final fromToHeader = pw.TextStyle(
-      font: fontBold, fontSize: fs(7), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(7), fontWeight: pw.FontWeight.bold);
     // Items table header: 8pt bold
     final itemsHeaderStyle = pw.TextStyle(
-      font: fontBold, fontSize: fs(6.5), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(6.5), fontWeight: pw.FontWeight.bold);
     // Items table body: 9pt
     final itemsBodyStyle =
-      pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
     // Footer text: 9pt
     final footerStyle =
-      pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
     final footerBold = pw.TextStyle(
-      font: fontBold, fontSize: fs(7), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(7), fontWeight: pw.FontWeight.bold);
     // Signature text: 10pt bold
     final signatureStyle = pw.TextStyle(
-      font: fontBold, fontSize: fs(8), fontWeight: pw.FontWeight.bold);
+        font: fontBold, fontSize: fs(8), fontWeight: pw.FontWeight.bold);
 
     // ── Logo ────────────────────────────────────────────────────────
     pw.MemoryImage? logoImage;
@@ -263,6 +264,11 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final storeEmail = _cfgVal('showEmail', params.customerCareEmail);
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
+    final accountLines = extraHeading2
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
 
     // Invoice number with prefix + stripping
     final prefix = config.numberPrefix ?? '';
@@ -308,8 +314,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.MultiPage(
         pageFormat: pageFormat,
         textDirection: textDir,
-        margin:
-            pw.EdgeInsets.only(
+        margin: pw.EdgeInsets.only(
             left: isA5 ? 8 : 14,
             right: isA5 ? 8 : 14,
             top: isA5 ? 8 : 12,
@@ -320,44 +325,44 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         ),
         build: (pw.Context ctx) {
           final fromFieldRows = <pw.Widget>[
-          _fromToRow('Name :', _displayOrNA(storeName), 'إسم :',
-            fromToLabel, fromToValue),
-          _fromToRow('Building No :', _displayOrNA(extraHeading1),
-            'رقم المبنى :', fromToLabel, fromToValue),
-          _fromToRow('Street name :', _displayOrNA(storeAddress),
-            'اسم الشارع :', fromToLabel, fromToValue),
-          _fromToRow('City :', _displayOrNA(storeDesc), 'مدينة :',
-            fromToLabel, fromToValue),
-          _fromToRow('C.R No :', _displayOrNA(storeFssai),
-            'رقم التجارة :', fromToLabel, fromToValue),
-          _fromToRow('VAT No :', _displayOrNA(params.zatcaVatNumber),
-            'رقم الضريبة :', fromToLabel, fromToValue),
-          _fromToRow('IBAN :', _displayOrNA(extraHeading2), 'رقم الآيبان :',
-            fromToLabel, fromToValue),
-          _fromToRow('Account No :', 'N/A', 'رقم الحساب :', fromToLabel,
-            fromToValue),
-          _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
-            fromToValue),
+            _fromToRow('Name :', _displayOrNA(storeName), 'إسم :', fromToLabel,
+                fromToValue),
+            _fromToRow('Building No :', _displayOrNA(extraHeading1),
+                'رقم المبنى :', fromToLabel, fromToValue),
+            _fromToRow('Street name :', _displayOrNA(storeAddress),
+                'اسم الشارع :', fromToLabel, fromToValue),
+            _fromToRow('City :', _displayOrNA(storeDesc), 'مدينة :',
+                fromToLabel, fromToValue),
+            _fromToRow('C.R No :', _displayOrNA(storeFssai), 'رقم التجارة :',
+                fromToLabel, fromToValue),
+            _fromToRow('VAT No :', _displayOrNA(params.zatcaVatNumber),
+                'رقم الضريبة :', fromToLabel, fromToValue),
+            _fromToRow('IBAN :', _displayOrNA(extraHeading2), 'رقم الآيبان :',
+                fromToLabel, fromToValue),
+            _fromToRow('Account No :', 'N/A', 'رقم الحساب :', fromToLabel,
+                fromToValue),
+            _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
+                fromToValue),
           ];
 
           final toFieldRows = <pw.Widget>[
-          _fromToRow('Name :', _displayOrNA(custName), 'إسم :',
-            fromToLabel, fromToValue),
-          _fromToRow('Building No :', 'N/A', 'رقم المبنى :', fromToLabel,
-            fromToValue),
-          _fromToRow('Address :', _displayOrNA(custAddress), 'عنوان :',
-            fromToLabel, fromToValue),
-          _fromToRow('City :', 'N/A', 'مدينة :', fromToLabel, fromToValue),
-          _fromToRow('C.R No :', 'N/A', 'رقم التجارة :', fromToLabel,
-            fromToValue),
-          _fromToRow('VAT No :', _displayOrNA(params.customerVatNumber),
-            'رقم الضريبة :', fromToLabel, fromToValue),
-          _fromToRow('Phone :', _displayOrNA(custPhone), 'هاتف :',
-            fromToLabel, fromToValue),
-          _fromToRow('Alt Phone :', _displayOrNA(custAltPhone),
-            'هاتف بديل :', fromToLabel, fromToValue),
-          _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
-            fromToValue),
+            _fromToRow('Name :', _displayOrNA(custName), 'إسم :', fromToLabel,
+                fromToValue),
+            _fromToRow('Building No :', 'N/A', 'رقم المبنى :', fromToLabel,
+                fromToValue),
+            _fromToRow('Address :', _displayOrNA(custAddress), 'عنوان :',
+                fromToLabel, fromToValue),
+            _fromToRow('City :', 'N/A', 'مدينة :', fromToLabel, fromToValue),
+            _fromToRow(
+                'C.R No :', 'N/A', 'رقم التجارة :', fromToLabel, fromToValue),
+            _fromToRow('VAT No :', _displayOrNA(params.customerVatNumber),
+                'رقم الضريبة :', fromToLabel, fromToValue),
+            _fromToRow('Phone :', _displayOrNA(custPhone), 'هاتف :',
+                fromToLabel, fromToValue),
+            _fromToRow('Alt Phone :', _displayOrNA(custAltPhone), 'هاتف بديل :',
+                fromToLabel, fromToValue),
+            _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
+                fromToValue),
           ];
 
           return [
@@ -372,39 +377,78 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 // ── Left: Company information ──
                 pw.Expanded(
                   flex: 1,
-                  child: pw.Column(
+                  child: pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      if (logoImage != null) ...[
-                        pw.Container(
-                            height: isA5 ? 16 : 22, child: pw.Image(logoImage)),
-                        pw.SizedBox(height: 2),
-                      ],
-                      if (_cfgVisible('showStoreName'))
-                        pw.Text(storeName, style: storeNameStyle),
-                      if (_cfgVisible('showDescription') &&
-                          storeDesc.isNotEmpty)
-                        pw.Text(storeDesc, style: storeInfoStyle),
-                      if (_cfgVisible('showStoreAddress') &&
-                          storeAddress.isNotEmpty)
-                        pw.Text(storeAddress, style: storeInfoStyle),
-                      if (_cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                        pw.Text(storeFssai, style: storeInfoStyle),
-                      if (_cfgVisible('showExtraHeading1') &&
-                          extraHeading1.isNotEmpty)
-                        pw.Text(extraHeading1, style: storeInfoStyle),
-                      if (_cfgVisible('showExtraHeading2') &&
-                          extraHeading2.isNotEmpty)
-                        pw.Text(
-                          extraHeading2,
-                          style: storeInfoStyle,
-                          textAlign: pw.TextAlign.left,
-                          textDirection: pw.TextDirection.ltr,
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            if (logoImage != null) ...[
+                              pw.Container(
+                                  height: isA5 ? 16 : 22,
+                                  child: pw.Image(logoImage)),
+                              pw.SizedBox(height: 2),
+                            ],
+                            if (_cfgVisible('showStoreName'))
+                              pw.Text(storeName, style: storeNameStyle),
+                            if (_cfgVisible('showDescription') &&
+                                storeDesc.isNotEmpty)
+                              pw.Text(storeDesc, style: storeInfoStyle),
+                            if (_cfgVisible('showStoreAddress') &&
+                                storeAddress.isNotEmpty)
+                              pw.Text(storeAddress, style: storeInfoStyle),
+                            if (_cfgVisible('showFssaiInfo') &&
+                                storeFssai.isNotEmpty)
+                              pw.Text(storeFssai, style: storeInfoStyle),
+                            if (_cfgVisible('showExtraHeading1') &&
+                                extraHeading1.isNotEmpty)
+                              pw.Text(extraHeading1, style: storeInfoStyle),
+                            if (_cfgVisible('showEmail') &&
+                                storeEmail.isNotEmpty)
+                              pw.Text('Email: $storeEmail',
+                                  style: storeInfoStyle),
+                            if (_cfgVisible('showTel') && storeTel.isNotEmpty)
+                              pw.Text('Mob: $storeTel', style: storeInfoStyle),
+                          ],
                         ),
-                      if (_cfgVisible('showEmail') && storeEmail.isNotEmpty)
-                        pw.Text('Email: $storeEmail', style: storeInfoStyle),
-                      if (_cfgVisible('showTel') && storeTel.isNotEmpty)
-                        pw.Text('Mob: $storeTel', style: storeInfoStyle),
+                      ),
+                      if (_cfgVisible('showExtraHeading2') &&
+                          accountLines.isNotEmpty) ...[
+                        pw.Container(
+                          width: isA5 ? 118 : 145,
+                          padding: const pw.EdgeInsets.only(top: 2),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text(
+                                'Account Details',
+                                style: pw.TextStyle(
+                                  font: fontBold,
+                                  fontSize: fs(7.2),
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
+                              pw.SizedBox(height: 2),
+                              ...accountLines.map(
+                                (line) => pw.Padding(
+                                  padding:
+                                      const pw.EdgeInsets.only(bottom: 1.2),
+                                  child: pw.Text(
+                                    line,
+                                    style: storeInfoStyle,
+                                    textAlign: pw.TextAlign.left,
+                                    textDirection: pw.TextDirection.ltr,
+                                    maxLines: 1,
+                                    overflow: pw.TextOverflow.clip,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        pw.SizedBox(width: 50)
+                      ],
                     ],
                   ),
                 ),
@@ -515,17 +559,17 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                 style: tableInfoStyle),
                         ],
                       ),
-                        4),
-                      _paddedCell(pw.Text(displayDate, style: tableInfoStyle), 4),
+                      4),
+                  _paddedCell(pw.Text(displayDate, style: tableInfoStyle), 4),
                   _paddedCell(
                       pw.Text(
                           params.paymentMethod == 'CASH' ? 'Cash' : 'Credit',
                           style: tableInfoStyle),
-                        4),
+                      4),
                 ]),
               ],
             ),
-                  pw.SizedBox(height: 6),
+            pw.SizedBox(height: 6),
 
             // ═══════════════════════════════════════════════════════
             // SECTION 3: INVOICE FROM / INVOICE TO
@@ -648,12 +692,16 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Text(
                             'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
                             style: pw.TextStyle(
-                            font: font, fontBold: fontBold, fontSize: fs(6))),
+                                font: font,
+                                fontBold: fontBold,
+                                fontSize: fs(6))),
                       if (_cfgVisible('showPayment') &&
                           params.paymentMethod != null)
                         pw.Text('Payment Method: ${params.paymentMethod}',
                             style: pw.TextStyle(
-                            font: font, fontBold: fontBold, fontSize: fs(6))),
+                                font: font,
+                                fontBold: fontBold,
+                                fontSize: fs(6))),
                       if (params.orderComment != null &&
                           params.orderComment!.isNotEmpty)
                         pw.Text(
@@ -733,8 +781,8 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             if (_cfgVisible('showTermsConditions')) ...[
               pw.Text(
                 _cfgVal('showTermsConditions', ''),
-                style:
-                    pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(6)),
+                style: pw.TextStyle(
+                    font: font, fontBold: fontBold, fontSize: fs(6)),
               ),
               pw.SizedBox(height: 3),
             ],
