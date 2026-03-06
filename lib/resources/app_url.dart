@@ -184,6 +184,7 @@ class APPUrl {
   static String get listFaqs => '$baseURL/api/v1/faq/faqs/company/1';
   static String get getGeneralSettings => '$baseURL/api/v1/general';
   static String get getAppSettings => '$baseURL/api/v1/website-settings';
+  static String get adminSettings => '$baseURL/api/v1/admin-settings';
 
   static String get getDeliveryMethods =>
       '$baseURL/api/v1/logistics/list-delivery-methods';
