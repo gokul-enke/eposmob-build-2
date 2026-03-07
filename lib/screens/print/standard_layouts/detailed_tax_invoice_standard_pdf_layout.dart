@@ -353,8 +353,8 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             _fromToRow('Address :', _displayOrNA(custAddress), 'عنوان :',
                 fromToLabel, fromToValue),
             _fromToRow('City :', 'N/A', 'مدينة :', fromToLabel, fromToValue),
-            _fromToRow(
-                'C.R No :', 'N/A', 'رقم التجارة :', fromToLabel, fromToValue),
+            _fromToRow('C.R No :', _displayOrNA(params.customerCrNumber),
+                'رقم التجارة :', fromToLabel, fromToValue),
             _fromToRow('VAT No :', _displayOrNA(params.customerVatNumber),
                 'رقم الضريبة :', fromToLabel, fromToValue),
             _fromToRow('Phone :', _displayOrNA(custPhone), 'هاتف :',

@@ -1354,6 +1354,9 @@ Powered by CloudPOS''',
                     orderDetails.data?.customerDetails?.address?.join(', ');
                 String? customerAlternatePhone =
                     orderDetails.data?.customerDetails?.alternatePhone;
+                String? customerVatNumber =
+                    orderDetails.data?.kycInfo?.vatNumber;
+                String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
                 String? deliveryMethod = orderDetails.data?.deliveryMethodName;
@@ -1438,6 +1441,8 @@ Powered by CloudPOS''',
                   customerEmail: customerEmail,
                   customerAddress: customerAddress,
                   customerAlternatePhone: customerAlternatePhone,
+                  customerVatNumber: customerVatNumber,
+                  customerCrNumber: customerCrNumber,
                   paymentMethod: paymentMethod,
                   paymentBreakdown:
                       paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
@@ -1470,6 +1475,8 @@ Powered by CloudPOS''',
                         customerEmail: customerEmail,
                         customerAddress: customerAddress,
                         customerAlternatePhone: customerAlternatePhone,
+                        customerVatNumber: customerVatNumber,
+                        customerCrNumber: customerCrNumber,
                         paymentMethod: paymentMethod,
                         paymentBreakdown: paymentBreakdown.isNotEmpty
                             ? paymentBreakdown
@@ -2045,10 +2052,10 @@ Powered by CloudPOS''',
                         ListOrderModelData order = entry.value;
                         PriceSummary priceSummary =
                             order.priceSummary ?? PriceSummary();
-                        
+
                         // Calculate serial number based on pagination
                         int serialNumber = provider.paginationFrom + index;
-                        
+
                         return TableRow(
                           decoration: BoxDecoration(
                             color: index % 2 == 0

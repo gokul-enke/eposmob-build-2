@@ -704,12 +704,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (propsList is List) {
         try {
           final match = propsList.firstWhere(
-            (e) => (e is Map) &&
+            (e) =>
+                (e is Map) &&
                 (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
                     'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -916,7 +918,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _orderPanelKey.currentState?.refreshSavedOrders();
         }
 
-          // Check if KOT print is enabled in app settings
+        // Check if KOT print is enabled in app settings
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
@@ -945,7 +947,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       tableName: tableName,
                       orderTime: orderTime,
                       items: printItems,
-                      comment: currentComment.isNotEmpty ? currentComment : null,
+                      comment:
+                          currentComment.isNotEmpty ? currentComment : null,
                     ),
                   ),
                 );
@@ -1912,7 +1915,7 @@ class _MenuPanelState extends State<_MenuPanel> {
         final categories = categoryProvider.category ?? [];
         final selectedCategoryId = widget.activeCategoryId ?? 0;
         final bool isProductsLoading =
-          productProvider.isLoading || _isResyncingProducts;
+            productProvider.isLoading || _isResyncingProducts;
 
         // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
@@ -2281,73 +2284,76 @@ class _MenuPanelState extends State<_MenuPanel> {
                         ),
                       )
                     : items.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.restaurant_menu,
-                              size: 48,
-                              color: ColorManager.textColor.withOpacity(0.3),
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.restaurant_menu,
+                                  size: 48,
+                                  color:
+                                      ColorManager.textColor.withOpacity(0.3),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No items in this category',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.21,
+                                      ColorManager.textColor.withOpacity(0.7)),
+                                ),
+                                const SizedBox(height: 12),
+                                CustomRoundButton(
+                                  title: _isResyncingProducts
+                                      ? 'Resyncing...'
+                                      : 'Resync Products',
+                                  fct: _isResyncingProducts
+                                      ? () {}
+                                      : _resyncProductsFromEmptyState,
+                                  width: 170,
+                                  height: 36,
+                                  fontSize: 11,
+                                  boxColor: ColorManager.kPrimaryColor,
+                                  borderColor: ColorManager.kPrimaryColor,
+                                  textColor: Colors.white,
+                                  radius: 8,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No items in this category',
-                              style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s14,
-                                  0.21,
-                                  ColorManager.textColor.withOpacity(0.7)),
+                          )
+                        : MouseRegion(
+                            cursor: SystemMouseCursors.grab,
+                            child: ScrollConfiguration(
+                              behavior:
+                                  ScrollConfiguration.of(context).copyWith(
+                                dragDevices: {
+                                  PointerDeviceKind.mouse,
+                                  PointerDeviceKind.touch,
+                                  PointerDeviceKind.stylus,
+                                  PointerDeviceKind.trackpad,
+                                },
+                              ),
+                              child: GridView.builder(
+                                padding:
+                                    EdgeInsets.all(widget.isCompact ? 6 : 8),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  mainAxisSpacing: widget.isCompact ? 6 : 8,
+                                  crossAxisSpacing: widget.isCompact ? 6 : 8,
+                                  childAspectRatio: childAspectRatio,
+                                ),
+                                itemCount: items.length,
+                                itemBuilder: (_, idx) {
+                                  final item = items[idx];
+                                  return _buildMenuItem(
+                                      item, widget.isCompact, context);
+                                },
+                                physics: const BouncingScrollPhysics(),
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                            CustomRoundButton(
-                              title: _isResyncingProducts
-                                  ? 'Resyncing...'
-                                  : 'Resync Products',
-                              fct: _isResyncingProducts
-                                  ? () {}
-                                  : _resyncProductsFromEmptyState,
-                              width: 170,
-                              height: 36,
-                              fontSize: 11,
-                              boxColor: ColorManager.kPrimaryColor,
-                              borderColor: ColorManager.kPrimaryColor,
-                              textColor: Colors.white,
-                              radius: 8,
-                            ),
-                          ],
-                        ),
-                      )
-                    : MouseRegion(
-                        cursor: SystemMouseCursors.grab,
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(
-                            dragDevices: {
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.stylus,
-                              PointerDeviceKind.trackpad,
-                            },
                           ),
-                          child: GridView.builder(
-                            padding: EdgeInsets.all(widget.isCompact ? 6 : 8),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              mainAxisSpacing: widget.isCompact ? 6 : 8,
-                              crossAxisSpacing: widget.isCompact ? 6 : 8,
-                              childAspectRatio: childAspectRatio,
-                            ),
-                            itemCount: items.length,
-                            itemBuilder: (_, idx) {
-                              final item = items[idx];
-                              return _buildMenuItem(
-                                  item, widget.isCompact, context);
-                            },
-                            physics: const BouncingScrollPhysics(),
-                          ),
-                        ),
-                      ),
               ),
             ],
           ),
@@ -2926,7 +2932,8 @@ class _OrderPanelState extends State<_OrderPanel> {
           debugPrint('   📊 ID: ${status.id}, Value: "${status.value}"');
         }
       } else {
-        debugPrint('❌ Failed to fetch cart item statuses: ${response['message']}');
+        debugPrint(
+            '❌ Failed to fetch cart item statuses: ${response['message']}');
       }
     } catch (e) {
       debugPrint('❌ Exception fetching cart item statuses: $e');
@@ -2959,9 +2966,9 @@ class _OrderPanelState extends State<_OrderPanel> {
     if (_selectedOrder == null) return;
 
     final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
-    final displayOrderId = _selectedOrder['order_number']?.toString() ?? 
-                           _selectedOrder['display_order_id']?.toString() ?? 
-                           orderId.toString();
+    final displayOrderId = _selectedOrder['order_number']?.toString() ??
+        _selectedOrder['display_order_id']?.toString() ??
+        orderId.toString();
 
     debugPrint('🚀 === MARKING ALL ORDER ITEMS AS SERVED ===');
     debugPrint('📦 Order ID: $orderId');
@@ -2990,10 +2997,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         debugPrint('✅ All order items updated to SERVED');
-        
+
         // Refresh the saved orders to get updated statuses
         await _refreshSavedOrdersSilently();
-        
+
         // Re-select the order to refresh details
         if (_selectedOrder != null) {
           final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
@@ -3137,7 +3144,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Calculate effective total (discount + delivery charge)
     final rawOrderTotal = _calculateOrderTotal();
     final totalDiscountAmount =
-      _flatDiscount + (rawOrderTotal * _percentageDiscount / 100);
+        _flatDiscount + (rawOrderTotal * _percentageDiscount / 100);
     double orderTotal = _getEffectiveOrderTotal();
 
     debugPrint(
@@ -3227,7 +3234,9 @@ class _OrderPanelState extends State<_OrderPanel> {
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
-        isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
+        isDefaultCustomer:
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .isDefaultCustomer,
         onAfterApply: onAfterApply,
         onPaymentMethodSelected: (
           isCash,
@@ -4057,7 +4066,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
-              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
+              _hasOpenedPaymentModalOnce =
+                  false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data');
             } else {
               // Keep the current selection - don't clear it immediately
@@ -4126,7 +4136,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
-              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
+              _hasOpenedPaymentModalOnce =
+                  false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data (silent)');
             } else {
               debugPrint(
@@ -4173,7 +4184,6 @@ class _OrderPanelState extends State<_OrderPanel> {
       });
     }
   }
-
 
   // Clear customer and payment state when switching orders
   void _clearOrderEditingState() {
@@ -4406,8 +4416,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       });
 
       // Load delivery information if available
-      final loadedDeliveryMethodId =
-          order['delivery_method_id']?.toString() ?? _getDefaultDeliveryMethodId();
+      final loadedDeliveryMethodId = order['delivery_method_id']?.toString() ??
+          _getDefaultDeliveryMethodId();
       final loadedDeliveryMethodName =
           order['delivery_method_name']?.toString() ??
               order['delivery_method']?.toString() ??
@@ -4623,9 +4633,10 @@ class _OrderPanelState extends State<_OrderPanel> {
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
       if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
         try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere((m) =>
-              m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-              m.id == appSettingsDefault);
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
+              (m) =>
+                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+                  m.id == appSettingsDefault);
           return match.id;
         } catch (e) {
           // Not found
@@ -4676,8 +4687,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       return _selectedDeliveryCharge!;
     }
 
-    final effectiveDeliveryMethodId =
-        _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId();
+    final effectiveDeliveryMethodId = _deliveryMethodId.isNotEmpty
+        ? _deliveryMethodId
+        : _getDefaultDeliveryMethodId();
 
     final deliveryMethodsProvider =
         Provider.of<DeliveryMethodsProvider>(context, listen: false);
@@ -4694,7 +4706,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   double _getEffectiveOrderTotal() {
-    return _getDiscountedOrderTotalWithoutDelivery() + _getDeliveryChargeForOrder();
+    return _getDiscountedOrderTotalWithoutDelivery() +
+        _getDeliveryChargeForOrder();
   }
 
   Widget _buildPaymentSummary() {
@@ -4972,8 +4985,9 @@ class _OrderPanelState extends State<_OrderPanel> {
           // ],
 
           // Only show customer balance if a customer is selected AND it's NOT the default customer
-          if (_selectedCustomer != null && 
-              !Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer) ...[
+          if (_selectedCustomer != null &&
+              !Provider.of<CustomerSelectionProvider>(context, listen: false)
+                  .isDefaultCustomer) ...[
             const SizedBox(height: 8),
             Container(
               height: 1,
@@ -5689,12 +5703,14 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (propsList is List) {
         try {
           final match = propsList.firstWhere(
-            (e) => (e is Map) &&
+            (e) =>
+                (e is Map) &&
                 (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
                     'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -5867,7 +5883,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       ).then((success) {
         // Only show print page if auto-print failed
         if (!success && mounted) {
-          debugPrint('🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
+          debugPrint(
+              '🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -6281,8 +6298,12 @@ class _OrderPanelState extends State<_OrderPanel> {
                       onTap: cartItems.isEmpty
                           ? null
                           : allItemsServed
-                              ? (_isLoadingConfirm ? null : () => _showCheckoutModal())
-                              : (_isMarkingServed ? null : () => _markAllOrderItemsServed()),
+                              ? (_isLoadingConfirm
+                                  ? null
+                                  : () => _showCheckoutModal())
+                              : (_isMarkingServed
+                                  ? null
+                                  : () => _markAllOrderItemsServed()),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -6296,9 +6317,12 @@ class _OrderPanelState extends State<_OrderPanel> {
                                       : const Color(0xFF2563EB))
                                   : (_isMarkingServed
                                       ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF059669)), // Green for Mark Served
+                                      : const Color(
+                                          0xFF059669)), // Green for Mark Served
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: cartItems.isNotEmpty && !_isLoadingConfirm && !_isMarkingServed
+                          boxShadow: cartItems.isNotEmpty &&
+                                  !_isLoadingConfirm &&
+                                  !_isMarkingServed
                               ? [
                                   BoxShadow(
                                     color: (allItemsServed
@@ -6334,7 +6358,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      allItemsServed ? 'Confirm' : 'Mark Served',
+                                      allItemsServed
+                                          ? 'Confirm'
+                                          : 'Mark Served',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
@@ -6384,7 +6410,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     double totalDiscountAmount =
         _flatDiscount + (orderTotal * _percentageDiscount / 100);
     double finalOrderTotal =
-      (orderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
+        (orderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -6458,7 +6484,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
     final methods =
-      await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
+        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
 
     if (methods != null && mounted) {
       final billingProvider =
@@ -6490,7 +6516,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       builder: (dialogContext) {
         final deliveryMethodsProvider =
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
-        final deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
+        final deliveryEnabled =
+            deliveryMethodsProvider.deliveryMethods.isNotEmpty;
 
         return CheckoutModal(
           cartTotal: _calculateOrderTotal(),
@@ -6502,8 +6529,9 @@ class _OrderPanelState extends State<_OrderPanel> {
           enableDelivery: deliveryEnabled,
           deliveryMethod:
               _deliveryMethod.isNotEmpty ? _deliveryMethod : "Store Takeaway",
-          deliveryMethodId:
-              _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId(),
+          deliveryMethodId: _deliveryMethodId.isNotEmpty
+              ? _deliveryMethodId
+              : _getDefaultDeliveryMethodId(),
           deliveryComment: _orderComment,
           deliveryAddress: _deliveryAddress,
           deliveryDate: _deliveryDate,
@@ -6525,7 +6553,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               _selectedDeliveryCharge = deliveryCharge;
             });
           },
-          
+
           // Payment State
           isCashSelected: _isCashSelected,
           isCardSelected: _isCardSelected,
@@ -6540,13 +6568,13 @@ class _OrderPanelState extends State<_OrderPanel> {
           transactionNumber: _transactionNumber,
           toCustomerCreditEnabled: _toCustomerCreditEnabled,
           toCustomerCreditAmount: _toCustomerCreditAmount,
-          
+
           // Discount State
           couponCode: _couponCode,
           flatDiscount: _flatDiscount,
           percentageDiscount: _percentageDiscount,
           isCouponApplied: _isCouponApplied,
-          
+
           onCustomerSelected: (customer) {
             setState(() {
               _selectedCustomer = customer;
@@ -6560,7 +6588,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           },
           onAddNewCustomer: (String searchQuery) async {
             // NOTE: Do not close the checkout dialog here. We will return the result.
-            
+
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
@@ -6569,11 +6597,9 @@ class _OrderPanelState extends State<_OrderPanel> {
               phoneToPreFill = normalizedSearchQuery;
             }
             final result = await showAddCustomerModal(
-              context, 
-              MediaQuery.of(context).size,
-              mobileNumber: phoneToPreFill
-            );
-            
+                context, MediaQuery.of(context).size,
+                mobileNumber: phoneToPreFill);
+
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
               final userData = responseData?['user'];
@@ -6634,8 +6660,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 final matchingCustomer = _customers.firstWhere(
                   (customer) {
                     final customerPhone =
-                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ??
-                            '';
+                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
                     return customerPhone == normalizedAddedPhone;
                   },
                   orElse: () => CustomerListModelData(),
@@ -6668,13 +6693,16 @@ class _OrderPanelState extends State<_OrderPanel> {
             });
 
             // Also update LocalProductProvider so the summary reflects the discount
-            final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
             localProductProvider.applyDiscount(
               flatDiscount: _flatDiscount,
               percentageDiscount: _percentageDiscount,
             );
           },
-          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
+              upi, cod, debit, trans, toCredit,
+              {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
             setState(() {
               _isCashSelected = isCash;
               _isCardSelected = isCard;
@@ -6688,18 +6716,31 @@ class _OrderPanelState extends State<_OrderPanel> {
               _debitAmount = debit;
               _transactionNumber = trans;
               _toCustomerCreditEnabled = toCredit;
-              _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0; // Correctly update credit amount
+              _toCustomerCreditAmount = double.tryParse(debit) ??
+                  0.0; // Correctly update credit amount
               _hasOpenedPaymentModalOnce = true;
             });
-            
+
             // Update provider
-            final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+            final billingProvider =
+                Provider.of<BillingProvider>(context, listen: false);
             billingProvider.updatePaymentFromModal(
-              isCash: isCash, isCard: isCard, isUpi: isUpi, isCod: isCod, isDebit: isDebit,
-              cashAmount: cash, cardAmount: card, upiAmount: upi, codAmount: cod, debitAmount: debit,
-              transactionNumber: trans, toCustomerCredit: toCredit,
-              cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
-            );
+                isCash: isCash,
+                isCard: isCard,
+                isUpi: isUpi,
+                isCod: isCod,
+                isDebit: isDebit,
+                cashAmount: cash,
+                cardAmount: card,
+                upiAmount: upi,
+                codAmount: cod,
+                debitAmount: debit,
+                transactionNumber: trans,
+                toCustomerCredit: toCredit,
+                cashMethodId: cashMethodId,
+                cardMethodId: cardMethodId,
+                upiMethodId: upiMethodId,
+                codMethodId: codMethodId);
           },
           onConfirmOrder: () async {
             setState(() {
@@ -6748,7 +6789,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     if (_selectedOrder == null) return;
 
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
 
       debugPrint('🔄 Syncing order items with LocalProductProvider cart...');
@@ -6775,12 +6817,13 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         if (product == null) continue;
 
-        final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-        final unitPrice = double.tryParse(
-          item['unit_price']?.toString() ??
-          item['price']?.toString() ??
-          item['product_price']?.toString() ?? '0'
-        ) ?? 0.0;
+        final quantity =
+            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+                item['price']?.toString() ??
+                item['product_price']?.toString() ??
+                '0') ??
+            0.0;
 
         // Find the stock entry if available
         Stock? selectedStock;
@@ -6803,7 +6846,8 @@ class _OrderPanelState extends State<_OrderPanel> {
           selectedStock: selectedStock,
         );
 
-        debugPrint('   ✓ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
+        debugPrint(
+            '   ✓ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
       }
 
       // Apply discounts from the order
@@ -6817,7 +6861,6 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('❌ Error syncing order items with cart: $e');
     }
   }
-
 
   // Wrapper method for quantity updates with loading state
   Future<void> _updateCartItemQuantityWithLoading(
@@ -7265,6 +7308,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     double? customerCurrentBalance,
     double? paidAmount,
     String? customerAlternatePhone,
+    String? customerVatNumber,
+    String? customerCrNumber,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -7293,6 +7338,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       customerCurrentBalance: customerCurrentBalance,
       paidAmount: paidAmount,
       customerAlternatePhone: customerAlternatePhone,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -7323,6 +7370,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             customerCurrentBalance: customerCurrentBalance,
             paidAmount: paidAmount,
             customerAlternatePhone: customerAlternatePhone,
+            customerVatNumber: customerVatNumber,
+            customerCrNumber: customerCrNumber,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -7394,8 +7443,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               orderDetails.data?.paymentDetails?.paymentMethod;
 
           // Extract payment breakdown (method -> amount mapping from API)
-          Map<String, dynamic>? paymentBreakdown =
-              orderDetails.data?.payments;
+          Map<String, dynamic>? paymentBreakdown = orderDetails.data?.payments;
 
           String? orderComment;
           if (orderDetails.data?.orderProps != null) {
@@ -7568,7 +7616,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     if (!_hasOpenedPaymentModalOnce) {
-      _showPaymentMethodModal(onAfterApply: () => _confirmOrder(closeOnSuccess: closeOnSuccess));
+      _showPaymentMethodModal(
+          onAfterApply: () => _confirmOrder(closeOnSuccess: closeOnSuccess));
       return false;
     }
 
@@ -7637,7 +7686,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       final percentageDiscountAmount =
           (rawOrderTotal * _percentageDiscount / 100);
       final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-        final finalOrderTotal =
+      final finalOrderTotal =
           (rawOrderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
       final totalPrice = finalOrderTotal.toString();
@@ -7723,7 +7772,8 @@ class _OrderPanelState extends State<_OrderPanel> {
           }
 
           // Keep for logs only; API will use paymentMethods/paidMethods format
-          paymentMethod = selectedMethods.length == 1 ? selectedMethods.first : null;
+          paymentMethod =
+              selectedMethods.length == 1 ? selectedMethods.first : null;
         }
       }
 
@@ -7794,8 +7844,9 @@ class _OrderPanelState extends State<_OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
-        deliveryMethodId:
-          _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId(),
+        deliveryMethodId: _deliveryMethodId.isNotEmpty
+            ? _deliveryMethodId
+            : _getDefaultDeliveryMethodId(),
         address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
@@ -9168,4 +9219,3 @@ class _OrderPanelState extends State<_OrderPanel> {
     });
   }
 }
-

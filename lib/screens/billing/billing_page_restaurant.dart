@@ -324,7 +324,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         setState(() {});
       }
     });
-
   }
 
   @override
@@ -616,15 +615,17 @@ class BillingPageState extends State<BillingPageRestaurant>
             String normalizedMethod = pm.toUpperCase();
             final int? methodId = int.tryParse(pm);
             if (methodId != null) {
-              final resolved = masterDataProvider.getPaymentMethodValue(methodId);
+              final resolved =
+                  masterDataProvider.getPaymentMethodValue(methodId);
               if (resolved != null && resolved.isNotEmpty) {
                 normalizedMethod = resolved.toUpperCase();
               }
             }
 
             bool isMethodMatch(List<String> candidates) {
-              final upperCandidates =
-                  candidates.map((c) => c.toUpperCase()).toList(growable: false);
+              final upperCandidates = candidates
+                  .map((c) => c.toUpperCase())
+                  .toList(growable: false);
               return upperCandidates.contains(normalizedMethod) ||
                   upperCandidates.contains(pm.toUpperCase());
             }
@@ -633,10 +634,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                 isMethodMatch(['CASH', if (cashId != null) cashId]);
             _isCardSelected =
                 isMethodMatch(['CARD', if (cardId != null) cardId]);
-            _isUpiSelected =
-                isMethodMatch(['UPI', if (upiId != null) upiId]);
-            _isCodSelected =
-                isMethodMatch(['COD', if (codId != null) codId]);
+            _isUpiSelected = isMethodMatch(['UPI', if (upiId != null) upiId]);
+            _isCodSelected = isMethodMatch(['COD', if (codId != null) codId]);
             _isDebitSelected = isMethodMatch(['DEBIT']);
 
             final paid = currentOrder.paidAmount ?? '0.0';
@@ -717,7 +716,8 @@ class BillingPageState extends State<BillingPageRestaurant>
   }) async {
     // Set loading flag - check for duplicate calls first
     if (_isLoadingCustomers && !forceRefresh) {
-      debugPrint("🛡️ _fetchCustomers() already in progress, skipping duplicate call");
+      debugPrint(
+          "🛡️ _fetchCustomers() already in progress, skipping duplicate call");
       return;
     }
 
@@ -739,7 +739,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     // If customer was manually selected (either from list or phone entry), don't reset to default
     if (applyDefaultSelection &&
-      _isCustomerManuallySelected &&
+        _isCustomerManuallySelected &&
         (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
       debugPrint("🛡️ Customer manually selected, skipping reset to default");
       debugPrint("  - selectedCustomerID: $selectedCustomerID");
@@ -749,7 +749,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     // Additional check: if the text field contains user-entered data that's not the sales executive's info, preserve it
     if (applyDefaultSelection &&
-      mobileNumberTextController.text.isNotEmpty &&
+        mobileNumberTextController.text.isNotEmpty &&
         !mobileNumberTextController.text.contains(
             "${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.name ?? ''} ${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.phone ?? ''}")) {
       debugPrint("🛡️ Text field contains user data, preserving manual entry");
@@ -775,8 +775,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
     try {
-      final response = await CustomerProvider()
-          .listCustomer(accessToken: accessToken!, sortAscending: true, loadAll: true);
+      final response = await CustomerProvider().listCustomer(
+          accessToken: accessToken!, sortAscending: true, loadAll: true);
 
       if (response["status"] == "success") {
         CustomerListModel customerListModel =
@@ -928,8 +928,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   void _handleKeyPress(KeyEvent event) {
     final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null &&
-        focusedContext.widget is EditableText) {
+    if (focusedContext != null && focusedContext.widget is EditableText) {
       return;
     }
 
@@ -1196,7 +1195,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
 
     // Double-check customerList is not empty, if it is, try fetching one more time
-    if ((customerList == null || customerList!.isEmpty) && !_isLoadingCustomers) {
+    if ((customerList == null || customerList!.isEmpty) &&
+        !_isLoadingCustomers) {
       await _fetchCustomers();
       // Wait a bit for the fetch to complete
       await Future.delayed(const Duration(milliseconds: 500));
@@ -1206,7 +1206,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
     final methods =
-      await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
+        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
 
     if (methods != null && mounted) {
       final billingProvider =
@@ -1317,11 +1317,10 @@ class BillingPageState extends State<BillingPageRestaurant>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-            confirmButtonTitle:
-              isSaveMode ? 'billing.save_order'.tr : 'Confirm',
-            printButtonTitle:
+          confirmButtonTitle: isSaveMode ? 'billing.save_order'.tr : 'Confirm',
+          printButtonTitle:
               isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
-            requireCheckoutCompletion: !isSaveMode,
+          requireCheckoutCompletion: !isSaveMode,
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -1412,8 +1411,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 final byPhone = customerList!.firstWhere(
                   (customer) {
                     final customerPhone =
-                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ??
-                            '';
+                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
                     return customerPhone == normalizedAddedPhone;
                   },
                   orElse: () => CustomerListModelData(),
@@ -1796,8 +1794,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
     // priceSummary is only updated when cartTotal getter is accessed
     final _ = localProductProvider.cartTotal;
-    final footerPriceSummary =
-        _getFooterPriceSummaryWithDeliveryCharge(localProductProvider.priceSummary);
+    final footerPriceSummary = _getFooterPriceSummaryWithDeliveryCharge(
+        localProductProvider.priceSummary);
 
     return CheckoutFooter(
       priceSummary: footerPriceSummary,
@@ -3069,11 +3067,12 @@ class BillingPageState extends State<BillingPageRestaurant>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
-    final baseTotal =
-        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+    final baseTotal = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
 
     if (appSettingsProvider.appSettings?.priceRoundOff == true) {
-      return AmountHelper.roundOffAmount(baseTotal) + _getDeliveryChargeForOrder();
+      return AmountHelper.roundOffAmount(baseTotal) +
+          _getDeliveryChargeForOrder();
     }
 
     return baseTotal + _getDeliveryChargeForOrder();
@@ -3850,14 +3849,14 @@ class BillingPageState extends State<BillingPageRestaurant>
       if (propsList is List) {
         try {
           final match = propsList.firstWhere(
-            (e) => (e is Map) &&
-                (e['code'] ?? e['props_code'])
-                        ?.toString()
-                        .toUpperCase() ==
+            (e) =>
+                (e is Map) &&
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
                     'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -3874,8 +3873,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   /// Helper method to print KOT for delivery and takeaway
-    Future<void> _printKOT(
-      String orderNumber, List<LocalCartItem> cartItems,
+  Future<void> _printKOT(String orderNumber, List<LocalCartItem> cartItems,
       {String? tokenNumber, bool showTableLabel = true}) async {
     debugPrint("🖨️ Printing KOT for $orderNumber");
     debugPrint("🧾 KOT tokenNumber: ${tokenNumber ?? 'null'}");
@@ -3909,9 +3907,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         showTableLabel: showTableLabel,
         orderTime: orderTime,
         items: printItems,
-        comment: _commentController.text.isNotEmpty
-            ? _commentController.text
-            : null,
+        comment:
+            _commentController.text.isNotEmpty ? _commentController.text : null,
       );
 
       // Only show print page if auto-print failed
@@ -4354,8 +4351,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             "💾 Updating saved order from current state: ${currentOrder.orderNumber}");
 
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave =
-            selectedCustomerPhone ?? mobileNumberText;
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         final paymentData = _getPaymentMethodData();
         localProductProvider.updateSavedOrder(
@@ -4439,7 +4435,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           orderToUse != null) {
         List<LocalCartItem> kotCartItems = orderToUse.items;
         await _printKOT(orderToUse.orderNumber, kotCartItems,
-          showTableLabel: false);
+            showTableLabel: false);
       }
 
       resetAutocomplete();
@@ -4744,9 +4740,9 @@ class BillingPageState extends State<BillingPageRestaurant>
 
             orderDetailsTokenNumber = orderDetails.data?.tokenNumber;
             debugPrint(
-              "🧾 Order details token_number: ${orderDetailsTokenNumber ?? 'null'}");
+                "🧾 Order details token_number: ${orderDetailsTokenNumber ?? 'null'}");
             debugPrint(
-              "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
+                "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
             debugPrint(
                 "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
 
@@ -4771,9 +4767,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                 paidAmount: totalPaid > 0 ? totalPaid : null,
                 customerAlternatePhone: customerAlternatePhone,
                 paymentMethod: paymentMethod,
-                paymentBreakdown: paymentBreakdown, 
+                paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
-                deliveryMethod: orderDetails.data?.deliveryMethodName ?? deliveryMethod,
+                deliveryMethod:
+                    orderDetails.data?.deliveryMethodName ?? deliveryMethod,
                 isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                         context,
                         listen: false)
@@ -4797,19 +4794,18 @@ class BillingPageState extends State<BillingPageRestaurant>
               Provider.of<AppSettingsProvider>(context, listen: false);
           if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
             final responseTokenNumber =
-              _extractTokenNumberFromOrderData(responseData);
-            final tokenNumber =
-              orderDetailsTokenNumber ?? responseTokenNumber;
+                _extractTokenNumberFromOrderData(responseData);
+            final tokenNumber = orderDetailsTokenNumber ?? responseTokenNumber;
             final orderNumberForKot = (responseData["order_number"] ??
-                response["order_number"] ??
-                'ORD-${responseOrderId}')
-              .toString();
+                    response["order_number"] ??
+                    'ORD-${responseOrderId}')
+                .toString();
             debugPrint('🧾 KOT token from create order response: '
-              '${responseTokenNumber ?? 'null'}');
+                '${responseTokenNumber ?? 'null'}');
             debugPrint('🧾 Raw response token_number: '
-              '${responseData["token_number"]?.toString() ?? 'null'}');
+                '${responseData["token_number"]?.toString() ?? 'null'}');
             debugPrint(
-              '🧾 KOT token resolved (details/response): ${tokenNumber ?? 'null'}');
+                '🧾 KOT token resolved (details/response): ${tokenNumber ?? 'null'}');
             _printKOT(
               orderNumberForKot,
               cartItems,
@@ -5114,7 +5110,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     final codId = billingProvider.codPaymentMethodId ?? "COD";
     const debitId = 'DEBIT';
 
-    final double debitAmount = double.tryParse(_debitAmountController.text) ?? 0;
+    final double debitAmount =
+        double.tryParse(_debitAmountController.text) ?? 0;
     if (_toCustomerCreditEnabled && debitAmount > 0) {
       selectedMethodsForStorage.add(debitId);
     }
@@ -5315,7 +5312,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final isDeliveryChargeEnabled =
-      appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
+        appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
 
     if (!isDeliveryChargeEnabled) {
       return 0.0;
@@ -5328,8 +5325,8 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
-    final netAmount =
-        localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+    final netAmount = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
 
     if (minimumAmount > 0 && netAmount >= minimumAmount) {
       return 0.0;
@@ -6145,6 +6142,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     double? customerCurrentBalance,
     double? paidAmount,
     String? customerAlternatePhone,
+    String? customerVatNumber,
+    String? customerCrNumber,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -6173,6 +6172,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       customerCurrentBalance: customerCurrentBalance,
       paidAmount: paidAmount,
       customerAlternatePhone: customerAlternatePhone,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -6203,6 +6204,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             customerCurrentBalance: customerCurrentBalance,
             paidAmount: paidAmount,
             customerAlternatePhone: customerAlternatePhone,
+            customerVatNumber: customerVatNumber,
+            customerCrNumber: customerCrNumber,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -6313,11 +6316,10 @@ class BillingPageState extends State<BillingPageRestaurant>
           paymentBreakdown: parsedPayment?.paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
           orderComment: savedOrder.comment,
-            deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
-          paidAmount:
-              (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                  ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                  : null,
+          deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
+          paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+              ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+              : null,
           isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
           netExcTax: netExcTax.toString(),
         );
@@ -7692,162 +7694,168 @@ class BillingPageState extends State<BillingPageRestaurant>
                       ),
                     )
                   : products.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.inventory_2_outlined,
-                              size: 64, color: Colors.grey.shade300),
-                          const SizedBox(height: 16),
-                          Text(
-                            "No products available",
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 16,
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.inventory_2_outlined,
+                                  size: 64, color: Colors.grey.shade300),
+                              const SizedBox(height: 16),
+                              Text(
+                                "No products available",
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              CustomRoundButton(
+                                title: _isResyncingProducts
+                                    ? 'Resyncing...'
+                                    : 'Resync Products',
+                                fct: _isResyncingProducts
+                                    ? () {}
+                                    : _resyncProductsFromMainGrid,
+                                width: 170,
+                                height: 36,
+                                fontSize: 11,
+                                boxColor: ColorManager.kPrimaryColor,
+                                borderColor: ColorManager.kPrimaryColor,
+                                textColor: Colors.white,
+                                radius: 8,
+                              ),
+                            ],
+                          ),
+                        )
+                      : MouseRegion(
+                          cursor: SystemMouseCursors.grab,
+                          child: ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(context).copyWith(
+                              dragDevices: {
+                                PointerDeviceKind.mouse,
+                                PointerDeviceKind.touch,
+                                PointerDeviceKind.stylus,
+                                PointerDeviceKind.trackpad,
+                              },
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          CustomRoundButton(
-                            title: _isResyncingProducts
-                                ? 'Resyncing...'
-                                : 'Resync Products',
-                            fct: _isResyncingProducts
-                                ? () {}
-                                : _resyncProductsFromMainGrid,
-                            width: 170,
-                            height: 36,
-                            fontSize: 11,
-                            boxColor: ColorManager.kPrimaryColor,
-                            borderColor: ColorManager.kPrimaryColor,
-                            textColor: Colors.white,
-                            radius: 8,
-                          ),
-                        ],
-                      ),
-                    )
-                  : MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: Consumer<AppFontProvider>(
-                          builder: (context, fontProvider, child) {
-                            return LayoutBuilder(
-                              builder: (context, constraints) {
-                                // Calculate columns based on available width and font size level
-                                // Level 0 (Small): Compact Mode (No Image)
-                                // Level 1 (Medium): Normal Mode
-                                // Level 2 (Large): Large Mode
-                                final bool showImage =
-                                    fontProvider.fontSizeLevel > 0;
+                            child: Consumer<AppFontProvider>(
+                              builder: (context, fontProvider, child) {
+                                return LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Calculate columns based on available width and font size level
+                                    // Level 0 (Small): Compact Mode (No Image)
+                                    // Level 1 (Medium): Normal Mode
+                                    // Level 2 (Large): Large Mode
+                                    final bool showImage =
+                                        fontProvider.fontSizeLevel > 0;
 
-                                double baseWidth;
-                                double childAspectRatio;
+                                    double baseWidth;
+                                    double childAspectRatio;
 
-                                if (!showImage) {
-                                  // Compact mode - denser grid, no images
-                                  baseWidth = 110.0;
-                                  childAspectRatio = 1.3;
-                                } else {
-                                  // Normal/Large mode with images
-                                  // Modified to allow more products visible at a time (smaller cards)
-                                  // Level 1 -> 125, Level 2 -> 145 (previously 150 -> 190)
-                                  baseWidth = 125.0 +
-                                      ((fontProvider.fontSizeLevel - 1) * 20.0);
-                                  // Slightly adjusted aspect ratio
-                                  childAspectRatio = 0.80;
-                                }
-
-                                int columns =
-                                    (constraints.maxWidth / baseWidth).floor();
-                                columns = columns.clamp(2, 12);
-
-                                return GridView.builder(
-                                  padding: const EdgeInsets.all(8),
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: columns,
-                                    childAspectRatio: childAspectRatio,
-                                    crossAxisSpacing: 6,
-                                    mainAxisSpacing: 6,
-                                  ),
-                                  physics: const BouncingScrollPhysics(),
-                                  itemCount: products.length,
-                                  itemBuilder: (context, index) {
-                                    final product = products[index];
-                                    final isSelected = product ==
-                                        productProvider.selectedProduct;
-
-                                    String? primaryImage;
-                                    if (showImage &&
-                                        product.attachment != null &&
-                                        product.attachment!.isNotEmpty) {
-                                      for (final attachment
-                                          in product.attachment!) {
-                                        if (attachment.isPrimary == 1) {
-                                          primaryImage = attachment.filePath;
-                                          break;
-                                        }
-                                      }
-                                      primaryImage ??=
-                                          product.attachment!.first.filePath;
+                                    if (!showImage) {
+                                      // Compact mode - denser grid, no images
+                                      baseWidth = 110.0;
+                                      childAspectRatio = 1.3;
+                                    } else {
+                                      // Normal/Large mode with images
+                                      // Modified to allow more products visible at a time (smaller cards)
+                                      // Level 1 -> 125, Level 2 -> 145 (previously 150 -> 190)
+                                      baseWidth = 125.0 +
+                                          ((fontProvider.fontSizeLevel - 1) *
+                                              20.0);
+                                      // Slightly adjusted aspect ratio
+                                      childAspectRatio = 0.80;
                                     }
 
-                                    return GestureDetector(
-                                      onTap: () async {
-                                        await ProductCartHelper
-                                            .handleProductSelection(
-                                          context: context,
-                                          product: product,
-                                          addToCartDirectly: true,
+                                    int columns =
+                                        (constraints.maxWidth / baseWidth)
+                                            .floor();
+                                    columns = columns.clamp(2, 12);
+
+                                    return GridView.builder(
+                                      padding: const EdgeInsets.all(8),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: columns,
+                                        childAspectRatio: childAspectRatio,
+                                        crossAxisSpacing: 6,
+                                        mainAxisSpacing: 6,
+                                      ),
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: products.length,
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected = product ==
+                                            productProvider.selectedProduct;
+
+                                        String? primaryImage;
+                                        if (showImage &&
+                                            product.attachment != null &&
+                                            product.attachment!.isNotEmpty) {
+                                          for (final attachment
+                                              in product.attachment!) {
+                                            if (attachment.isPrimary == 1) {
+                                              primaryImage =
+                                                  attachment.filePath;
+                                              break;
+                                            }
+                                          }
+                                          primaryImage ??= product
+                                              .attachment!.first.filePath;
+                                        }
+
+                                        return GestureDetector(
+                                          onTap: () async {
+                                            await ProductCartHelper
+                                                .handleProductSelection(
+                                              context: context,
+                                              product: product,
+                                              addToCartDirectly: true,
+                                            );
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: isSelected
+                                                  ? Border.all(
+                                                      color: ColorManager
+                                                          .kPrimaryColor,
+                                                      width: 2)
+                                                  : Border.all(
+                                                      color:
+                                                          Colors.grey.shade200),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.grey
+                                                      .withOpacity(0.1),
+                                                  spreadRadius: 1,
+                                                  blurRadius: 2,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ],
+                                            ),
+                                            child: showImage
+                                                ? _buildProductCardWithImage(
+                                                    context,
+                                                    product,
+                                                    primaryImage,
+                                                    fontProvider)
+                                                : _buildCompactProductCard(
+                                                    context,
+                                                    product,
+                                                    fontProvider),
+                                          ),
                                         );
                                       },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border: isSelected
-                                              ? Border.all(
-                                                  color: ColorManager
-                                                      .kPrimaryColor,
-                                                  width: 2)
-                                              : Border.all(
-                                                  color: Colors.grey.shade200),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.grey.withOpacity(0.1),
-                                              spreadRadius: 1,
-                                              blurRadius: 2,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ],
-                                        ),
-                                        child: showImage
-                                            ? _buildProductCardWithImage(
-                                                context,
-                                                product,
-                                                primaryImage,
-                                                fontProvider)
-                                            : _buildCompactProductCard(
-                                                context, product, fontProvider),
-                                      ),
                                     );
                                   },
                                 );
                               },
-                            );
-                          },
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
             ),
           ],
         );

@@ -33,6 +33,7 @@ class ReceiptLayoutParams {
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final String? customerVatNumber;
+  final String? customerCrNumber;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   // ZATCA fields for Saudi Arabia e-invoicing
@@ -72,6 +73,7 @@ class ReceiptLayoutParams {
     this.customerAlternatePhone,
     this.paymentMethod,
     this.customerVatNumber,
+    this.customerCrNumber,
     this.paymentBreakdown,
     this.zatcaVatNumber,
     this.zatcaCompanyName,
@@ -105,7 +107,7 @@ class ReceiptLayoutParams {
   /// Get the active theme, defaulting to 'classic'
   String get activeTheme => billDocumentConfig.activeTheme ?? 'classic';
 
-    /// Check if this is a thermal paper size (58mm, 80mm, or 112mm)
+  /// Check if this is a thermal paper size (58mm, 80mm, or 112mm)
   bool get isThermal =>
       selectedPaperSize == '58mm' ||
       selectedPaperSize == '80mm' ||

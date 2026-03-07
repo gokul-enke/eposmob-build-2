@@ -77,7 +77,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             if (orderDetails?.data != null) {
               orderDetailsModelData = orderDetails!.data;
               cart = orderDetailsModelData?.cart;
-              priceSummary = cart?.priceSummary;
+              priceSummary =
+                  orderDetailsModelData?.priceSummary ?? cart?.priceSummary;
               customerDetails = orderDetailsModelData?.customerDetails;
               cartItems = cart?.cartItems ?? [];
               orderNumber = orderDetailsModelData?.orderNumber ?? "";
@@ -182,7 +183,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                             overflow: TextOverflow.ellipsis, // Handle overflow
                           ),
                           // Delivery Date/Time if present
-                          if (orderDetailsModelData?.orderProps != null) ...[
+                          if ((orderDetailsModelData?.orderProps != null) ||
+                              orderDetailsModelData?.deliveryDate != null ||
+                              orderDetailsModelData?.deliveryTime != null) ...[
                             Builder(
                               builder: (context) {
                                 final dateProp = orderDetailsModelData
@@ -207,18 +210,24 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                       propsCode: null,
                                       propsValue: null),
                                 );
+                                final effectiveDeliveryDate =
+                                    dateProp?.propsValue?.isNotEmpty == true
+                                        ? dateProp?.propsValue
+                                        : orderDetailsModelData?.deliveryDate;
+                                final effectiveDeliveryTime =
+                                    timeProp?.propsValue?.isNotEmpty == true
+                                        ? timeProp?.propsValue
+                                        : orderDetailsModelData?.deliveryTime;
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (dateProp?.propsCode != null &&
-                                        dateProp?.propsValue != null &&
-                                        (dateProp?.propsValue?.isNotEmpty ??
-                                            false))
+                                    if (effectiveDeliveryDate != null &&
+                                        effectiveDeliveryDate.isNotEmpty)
                                       Padding(
                                         padding:
                                             const EdgeInsets.only(top: 4.0),
                                         child: Text(
-                                          'Delivery Date: 	${DateHelper.formatISODate(dateProp?.propsValue ?? '')}',
+                                          'Delivery Date: 	${DateHelper.formatISODate(effectiveDeliveryDate)}',
                                           style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s14,
@@ -226,15 +235,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                               ColorManager.textColor),
                                         ),
                                       ),
-                                    if (timeProp?.propsCode != null &&
-                                        timeProp?.propsValue != null &&
-                                        (timeProp?.propsValue?.isNotEmpty ??
-                                            false))
+                                    if (effectiveDeliveryTime != null &&
+                                        effectiveDeliveryTime.isNotEmpty)
                                       Padding(
                                         padding:
                                             const EdgeInsets.only(top: 2.0),
                                         child: Text(
-                                          'Delivery Time: 	${timeProp?.propsValue ?? ''}',
+                                          'Delivery Time: 	${effectiveDeliveryTime}',
                                           style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s14,
@@ -358,7 +365,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   "0.00";
               String storeName =
                   orderDetailsModelData?.cart?.storeName ?? "Store";
-                String orderDate = orderDetailsModelData?.orderDate ?? "";
+              String orderDate = orderDetailsModelData?.orderDate ?? "";
 
               String? customerName = customerDetails?.name;
               String? customerPhone = customerDetails?.phone;
@@ -369,7 +376,11 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? customerAlternatePhone = customerDetails?.alternatePhone;
               String? paymentMethod =
                   orderDetailsModelData?.paymentDetails?.paymentMethod;
-                String? deliveryMethod =
+              String? customerVatNumber =
+                  orderDetailsModelData?.kycInfo?.vatNumber;
+              String? customerCrNumber =
+                  orderDetailsModelData?.kycInfo?.crNumber;
+              String? deliveryMethod =
                   orderDetailsModelData?.deliveryMethodName;
 
               String? orderComment;
@@ -429,13 +440,16 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 customerAddress: customerAddress,
                 customerAlternatePhone: customerAlternatePhone,
                 paymentMethod: paymentMethod,
+                customerVatNumber: customerVatNumber,
+                customerCrNumber: customerCrNumber,
                 orderComment: orderComment,
                 deliveryMethod: deliveryMethod,
                 orderReturns: orderDetailsModelData?.orderReturns,
                 paidAmount: paidAmount > 0 ? paidAmount : null,
                 customerCurrentBalance: customerCurrentBalance,
                 isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax?.toString(),
+                netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax
+                    ?.toString(),
               );
 
               // Only show print page if auto-print failed
@@ -458,13 +472,17 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       customerAddress: customerAddress,
                       customerAlternatePhone: customerAlternatePhone,
                       paymentMethod: paymentMethod,
+                      customerVatNumber: customerVatNumber,
+                      customerCrNumber: customerCrNumber,
                       orderComment: orderComment,
                       deliveryMethod: deliveryMethod,
                       orderReturns: orderDetailsModelData?.orderReturns,
                       paidAmount: paidAmount > 0 ? paidAmount : null,
                       customerCurrentBalance: customerCurrentBalance,
                       isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                      netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax?.toString(),
+                      netExcTax: orderDetailsModelData
+                          ?.cart?.priceSummary?.netExcTax
+                          ?.toString(),
                     ),
                   ),
                 );
@@ -686,7 +704,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       String? customerAlternatePhone = customerDetails?.alternatePhone;
       String? paymentMethod =
           orderDetailsModelData?.paymentDetails?.paymentMethod;
-        String? deliveryMethod = orderDetailsModelData?.deliveryMethodName;
+      String? deliveryMethod = orderDetailsModelData?.deliveryMethodName;
 
       String? orderComment;
       if (orderDetailsModelData?.orderProps != null) {

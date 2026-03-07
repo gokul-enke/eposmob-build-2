@@ -44,6 +44,7 @@ class PrintPage extends StatefulWidget {
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final String? customerVatNumber;
+  final String? customerCrNumber;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
@@ -73,6 +74,7 @@ class PrintPage extends StatefulWidget {
     this.customerAlternatePhone,
     this.paymentMethod,
     this.customerVatNumber,
+    this.customerCrNumber,
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
@@ -107,6 +109,7 @@ class PrintPage extends StatefulWidget {
     String? customerAlternatePhone,
     String? paymentMethod,
     String? customerVatNumber,
+    String? customerCrNumber,
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
@@ -214,6 +217,7 @@ class PrintPage extends StatefulWidget {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         customerVatNumber: customerVatNumber,
+        customerCrNumber: customerCrNumber,
         paymentBreakdown: paymentBreakdown,
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
@@ -681,6 +685,7 @@ class _PrintPageState extends State<PrintPage> {
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
+      customerCrNumber: widget.customerCrNumber,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
@@ -771,6 +776,7 @@ class _PrintPageState extends State<PrintPage> {
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
+      customerCrNumber: widget.customerCrNumber,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
