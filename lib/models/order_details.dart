@@ -173,6 +173,71 @@ class OrderDetailsModelData {
     return null;
   }
 
+  /// Returns a concise printable customer address.
+  /// Priority: `order_props` address -> `customer_details.address` first entry.
+  String? getCustomerAddressForDisplay() {
+    final fromProps = getCustomerAddressFromProps();
+    if (fromProps != null && fromProps.trim().isNotEmpty) {
+      return fromProps;
+    }
+
+    final addressList = customerDetails?.address;
+    if (addressList == null || addressList.isEmpty) {
+      return null;
+    }
+
+    final first = addressList.first;
+
+    if (first is Map) {
+      return _buildCustomerDetailsAddress(first);
+    }
+
+    final raw = first.toString();
+    if (raw.trim().isEmpty) {
+      return null;
+    }
+
+    if (raw.trim().startsWith('{') || raw.trim().startsWith('[')) {
+      final parsed = _formatAddress(raw);
+      return parsed.trim().isEmpty ? null : parsed;
+    }
+
+    return raw;
+  }
+
+  String? _buildCustomerDetailsAddress(Map<dynamic, dynamic> map) {
+    final parts = <String>[];
+
+    void addPart(dynamic value) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty && !parts.contains(text)) {
+        parts.add(text);
+      }
+    }
+
+    addPart(map['address']);
+    addPart(map['landmark']);
+    addPart(map['city']);
+
+    if (map['state'] != null) {
+      if (map['state'] is Map && map['state']['name'] != null) {
+        addPart(map['state']['name']);
+      } else {
+        addPart(map['state']);
+      }
+    }
+
+    if (map['pincode'] != null) {
+      if (map['pincode'] is Map && map['pincode']['pin_code'] != null) {
+        addPart(map['pincode']['pin_code']);
+      } else {
+        addPart(map['pincode']);
+      }
+    }
+
+    return parts.isEmpty ? null : parts.join(', ');
+  }
+
   // Helper to format address string from JSON string or raw string
   String _formatAddress(String rawAddress) {
     try {

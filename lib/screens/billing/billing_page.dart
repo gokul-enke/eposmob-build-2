@@ -4802,8 +4802,7 @@ class BillingPageState extends State<BillingPage>
             String? customerEmail = orderDetails.data?.customerDetails?.email;
             // Use helper to get address from order_props, fallback to customer details
             String? customerAddress =
-                orderDetails.data?.getCustomerAddressFromProps() ??
-                    orderDetails.data?.customerDetails?.address?.join(', ');
+                orderDetails.data?.getCustomerAddressForDisplay();
 
             // Calculate customer balance for print
             double? oldBalance = selectedCustomer?.balance;

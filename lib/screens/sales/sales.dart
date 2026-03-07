@@ -341,10 +341,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerName: orderData.customerDetails?.name,
         customerPhone: orderData.customerDetails?.phone,
         customerEmail: orderData.customerDetails?.email,
-        customerAddress: orderData.getCustomerAddressFromProps() ??
-            (orderData.customerDetails?.address?.isNotEmpty == true
-                ? orderData.customerDetails!.address!.join(', ')
-                : null),
+        customerAddress: orderData.getCustomerAddressForDisplay(),
         orderReturns: orderData.orderReturns,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
@@ -1351,7 +1348,7 @@ Powered by CloudPOS''',
                 String? customerEmail =
                     orderDetails.data?.customerDetails?.email;
                 String? customerAddress =
-                    orderDetails.data?.customerDetails?.address?.join(', ');
+                    orderDetails.data?.getCustomerAddressForDisplay();
                 String? customerAlternatePhone =
                     orderDetails.data?.customerDetails?.alternatePhone;
                 String? customerVatNumber =

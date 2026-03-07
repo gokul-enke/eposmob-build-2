@@ -7435,7 +7435,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           String? customerPhone = orderDetails.data?.customerDetails?.phone;
           String? customerEmail = orderDetails.data?.customerDetails?.email;
           String? customerAddress =
-              orderDetails.data?.customerDetails?.address?.join(', ');
+              orderDetails.data?.getCustomerAddressForDisplay();
 
           String? customerAlternatePhone =
               orderDetails.data?.customerDetails?.alternatePhone;

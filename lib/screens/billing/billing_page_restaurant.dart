@@ -4723,8 +4723,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
             String? customerEmail = orderDetails.data?.customerDetails?.email;
             String? customerAddress =
-                orderDetails.data?.getCustomerAddressFromProps() ??
-                    orderDetails.data?.customerDetails?.address?.join(', ');
+                orderDetails.data?.getCustomerAddressForDisplay();
 
             // Calculate customer balance for print
             double? oldBalance = selectedCustomer?.balance;
