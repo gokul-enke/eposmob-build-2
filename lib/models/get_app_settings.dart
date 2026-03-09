@@ -128,10 +128,8 @@ class AppSettings {
       skipCustomerSelection:
           settingsMap['SKIP_CUSTOMER_SELECTION']?['status'] ?? false,
       hideDefaultPhone: settingsMap['HIDE_DEFAULT_PHONE']?['status'] ?? true,
-        freeDeliveryEnabled:
-          settingsMap['FREE_DELIVERY_ENABLED']?['status'] ??
-            settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['status'] ??
-            false,
+      freeDeliveryEnabled:
+          settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['status'] ?? false,
       freeDeliveryMinimumAmount:
           settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['value'] ?? "",
     );
