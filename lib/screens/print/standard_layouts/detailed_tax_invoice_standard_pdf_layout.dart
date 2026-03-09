@@ -264,11 +264,17 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final storeEmail = _cfgVal('showEmail', params.customerCareEmail);
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
-    final accountLines = extraHeading2
+    final fallbackAccountLines = extraHeading2
         .split('\n')
         .map((line) => line.trim())
         .where((line) => line.isNotEmpty)
         .toList();
+    final accountLines = params.bankAccountDetailLines.isNotEmpty
+        ? params.bankAccountDetailLines
+        : fallbackAccountLines;
+    final ibanValue = params.primaryBankAccount?.iban ?? extraHeading2;
+    final accountNumberValue =
+        params.primaryBankAccount?.accountNumber ?? 'N/A';
 
     // Invoice number with prefix + stripping
     final prefix = config.numberPrefix ?? '';
@@ -337,10 +343,10 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 fromToLabel, fromToValue),
             _fromToRow('VAT No :', _displayOrNA(params.zatcaVatNumber),
                 'رقم الضريبة :', fromToLabel, fromToValue),
-            _fromToRow('IBAN :', _displayOrNA(extraHeading2), 'رقم الآيبان :',
+            _fromToRow('IBAN :', _displayOrNA(ibanValue), 'رقم الآيبان :',
                 fromToLabel, fromToValue),
-            _fromToRow('Account No :', 'N/A', 'رقم الحساب :', fromToLabel,
-                fromToValue),
+            _fromToRow('Account No :', _displayOrNA(accountNumberValue),
+                'رقم الحساب :', fromToLabel, fromToValue),
             _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
                 fromToValue),
           ];
@@ -413,8 +419,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           ],
                         ),
                       ),
-                      if (_cfgVisible('showExtraHeading2') &&
-                          accountLines.isNotEmpty) ...[
+                      if (accountLines.isNotEmpty) ...[
                         pw.Container(
                           width: isA5 ? 118 : 145,
                           padding: const pw.EdgeInsets.only(top: 2),

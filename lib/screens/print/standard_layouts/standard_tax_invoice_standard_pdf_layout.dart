@@ -20,17 +20,17 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 
-/// Detailed Tax Invoice PDF layout — enhanced ZATCA-compliant bilingual template.
+/// Standard Tax Invoice PDF layout — enhanced ZATCA-compliant bilingual template.
 ///
 /// Features an enriched Invoice From/To section with Building No, City,
 /// Account No, IBAN, C.R No, Customer No fields. QR code is placed
 /// beside the "Tax Invoice" title in the top-right header area.
 class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   @override
-  String get layoutId => 'detailed_tax_invoice';
+  String get layoutId => 'standard_tax_invoice';
 
   @override
-  String get displayName => 'Detailed Tax Invoice';
+  String get displayName => 'Standard Tax Invoice';
 
   // ── Font cache ──────────────────────────────────────────────────────
   static pw.Font? _arabicFont;
@@ -264,11 +264,11 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final storeEmail = _cfgVal('showEmail', params.customerCareEmail);
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
-    final accountLines = extraHeading2
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList();
+    final ibanValue = params.primaryBankAccount?.iban ?? extraHeading2;
+    final accountNumberValue =
+        params.primaryBankAccount?.accountNumber ?? 'N/A';
+    final accountHolderNameValue =
+        params.primaryBankAccount?.accountHolderName ?? 'N/A';
 
     // Invoice number with prefix + stripping
     final prefix = config.numberPrefix ?? '';
@@ -327,22 +327,22 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           final fromFieldRows = <pw.Widget>[
             _fromToRow('Name :', _displayOrNA(storeName), 'إسم :', fromToLabel,
                 fromToValue),
-            _fromToRow('Building No :', _displayOrNA(extraHeading1),
+            _fromToRow('Building No :', _displayOrNA(storeAddress),
                 'رقم المبنى :', fromToLabel, fromToValue),
-            _fromToRow('Street name :', _displayOrNA(storeAddress),
+            _fromToRow('Street name :', _displayOrNA(extraHeading1),
                 'اسم الشارع :', fromToLabel, fromToValue),
-            _fromToRow('City :', _displayOrNA(storeDesc), 'مدينة :',
-                fromToLabel, fromToValue),
-            _fromToRow('C.R No :', _displayOrNA(storeFssai), 'رقم التجارة :',
+            // _fromToRow('City :', _displayOrNA(extraHeading2), 'مدينة :',
+            //     fromToLabel, fromToValue),
+            _fromToRow('C.R No :', _displayOrNA(extraHeading2), 'رقم التجارة :',
                 fromToLabel, fromToValue),
             _fromToRow('VAT No :', _displayOrNA(params.zatcaVatNumber),
                 'رقم الضريبة :', fromToLabel, fromToValue),
-            _fromToRow('IBAN :', _displayOrNA(extraHeading2), 'رقم الآيبان :',
+            _fromToRow('Account Name :', _displayOrNA(accountHolderNameValue),
+                'رقم الحساب :', fromToLabel, fromToValue),
+            _fromToRow('Account No :', _displayOrNA(accountNumberValue),
+                'رقم الحساب :', fromToLabel, fromToValue),
+            _fromToRow('IBAN :', _displayOrNA(ibanValue), 'رقم الآيبان :',
                 fromToLabel, fromToValue),
-            _fromToRow('Account No :', 'N/A', 'رقم الحساب :', fromToLabel,
-                fromToValue),
-            _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
-                fromToValue),
           ];
 
           final toFieldRows = <pw.Widget>[
@@ -361,8 +361,6 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 fromToLabel, fromToValue),
             _fromToRow('Alt Phone :', _displayOrNA(custAltPhone), 'هاتف بديل :',
                 fromToLabel, fromToValue),
-            _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
-                fromToValue),
           ];
 
           return [
@@ -413,42 +411,6 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           ],
                         ),
                       ),
-                      if (_cfgVisible('showExtraHeading2') &&
-                          accountLines.isNotEmpty) ...[
-                        pw.Container(
-                          width: isA5 ? 118 : 145,
-                          padding: const pw.EdgeInsets.only(top: 2),
-                          child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text(
-                                'Account Details',
-                                style: pw.TextStyle(
-                                  font: fontBold,
-                                  fontSize: fs(7.2),
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                              ),
-                              pw.SizedBox(height: 2),
-                              ...accountLines.map(
-                                (line) => pw.Padding(
-                                  padding:
-                                      const pw.EdgeInsets.only(bottom: 1.2),
-                                  child: pw.Text(
-                                    line,
-                                    style: storeInfoStyle,
-                                    textAlign: pw.TextAlign.left,
-                                    textDirection: pw.TextDirection.ltr,
-                                    maxLines: 1,
-                                    overflow: pw.TextOverflow.clip,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        pw.SizedBox(width: 50)
-                      ],
                     ],
                   ),
                 ),

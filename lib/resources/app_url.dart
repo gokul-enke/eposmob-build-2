@@ -190,6 +190,7 @@ class APPUrl {
       '$baseURL/api/v1/logistics/list-delivery-methods';
   static String get getPaymentGateways =>
       '$baseURL/api/v1/payment-gateway/list-payment-gateways';
+  static String get getBanks => '$baseURL/api/v1/get-banks';
 
   static String get listSalesExecutives =>
       '$baseURL/api/v1/list-sales-executives';

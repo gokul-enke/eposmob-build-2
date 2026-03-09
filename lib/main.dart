@@ -44,6 +44,7 @@ import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
+import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
@@ -330,6 +331,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DeliveryMethodsProvider()),
         ChangeNotifierProvider(create: (_) => LocalProductProvider()),
         ChangeNotifierProvider(create: (_) => PaymentGatewaysProvider()),
+        ChangeNotifierProvider(create: (_) => BankProvider()),
         ChangeNotifierProvider(create: (_) => SupplierProvider()),
         ChangeNotifierProvider(create: (_) => SalesExecutiveProvider()),
         ChangeNotifierProvider(create: (_) => CompanyAccountProvider()),

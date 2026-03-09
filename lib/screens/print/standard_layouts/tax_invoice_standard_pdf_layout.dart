@@ -259,6 +259,7 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final storeEmail = _cfgVal('showEmail', params.customerCareEmail);
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
+    final accountLines = params.bankAccountDetailLines;
 
     // Invoice number with prefix + stripping
     final prefix = config.numberPrefix ?? '';
@@ -337,7 +338,11 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       if (_cfgVisible('showExtraHeading1') &&
                           extraHeading1.isNotEmpty)
                         pw.Text(extraHeading1, style: storeInfoStyle),
-                      if (_cfgVisible('showExtraHeading2') &&
+                      if (accountLines.isNotEmpty)
+                        ...accountLines.map(
+                          (line) => pw.Text(line, style: storeInfoStyle),
+                        )
+                      else if (_cfgVisible('showExtraHeading2') &&
                           extraHeading2.isNotEmpty)
                         pw.Text(extraHeading2, style: storeInfoStyle),
                       if (_cfgVisible('showEmail') && storeEmail.isNotEmpty)

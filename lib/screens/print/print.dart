@@ -9,6 +9,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -142,6 +143,7 @@ class PrintPage extends StatefulWidget {
           Provider.of<DocumentConfigProvider>(context, listen: false);
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
+        final bankProvider = Provider.of<BankProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
 
       if (appSettings == null) {
@@ -224,6 +226,7 @@ class PrintPage extends StatefulWidget {
         isDefaultCustomer: isDefaultCustomer,
         hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
         netExcTax: netExcTax,
+        bankDetails: bankProvider.banks,
       );
 
       // Print
@@ -653,6 +656,7 @@ class _PrintPageState extends State<PrintPage> {
 
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
+    final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -692,6 +696,7 @@ class _PrintPageState extends State<PrintPage> {
       isDefaultCustomer: widget.isDefaultCustomer,
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
+      bankDetails: bankProvider.banks,
     );
 
     // Print using the selected layout
@@ -744,6 +749,7 @@ class _PrintPageState extends State<PrintPage> {
 
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
+    final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -783,6 +789,7 @@ class _PrintPageState extends State<PrintPage> {
       isDefaultCustomer: widget.isDefaultCustomer,
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
+      bankDetails: bankProvider.banks,
     );
 
     // Print using the selected standard PDF layout

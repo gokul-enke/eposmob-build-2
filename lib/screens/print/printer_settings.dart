@@ -69,6 +69,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'classic', 'name': 'Classic'},
     {'id': 'tax_invoice', 'name': 'Tax Invoice'},
     {'id': 'detailed_tax_invoice', 'name': 'Detailed Tax Invoice'},
+    {'id': 'standard_tax_invoice', 'name': 'Standard Tax Invoice'},
   ];
 
   /// Returns the appropriate theme list based on selected paper size
@@ -91,6 +92,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Traditional A4/A5 PDF layout with standard formatting';
         case 'tax_invoice':
           return 'Formal ZATCA-compliant bilingual Tax Invoice layout';
+        case 'detailed_tax_invoice':
+          return 'Comprehensive Tax Invoice with detailed itemization and tax breakdown';
+        case 'standard_tax_invoice':
+          return 'Clean Tax Invoice layout with essential details and clear tax info';
         default:
           return 'Standard PDF layout';
       }
@@ -625,7 +630,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Generate receipt with all fields enabled (dummy document config)
       final profile = await CapabilityProfile.load();
-        PaperSize paperSize =
+      PaperSize paperSize =
           selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
@@ -1448,17 +1453,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               }).toList(),
                                               onChanged: (String? newValue) {
                                                 if (newValue != null) {
-                                                    final wasThermal =
+                                                  final wasThermal =
                                                       selectedPaperSize ==
-                                                          '112mm' ||
-                                                        selectedPaperSize ==
-                                                          '80mm' ||
-                                                        selectedPaperSize ==
-                                                          '58mm';
-                                                    final willBeThermal =
+                                                              '112mm' ||
+                                                          selectedPaperSize ==
+                                                              '80mm' ||
+                                                          selectedPaperSize ==
+                                                              '58mm';
+                                                  final willBeThermal =
                                                       newValue == '112mm' ||
-                                                        newValue == '80mm' ||
-                                                        newValue == '58mm';
+                                                          newValue == '80mm' ||
+                                                          newValue == '58mm';
 
                                                   setState(() {
                                                     selectedPaperSize =

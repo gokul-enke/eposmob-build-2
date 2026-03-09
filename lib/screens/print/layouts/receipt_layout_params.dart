@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/models/bank.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -44,6 +45,7 @@ class ReceiptLayoutParams {
   // Flag to hide phone for default/walk-in customer
   final bool hideDefaultCustomerPhone;
   final String? netExcTax;
+  final List<StoreBank> bankDetails;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -80,6 +82,7 @@ class ReceiptLayoutParams {
     this.isDefaultCustomer = false,
     this.hideDefaultCustomerPhone = true,
     this.netExcTax,
+    this.bankDetails = const [],
   });
 
   /// Get the display configuration options from the document config
@@ -164,4 +167,54 @@ class ReceiptLayoutParams {
 
   /// Get the total amount as double
   double get totalAmountAsDouble => double.tryParse(formattedTotal) ?? 0.0;
+
+  StoreBank? get primaryBank {
+    for (final bank in bankDetails) {
+      if (bank.isActive && bank.bankAccounts.isNotEmpty) {
+        return bank;
+      }
+    }
+    for (final bank in bankDetails) {
+      if (bank.bankAccounts.isNotEmpty) {
+        return bank;
+      }
+    }
+    if (bankDetails.isEmpty) {
+      return null;
+    }
+    return bankDetails.first;
+  }
+
+  StoreBankAccount? get primaryBankAccount => primaryBank?.primaryAccount;
+
+  List<String> get bankAccountDetailLines {
+    final bank = primaryBank;
+    final account = primaryBankAccount;
+    final lines = <String>[];
+
+    void addLine(String label, String? value) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        lines.add('$label: $trimmed');
+      }
+    }
+
+    addLine('Bank', bank?.bankName);
+    addLine('Branch', bank?.headOffice);
+    addLine('A/C Name', account?.accountHolderName);
+    addLine('A/C No', account?.accountNumber);
+    addLine('IBAN', account?.iban);
+    addLine('IFSC', account?.ifsc);
+
+    final swiftCode = account?.swiftCode?.trim();
+    final ifsc = account?.ifsc?.trim();
+    if (swiftCode != null && swiftCode.isNotEmpty && swiftCode != ifsc) {
+      lines.add('SWIFT: $swiftCode');
+    }
+
+    addLine('Phone', account?.phoneNumber ?? bank?.phone);
+    addLine('Email', account?.emailId);
+
+    return lines;
+  }
 }
