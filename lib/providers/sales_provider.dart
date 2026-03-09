@@ -297,10 +297,8 @@ class SalesProvider with ChangeNotifier {
                   listSalesOrderModel.pagination?.currentPage ?? 1;
               int newTotalPages =
                   listSalesOrderModel.pagination?.totalPages ?? 1;
-              int newPaginationFrom =
-                  listSalesOrderModel.pagination?.from ?? 1;
-              int newPaginationTo =
-                  listSalesOrderModel.pagination?.to ?? 1;
+              int newPaginationFrom = listSalesOrderModel.pagination?.from ?? 1;
+              int newPaginationTo = listSalesOrderModel.pagination?.to ?? 1;
 
               debugPrint('=== PAGINATION UPDATE ===');
               debugPrint('Previous Current Page: $currentPage');
@@ -705,6 +703,14 @@ class SalesProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
+    final requestBody = {
+      'order_id': orderId,
+      'refund_method': paymentMethod,
+      'delivery_charge_refundable': deliveryChargeRefundable,
+    };
+
+    debugPrint("🔴 CANCEL ORDER API REQUEST BODY: ${jsonEncode(requestBody)}");
+
     final response = await http.post(
       url,
       headers: {
@@ -712,18 +718,13 @@ class SalesProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
       },
-      body: jsonEncode({
-        'order_id': int.tryParse(orderId) ?? orderId,
-        'refund_method': int.tryParse(paymentMethod) ?? paymentMethod,
-        'delivery_charge_refundable': deliveryChargeRefundable,
-      }),
+      body: jsonEncode(requestBody),
     );
 
     debugPrint("accessToken $accessToken");
     debugPrint("orderId $orderId");
     debugPrint("paymentMethod $paymentMethod");
-    debugPrint(
-      "deliveryChargeRefundable $deliveryChargeRefundable");
+    debugPrint("deliveryChargeRefundable $deliveryChargeRefundable");
     debugPrint("response.statusCode ${response.statusCode}");
     debugPrint("response.body ${response.body}");
 

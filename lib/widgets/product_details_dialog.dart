@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -882,6 +883,66 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
+  Widget _buildDetailRowWithCopy(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              '$label: ',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    value,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s14,
+                      0.20,
+                      ColorManager.textColor,
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                  ),
+                ),
+                if (value.isNotEmpty && value != 'N/A')
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: value));
+                        showScaffold(
+                          context: context,
+                          message: '$label copied to clipboard',
+                        );
+                      },
+                      child: Icon(
+                        Icons.copy,
+                        size: 16,
+                        color: ColorManager.textColor.withOpacity(0.6),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEditLanguageField(
     Size size,
     Language language,
@@ -990,7 +1051,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   _buildDetailRow('Product Name', product.productName ?? 'N/A'),
                   _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
                   _buildDetailRow('Category', product.category?.name ?? 'N/A'),
-                  _buildDetailRow('Barcode', product.barcode ?? 'N/A'),
+                  _buildDetailRowWithCopy('Barcode', product.barcode ?? 'N/A'),
                   _buildDetailRow('Unit', product.unit ?? 'N/A'),
                   if (product.taxes != null && product.taxes!.isNotEmpty)
                     ...product.taxes!.map((tax) => _buildDetailRow(
