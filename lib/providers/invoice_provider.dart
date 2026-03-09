@@ -59,6 +59,21 @@ class InvoiceProvider extends ChangeNotifier {
       getVoucherAccountTypesModelData;
   Map<String, String>? get getInvoiceAccountTypes =>
       getInvoiceAccountTypesModelData;
+
+  void _debugPrintHttpFailure({
+    required String requestName,
+    required Uri uri,
+    required http.Response response,
+  }) {
+    debugPrint(
+        '[$requestName] HTTP ${response.statusCode} ${response.reasonPhrase ?? ''}');
+    debugPrint('[$requestName] Request URL: $uri');
+    debugPrint('[$requestName] Response headers: ${response.headers}');
+    debugPrint('[$requestName] Response body start');
+    debugPrint(response.body);
+    debugPrint('[$requestName] Response body end');
+  }
+
   Map<String, String>? get getPaymentType => paymentList;
 
   // Pagination properties
@@ -992,12 +1007,11 @@ class InvoiceProvider extends ChangeNotifier {
     // Build URL with store_id parameter
     final baseInvoiceAccountTypeUri = Uri.parse(APPUrl.listInvoiceAccountType);
     final queryParams =
-      Map<String, String>.from(baseInvoiceAccountTypeUri.queryParameters);
+        Map<String, String>.from(baseInvoiceAccountTypeUri.queryParameters);
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final url =
-      baseInvoiceAccountTypeUri.replace(queryParameters: queryParams);
+    final url = baseInvoiceAccountTypeUri.replace(queryParameters: queryParams);
 
     try {
       debugPrint("[InvoiceProvider] Fetching account types from: $url");
@@ -1045,12 +1059,12 @@ class InvoiceProvider extends ChangeNotifier {
 
     final baseVoucherAccountTypeUri = Uri.parse(APPUrl.listVoucherAccountType);
     final queryParameters =
-      Map<String, String>.from(baseVoucherAccountTypeUri.queryParameters);
+        Map<String, String>.from(baseVoucherAccountTypeUri.queryParameters);
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
     final url =
-      baseVoucherAccountTypeUri.replace(queryParameters: queryParameters);
+        baseVoucherAccountTypeUri.replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(url, headers: {
@@ -1090,8 +1104,8 @@ class InvoiceProvider extends ChangeNotifier {
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.listUser)
-        .replace(queryParameters: queryParameters);
+    final url =
+        Uri.parse(APPUrl.listUser).replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(url, headers: {
@@ -1286,7 +1300,8 @@ class InvoiceProvider extends ChangeNotifier {
     if (dateFrom != null) queryParams['date_from'] = dateFrom;
     if (dateTo != null) queryParams['date_to'] = dateTo;
     if (page != null) queryParams['page'] = page.toString();
-    if (activeStoreId != null) queryParams['store_id'] = activeStoreId.toString();
+    if (activeStoreId != null)
+      queryParams['store_id'] = activeStoreId.toString();
 
     // Build URL with query parameters
     Uri url = Uri.parse(APPUrl.listAllTransaction);
@@ -1399,7 +1414,6 @@ class InvoiceProvider extends ChangeNotifier {
 
     final queryParams = {
       'page': '1', // Always fetch all invoices for local pagination
-      'per_page': '1000', // Get a large number for local filtering
     };
 
     if (activeStoreId != null) {
@@ -1456,10 +1470,20 @@ class InvoiceProvider extends ChangeNotifier {
         notifyListeners();
         return jsonData;
       } else {
-        debugPrint("Error fetching invoices: ${response.statusCode}");
+        _debugPrintHttpFailure(
+          requestName: 'listAllInvoices',
+          uri: uri,
+          response: response,
+        );
         _isLoading = false;
         notifyListeners();
-        return {'status': 'error', 'message': 'Failed to fetch invoices'};
+        return {
+          'status': 'error',
+          'message': 'Failed to fetch invoices',
+          'statusCode': response.statusCode,
+          'reasonPhrase': response.reasonPhrase,
+          'body': response.body,
+        };
       }
     } catch (e) {
       debugPrint("Exception fetching invoices: $e");
@@ -1720,8 +1744,7 @@ class InvoiceProvider extends ChangeNotifier {
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(
-        "${APPUrl.detailsOfReceipt}/$id")
+    final url = Uri.parse("${APPUrl.detailsOfReceipt}/$id")
         .replace(queryParameters: queryParameters);
 
     try {

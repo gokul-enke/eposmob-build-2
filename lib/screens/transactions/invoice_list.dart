@@ -32,6 +32,7 @@ class InvoiceListScreen extends StatefulWidget {
 
 class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
+  InvoiceProvider? _invoiceProvider;
   Worker? _sidebarIndexWorker;
   bool isInitialized = false;
   final TextEditingController searchTextController = TextEditingController();
@@ -50,6 +51,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
       loadInvoices();
     });
 
@@ -73,7 +75,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     selectedInvoiceIds.clear();
 
     if (clearProviderFilters) {
-      Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
+      _invoiceProvider?.resetFilters();
     }
   }
 

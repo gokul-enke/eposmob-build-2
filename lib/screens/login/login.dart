@@ -447,6 +447,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                                           .toList());
                                                 }
 
+                                                final String? countryName =
+                                                    value['data']?['country']?['name']
+                                                        ?.toString();
+
                                                   SharedPreferenceProvider()
                                                       .saveAccessTokenandCustomerId(
                                                     executiveModelData
@@ -470,6 +474,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                                     storesJson: storesJson,
                                                     timeZone: executiveModelData
                                                         ?.timeZone,
+                                                    countryName: countryName,
                                                   );
 
                                                   // Update DateHelper with the new timezone

@@ -21,6 +21,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     String? companyName,
     String? storesJson,
     String? timeZone,
+    String? countryName,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
@@ -45,6 +46,9 @@ class SharedPreferenceProvider extends ChangeNotifier {
     }
     if (timeZone != null) {
       prefs.setString('time_zone', timeZone);
+    }
+    if (countryName != null) {
+      prefs.setString('country_name', countryName);
     }
     // debugPrint('inside shared ,$customerName');
   }
@@ -72,6 +76,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('stores');
     prefs.remove('active_store_id');
     prefs.remove('time_zone');
+    prefs.remove('country_name');
 
     // Remove ZATCA fields
     prefs.remove('zatca_vat_number');
@@ -154,6 +159,11 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<String?> getTimeZone() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('time_zone');
+  }
+
+  Future<String?> getCountryName() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('country_name');
   }
 
   Future<List<dynamic>?> getStores() async {
