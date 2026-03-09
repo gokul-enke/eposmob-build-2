@@ -4722,6 +4722,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             String? customerName = orderDetails.data?.customerDetails?.name;
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
             String? customerEmail = orderDetails.data?.customerDetails?.email;
+            String? customerVatNumber = orderDetails.data?.kycInfo?.vatNumber;
+            String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
             String? customerAddress =
                 orderDetails.data?.getCustomerAddressForDisplay();
 
@@ -4765,6 +4767,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                 customerCurrentBalance: currentBalance,
                 paidAmount: totalPaid > 0 ? totalPaid : null,
                 customerAlternatePhone: customerAlternatePhone,
+                customerVatNumber: customerVatNumber,
+                customerCrNumber: customerCrNumber,
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,

@@ -4800,6 +4800,8 @@ class BillingPageState extends State<BillingPage>
             String? customerName = orderDetails.data?.customerDetails?.name;
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
             String? customerEmail = orderDetails.data?.customerDetails?.email;
+            String? customerVatNumber = orderDetails.data?.kycInfo?.vatNumber;
+            String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
             // Use helper to get address from order_props, fallback to customer details
             String? customerAddress =
                 orderDetails.data?.getCustomerAddressForDisplay();
@@ -4841,6 +4843,8 @@ class BillingPageState extends State<BillingPage>
                 customerCurrentBalance: currentBalance,
                 paidAmount: totalPaid > 0 ? totalPaid : null,
                 customerAlternatePhone: customerAlternatePhone,
+                customerVatNumber: customerVatNumber,
+                customerCrNumber: customerCrNumber,
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
