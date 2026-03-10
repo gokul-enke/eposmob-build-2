@@ -1,10 +1,6 @@
 import 'dart:ui';
-import 'dart:convert';
-import 'dart:math';
-import 'dart:io';
 
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
@@ -16,9 +12,8 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
-import 'package:pos_machine/resources/app_url.dart';
+import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
@@ -277,344 +272,23 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   void _showEditStockModal(ListStockModelData stock) {
-    // Controllers for editable fields
-    final TextEditingController retailPriceController =
-        TextEditingController(text: stock.retailPrice);
-    final TextEditingController mrpController =
-        TextEditingController(text: stock.mrp);
-    final TextEditingController purchasePriceController =
-        TextEditingController(text: stock.purchaseRate);
-    final TextEditingController quantityController =
-        TextEditingController(text: stock.qty?.toString() ?? '0');
-    final TextEditingController rackController =
-        TextEditingController(text: stock.rack);
-
-    // State for racks dropdown
-    Map<String, String> racksData = {};
-    String? selectedRack = stock.rack;
-
-    // Fetch racks data
-    Future<void> fetchRacksData() async {
-      debugPrint("fetchRacksData API called");
-
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      if (accessToken == null || accessToken.isEmpty) {
-        debugPrint("Authentication token is missing");
-        return;
-      }
-
-      // Get API key from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? apiKey = prefs.getString('api_key');
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw const HttpException("API key not found. Please restart the app.");
-      }
-      debugPrint(
-          "Using token: ${accessToken.substring(0, min(accessToken.length, 10))}...");
-
-      try {
-        final baseUri = Uri.parse(APPUrl.getRacksDataValues);
-        final queryParameters =
-            Map<String, String>.from(baseUri.queryParameters);
-        if (activeStoreId != null) {
-          queryParameters['store_id'] = activeStoreId.toString();
-        }
-        final url = baseUri.replace(queryParameters: queryParameters);
-        debugPrint("Making API call to ${url.toString()}");
-
-        final response = await http.get(url, headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        });
-
-        debugPrint('API response status code: ${response.statusCode}');
-        debugPrint(
-            'API response body: ${response.body.substring(0, min(response.body.length, 100))}...');
-
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data['status'] == 'success') {
-            // Handle both new List structure and legacy Map structure
-            if (data['data'] is List) {
-              // New structure: List of objects with id, value, description
-              racksData = {};
-              for (var item in data['data']) {
-                final value = item['value']?.toString() ?? '';
-                final description = item['description']?.toString() ?? value;
-                if (value.isNotEmpty) {
-                  racksData[value] = description;
-                }
-              }
-              debugPrint(
-                  "Successfully loaded ${racksData.length} racks (from List)");
-            } else if (data['data'] is Map) {
-              // Legacy structure: Map<String, String>
-              racksData = Map<String, String>.from(data['data']);
-              debugPrint(
-                  "Successfully loaded ${racksData.length} racks (from Map)");
-            } else {
-              debugPrint("Unexpected data format: ${data['data'].runtimeType}");
-              racksData = {};
-            }
-          } else {
-            debugPrint("API returned error status: ${data['message']}");
-          }
-        } else {
-          debugPrint('Error in API response: ${response.reasonPhrase}');
-        }
-      } catch (error) {
-        debugPrint('Exception in fetchRacksData: $error');
-      }
+    if (stock.stockId == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Stock id missing. Unable to edit this row.',
+      );
+      return;
     }
 
-    showDialog(
+    showEditStockDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 8,
-        backgroundColor: Colors.white,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.7,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Edit Stock: ${stock.productName}',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    children: [
-                      // First row
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Retail Price
-                          Expanded(
-                            child: _buildEditableField(
-                              'Retail Price',
-                              retailPriceController,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // MRP
-                          Expanded(
-                            child: _buildEditableField(
-                              'MRP',
-                              mrpController,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Second row
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Purchase Price
-                          Expanded(
-                            child: _buildEditableField(
-                              'Purchase Price',
-                              purchasePriceController,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // Quantity
-                          Expanded(
-                            child: _buildEditableField(
-                              'Quantity',
-                              quantityController,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Third row
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Rack
-                          Expanded(
-                            child: FutureBuilder(
-                              future: fetchRacksData(),
-                              builder: (context, snapshot) {
-                                return StatefulBuilder(
-                                    builder: (context, setState) {
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Rack',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12),
-                                        decoration: BoxDecoration(
-                                          border:
-                                              Border.all(color: Colors.grey),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: DropdownButtonHideUnderline(
-                                          child: DropdownButton<String>(
-                                            value: racksData
-                                                    .containsKey(selectedRack)
-                                                ? selectedRack
-                                                : null,
-                                            isExpanded: true,
-                                            hint: const Text('Select Rack'),
-                                            items:
-                                                racksData.entries.map((entry) {
-                                              return DropdownMenuItem<String>(
-                                                value: entry.key,
-                                                child: Text(entry.value),
-                                              );
-                                            }).toList(),
-                                            onChanged: (String? newValue) {
-                                              if (newValue != null) {
-                                                setState(() {
-                                                  selectedRack = newValue;
-                                                  rackController.text =
-                                                      newValue;
-                                                });
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // Empty space for alignment
-                          const Expanded(child: SizedBox()),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Cancel",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                  const SizedBox(width: 16),
-                  CustomRoundButton(
-                    title: "Update",
-                    boxColor: ColorManager.kPrimaryColor,
-                    textColor: Colors.white,
-                    fct: () async {
-                      // Get the access token
-                      String? accessToken =
-                          Provider.of<AuthModel>(context, listen: false).token;
-
-                      if (accessToken == null || accessToken.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text("Authentication token is missing")),
-                        );
-                        return;
-                      }
-
-                      // Show loading indicator
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-
-                      // Call the update function
-                      final success = await Provider.of<StockProvider>(context,
-                              listen: false)
-                          .updateStockDetails(
-                        stockId: stock.stockId!,
-                        retailPrice: retailPriceController.text,
-                        mrp: mrpController.text,
-                        purchasePrice: purchasePriceController.text,
-                        quantity: quantityController.text,
-                        rack: rackController.text,
-                        accessToken: accessToken,
-                      );
-
-                      // Close the loading dialog
-                      Navigator.pop(context);
-
-                      // Close the edit dialog
-                      Navigator.pop(context);
-
-                      if (success) {
-                        showScaffold(
-                            context: context,
-                            message: "Stock updated successfully");
-                      } else {
-                        showScaffoldError(
-                            context: context,
-                            message: "Failed to update stock");
-                      }
-                    },
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      stockId: stock.stockId!,
+      title: 'Edit Stock: ${stock.productName ?? ''}',
+      initialRetailPrice: stock.retailPrice ?? '',
+      initialMrp: stock.mrp ?? '',
+      initialPurchasePrice: stock.purchaseRate ?? '',
+      initialQuantity: stock.qty?.toString() ?? '0',
+      initialRack: stock.rack ?? '',
     );
   }
 
@@ -648,55 +322,6 @@ class _AddStockScreenState extends State<AddStockScreen> {
     showDialog(
       context: context,
       builder: (context) => WithdrawStockModal(stock: stock),
-    );
-  }
-
-  Widget _buildEditableField(String label, TextEditingController controller,
-      {TextInputType? keyboardType}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s14,
-              0.20,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          BuildBoxShadowContainer(
-            circleRadius: 7,
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            height: 45,
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              decoration: InputDecoration(
-                hintText: 'Enter $label',
-                hintStyle: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s12,
-                  0.27,
-                  ColorManager.textColor.withOpacity(.5),
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.27,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
