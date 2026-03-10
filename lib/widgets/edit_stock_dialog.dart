@@ -303,7 +303,7 @@ Future<bool> showEditStockDialog({
                                 await Provider.of<LocalProductProvider>(
                                   parentContext,
                                   listen: false,
-                                ).fetchProductsFromAPI(refresh: true);
+                                ).fetchProductsFromAPI();
 
                                 if (onSuccess != null) {
                                   await onSuccess(
