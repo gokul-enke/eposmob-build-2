@@ -336,7 +336,7 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
       }
 
       if (addressText.isNotEmpty) {
-        rows.add(TextRow(addressText, scale: 0.85, isBold: true));
+        rows.add(TextRow(addressText, scale: 0.85, isBold: true, verticalPadding: 0, verticalOffset: 0));
       }
     }
 
@@ -350,7 +350,7 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
 
       if (invoiceTitleText.isNotEmpty) {
         rows.add(
-            TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.1));
+            TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.1, verticalPadding: 0, verticalOffset: 0));
       }
     }
 
@@ -370,7 +370,7 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
       }
 
       if (extraHeading1Text.isNotEmpty) {
-        rows.add(TextRow(extraHeading1Text, scale: 0.95, isBold: true));
+        rows.add(TextRow(extraHeading1Text, scale: 0.95, isBold: true, verticalPadding: 0, verticalOffset: 0));
       }
     }
 
@@ -390,7 +390,7 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
       }
 
       if (extraHeading2Text.isNotEmpty) {
-        rows.add(TextRow(extraHeading2Text, scale: 0.95, isBold: true));
+        rows.add(TextRow(extraHeading2Text, scale: 0.95, isBold: true, verticalPadding: 0, verticalOffset: 0));
       }
     }
 
@@ -409,7 +409,7 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
       }
 
       if (fssaiInfoText.isNotEmpty) {
-        rows.add(TextRow(fssaiInfoText, scale: 0.85, isBold: true));
+        rows.add(TextRow(fssaiInfoText, scale: 0.85, isBold: true, verticalPadding: 0, verticalOffset: 0));
       }
     }
 
@@ -430,7 +430,7 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
       }
 
       if (telephoneText.isNotEmpty) {
-        rows.add(TextRow(telephoneText, scale: 0.9, isBold: true));
+        rows.add(TextRow(telephoneText, scale: 0.9, isBold: true, verticalPadding: 0, verticalOffset: 0));
       }
     }
 
@@ -450,7 +450,7 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
       }
 
       if (emailText.isNotEmpty) {
-        rows.add(TextRow(emailText, scale: 0.9, isBold: true));
+        rows.add(TextRow(emailText, scale: 0.9, isBold: true, verticalPadding: 0, verticalOffset: 0));
       }
     }
 
