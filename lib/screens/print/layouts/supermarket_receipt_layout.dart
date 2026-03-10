@@ -2283,18 +2283,18 @@ class StandardBoxedTotalsRow extends ReceiptRow {
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
             final dst = Rect.fromLTWH(iconX,
-                currentY + (itemFontSize - iconSize) / 2, iconSize, iconSize);
+                currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
           }
         } else {
           // Arabic: Value + Icon on Left, Label on Right
           double valueOffsetX = padding;
           if (item.icon != null) {
-            final double iconSize = itemFontSize * 1.2;
+            final double iconSize = itemFontSize * 0.75;
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
             final dst = Rect.fromLTWH(
-                padding, currentY - (iconSize * 0.1), iconSize, iconSize);
+                padding, currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
             valueOffsetX += iconSize + 4;
           }
