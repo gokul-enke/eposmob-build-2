@@ -62,6 +62,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'standard', 'name': 'Standard'},
     {'id': 'arabic_and_english', 'name': 'Arabic&English'},
     {'id': 'supermarket', 'name': 'Supermarket'},
+    {'id': 'bilingual', 'name': 'Bilingual'},
   ];
 
   // List of available receipt themes for standard PDF printing (A4/A5)
@@ -112,6 +113,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'Clean and minimal receipt layout';
       case 'supermarket':
         return 'Modern & clean design with enhanced spacing';
+      case 'bilingual':
+        return 'Bilingual layout with English and Arabic support';
       default:
         return 'Modern & clean design with enhanced spacing';
     }

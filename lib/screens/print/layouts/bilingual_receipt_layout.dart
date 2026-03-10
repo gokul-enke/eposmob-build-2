@@ -43,24 +43,24 @@ import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 /// - Bilingual support (English/Arabic) like the reference
 /// - Streamlined totals section with clear hierarchy
 /// - Minimal, elegant footer
-class SupermarketReceiptLayout implements ReceiptLayout {
+class BilingualReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
-  // Ultra-compact spacing for Supermarket
+  // Ultra-compact spacing for Bilingual
   static const double _sectionGap = 0.0;
   static const double _itemGap = 0.0;
   static const double _smallItemGap = 3.0;
   static const double _headerGap = 0.0;
 
   @override
-  String get layoutId => 'supermarket';
+  String get layoutId => 'bilingual';
 
   @override
-  String get displayName => 'Supermarket';
+  String get displayName => 'Bilingual';
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
-    debugPrint("===== supermarket LAYOUT: THERMAL PRINTING ====");
+    debugPrint("===== bilingual LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
     final selectedPrinter = params.selectedPrinter;
