@@ -1455,7 +1455,9 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         rows.add(TextRow('$arabicText فقط.',
             scale: is58mm ? 0.65 : 0.75, isBold: true));
         rows.add(TextRow('$englishText Only.',
-            scale: is58mm ? 0.65 : 0.75, isBold: true));
+          scale: is58mm ? 0.65 : 0.75,
+          isBold: true,
+          textDirectionOverride: TextDirection.ltr));
       } else {
         final language =
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
@@ -2418,19 +2420,26 @@ class TextRow extends ReceiptRow {
   final TextAlign align;
   final bool isBold;
   final double scale;
+  final TextDirection? textDirectionOverride;
 
   TextRow(this.text,
-      {this.align = TextAlign.center, this.isBold = false, this.scale = 1.0});
+      {this.align = TextAlign.center,
+      this.isBold = false,
+      this.scale = 1.0,
+      this.textDirectionOverride});
 
   @override
   double calculateHeight(
           double width, double fontSize, TextDirection textDirection) =>
-      _createPainter(width, fontSize, textDirection).height;
+      _createPainter(
+              width, fontSize, textDirectionOverride ?? textDirection)
+          .height;
 
   @override
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
-    final tp = _createPainter(width, fontSize, textDirection);
+    final tp = _createPainter(
+        width, fontSize, textDirectionOverride ?? textDirection);
     double x = 0;
     if (align == TextAlign.center) {
       x = (width - tp.width) / 2;

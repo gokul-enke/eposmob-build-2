@@ -1166,7 +1166,10 @@ class ClassicReceiptLayout implements ReceiptLayout {
             .convertNumberToWords(total, currency: currency, language: 'en');
 
         rows.add(TextRow('$arabicText فقط.', scale: 0.9, isBold: true));
-        rows.add(TextRow('$englishText Only.', scale: 0.9, isBold: true));
+        rows.add(TextRow('$englishText Only.',
+          scale: 0.9,
+          isBold: true,
+          textDirectionOverride: TextDirection.ltr));
       } else {
         final language =
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
