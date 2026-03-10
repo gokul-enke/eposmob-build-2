@@ -5,7 +5,7 @@ import 'classic_receipt_layout.dart';
 import 'premium_receipt_layout.dart';
 import 'premium1_receipt_layout.dart';
 import 'standard_receipt_layout.dart';
-import 'templmet_1_layout.dart';
+import 'supermarket_receipt_layout.dart';
 
 /// Factory class for creating receipt layouts based on theme.
 ///
