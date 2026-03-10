@@ -577,13 +577,9 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         lang == 'ar' ? 'رقم الفاتورة:' : 'Invoice No:',
       );
 
-      final invoiceNumberText = '$invoicePrefix $strippedNumber';
-      rows.add(ReceiptTableRow([
-        ReceiptTableColumn(invoicePrefix,
-            weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
-        ReceiptTableColumn(strippedNumber,
-            weight: 0.65, align: TextAlign.left, scale: 0.75),
-      ]));
+      final invoiceNumberText =
+          _formatInvoiceIdentifier(invoicePrefix, strippedNumber);
+      rows.add(TextRow(invoiceNumberText, isBold: true, scale: 1.0));
       rows.add(SpacingRow(_itemGap));
     }
 
@@ -2019,6 +2015,22 @@ class SupermarketReceiptLayout implements ReceiptLayout {
       return arabic;
     }
     return '';
+  }
+
+  String _formatInvoiceIdentifier(String prefix, String number) {
+    final trimmedPrefix = prefix.trim();
+    final needsTightJoin = trimmedPrefix.endsWith('-') ||
+        trimmedPrefix.endsWith('/') ||
+        trimmedPrefix.endsWith('#');
+    final joined = needsTightJoin
+        ? '$trimmedPrefix$number'
+        : '$trimmedPrefix $number';
+
+    if (RegExp(r'^[A-Za-z0-9\-/#\s]+$').hasMatch(trimmedPrefix)) {
+      return '\u202A$joined\u202C';
+    }
+
+    return joined;
   }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
