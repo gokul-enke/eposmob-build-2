@@ -29,6 +29,7 @@ class SessionResetService {
     'stores',
     'active_store_id',
     'time_zone',
+    'zatca_cr_number',
     'zatca_vat_number',
     'zatca_company_name',
     'default_printer',

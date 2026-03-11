@@ -79,6 +79,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('country_name');
 
     // Remove ZATCA fields
+    prefs.remove('zatca_cr_number');
     prefs.remove('zatca_vat_number');
     prefs.remove('zatca_company_name');
   }
@@ -252,6 +253,18 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.setString('zatca_vat_number', vatNumber);
   }
 
+  /// Save ZATCA CR number for Saudi Arabia e-invoicing
+  Future<void> saveZatcaCrNumber(String crNumber) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zatca_cr_number', crNumber);
+  }
+
+  /// Get ZATCA CR number
+  Future<String?> getZatcaCrNumber() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('zatca_cr_number');
+  }
+
   /// Get ZATCA VAT number
   Future<String?> getZatcaVatNumber() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -272,10 +285,14 @@ class SharedPreferenceProvider extends ChangeNotifier {
 
   /// Save both ZATCA credentials at once
   Future<void> saveZatcaCredentials({
+    String? crNumber,
     String? vatNumber,
     String? companyName,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (crNumber != null && crNumber.isNotEmpty) {
+      await prefs.setString('zatca_cr_number', crNumber);
+    }
     if (vatNumber != null && vatNumber.isNotEmpty) {
       await prefs.setString('zatca_vat_number', vatNumber);
     }
@@ -298,6 +315,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
   /// Remove ZATCA credentials
   Future<void> removeZatcaCredentials() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('zatca_cr_number');
     await prefs.remove('zatca_vat_number');
     await prefs.remove('zatca_company_name');
   }

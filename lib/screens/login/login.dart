@@ -448,54 +448,68 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 }
 
                                                 final String? countryName =
-                                                    value['data']?['country']?['name']
+                                                    value['data']?['country']
+                                                            ?['name']
                                                         ?.toString();
 
-                                                  SharedPreferenceProvider()
-                                                      .saveAccessTokenandCustomerId(
-                                                    executiveModelData
-                                                            ?.accessToken ??
-                                                        "",
-                                                    executiveModelData?.userId ??
-                                                        0,
-                                                    executiveModelData
-                                                            ?.userName ??
-                                                        "",
-                                                    executiveModelData
-                                                            ?.userRole ??
-                                                        "",
-                                                    tokenType: executiveModelData
-                                                        ?.tokenType,
-                                                    companyId: executiveModelData
-                                                        ?.companyId,
-                                                    companyName:
-                                                        executiveModelData
-                                                            ?.companyName,
-                                                    storesJson: storesJson,
-                                                    timeZone: executiveModelData
-                                                        ?.timeZone,
-                                                    countryName: countryName,
-                                                  );
+                                                SharedPreferenceProvider()
+                                                    .saveAccessTokenandCustomerId(
+                                                  executiveModelData
+                                                          ?.accessToken ??
+                                                      "",
+                                                  executiveModelData?.userId ??
+                                                      0,
+                                                  executiveModelData
+                                                          ?.userName ??
+                                                      "",
+                                                  executiveModelData
+                                                          ?.userRole ??
+                                                      "",
+                                                  tokenType: executiveModelData
+                                                      ?.tokenType,
+                                                  companyId: executiveModelData
+                                                      ?.companyId,
+                                                  companyName:
+                                                      executiveModelData
+                                                          ?.companyName,
+                                                  storesJson: storesJson,
+                                                  timeZone: executiveModelData
+                                                      ?.timeZone,
+                                                  countryName: countryName,
+                                                );
 
-                                                  // Update DateHelper with the new timezone
-                                                  if (executiveModelData
-                                                          ?.timeZone !=
-                                                      null) {
-                                                    DateHelper.setTimeZone(
-                                                        executiveModelData!
-                                                            .timeZone!);
-                                                  }
+                                                // Update DateHelper with the new timezone
+                                                if (executiveModelData
+                                                        ?.timeZone !=
+                                                    null) {
+                                                  DateHelper.setTimeZone(
+                                                      executiveModelData!
+                                                          .timeZone!);
+                                                }
 
-                                                  // Save ZATCA credentials for Saudi Arabia e-invoicing
-                                                if (executiveModelData?.vatNumber != null ||
-                                                    executiveModelData?.zatcaCompanyName != null) {
+                                                // Save ZATCA credentials for Saudi Arabia e-invoicing
+                                                if (executiveModelData
+                                                            ?.crNumber !=
+                                                        null ||
+                                                    executiveModelData
+                                                            ?.vatNumber !=
+                                                        null ||
+                                                    executiveModelData
+                                                            ?.zatcaCompanyName !=
+                                                        null) {
                                                   SharedPreferenceProvider()
                                                       .saveZatcaCredentials(
-                                                    vatNumber: executiveModelData?.vatNumber,
-                                                    companyName: executiveModelData?.zatcaCompanyName,
+                                                    crNumber: executiveModelData
+                                                        ?.crNumber,
+                                                    vatNumber:
+                                                        executiveModelData
+                                                            ?.vatNumber,
+                                                    companyName:
+                                                        executiveModelData
+                                                            ?.zatcaCompanyName,
                                                   );
                                                   debugPrint(
-                                                      "ZATCA credentials saved - VAT: ${executiveModelData?.vatNumber}, Company: ${executiveModelData?.zatcaCompanyName}");
+                                                      "ZATCA credentials saved - CR: ${executiveModelData?.crNumber}, VAT: ${executiveModelData?.vatNumber}, Company: ${executiveModelData?.zatcaCompanyName}");
                                                 }
 
                                                 SalesProvider salesProvider =
