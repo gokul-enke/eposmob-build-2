@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
 
@@ -35,15 +36,33 @@ Future<void> handleAddProductToCart({
   try {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final storeSessionProvider =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+    final activeStore = storeSessionProvider.activeStore;
 
     // Check if product has stock options
     if (product.stock != null && product.stock!.isNotEmpty) {
-      // Get all stock options (don't filter by quantity - physical stock may be available)
-      // Physical stock at shop matters more than digital count
-      List<Stock> availableStocks = List.from(product.stock!);
+      final availableStocks = localProductProvider.getStockOptionsForStore(
+        product,
+        activeStoreId: activeStore?.storeId,
+        activeStoreName: activeStore?.storeName,
+      );
 
-      // If multiple stock options are available, show selection modal
-      if (availableStocks.length > 1) {
+      if (availableStocks.isEmpty) {
+        localProductProvider.addToCart(
+          product: product,
+          quantity: quantity,
+          price: price,
+          mrp: mrp,
+          isIncreamentUsingCompactQuantityControl:
+              isIncreamentUsingCompactQuantityControl,
+        );
+
+        if (onSuccess != null) {
+          onSuccess();
+        }
+        return;
+      } else if (availableStocks.length > 1) {
         final result = await showDialog(
           context: context,
           builder: (context) => StockSelectionModal(
