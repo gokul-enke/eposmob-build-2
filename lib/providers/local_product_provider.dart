@@ -813,10 +813,10 @@ class LocalProductProvider extends ChangeNotifier {
     const int batchSize = 10; // Fetch 10 pages concurrently
     final prefsProvider = prefs_provider.SharedPreferenceProvider();
     final lastSyncRaw =
-      refresh ? null : await prefsProvider.getLastProductSyncIso();
+        refresh ? null : await prefsProvider.getLastProductSyncIso();
     final lastSyncIso = (lastSyncRaw == null || lastSyncRaw.isEmpty)
-      ? null
-      : DateHelper.normalizeToApiDateTime(lastSyncRaw);
+        ? null
+        : DateHelper.normalizeToApiDateTime(lastSyncRaw);
     final syncEndIso = DateHelper.formatForApiDateTime();
     final requestedDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
     final hasLocalBaseline = _products.isNotEmpty;
@@ -2252,8 +2252,8 @@ class LocalProductProvider extends ChangeNotifier {
       if (isStockEnabled) {
         for (final cartItem in _cartItems) {
           if (cartItem.selectedStock != null) {
-            _updateStockQuantity(
-                cartItem.selectedStock!, cartItem.quantity, "LOAD_ORDER_RELEASE");
+            _updateStockQuantity(cartItem.selectedStock!, cartItem.quantity,
+                "LOAD_ORDER_RELEASE");
           }
         }
       }
@@ -2309,6 +2309,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
+    BuildContext? context,
     String? tableId,
     String? address,
     double? deliveryCharge,
@@ -2327,9 +2328,10 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("  - Found order at index: $index");
       debugPrint(
           "  - Original order phone: '${_savedOrders[index].customerPhone}'");
-      // Get current cart total
+        // Keep total calculation aligned with new draft saves, including optional round-off.
+        final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;
         double total =
-          cartTotal + (deliveryCharge ?? _savedOrders[index].deliveryCharge ?? 0.0);
+          baseTotal + (deliveryCharge ?? _savedOrders[index].deliveryCharge ?? 0.0);
 
       // Create a copy of current cart items
       List<LocalCartItem> orderItems = _cartItems
@@ -2449,6 +2451,39 @@ class LocalProductProvider extends ChangeNotifier {
     return product.stock!
         .where((stock) => stock.quantity != null && stock.quantity! > 0)
         .toList();
+  }
+
+  List<Stock> getStockOptionsForStore(
+    GetProduct product, {
+    int? activeStoreId,
+    String? activeStoreName,
+  }) {
+    final availableStocks = getStockOptions(product);
+    if (availableStocks.isEmpty) {
+      return const <Stock>[];
+    }
+
+    final normalizedActiveStoreName = activeStoreName?.trim().toLowerCase();
+    final hasActiveStoreId = activeStoreId != null;
+    final hasActiveStoreName = normalizedActiveStoreName != null &&
+        normalizedActiveStoreName.isNotEmpty;
+
+    if (!hasActiveStoreId && !hasActiveStoreName) {
+      return availableStocks;
+    }
+
+    return availableStocks.where((stock) {
+      if (hasActiveStoreId && stock.storeId != null) {
+        return stock.storeId == activeStoreId;
+      }
+
+      if (hasActiveStoreName) {
+        final normalizedStockStoreName = stock.storeName?.trim().toLowerCase();
+        return normalizedStockStoreName == normalizedActiveStoreName;
+      }
+
+      return false;
+    }).toList();
   }
 
   /// Selects the optimal stock entry based on quantity needed

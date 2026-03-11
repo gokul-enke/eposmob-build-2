@@ -8471,6 +8471,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           _loadedLocalDraftId!,
           comment: taggedComment,
           status: 'pending',
+          context: context,
           tableId: widget.tableId,
         );
         showScaffold(context: context, message: 'Updated local draft');

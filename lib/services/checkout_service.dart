@@ -526,6 +526,7 @@ class CheckoutService {
               : null,
           deliveryMethodId: billingProvider.deliveryMethodId,
           carNumber: billingProvider.carNumberController.text,
+          context: context,
           status: "saved",
           deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
           deliveryTime: billingProvider.deliveryTime,

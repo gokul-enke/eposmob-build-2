@@ -1907,6 +1907,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       customerPhone: selectedCustomerPhone ?? mobileNumberText,
                       comment: _commentController.text,
                       deliveryMethod: deliveryMethod,
+                      context: context,
                       deliveryDate: deliveryDate, // Pass deliveryDate
                       deliveryTime: deliveryTime, // Pass deliveryTime
                     );
@@ -4202,6 +4203,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
           toCustomerCredit: _toCustomerCreditEnabled,
+          context: context,
           address: deliveryAddress, // Pass address
           deliveryCharge: _getDeliveryChargeForOrder(),
           // context: context, // Pass context
@@ -4372,6 +4374,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           toCustomerCredit: _toCustomerCreditEnabled,
+          context: context,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
         );
