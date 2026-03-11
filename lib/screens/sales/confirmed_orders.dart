@@ -36,6 +36,25 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
   // Function to update dialog state from outside
   void Function(void Function())? _dialogSetState;
 
+  double _calculateOrderDiscountAmount(SavedOrder order) {
+    final subtotal = order.items.fold<double>(
+      0.0,
+      (sum, item) =>
+          sum + ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+    );
+
+    final flatDiscount = order.flatDiscount ?? 0.0;
+    final percentageValue = order.percentageDiscount ?? 0.0;
+    final percentageDiscount = subtotal * percentageValue / 100;
+    final totalDiscount = flatDiscount + percentageDiscount;
+
+    if (totalDiscount > subtotal) {
+      return subtotal;
+    }
+
+    return totalDiscount;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -338,10 +357,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
       // Calculate discount amount
-      double discountAmount = (order.flatDiscount ?? 0.0) +
-          ((order.percentageDiscount ?? 0.0) > 0
-              ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
-              : 0.0);
+        final double discountAmount = _calculateOrderDiscountAmount(order);
 
       // Get paid amount
       double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
@@ -785,18 +801,16 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           carNumber: order.carNumber,
           status:
               "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
-            deliveryDate: order.deliveryDate,
-            deliveryTime: order.deliveryTime,
+          deliveryDate: order.deliveryDate,
+          deliveryTime: order.deliveryTime,
+          tableId: order.tableId,
           // Include discount data from saved order
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
-          discountAmount: (order.flatDiscount ?? 0.0) +
-              ((order.percentageDiscount ?? 0.0) > 0
-                  ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
-                  : 0.0),
+          discountAmount: _calculateOrderDiscountAmount(order),
           toCustomerCredit: order.toCustomerCredit,
-            address: order.address,
-            deliveryCharge: order.deliveryCharge,
+          address: order.address,
+          deliveryCharge: order.deliveryCharge,
         );
 
         // AFTER the API call completes, update the index

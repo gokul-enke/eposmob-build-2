@@ -645,7 +645,30 @@ class CheckoutService {
           billingProvider.mobileNumberText;
 
       if (currentOrder != null) {
-        result = localProductProvider.moveToConfirmedOrders(currentOrder.id);
+        final currentOrderId = currentOrder.id;
+        localProductProvider.updateSavedOrder(
+          currentOrderId,
+          customerName: customerNameToSave,
+          customerPhone: customerPhoneToSave,
+          comment: billingProvider.commentController.text,
+          deliveryMethod: billingProvider.deliveryMethod,
+          customerId: billingProvider.selectedCustomerID,
+          paymentMethod: paymentMethod,
+          paidAmount: paidAmount,
+          balanceAmount: billingProvider.balanceAmount.toString(),
+          transactionId: billingProvider.transactionNumberController.text,
+          couponId: billingProvider.isCouponApplied
+              ? billingProvider.coupenCodeTextController.text
+              : null,
+          deliveryMethodId: billingProvider.deliveryMethodId,
+          carNumber: billingProvider.carNumberController.text,
+          status: "confirmed",
+          deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
+          deliveryTime: billingProvider.deliveryTime,
+          toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+          context: context,
+        );
+        result = localProductProvider.moveToConfirmedOrders(currentOrderId);
         if (result != null) {
           showScaffold(
             context: context,
@@ -672,6 +695,7 @@ class CheckoutService {
             deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
             deliveryTime: billingProvider.deliveryTime,
             toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+            context: context,
           );
           showScaffold(
             context: context,
@@ -698,6 +722,7 @@ class CheckoutService {
           deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
           deliveryTime: billingProvider.deliveryTime,
           toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+          context: context,
         );
         showScaffold(
           context: context,

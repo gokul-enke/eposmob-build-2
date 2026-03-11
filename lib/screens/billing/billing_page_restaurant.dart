@@ -4350,14 +4350,15 @@ class BillingPageState extends State<BillingPageRestaurant>
 
       if (currentOrder != null) {
         debugPrint(
-            "💾 Updating saved order from current state: ${currentOrder.orderNumber}");
+            "💾 Promoting saved order to confirmed: ${currentOrder.orderNumber}");
 
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         final paymentData = _getPaymentMethodData();
+        final currentOrderId = currentOrder.id;
         localProductProvider.updateSavedOrder(
-          currentOrder.id,
+          currentOrderId,
           customerName: customerNameToSave,
           customerPhone: customerPhoneToSave,
           comment: _commentController.text,
@@ -4379,14 +4380,35 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryCharge: _getDeliveryChargeForOrder(),
         );
 
-        orderToUse = localProductProvider.findOrderById(currentOrder.id);
+        orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
+        orderToUse ??= localProductProvider.saveCurrentCartAsConfirmedOrder(
+          customerName: customerNameToSave,
+          customerPhone: customerPhoneToSave,
+          comment: _commentController.text,
+          deliveryMethod: deliveryMethod,
+          customerId: selectedCustomerID,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: 'confirmed',
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
+          context: context,
+          toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress,
+          deliveryCharge: _getDeliveryChargeForOrder(),
+        );
 
         showScaffold(
           context: context,
-          message: "billing.order_updated_success".tr,
+          message: "billing.order_saved_success".tr,
         );
       } else {
-        debugPrint("💾 Creating new saved order for printing");
+        debugPrint("💾 Creating new confirmed order for printing");
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
@@ -4394,7 +4416,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
         final paymentData = _getPaymentMethodData();
 
-        orderToUse = localProductProvider.saveCurrentCartAsOrder(
+        orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
           customerName: customerNameToSave,
           customerPhone: customerPhoneToSave,
           comment: _commentController.text,
@@ -4408,7 +4430,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: 'saved',
+          status: 'confirmed',
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           context: context,

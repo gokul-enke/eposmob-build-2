@@ -54,6 +54,25 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     return youSaved > 0 ? youSaved : 0.0;
   }
 
+  double _calculateDiscountAmount() {
+    final subtotal = order.items.fold<double>(
+      0.0,
+      (sum, item) =>
+          sum + ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+    );
+
+    final flatDiscount = order.flatDiscount ?? 0.0;
+    final percentageValue = order.percentageDiscount ?? 0.0;
+    final percentageDiscount = subtotal * percentageValue / 100;
+    final totalDiscount = flatDiscount + percentageDiscount;
+
+    if (totalDiscount > subtotal) {
+      return subtotal;
+    }
+
+    return totalDiscount;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppSettingsProvider>(
@@ -495,11 +514,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
-      // Calculate discount amount
-      double discountAmount = (order.flatDiscount ?? 0.0) +
-          ((order.percentageDiscount ?? 0.0) > 0
-              ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
-              : 0.0);
+        final double discountAmount = _calculateDiscountAmount();
 
       // Get paid amount
       double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0

@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
@@ -984,6 +985,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
+      final orderPanelState = _orderPanelKey.currentState;
       final cartItems = localProductProvider.cartItems;
 
       if (cartItems.isEmpty) {
@@ -997,10 +999,27 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
       // Auto-save as pending draft with tableId
       localProductProvider.saveCurrentCartAsOrder(
-        comment: 'TABLE:$_activeTableId',
+        customerName: orderPanelState?.selectedCustomerNameForDraft,
+        customerPhone: orderPanelState?.selectedCustomerPhoneForDraft,
+        comment:
+            orderPanelState?.buildTaggedDraftComment(_activeTableId!) ??
+                'TABLE:$_activeTableId',
+        deliveryMethod: orderPanelState?.deliveryMethodForDraft,
+        customerId: orderPanelState?.selectedCustomerIdForDraft,
+        paymentMethod: orderPanelState?.paymentMethodForDraft,
+        paidAmount: orderPanelState?.paidAmountForDraft,
+        balanceAmount: orderPanelState?.balanceAmountForDraft,
+        transactionId: orderPanelState?.transactionNumberForDraft,
+        couponId: orderPanelState?.couponIdForDraft,
+        deliveryMethodId: orderPanelState?.deliveryMethodIdForDraft,
         status: 'pending',
+        deliveryDate: orderPanelState?.deliveryDateForDraft,
+        deliveryTime: orderPanelState?.deliveryTimeForDraft,
+        toCustomerCredit: orderPanelState?.toCustomerCreditForDraft,
         context: context,
         tableId: _activeTableId,
+        address: orderPanelState?.deliveryAddressForDraft,
+        deliveryCharge: orderPanelState?.deliveryChargeForDraft,
       );
 
       debugPrint('✅ Auto-saved pending draft for table $_activeTableId');
@@ -2740,6 +2759,25 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Expose current comment to parent (RestaurantPage) for new order flow
   String get orderComment => _orderComment;
+    String? get selectedCustomerNameForDraft => _selectedCustomer?.name;
+    int? get selectedCustomerIdForDraft => _selectedCustomer?.id ?? _selectedCustomerID;
+    String? get selectedCustomerPhoneForDraft =>
+      _selectedCustomer?.phone ?? _selectedCustomerPhone;
+    String get deliveryMethodForDraft => _deliveryMethod;
+    String get deliveryMethodIdForDraft =>
+      _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId();
+    String? get deliveryDateForDraft => _deliveryDate;
+    String? get deliveryTimeForDraft => _deliveryTime;
+    String? get deliveryAddressForDraft =>
+      _deliveryAddress.isNotEmpty ? _deliveryAddress : null;
+    double get deliveryChargeForDraft => _getDeliveryChargeForOrder();
+    bool get toCustomerCreditForDraft => _toCustomerCreditEnabled;
+    String? get transactionNumberForDraft =>
+      _transactionNumber.isNotEmpty ? _transactionNumber : null;
+    String? get couponIdForDraft => _couponCode.isNotEmpty ? _couponCode : null;
+    String? get balanceAmountForDraft => _balanceAmount.toString();
+    String? get paymentMethodForDraft => _getLocalDraftPaymentData()['paymentMethod'];
+    String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
 
   // Customer Selection Variables
   CustomerListModelData? _selectedCustomer;
@@ -2908,6 +2946,186 @@ class _OrderPanelState extends State<_OrderPanel> {
       });
       debugPrint('❌ [DEBUG] Error fetching customers: $e');
     }
+  }
+
+  Map<String, String?> _getLocalDraftPaymentData() {
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final paymentAmounts = <String, String>{};
+    final selectedMethods = <String>[];
+
+    void addMethod(bool isSelected, String amountText, String methodId) {
+      final amount = double.tryParse(amountText) ?? 0.0;
+      if (!isSelected || amount <= 0) return;
+      selectedMethods.add(methodId);
+      paymentAmounts[methodId] = amount.toStringAsFixed(2);
+    }
+
+    addMethod(_isCashSelected, _cashAmount, billingProvider.cashPaymentMethodId ?? 'CASH');
+    addMethod(_isCardSelected, _cardAmount, billingProvider.cardPaymentMethodId ?? 'CARD');
+    addMethod(_isUpiSelected, _upiAmount, billingProvider.upiPaymentMethodId ?? 'UPI');
+    addMethod(_isCodSelected, _codAmount, billingProvider.codPaymentMethodId ?? 'COD');
+    addMethod(_isDebitSelected, _debitAmount, 'DEBIT');
+
+    if (selectedMethods.isEmpty) {
+      return {'paymentMethod': null, 'paidAmount': null};
+    }
+
+    final totalPaid = paymentAmounts.values.fold<double>(
+      0.0,
+      (sum, amount) => sum + (double.tryParse(amount) ?? 0.0),
+    );
+
+    if (selectedMethods.length == 1) {
+      return {
+        'paymentMethod': selectedMethods.first,
+        'paidAmount': totalPaid.toStringAsFixed(2),
+      };
+    }
+
+    return {
+      'paymentMethod': json.encode({
+        'methods': selectedMethods,
+        'amounts': paymentAmounts,
+        'isMultiPayment': true,
+      }),
+      'paidAmount': totalPaid.toStringAsFixed(2),
+    };
+  }
+
+  String buildTaggedDraftComment(String tableId) {
+    return 'TABLE:$tableId' + (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
+  }
+
+  String? _resolveStoredPaymentMethodName(String? storedMethod) {
+    if (storedMethod == null || storedMethod.isEmpty) return null;
+
+    final normalized = storedMethod.trim().toUpperCase();
+    if (normalized == 'CASH' ||
+        normalized == 'CARD' ||
+        normalized == 'UPI' ||
+        normalized == 'COD' ||
+        normalized == 'DEBIT') {
+      return normalized;
+    }
+
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    if (storedMethod == billingProvider.cashPaymentMethodId) return 'CASH';
+    if (storedMethod == billingProvider.cardPaymentMethodId) return 'CARD';
+    if (storedMethod == billingProvider.upiPaymentMethodId) return 'UPI';
+    if (storedMethod == billingProvider.codPaymentMethodId) return 'COD';
+    if (normalized == 'DEBIT') return 'DEBIT';
+
+    return null;
+  }
+
+  CustomerListModelData? _resolveDraftCustomer(SavedOrder order) {
+    if (_customers.isEmpty) return null;
+
+    for (final customer in _customers) {
+      if (order.customerId != null && customer.id == order.customerId) {
+        return customer;
+      }
+    }
+
+    for (final customer in _customers) {
+      if ((order.customerPhone?.isNotEmpty ?? false) &&
+          customer.phone == order.customerPhone) {
+        return customer;
+      }
+    }
+
+    return null;
+  }
+
+  void _rehydrateLocalDraftMetadata(SavedOrder order) {
+    final matchedCustomer = _resolveDraftCustomer(order);
+    final parsedPayment =
+        PaymentHelper.parseLocalMultiPayment(context, order.paymentMethod);
+    final paymentBreakdown = parsedPayment?.paymentBreakdown;
+    final paidAmount = double.tryParse(order.paidAmount ?? '') ?? 0.0;
+    final singleMethodName = parsedPayment == null
+        ? _resolveStoredPaymentMethodName(order.paymentMethod)
+        : null;
+
+    double amountFor(String methodName) {
+      if (paymentBreakdown != null) {
+        return double.tryParse(paymentBreakdown[methodName]?.toString() ?? '') ?? 0.0;
+      }
+      return singleMethodName == methodName ? paidAmount : 0.0;
+    }
+
+    final cashAmount = amountFor('CASH');
+    final cardAmount = amountFor('CARD');
+    final upiAmount = amountFor('UPI');
+    final codAmount = amountFor('COD');
+    final debitAmount = amountFor('DEBIT');
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    if (matchedCustomer != null) {
+      customerSelectionProvider.setSelectedCustomer(
+        matchedCustomer,
+        isDefault: _isDefaultCustomerPhone(matchedCustomer.phone),
+      );
+    } else {
+      customerSelectionProvider.clearSelectedCustomer();
+      if (order.customerPhone?.isNotEmpty == true) {
+        customerSelectionProvider.updateCustomerPhone(order.customerPhone!);
+      }
+    }
+
+    setState(() {
+      _selectedCustomer = matchedCustomer;
+      _selectedCustomerID = matchedCustomer?.id ?? order.customerId;
+      _selectedCustomerPhone = matchedCustomer?.phone ?? order.customerPhone;
+      _isCustomerManuallySelected =
+          order.customerId != null || (order.customerPhone?.isNotEmpty ?? false);
+
+      _orderComment = _cleanDraftComment(order.comment);
+      _deliveryMethod = order.deliveryMethod ?? 'Store Takeaway';
+      _deliveryMethodId = order.deliveryMethodId ?? _getDefaultDeliveryMethodId();
+      _deliveryAddress = order.address ?? '';
+      _deliveryDate = order.deliveryDate;
+      _deliveryTime = order.deliveryTime;
+      _selectedDeliveryCharge = order.deliveryCharge;
+
+      _flatDiscount = order.flatDiscount ?? 0.0;
+      _percentageDiscount = order.percentageDiscount ?? 0.0;
+      _couponCode = order.couponId ?? '';
+      _isCouponApplied = _flatDiscount > 0 ||
+          _percentageDiscount > 0 ||
+          _couponCode.isNotEmpty;
+
+      _transactionNumber = order.transactionId ?? '';
+      _balanceAmount = double.tryParse(order.balanceAmount ?? '') ?? 0.0;
+      _toCustomerCreditEnabled = order.toCustomerCredit ?? false;
+      _toCustomerCreditAmount = 0.0;
+
+      _isCashSelected = cashAmount > 0;
+      _cashAmount = cashAmount > 0 ? cashAmount.toStringAsFixed(2) : '';
+      _isCardSelected = cardAmount > 0;
+      _cardAmount = cardAmount > 0 ? cardAmount.toStringAsFixed(2) : '';
+      _isUpiSelected = upiAmount > 0;
+      _upiAmount = upiAmount > 0 ? upiAmount.toStringAsFixed(2) : '';
+      _isCodSelected = codAmount > 0;
+      _codAmount = codAmount > 0 ? codAmount.toStringAsFixed(2) : '';
+      _isDebitSelected = debitAmount > 0;
+      _debitAmount = debitAmount > 0 ? debitAmount.toStringAsFixed(2) : '';
+      _hasOpenedPaymentModalOnce = _isCashSelected ||
+          _isCardSelected ||
+          _isUpiSelected ||
+          _isCodSelected ||
+          _isDebitSelected;
+    });
+  }
+
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? '';
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
   }
 
   /// Fetch cart item statuses for Mark Served functionality
@@ -8460,28 +8678,57 @@ class _OrderPanelState extends State<_OrderPanel> {
         return;
       }
 
-      // Prefix table tag into comment so we can filter drafts per table without Hive migration
-      final String taggedComment = 'TABLE:${widget.tableId}' +
-          (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
+      final paymentData = _getLocalDraftPaymentData();
+      final taggedComment = buildTaggedDraftComment(widget.tableId!);
 
       // If a local draft is loaded, update it instead of creating a new one
       if (_loadedLocalDraftId != null) {
         debugPrint('📝 Updating existing local draft $_loadedLocalDraftId');
         localProductProvider.updateSavedOrder(
           _loadedLocalDraftId!,
+          customerName: selectedCustomerNameForDraft,
+          customerPhone: selectedCustomerPhoneForDraft,
           comment: taggedComment,
+          deliveryMethod: deliveryMethodForDraft,
+          customerId: selectedCustomerIdForDraft,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: balanceAmountForDraft,
+          transactionId: transactionNumberForDraft,
+          couponId: couponIdForDraft,
+          deliveryMethodId: deliveryMethodIdForDraft,
           status: 'pending',
+          deliveryDate: deliveryDateForDraft,
+          deliveryTime: deliveryTimeForDraft,
+          toCustomerCredit: toCustomerCreditForDraft,
           context: context,
           tableId: widget.tableId,
+          address: deliveryAddressForDraft,
+          deliveryCharge: deliveryChargeForDraft,
         );
         showScaffold(context: context, message: 'Updated local draft');
       } else {
         debugPrint('📝 Creating new local draft');
         final saved = localProductProvider.saveCurrentCartAsOrder(
+          customerName: selectedCustomerNameForDraft,
+          customerPhone: selectedCustomerPhoneForDraft,
           comment: taggedComment,
+          deliveryMethod: deliveryMethodForDraft,
+          customerId: selectedCustomerIdForDraft,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: balanceAmountForDraft,
+          transactionId: transactionNumberForDraft,
+          couponId: couponIdForDraft,
+          deliveryMethodId: deliveryMethodIdForDraft,
           status: 'pending',
+          deliveryDate: deliveryDateForDraft,
+          deliveryTime: deliveryTimeForDraft,
+          toCustomerCredit: toCustomerCreditForDraft,
           context: context,
           tableId: widget.tableId,
+          address: deliveryAddressForDraft,
+          deliveryCharge: deliveryChargeForDraft,
         );
         showScaffold(
             context: context,
@@ -8540,6 +8787,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               Provider.of<LocalProductProvider>(context, listen: false);
           _loadedLocalDraftId = order.id;
           localProductProvider.loadOrderForEditing(order.id);
+          _rehydrateLocalDraftMetadata(order);
           showCurrentOrderTab();
         },
         borderRadius: BorderRadius.circular(12),
@@ -9218,5 +9466,6 @@ class _OrderPanelState extends State<_OrderPanel> {
       _isLoadingOrderDetails = false;
       _error = null;
     });
+    widget.onOrderSelected(null);
   }
 }

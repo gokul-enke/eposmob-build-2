@@ -1938,6 +1938,8 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryTime, // Add deliveryTime
     bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
+    String? tableId,
+    String? alternatePhone,
     String? address,
     double? deliveryCharge,
   }) {
@@ -1994,6 +1996,8 @@ class LocalProductProvider extends ChangeNotifier {
       flatDiscount: _flatDiscount,
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
+      tableId: tableId,
+      alternatePhone: alternatePhone,
       address: address,
       deliveryCharge: deliveryCharge,
     );
@@ -2042,6 +2046,8 @@ class LocalProductProvider extends ChangeNotifier {
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
           toCustomerCredit: order.toCustomerCredit,
+          tableId: order.tableId,
+          alternatePhone: order.alternatePhone,
           address: order.address,
           deliveryCharge: order.deliveryCharge,
         );
@@ -2473,10 +2479,12 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     return availableStocks.where((stock) {
-      if (hasActiveStoreId && stock.storeId != null) {
+      if (hasActiveStoreId) {
+        // Primary matching by store_id (API provides this reliably)
         return stock.storeId == activeStoreId;
       }
 
+      // Fallback matching only when active store id is unavailable
       if (hasActiveStoreName) {
         final normalizedStockStoreName = stock.storeName?.trim().toLowerCase();
         return normalizedStockStoreName == normalizedActiveStoreName;
