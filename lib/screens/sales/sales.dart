@@ -1853,7 +1853,11 @@ Powered by CloudPOS''',
                             showDialog(
                               context: context,
                               builder: (dialogCtx) => CancelOrderModal(
-                                onConfirm: (paymentMethodId,
+                                initialRefundAmount:
+                                    order.priceSummary?.grandTotal ??
+                                        order.grantTotal ??
+                                        '',
+                                onConfirm: (paymentMethodId, refundAmount,
                                     deliveryChargeRefundable) async {
                                   try {
                                     final authModel = Provider.of<AuthModel>(
@@ -1867,6 +1871,7 @@ Powered by CloudPOS''',
                                       accessToken: authModel.token ?? "",
                                       orderId: order.id.toString(),
                                       paymentMethod: paymentMethodId,
+                                      refundAmount: refundAmount,
                                       deliveryChargeRefundable:
                                           deliveryChargeRefundable,
                                     );
