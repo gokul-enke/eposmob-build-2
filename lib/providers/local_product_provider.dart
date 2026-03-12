@@ -25,6 +25,11 @@ class LocalCartItem {
   num quantity;
   final Stock? selectedStock;
 
+  /// Tracks the actual number of units deducted from the selected stock.
+  /// This may be less than [quantity] when stock ran out (clamped at 0).
+  /// Used for accurate stock restoration on cart removal / clear.
+  num stockDeducted;
+
   LocalCartItem({
     required this.product,
     this.price,
@@ -33,6 +38,7 @@ class LocalCartItem {
     this.taxAmount,
     this.quantity = 1,
     this.selectedStock,
+    this.stockDeducted = 0,
   });
 }
 
@@ -354,6 +360,7 @@ class LocalProductProvider extends ChangeNotifier {
             taxAmount: hiveCartItem.taxAmount,
             taxRate: hiveCartItem.taxRate,
             selectedStock: selectedStock,
+            stockDeducted: hiveCartItem.stockDeducted,
           );
         }).toList();
 
@@ -425,6 +432,7 @@ class LocalProductProvider extends ChangeNotifier {
             serializedProduct:
                 HiveStringValue(json.encode(item.product.toJson())),
             serializedSelectedStock: serializedStock,
+            stockDeducted: item.stockDeducted,
           );
         }).toList();
 
@@ -510,6 +518,7 @@ class LocalProductProvider extends ChangeNotifier {
         taxAmount: hiveCartItem.taxAmount,
         taxRate: hiveCartItem.taxRate,
         selectedStock: selectedStock,
+        stockDeducted: hiveCartItem.stockDeducted,
       ));
     }
     notifyListeners();
@@ -543,6 +552,7 @@ class LocalProductProvider extends ChangeNotifier {
           taxAmount: hiveCartItem.taxAmount,
           taxRate: hiveCartItem.taxRate,
           selectedStock: selectedStock,
+          stockDeducted: hiveCartItem.stockDeducted,
         );
       }).toList();
 
@@ -634,6 +644,7 @@ class LocalProductProvider extends ChangeNotifier {
         serializedProduct:
             HiveStringValue(json.encode(cartItem.product.toJson())),
         serializedSelectedStock: serializedStock,
+        stockDeducted: cartItem.stockDeducted,
       );
       _cartItemsBox.add(hiveCartItem);
     }
@@ -665,6 +676,7 @@ class LocalProductProvider extends ChangeNotifier {
           serializedProduct:
               HiveStringValue(json.encode(item.product.toJson())),
           serializedSelectedStock: serializedStock,
+          stockDeducted: item.stockDeducted,
         );
       }).toList();
 
@@ -1197,12 +1209,14 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates the stock quantity for a specific stock entry
-  /// This method handles the actual stock tracking without validation
-  void _updateStockQuantity(Stock stock, num quantityChange, String operation) {
+  /// Updates the stock quantity for a specific stock entry.
+  /// Stock is clamped at 0 — it never goes negative.
+  /// Returns the **actual** quantity change applied (may differ from
+  /// [quantityChange] when clamping kicks in).
+  num _updateStockQuantity(Stock stock, num quantityChange, String operation) {
     if (!isStockEnabled) {
       debugPrint("📦 Stock management disabled - skipping stock update");
-      return;
+      return 0;
     }
 
     // Find and update the stock in the products list
@@ -1212,29 +1226,32 @@ class LocalProductProvider extends ChangeNotifier {
           if (product.stock![i].id == stock.id) {
             final currentStock = product.stock![i];
             final previousQuantity = currentStock.quantity ?? 0;
-            final newQuantity = previousQuantity + quantityChange;
+            final rawNewQuantity = previousQuantity + quantityChange;
+
+            // Clamp: stock can never go below 0
+            final num clampedQuantity = rawNewQuantity < 0 ? 0 : rawNewQuantity;
+            final num actualChange = clampedQuantity - previousQuantity;
 
             debugPrint("📦 STOCK UPDATE:");
             debugPrint("  - Stock ID: ${stock.id}");
             debugPrint("  - Operation: $operation");
-            debugPrint("  - Quantity Change: $quantityChange");
+            debugPrint("  - Requested Change: $quantityChange");
             debugPrint("  - Previous Quantity: $previousQuantity");
-            debugPrint("  - New Quantity: $newQuantity");
+            debugPrint("  - Raw New Quantity: $rawNewQuantity");
+            debugPrint("  - Clamped Quantity: $clampedQuantity");
+            debugPrint("  - Actual Change: $actualChange");
 
-            // Show warning if stock goes negative (but don't prevent the operation)
-            if (newQuantity < 0) {
+            if (rawNewQuantity < 0) {
               debugPrint(
-                  "⚠️ WARNING: Stock quantity went negative ($newQuantity) - this indicates overselling");
-              // Note: We don't prevent this - business decision is to allow sales even with negative stock
+                  "📦 Stock clamped at 0 (would have been $rawNewQuantity). Sale continues without further stock deduction.");
             }
 
             // Create a new Stock object with updated quantity (since Stock fields are final)
-            // 🔧 FIX: Preserve ALL stock fields including supplier, sku, unit, date, etc.
             product.stock![i] = Stock(
               id: currentStock.id,
               productId: currentStock.productId,
               supplier: currentStock.supplier,
-              quantity: newQuantity,
+              quantity: clampedQuantity,
               price: currentStock.price,
               sku: currentStock.sku,
               mrp: currentStock.mrp,
@@ -1254,13 +1271,14 @@ class LocalProductProvider extends ChangeNotifier {
 
             // Notify listeners to update UI
             notifyListeners();
-            return;
+            return actualChange;
           }
         }
       }
     }
 
     debugPrint("⚠️ Stock entry not found for update: ${stock.id}");
+    return 0;
   }
 
   /// Updates a specific stock entry within the products list
@@ -1322,8 +1340,10 @@ class LocalProductProvider extends ChangeNotifier {
 
       // STOCK DEDUCTION: Deduct the additional quantity being added
       if (isStockEnabled && selectedStock != null) {
-        _updateStockQuantity(
+        final actualChange = _updateStockQuantity(
             selectedStock, -cartQuantity, "ADD_TO_CART_INCREMENT");
+        // Track only what was actually deducted (actualChange is negative)
+        _cartItems[index].stockDeducted += actualChange.abs();
       }
 
       // If the product already exists in cart with the same stock, just update the quantity and price
@@ -1407,8 +1427,10 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("🆕 Adding new product to cart");
 
       // STOCK DEDUCTION: Deduct quantity for new cart item
+      num initialStockDeducted = 0;
       if (isStockEnabled && selectedStock != null) {
-        _updateStockQuantity(selectedStock, -cartQuantity, "ADD_TO_CART_NEW");
+        final actualChange = _updateStockQuantity(selectedStock, -cartQuantity, "ADD_TO_CART_NEW");
+        initialStockDeducted = actualChange.abs();
       }
 
       // Safely handle null product price when adding new cart item
@@ -1445,6 +1467,7 @@ class LocalProductProvider extends ChangeNotifier {
             taxRate: taxRate,
             taxAmount: calculatedTax,
             selectedStock: selectedStock,
+            stockDeducted: initialStockDeducted,
           ));
     }
 
@@ -1474,12 +1497,12 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (index != -1) {
       final cartItem = _cartItems[index];
-      final quantityToRestore = cartItem.quantity;
+      final quantityToRestore = cartItem.stockDeducted;
 
-      debugPrint("📝 Found cart item - removing ${quantityToRestore} units");
+      debugPrint("📝 Found cart item - cart qty: ${cartItem.quantity}, stockDeducted: $quantityToRestore");
 
-      // STOCK RESTORATION: Add back the quantity being removed
-      if (isStockEnabled && selectedStock != null) {
+      // STOCK RESTORATION: Add back only what was actually deducted
+      if (isStockEnabled && selectedStock != null && quantityToRestore > 0) {
         _updateStockQuantity(
             selectedStock, quantityToRestore, "REMOVE_FROM_CART");
       }
@@ -1595,19 +1618,20 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (index != -1) {
       debugPrint(
-          "📝 Found cart item - current quantity: ${_cartItems[index].quantity}");
+          "📝 Found cart item - current quantity: ${_cartItems[index].quantity}, stockDeducted: ${_cartItems[index].stockDeducted}");
 
       if (_cartItems[index].quantity > 1) {
-        // STOCK RESTORATION: Add back 1 unit
-        if (isStockEnabled && selectedStock != null) {
+        // STOCK RESTORATION: Only restore 1 unit if we actually have stock to restore
+        if (isStockEnabled && selectedStock != null && _cartItems[index].stockDeducted > 0) {
           _updateStockQuantity(selectedStock, 1, "DECREMENT_CART_ITEM");
+          _cartItems[index].stockDeducted -= 1;
         }
 
         _cartItems[index].quantity--;
         debugPrint("📝 Decremented quantity to: ${_cartItems[index].quantity}");
       } else {
-        // STOCK RESTORATION: Add back the last unit
-        if (isStockEnabled && selectedStock != null) {
+        // STOCK RESTORATION: Add back the last unit if we have stock to restore
+        if (isStockEnabled && selectedStock != null && _cartItems[index].stockDeducted > 0) {
           _updateStockQuantity(selectedStock, 1, "DECREMENT_CART_ITEM_REMOVE");
         }
 
@@ -1631,12 +1655,12 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("Cart items count: ${_cartItems.length}");
     debugPrint("Stock Management Enabled: $isStockEnabled");
 
-    // STOCK RESTORATION: Restore all quantities from cart items
+    // STOCK RESTORATION: Restore only the actually-deducted amounts
     if (isStockEnabled) {
       for (var cartItem in _cartItems) {
-        if (cartItem.selectedStock != null) {
+        if (cartItem.selectedStock != null && cartItem.stockDeducted > 0) {
           _updateStockQuantity(
-              cartItem.selectedStock!, cartItem.quantity, "CLEAR_CART");
+              cartItem.selectedStock!, cartItem.stockDeducted, "CLEAR_CART");
         }
       }
     }
@@ -1964,6 +1988,7 @@ class LocalProductProvider extends ChangeNotifier {
               taxRate: item.taxRate,
               taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
+              stockDeducted: item.stockDeducted,
             ))
         .toList();
 
@@ -2161,6 +2186,7 @@ class LocalProductProvider extends ChangeNotifier {
               taxRate: item.taxRate,
               taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
+              stockDeducted: item.stockDeducted,
             ))
         .toList();
 
@@ -2257,8 +2283,8 @@ class LocalProductProvider extends ChangeNotifier {
       // Release any stock reserved by the current cart before switching drafts.
       if (isStockEnabled) {
         for (final cartItem in _cartItems) {
-          if (cartItem.selectedStock != null) {
-            _updateStockQuantity(cartItem.selectedStock!, cartItem.quantity,
+          if (cartItem.selectedStock != null && cartItem.stockDeducted > 0) {
+            _updateStockQuantity(cartItem.selectedStock!, cartItem.stockDeducted,
                 "LOAD_ORDER_RELEASE");
           }
         }
@@ -2269,6 +2295,13 @@ class LocalProductProvider extends ChangeNotifier {
 
       // Add items from the saved order to the cart
       for (var item in order.items) {
+        num stockDeducted = 0;
+        if (isStockEnabled && item.selectedStock != null) {
+          final actualChange = _updateStockQuantity(
+              item.selectedStock!, -item.quantity, "LOAD_ORDER_RESERVE");
+          stockDeducted = actualChange.abs();
+        }
+
         _cartItems.add(LocalCartItem(
           product: item.product,
           quantity: item.quantity,
@@ -2277,12 +2310,8 @@ class LocalProductProvider extends ChangeNotifier {
           taxAmount: item.taxAmount,
           taxRate: item.taxRate,
           selectedStock: item.selectedStock,
+          stockDeducted: stockDeducted,
         ));
-
-        if (isStockEnabled && item.selectedStock != null) {
-          _updateStockQuantity(
-              item.selectedStock!, -item.quantity, "LOAD_ORDER_RESERVE");
-        }
       }
 
       // Set current order
@@ -2349,6 +2378,7 @@ class LocalProductProvider extends ChangeNotifier {
                 taxRate: item.taxRate,
                 taxAmount: item.taxAmount,
                 selectedStock: item.selectedStock,
+                stockDeducted: item.stockDeducted,
               ))
           .toList();
 
@@ -2449,13 +2479,16 @@ class LocalProductProvider extends ChangeNotifier {
     return product.stock!.fold(0, (sum, stock) => sum + (stock.quantity ?? 0));
   }
 
-  /// Gets a list of available stock options for a product
+  /// Gets a list of all stock options for a product
+  /// Returns all stocks regardless of quantity (zero/negative allowed)
+  /// because a sale should never be blocked — if the product is on screen,
+  /// the physical stock exists and the data may simply be stale.
   List<Stock> getStockOptions(GetProduct product) {
     if (product.stock == null) {
       return [];
     }
     return product.stock!
-        .where((stock) => stock.quantity != null && stock.quantity! > 0)
+        .where((stock) => stock.quantity != null)
         .toList();
   }
 
@@ -2466,6 +2499,8 @@ class LocalProductProvider extends ChangeNotifier {
   }) {
     final availableStocks = getStockOptions(product);
     if (availableStocks.isEmpty) {
+      // No stock entries with quantity data at all — return empty so caller
+      // falls back to base product pricing (non-stock mode).
       return const <Stock>[];
     }
 
@@ -2586,13 +2621,31 @@ class LocalProductProvider extends ChangeNotifier {
     if (isStockEnabled && selectedStock != null && difference != 0) {
       // If difference is positive we are selling more → deduct stock (-difference)
       // If difference is negative we are reducing sale → restore stock (+abs(difference))
-      _updateStockQuantity(
-          selectedStock, -difference, "SET_CART_ITEM_QUANTITY");
+      if (difference > 0) {
+        // Increasing quantity → deduct from stock
+        final actualChange = _updateStockQuantity(
+            selectedStock, -difference, "SET_CART_ITEM_QUANTITY_INCREASE");
+        _cartItems[index].stockDeducted += actualChange.abs();
+      } else {
+        // Decreasing quantity → restore to stock (only up to what was deducted)
+        final restoreAmount = difference.abs();
+        final maxRestore = _cartItems[index].stockDeducted;
+        final actualRestore = restoreAmount > maxRestore ? maxRestore : restoreAmount;
+        if (actualRestore > 0) {
+          _updateStockQuantity(
+              selectedStock, actualRestore, "SET_CART_ITEM_QUANTITY_DECREASE");
+          _cartItems[index].stockDeducted -= actualRestore;
+        }
+      }
     }
 
     if (newQuantity <= 0) {
-      // Remove item
+      // Remove item — restore any remaining stock that was deducted
       debugPrint("🗑️ New quantity <= 0 – removing item from cart");
+      if (isStockEnabled && selectedStock != null && _cartItems[index].stockDeducted > 0) {
+        _updateStockQuantity(
+            selectedStock, _cartItems[index].stockDeducted, "SET_CART_ITEM_QUANTITY_REMOVE");
+      }
       _cartItems.removeAt(index);
     } else {
       // Update quantity
