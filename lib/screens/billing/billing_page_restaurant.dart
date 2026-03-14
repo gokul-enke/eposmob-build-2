@@ -55,6 +55,7 @@ import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
+import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:provider/provider.dart';
 
 import 'package:websafe_svg/websafe_svg.dart';
@@ -2045,6 +2046,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                   },
                 );
               },
+            ),
+            OpenCashDrawerButton(
+              color: Colors.grey.shade600,
             ),
             // Sync button next to keyboard icon
             const SyncButton(

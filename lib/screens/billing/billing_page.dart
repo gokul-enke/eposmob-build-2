@@ -35,6 +35,7 @@ import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
@@ -52,6 +53,7 @@ import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
+import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:provider/provider.dart';
 
 import 'package:websafe_svg/websafe_svg.dart';
@@ -172,6 +174,8 @@ class BillingPageState extends State<BillingPage>
   static const double _sidebarMinWidth = 250;
   static const double _sidebarMaxWidth = 420;
   static const double _mainContentMinWidth = 620;
+  static const String _billingSidebarWidthPrefKey =
+      'billing_sidebar_width_fraction';
 
   Timer? _debounceTimer;
 
@@ -209,6 +213,7 @@ class BillingPageState extends State<BillingPage>
   @override
   void initState() {
     super.initState();
+    _loadSidebarWidthPreference();
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     // debugPrint("accessToken From AuthModel $accessToken");
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
@@ -1332,6 +1337,40 @@ class BillingPageState extends State<BillingPage>
     return desiredWidth.clamp(minWidth, maxWidth).toDouble();
   }
 
+  Future<void> _loadSidebarWidthPreference() async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final savedFraction = await SharedPreferenceProvider()
+          .getBillingSidebarWidthFraction(userId: authModel.userId);
+
+      if (savedFraction == null ||
+          !savedFraction.isFinite ||
+          savedFraction <= 0) {
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _sidebarWidthFraction = savedFraction;
+      });
+    } catch (e) {
+      debugPrint('Failed to load billing sidebar width preference: $e');
+    }
+  }
+
+  Future<void> _saveSidebarWidthPreference() async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      await SharedPreferenceProvider().saveBillingSidebarWidthFraction(
+        _sidebarWidthFraction,
+        userId: authModel.userId,
+      );
+    } catch (e) {
+      debugPrint('Failed to save billing sidebar width preference: $e');
+    }
+  }
+
   Widget _buildSidebarResizeHandle(double usableWidth) {
     final bool isActive = _isSidebarResizeHandleHovered || _isSidebarResizing;
 
@@ -1371,12 +1410,14 @@ class BillingPageState extends State<BillingPage>
           setState(() {
             _isSidebarResizing = false;
           });
+          unawaited(_saveSidebarWidthPreference());
         },
         onHorizontalDragCancel: () {
           setState(() {
             _isSidebarResizing = false;
             _isSidebarResizeHandleHovered = false;
           });
+          unawaited(_saveSidebarWidthPreference());
         },
         child: SizedBox(
           width: _sidebarResizeHandleWidth,
@@ -1895,6 +1936,9 @@ class BillingPageState extends State<BillingPage>
                   },
                 );
               },
+            ),
+            OpenCashDrawerButton(
+              color: Colors.grey.shade600,
             ),
             // Sync button next to keyboard icon
             const SyncButton(

@@ -3,6 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferenceProvider extends ChangeNotifier {
+  static const String _billingSidebarWidthKey =
+      'billing_sidebar_width_fraction';
+
+  String _billingSidebarWidthPrefKey({int? userId}) {
+    if (userId == null) {
+      return _billingSidebarWidthKey;
+    }
+    return '${_billingSidebarWidthKey}_$userId';
+  }
+
   saveAccessToken(String accessToken) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
@@ -243,6 +253,32 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<void> clearManualOfflineMode() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('manual_offline_mode');
+  }
+
+  Future<void> saveBillingSidebarWidthFraction(
+    double fraction, {
+    int? userId,
+  }) async {
+    if (!fraction.isFinite || fraction <= 0) return;
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(
+      _billingSidebarWidthPrefKey(userId: userId),
+      fraction,
+    );
+  }
+
+  Future<double?> getBillingSidebarWidthFraction({int? userId}) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final scopedValue = prefs.getDouble(
+      _billingSidebarWidthPrefKey(userId: userId),
+    );
+    if (scopedValue != null) {
+      return scopedValue;
+    }
+
+    return prefs.getDouble(_billingSidebarWidthKey);
   }
 
   // ==================== ZATCA METHODS ====================

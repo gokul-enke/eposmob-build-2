@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/models/language.dart';
-import 'package:pos_machine/providers/auth_model.dart';
+  import 'package:pos_machine/models/language.dart';
+  import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
@@ -49,6 +49,7 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
+  final Map<int, FocusNode> _translateButtonFocusNodes = {};
   bool _languagesRequested = false;
 
   // Focus nodes for each text field
@@ -60,6 +61,7 @@ class _AddProductWithBarcodeModalState
   final FocusNode _purchasePriceFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _generateBarcodeFocusNode = FocusNode();
 
   bool isLoading = false;
   bool isSaveAndCreateLoading = false;
@@ -83,6 +85,9 @@ class _AddProductWithBarcodeModalState
     _barcodeFocusNode.addListener(_handleBarcodeFocusChange);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _productNameFocusNode.requestFocus();
+      }
       _fetchLanguages();
     });
   }
@@ -678,6 +683,10 @@ class _AddProductWithBarcodeModalState
     }
     _languageNameControllers.clear();
     _languageTranslating.clear();
+    for (final node in _translateButtonFocusNodes.values) {
+      node.dispose();
+    }
+    _translateButtonFocusNodes.clear();
 
     // Dispose focus nodes
     _barcodeFocusNode.dispose();
@@ -688,6 +697,7 @@ class _AddProductWithBarcodeModalState
     _purchasePriceFocusNode.dispose();
     _unitFocusNode.dispose();
     _categoryFocusNode.dispose();
+    _generateBarcodeFocusNode.dispose();
 
     isLoading = false;
     isSaveAndCreateLoading = false;
@@ -745,7 +755,37 @@ class _AddProductWithBarcodeModalState
         }
       }
       _languageTranslating.putIfAbsent(language.id, () => false);
+      _translateButtonFocusNodes.putIfAbsent(language.id, () => FocusNode());
     }
+  }
+
+  ButtonStyle _buildSquareActionButtonStyle() {
+    return ButtonStyle(
+      backgroundColor: WidgetStateProperty.all(ColorManager.kPrimaryColor),
+      foregroundColor: WidgetStateProperty.all(Colors.white),
+      padding: WidgetStateProperty.all(EdgeInsets.zero),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(7),
+        ),
+      ),
+      elevation: WidgetStateProperty.resolveWith<double>(
+        (states) => states.contains(WidgetState.focused) ? 9 : 4,
+      ),
+      shadowColor: WidgetStateProperty.resolveWith<Color>(
+        (states) => states.contains(WidgetState.focused)
+            ? ColorManager.kPrimaryColor.withOpacity(0.45)
+            : Colors.black.withOpacity(0.18),
+      ),
+      side: WidgetStateProperty.resolveWith<BorderSide>(
+        (states) => states.contains(WidgetState.focused)
+            ? BorderSide(
+                color: Colors.white.withOpacity(0.9),
+                width: 1.2,
+              )
+            : BorderSide.none,
+      ),
+    );
   }
 
   Future<void> _translateLanguage(Language language) async {
@@ -793,6 +833,11 @@ class _AddProductWithBarcodeModalState
     if (mounted) {
       setState(() {
         _languageTranslating[language.id] = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _translateButtonFocusNodes[language.id]?.requestFocus();
+        }
       });
     }
   }
@@ -866,7 +911,32 @@ class _AddProductWithBarcodeModalState
     List<Category>? categoryList = categoryProvider.category;
 
     final languageProvider = Provider.of<LanguageProvider>(context);
-    return Dialog(
+    return Focus(
+      autofocus: false,
+      canRequestFocus: false,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.f4) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            Navigator.pop(context, null);
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f8) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            _submitForm(keepOpen: true);
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f9) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            _submitForm(keepOpen: false);
+          }
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
@@ -1035,7 +1105,7 @@ class _AddProductWithBarcodeModalState
                   children: [
                     // Close Button
                     SizedBox(
-                      width: 100,
+                      width: 115,
                       height: 40,
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context, null),
@@ -1045,19 +1115,44 @@ class _AddProductWithBarcodeModalState
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: Text(
-                          "Close",
-                          style: TextStyle(
-                            color: ColorManager.kPrimaryColor,
-                            fontSize: FontSize.s12,
-                          ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Close',
+                              style: TextStyle(
+                                color: ColorManager.kPrimaryColor,
+                                fontSize: FontSize.s12,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: ColorManager.kPrimaryColor
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                'F4',
+                                style: TextStyle(
+                                  color: ColorManager.kPrimaryColor
+                                      .withOpacity(0.7),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     // Save and Create Button
                     SizedBox(
-                      width: 140,
+                      width: 172,
                       height: 40,
                       child: ElevatedButton(
                         onPressed: (isLoading || isSaveAndCreateLoading)
@@ -1080,12 +1175,37 @@ class _AddProductWithBarcodeModalState
                                       ColorManager.kPrimaryColor),
                                 ),
                               )
-                            : Text(
-                                "Save and Create",
-                                style: TextStyle(
-                                  color: ColorManager.kPrimaryColor,
-                                  fontSize: FontSize.s12,
-                                ),
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Save and Create',
+                                    style: TextStyle(
+                                      color: ColorManager.kPrimaryColor,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: ColorManager.kPrimaryColor
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: Text(
+                                      'F8',
+                                      style: TextStyle(
+                                        color: ColorManager.kPrimaryColor
+                                            .withOpacity(0.7),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
@@ -1114,12 +1234,35 @@ class _AddProductWithBarcodeModalState
                                       Colors.white),
                                 ),
                               )
-                            : const Text(
-                                "Save",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: FontSize.s12,
-                                ),
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Save',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: const Text(
+                                      'F9',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
@@ -1130,7 +1273,8 @@ class _AddProductWithBarcodeModalState
           ),
         ),
       ),
-    );
+    ), // Dialog
+  ); // Focus
   }
 
   // Helper method for text fields
@@ -1182,6 +1326,7 @@ class _AddProductWithBarcodeModalState
           child: TextFormField(
             controller: controller,
             focusNode: focusNode,
+            autofocus: focusNode == _productNameFocusNode,
             keyboardType: keyboardType,
             textInputAction: TextInputAction.next,
             onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
@@ -1304,16 +1449,18 @@ class _AddProductWithBarcodeModalState
               height: size.height * 0.048,
               width: size.height * 0.048,
               child: ElevatedButton(
-                onPressed: widget.barcode != null || isBarcodeGenerating
+                focusNode: _generateBarcodeFocusNode,
+                onPressed: widget.barcode != null
                     ? null
-                    : generateBarcode,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ColorManager.kPrimaryColor,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                ),
+                    : () async {
+                        _unfocusAllExcept(null);
+                        _generateBarcodeFocusNode.requestFocus();
+                        await generateBarcode();
+                        if (mounted) {
+                          _generateBarcodeFocusNode.requestFocus();
+                        }
+                      },
+                style: _buildSquareActionButtonStyle(),
                 child: isBarcodeGenerating
                     ? const SizedBox(
                         width: 16,
@@ -1425,6 +1572,7 @@ class _AddProductWithBarcodeModalState
   Widget _buildLanguageField(Size size, Language language) {
     final controller = _languageNameControllers[language.id];
     final isTranslating = _languageTranslating[language.id] ?? false;
+    final translateFocusNode = _translateButtonFocusNodes[language.id];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1476,15 +1624,10 @@ class _AddProductWithBarcodeModalState
               child: Tooltip(
                 message: 'Translate',
                 child: ElevatedButton(
+                  focusNode: translateFocusNode,
                   onPressed:
                       isTranslating ? null : () => _translateLanguage(language),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ColorManager.kPrimaryColor,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                  ),
+                  style: _buildSquareActionButtonStyle(),
                   child: isTranslating
                       ? const SizedBox(
                           width: 16,
