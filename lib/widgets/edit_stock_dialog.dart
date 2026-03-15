@@ -288,9 +288,19 @@ Future<bool> showEditStockDialog({
                                       selectedRackId!.trim().isNotEmpty)
                                   ? selectedRackId!.trim()
                                   : rackController.text.trim();
+                                final quantityInput =
+                                  quantityController.text.trim();
+                                final initialQuantityNormalized =
+                                  initialQuantity.trim();
+                                final String? payloadQuantity =
+                                  (quantityInput.isEmpty ||
+                                      quantityInput ==
+                                        initialQuantityNormalized)
+                                    ? null
+                                    : quantityInput;
 
                               debugPrint(
-                                  '🛠️ [EditStockDialog] Payload summary: retail=${retailPriceController.text.trim()}, mrp=${mrpController.text.trim()}, purchase=${purchasePriceController.text.trim()}, qty=${quantityController.text.trim()}, rack=$payloadRack');
+                                  '🛠️ [EditStockDialog] Payload summary: retail=${retailPriceController.text.trim()}, mrp=${mrpController.text.trim()}, purchase=${purchasePriceController.text.trim()}, qtyIncluded=${payloadQuantity != null}, qtyValue=${payloadQuantity ?? "<omitted>"}, rack=$payloadRack');
 
                               final bool success =
                                   await Provider.of<StockProvider>(
@@ -302,7 +312,7 @@ Future<bool> showEditStockDialog({
                                 mrp: mrpController.text.trim(),
                                 purchasePrice:
                                     purchasePriceController.text.trim(),
-                                quantity: quantityController.text.trim(),
+                                quantity: payloadQuantity,
                                 rack: payloadRack,
                                 accessToken: accessToken,
                               );

@@ -1163,7 +1163,7 @@ class StockProvider extends ChangeNotifier {
     required String retailPrice,
     required String mrp,
     required String purchasePrice,
-    required String quantity,
+    String? quantity,
     required String rack,
     required String accessToken,
   }) async {
@@ -1176,17 +1176,20 @@ class StockProvider extends ChangeNotifier {
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
-      final payload = {
+      final payload = <String, dynamic>{
         'retail_price': retailPrice,
         'mrp': mrp,
         'purchase_price': purchasePrice,
-        'quantity': quantity,
         'rack': rack,
       };
+      if (quantity != null && quantity.trim().isNotEmpty) {
+        payload['quantity'] = quantity.trim();
+      }
 
       debugPrint('🚀 [StockProvider.updateStockDetails] REQUEST START');
       debugPrint('   URL: $url');
       debugPrint('   STOCK ID: $stockId');
+      debugPrint('   QUANTITY INCLUDED: ${payload.containsKey('quantity')}');
       debugPrint('   PAYLOAD: ${jsonEncode(payload)}');
 
       final response = await http.post(
