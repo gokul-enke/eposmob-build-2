@@ -625,8 +625,12 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save cart items to Hive
   void _saveCartToHive() {
+    debugPrint(
+        "💾 [Hive] Persisting ${_cartItems.length} cart items to 'cart_items' box...");
     _cartItemsBox.clear();
+    int idx = 0;
     for (var cartItem in _cartItems) {
+      idx++;
       // Serialize selected stock if it exists
       HiveStringValue? serializedStock;
       if (cartItem.selectedStock != null) {
@@ -647,7 +651,11 @@ class LocalProductProvider extends ChangeNotifier {
         stockDeducted: cartItem.stockDeducted,
       );
       _cartItemsBox.add(hiveCartItem);
+      debugPrint(
+          "  #$idx ✅ Cart item productId=${cartItem.product.productId}, qty=${cartItem.quantity}, price=${cartItem.price}, mrp=${cartItem.mrp}, taxRate=${cartItem.taxRate}, stockId=${cartItem.selectedStock?.id}");
     }
+    debugPrint(
+        "✅ [Hive] Cart persistence complete. Box 'cart_items' now has ${_cartItemsBox.length} entries");
   }
 
   // Save orders to Hive
@@ -1567,38 +1575,89 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateProductPricingInCart(
-      int productId, double newPrice, double newMrp, double newTax) {
+    int productId,
+    double newPrice,
+    double newMrp,
+    double newTax, {
+    GetProduct? updatedProduct,
+  }) {
+    debugPrint(
+        "🔁 [CartUpdate] Start productId=$productId, newPrice=$newPrice, newMrp=$newMrp, newTax=$newTax, withSnapshot=${updatedProduct != null}");
     bool cartUpdated = false;
-    for (var item in _cartItems) {
+    int cartUpdatedCount = 0;
+    for (int i = 0; i < _cartItems.length; i++) {
+      final item = _cartItems[i];
       if (item.product.productId == productId) {
-        item.price = newPrice;
-        item.mrp = newMrp;
-        item.taxRate = newTax; // Changed from item.tax to item.taxRate
-        // 🔧 FIX: Recalculate taxAmount
-        item.taxAmount = (newPrice * newTax) / (100 + newTax);
+        if (updatedProduct != null) {
+          _cartItems[i] = LocalCartItem(
+            product: updatedProduct,
+            price: newPrice,
+            mrp: newMrp,
+            taxRate: newTax,
+            taxAmount: (newPrice * newTax) / (100 + newTax),
+            quantity: item.quantity,
+            selectedStock: item.selectedStock,
+            stockDeducted: item.stockDeducted,
+          );
+        } else {
+          item.price = newPrice;
+          item.mrp = newMrp;
+          item.taxRate = newTax; // Changed from item.tax to item.taxRate
+          // 🔧 FIX: Recalculate taxAmount
+          item.taxAmount = (newPrice * newTax) / (100 + newTax);
+        }
         cartUpdated = true;
+        cartUpdatedCount++;
       }
     }
 
     bool savedOrdersUpdated = false;
+    int savedOrderItemUpdatedCount = 0;
     for (var order in _savedOrders) {
-      for (var orderItem in order.items) {
+      for (int i = 0; i < order.items.length; i++) {
+        final orderItem = order.items[i];
         if (orderItem.product.productId == productId) {
-          orderItem.price = newPrice;
-          orderItem.mrp = newMrp;
+          if (updatedProduct != null) {
+            order.items[i] = LocalCartItem(
+              product: updatedProduct,
+              price: newPrice,
+              mrp: newMrp,
+              taxRate: newTax,
+              taxAmount: (newPrice * newTax) / (100 + newTax),
+              quantity: orderItem.quantity,
+              selectedStock: orderItem.selectedStock,
+              stockDeducted: orderItem.stockDeducted,
+            );
+          } else {
+            orderItem.price = newPrice;
+            orderItem.mrp = newMrp;
+            orderItem.taxRate = newTax;
+            orderItem.taxAmount = (newPrice * newTax) / (100 + newTax);
+          }
           savedOrdersUpdated = true;
+          savedOrderItemUpdatedCount++;
         }
       }
     }
 
+    debugPrint(
+        "📊 [CartUpdate] Matched cartItems=$cartUpdatedCount, savedOrderItems=$savedOrderItemUpdatedCount");
+
     if (cartUpdated) {
       _saveCartToHive();
+      debugPrint("💾 [CartUpdate] Cart Hive sync complete for productId=$productId");
     }
     if (savedOrdersUpdated) {
       _saveSavedOrdersToHive();
+      debugPrint(
+          "💾 [CartUpdate] Saved orders Hive sync complete for productId=$productId");
     }
     if (cartUpdated || savedOrdersUpdated) {
       notifyListeners();
+      debugPrint("✅ [CartUpdate] notifyListeners() called for productId=$productId");
+    } else {
+      debugPrint(
+          "ℹ️ [CartUpdate] No matching cart/saved-order items found for productId=$productId");
     }
   }
 

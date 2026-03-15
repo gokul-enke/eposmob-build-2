@@ -469,6 +469,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     FocusScope.of(context).unfocus();
 
+    debugPrint('🛠️ [ProductDetailsDialog] Save started for productId=${selectedProduct?.productId}');
+
     setState(() {
       _isSaving = true;
     });
@@ -542,6 +544,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         throw const HttpException('Product ID missing.');
       }
 
+      debugPrint('🛠️ [ProductDetailsDialog] Edit payload summary: '
+          'id=$productId, name="$updatedName", barcode="$updatedBarcode", '
+          'price=$priceForApi, mrp=$mrpForApi, tax=${_taxController.text}, '
+          'categoryId=$resolvedCategoryId, unitId=$_selectedUnitId, rack=$_selectedRackId');
+
       final int? rackForApi = int.tryParse(_selectedRackId ?? '') ?? rackNumber;
 
       final response = await productProvider.editProduct(
@@ -566,7 +573,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       final String successMessage = response['message']?.toString() ??
           'Product details updated successfully.';
 
+        debugPrint('✅ [ProductDetailsDialog] Server edit success for id=$productId: $successMessage');
+
+        debugPrint('🔄 [ProductDetailsDialog] Refreshing local product cache via fetchProductsFromAPI()...');
+
       await localProductProvider.fetchProductsFromAPI();
+
+        debugPrint('✅ [ProductDetailsDialog] Product cache refresh finished for id=$productId');
 
       ProductPrice? updatedProductPrice;
       if (product.price != null) {
@@ -662,7 +675,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           localProductProvider.getProductById(int.parse(productId)) ??
               updatedProduct;
 
+        debugPrint('🧩 [ProductDetailsDialog] Using product snapshot source: '
+          '${localProductProvider.getProductById(int.parse(productId)) != null ? "provider" : "fallback_local"}');
+
       localProductProvider.updateProduct(resolvedUpdatedProduct);
+
+        debugPrint('💾 [ProductDetailsDialog] Product snapshot updated in provider/Hive for id=$productId');
 
       final updatedTaxValue = double.tryParse(_taxController.text) ?? 0.0;
       localProductProvider.updateProductPricingInCart(
@@ -670,7 +688,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         updatedPriceValue,
         updatedMrpValue,
         updatedTaxValue,
+        updatedProduct: resolvedUpdatedProduct,
       );
+
+      debugPrint('🛒 [ProductDetailsDialog] Cart and saved orders refresh requested for id=$productId '
+          '(price=$updatedPriceValue, mrp=$updatedMrpValue, tax=$updatedTaxValue)');
 
       if (!mounted) return;
       setState(() {
@@ -685,7 +707,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         context: context,
         message: successMessage,
       );
+      debugPrint('🏁 [ProductDetailsDialog] Save flow completed for id=$productId');
     } catch (error) {
+      debugPrint('❌ [ProductDetailsDialog] Save flow failed: $error');
       if (mounted) {
         setState(() {
           _isSaving = false;
