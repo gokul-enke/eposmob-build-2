@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
@@ -260,8 +261,12 @@ Future<bool> showEditStockDialog({
                             title: 'Update',
                             boxColor: ColorManager.kPrimaryColor,
                             textColor: Colors.white,
+                            isLoading: isSubmitting,
                             fct: () async {
                               if (isSubmitting) return;
+
+                              debugPrint(
+                                  '🛠️ [EditStockDialog] Update tapped for stockId=$stockId');
 
                               final accessToken =
                                   Provider.of<AuthModel>(parentContext,
@@ -279,6 +284,14 @@ Future<bool> showEditStockDialog({
                                 isSubmitting = true;
                               });
 
+                              final payloadRack = (selectedRackId != null &&
+                                      selectedRackId!.trim().isNotEmpty)
+                                  ? selectedRackId!.trim()
+                                  : rackController.text.trim();
+
+                              debugPrint(
+                                  '🛠️ [EditStockDialog] Payload summary: retail=${retailPriceController.text.trim()}, mrp=${mrpController.text.trim()}, purchase=${purchasePriceController.text.trim()}, qty=${quantityController.text.trim()}, rack=$payloadRack');
+
                               final bool success =
                                   await Provider.of<StockProvider>(
                                 parentContext,
@@ -290,20 +303,75 @@ Future<bool> showEditStockDialog({
                                 purchasePrice:
                                     purchasePriceController.text.trim(),
                                 quantity: quantityController.text.trim(),
-                                rack: (selectedRackId != null &&
-                                        selectedRackId!.trim().isNotEmpty)
-                                    ? selectedRackId!.trim()
-                                    : rackController.text.trim(),
+                                rack: payloadRack,
                                 accessToken: accessToken,
                               );
 
                               if (!parentContext.mounted) return;
 
                               if (success) {
-                                await Provider.of<LocalProductProvider>(
+                                final localProductProvider =
+                                    Provider.of<LocalProductProvider>(
                                   parentContext,
                                   listen: false,
-                                ).fetchProductsFromAPI();
+                                );
+
+                                debugPrint(
+                                    '🔄 [EditStockDialog] Stock update succeeded. Refreshing products with refresh=true...');
+                                await localProductProvider.fetchProductsFromAPI(
+                                  refresh: true,
+                                );
+                                debugPrint(
+                                    '✅ [EditStockDialog] Product refresh completed after stock update for stockId=$stockId');
+
+                                GetProduct? refreshedProduct;
+                                Stock? refreshedStock;
+
+                                for (final product
+                                    in localProductProvider.products) {
+                                  final stocks = product.stock;
+                                  if (stocks == null || stocks.isEmpty) {
+                                    continue;
+                                  }
+                                  for (final stock in stocks) {
+                                    if (stock.id == stockId) {
+                                      refreshedProduct = product;
+                                      refreshedStock = stock;
+                                      break;
+                                    }
+                                  }
+                                  if (refreshedStock != null) {
+                                    break;
+                                  }
+                                }
+
+                                final double reconciledPrice =
+                                    double.tryParse(
+                                          refreshedStock?.price ??
+                                              retailPriceController.text.trim(),
+                                        ) ??
+                                        0.0;
+                                final double reconciledMrp =
+                                    double.tryParse(
+                                          refreshedStock?.mrp ??
+                                              mrpController.text.trim(),
+                                        ) ??
+                                        0.0;
+
+                                debugPrint(
+                                    '🧩 [EditStockDialog] Reconcile source: productFound=${refreshedProduct != null}, stockFound=${refreshedStock != null}, price=$reconciledPrice, mrp=$reconciledMrp');
+
+                                localProductProvider
+                                    .updateStockPricingInCartByStockId(
+                                  stockId: stockId,
+                                  newPrice: reconciledPrice,
+                                  newMrp: reconciledMrp,
+                                  updatedProduct: refreshedProduct,
+                                  updatedStock: refreshedStock,
+                                );
+
+                                debugPrint(
+                                    '🛒 [EditStockDialog] Cart/saved-order stock reconciliation requested for stockId=$stockId');
 
                                 if (onSuccess != null) {
                                   await onSuccess(
@@ -327,8 +395,13 @@ Future<bool> showEditStockDialog({
                                   context: parentContext,
                                   message: 'Stock updated successfully',
                                 );
+                                debugPrint(
+                                    '🏁 [EditStockDialog] Stock update flow completed for stockId=$stockId');
                                 return;
                               }
+
+                              debugPrint(
+                                  '❌ [EditStockDialog] Stock update failed for stockId=$stockId');
 
                               showScaffoldError(
                                 context: parentContext,

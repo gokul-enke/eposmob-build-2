@@ -1176,6 +1176,19 @@ class StockProvider extends ChangeNotifier {
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
+      final payload = {
+        'retail_price': retailPrice,
+        'mrp': mrp,
+        'purchase_price': purchasePrice,
+        'quantity': quantity,
+        'rack': rack,
+      };
+
+      debugPrint('🚀 [StockProvider.updateStockDetails] REQUEST START');
+      debugPrint('   URL: $url');
+      debugPrint('   STOCK ID: $stockId');
+      debugPrint('   PAYLOAD: ${jsonEncode(payload)}');
+
       final response = await http.post(
         url,
         headers: {
@@ -1183,27 +1196,34 @@ class StockProvider extends ChangeNotifier {
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
         },
-        body: jsonEncode({
-          'retail_price': retailPrice,
-          'mrp': mrp,
-          'purchase_price': purchasePrice,
-          'quantity': quantity,
-          'rack': rack,
-        }),
+        body: jsonEncode(payload),
       );
+
+      debugPrint('📥 [StockProvider.updateStockDetails] RESPONSE');
+      debugPrint('   STATUS: ${response.statusCode}');
+      debugPrint('   BODY: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['status'] == 'success') {
+          debugPrint(
+              '✅ [StockProvider.updateStockDetails] API success for stockId=$stockId. Refreshing stock list...');
           // Refresh the stock list after successful update
           await loadAllStocks(accessToken);
+          debugPrint(
+              '✅ [StockProvider.updateStockDetails] Stock list refresh complete for stockId=$stockId');
           return true;
         }
+        debugPrint(
+            '⚠️ [StockProvider.updateStockDetails] API returned 200 but status was not success: ${responseData['status']}');
       }
+
+      debugPrint(
+          '❌ [StockProvider.updateStockDetails] Request failed for stockId=$stockId with status=${response.statusCode}');
 
       return false;
     } catch (e) {
-      debugPrint('Error updating stock details: $e');
+      debugPrint('❌ [StockProvider.updateStockDetails] Exception: $e');
       return false;
     }
   }

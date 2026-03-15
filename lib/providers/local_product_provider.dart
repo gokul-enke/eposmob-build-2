@@ -1661,6 +1661,81 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  void updateStockPricingInCartByStockId({
+    required int stockId,
+    required double newPrice,
+    required double newMrp,
+    GetProduct? updatedProduct,
+    Stock? updatedStock,
+  }) {
+    debugPrint(
+        "🔁 [StockCartUpdate] Start stockId=$stockId, newPrice=$newPrice, newMrp=$newMrp, withProductSnapshot=${updatedProduct != null}, withStockSnapshot=${updatedStock != null}");
+
+    bool cartUpdated = false;
+    int cartUpdatedCount = 0;
+    for (int i = 0; i < _cartItems.length; i++) {
+      final item = _cartItems[i];
+      if (item.selectedStock?.id == stockId) {
+        final effectiveTax = item.taxRate ?? 0.0;
+        _cartItems[i] = LocalCartItem(
+          product: updatedProduct ?? item.product,
+          price: newPrice,
+          mrp: newMrp,
+          taxRate: effectiveTax,
+          taxAmount: (newPrice * effectiveTax) / (100 + effectiveTax),
+          quantity: item.quantity,
+          selectedStock: updatedStock ?? item.selectedStock,
+          stockDeducted: item.stockDeducted,
+        );
+        cartUpdated = true;
+        cartUpdatedCount++;
+      }
+    }
+
+    bool savedOrdersUpdated = false;
+    int savedOrderItemUpdatedCount = 0;
+    for (var order in _savedOrders) {
+      for (int i = 0; i < order.items.length; i++) {
+        final orderItem = order.items[i];
+        if (orderItem.selectedStock?.id == stockId) {
+          final effectiveTax = orderItem.taxRate ?? 0.0;
+          order.items[i] = LocalCartItem(
+            product: updatedProduct ?? orderItem.product,
+            price: newPrice,
+            mrp: newMrp,
+            taxRate: effectiveTax,
+            taxAmount: (newPrice * effectiveTax) / (100 + effectiveTax),
+            quantity: orderItem.quantity,
+            selectedStock: updatedStock ?? orderItem.selectedStock,
+            stockDeducted: orderItem.stockDeducted,
+          );
+          savedOrdersUpdated = true;
+          savedOrderItemUpdatedCount++;
+        }
+      }
+    }
+
+    debugPrint(
+        "📊 [StockCartUpdate] Matched cartItems=$cartUpdatedCount, savedOrderItems=$savedOrderItemUpdatedCount");
+
+    if (cartUpdated) {
+      _saveCartToHive();
+      debugPrint("💾 [StockCartUpdate] Cart Hive sync complete for stockId=$stockId");
+    }
+    if (savedOrdersUpdated) {
+      _saveSavedOrdersToHive();
+      debugPrint(
+          "💾 [StockCartUpdate] Saved orders Hive sync complete for stockId=$stockId");
+    }
+    if (cartUpdated || savedOrdersUpdated) {
+      notifyListeners();
+      debugPrint("✅ [StockCartUpdate] notifyListeners() called for stockId=$stockId");
+    } else {
+      debugPrint(
+          "ℹ️ [StockCartUpdate] No matching cart/saved-order items found for stockId=$stockId");
+    }
+  }
+
   /// Decrements the quantity of the product in the cart.
   /// If the quantity becomes less than 1, the product is removed from the cart.
   /// Also handles stock restoration when stock management is enabled.
