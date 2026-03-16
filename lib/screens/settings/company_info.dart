@@ -13,6 +13,7 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/get_store.dart';
 
@@ -33,6 +34,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   int? _customerId;
   String? _userRole;
   String? _tokenType;
+  String? _appVersion;
   int? _companyId;
   bool _loading = true;
 
@@ -69,6 +71,9 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       // Fetch company name from store API
       await _fetchCompanyName();
 
+      // Read app version from installed package metadata
+      await _loadAppVersion();
+
       setState(() {
         _loading = false;
       });
@@ -77,6 +82,16 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       setState(() {
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      _appVersion = '${packageInfo.version}.${packageInfo.buildNumber}';
+    } catch (e) {
+      debugPrint('Error loading app version: $e');
+      _appVersion = 'Not available';
     }
   }
 
@@ -279,8 +294,6 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildInfoTable(),
-                          const SizedBox(height: 20),
-                          _buildNoteSection(),
                         ],
                       ),
                     ),
@@ -334,6 +347,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         _buildTableRow('Token Type', _tokenType ?? 'Loading...'),
         _buildTableRow('Timezone', _timeZone ?? 'Not available'),
         _buildTableRow('Base URL', APPUrl.baseURL),
+        _buildTableRow('App Version', _appVersion ?? 'Loading...'),
         _buildTableRow('API Key', _apiKey ?? 'Not available'),
       ],
     );
@@ -367,43 +381,6 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildNoteSection() {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: Colors.yellow.shade50,
-        border: Border.all(color: Colors.yellow.shade200),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Note:',
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s14,
-              0.27,
-              Colors.orange.shade700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '• API Key is sensitive information and should be kept secure\n'
-            '• User information is fetched from local storage\n'
-            '• Company Name is fetched from the first store in the store list',
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s12,
-              0.27,
-              Colors.black.withOpacity(0.6),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
