@@ -771,7 +771,8 @@ class KotThermalPrinter {
 
     List<int> bytes = [];
     bytes += generator.reset();
-    bytes += generator.imageRaster(image, align: PosAlign.center);
+    bytes += generator.image(image, align: PosAlign.center);
+    bytes += generator.feed(2);
     bytes += generator.cut();
 
     await printerManager.send(type: printerType, bytes: bytes);

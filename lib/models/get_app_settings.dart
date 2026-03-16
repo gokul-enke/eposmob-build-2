@@ -24,32 +24,35 @@ class AppSettings {
   final bool posPrintDoubleBill;
   final bool skipCustomerSelection;
   final bool hideDefaultPhone;
+  final bool freeDeliveryEnabled;
+  final String freeDeliveryMinimumAmount;
 
-  AppSettings({
-    required this.barcodeSales,
-    required this.customerCarePhone,
-    required this.customerCareEmail,
-    required this.printTitle,
-    required this.showCustomerLastBuyedPriceList,
-    required this.askDeliveryDate,
-    required this.priceRoundOff,
-    required this.discountAndCoupon,
-    required this.autoAssignDefaultCustomer,
-    required this.autoAssignDefaultCustomerPhone,
-    required this.currency,
-    required this.zatcaPhase1Enabled,
-    required this.zatcaPhase2Enabled,
-    required this.showTaxPos,
-    required this.showMrpPos,
-    required this.showTaxRatePos,
-    required this.showConfirmOrderButton,
-    required this.enableKOTPrint,
-    required this.defaultDeliveryMethod,
-    required this.defaultPaymentMethod,
-    required this.posPrintDoubleBill,
-    required this.skipCustomerSelection,
-    required this.hideDefaultPhone,
-  });
+  AppSettings(
+      {required this.barcodeSales,
+      required this.customerCarePhone,
+      required this.customerCareEmail,
+      required this.printTitle,
+      required this.showCustomerLastBuyedPriceList,
+      required this.askDeliveryDate,
+      required this.priceRoundOff,
+      required this.discountAndCoupon,
+      required this.autoAssignDefaultCustomer,
+      required this.autoAssignDefaultCustomerPhone,
+      required this.currency,
+      required this.zatcaPhase1Enabled,
+      required this.zatcaPhase2Enabled,
+      required this.showTaxPos,
+      required this.showMrpPos,
+      required this.showTaxRatePos,
+      required this.showConfirmOrderButton,
+      required this.enableKOTPrint,
+      required this.defaultDeliveryMethod,
+      required this.defaultPaymentMethod,
+      required this.posPrintDoubleBill,
+      required this.skipCustomerSelection,
+      required this.hideDefaultPhone,
+      required this.freeDeliveryEnabled,
+      required this.freeDeliveryMinimumAmount});
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     var data = json['data'] as List;
@@ -124,8 +127,11 @@ class AppSettings {
           settingsMap['POS_PRINT_DOUBLE_BILL']?['status'] ?? false,
       skipCustomerSelection:
           settingsMap['SKIP_CUSTOMER_SELECTION']?['status'] ?? false,
-        hideDefaultPhone:
-          settingsMap['HIDE_DEFAULT_PHONE']?['status'] ?? true,
+      hideDefaultPhone: settingsMap['HIDE_DEFAULT_PHONE']?['status'] ?? true,
+      freeDeliveryEnabled:
+          settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['status'] ?? false,
+      freeDeliveryMinimumAmount:
+          settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['value'] ?? "",
     );
   }
 
@@ -263,6 +269,12 @@ class AppSettings {
           "code": "HIDE_DEFAULT_PHONE",
           "value": "",
           "status": hideDefaultPhone.toString(),
+        },
+        {
+          "name": "Free Delivery Minimum Amount",
+          "code": "FREE_DELIVERY_MINIMUM_AMOUNT",
+          "value": freeDeliveryMinimumAmount.toString(),
+          "status": freeDeliveryEnabled.toString(),
         },
       ],
     };

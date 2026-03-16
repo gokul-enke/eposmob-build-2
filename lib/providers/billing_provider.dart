@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import '../models/customer_list.dart';
 import '../models/list_cart.dart';
 import '../providers/customer_provider.dart';
@@ -12,10 +13,17 @@ import '../providers/sales_provider.dart';
 
 class BillingProvider extends ChangeNotifier {
   // 1. Internet Connectivity - Real-time connection monitoring with status indicator
-  bool _hasInternet = true;
+  bool _deviceHasInternet = true;
+  bool _isManualOfflineMode = false;
   StreamSubscription? _internetSubscription;
 
-  bool get hasInternet => _hasInternet;
+  bool get hasInternet => !_isManualOfflineMode && _deviceHasInternet;
+  bool get deviceHasInternet => _deviceHasInternet;
+  bool get isManualOfflineMode => _isManualOfflineMode;
+
+  BillingProvider() {
+    _loadManualOfflineMode();
+  }
 
   // 2. Loading States - Individual loading flags for each operation
   bool _isLoadingClearCart = false;
@@ -116,20 +124,22 @@ class BillingProvider extends ChangeNotifier {
     Function(String)? onConnectivityChanged,
   }) async {
     try {
+      _internetSubscription?.cancel();
+
       // Check initial connectivity status
       final hasConnection = await InternetConnection().hasInternetAccess;
-      _hasInternet = hasConnection;
+      _deviceHasInternet = hasConnection;
       notifyListeners();
 
       // Listen for connectivity changes
       _internetSubscription =
           InternetConnection().onStatusChange.listen((InternetStatus status) {
         final isConnected = status == InternetStatus.connected;
-        _hasInternet = isConnected;
+        _deviceHasInternet = isConnected;
         notifyListeners();
 
         // Optional callback for UI feedback
-        if (onConnectivityChanged != null) {
+        if (onConnectivityChanged != null && !_isManualOfflineMode) {
           if (!isConnected) {
             onConnectivityChanged('No internet connection');
           } else {
@@ -140,8 +150,33 @@ class BillingProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error initializing connectivity listener: $e');
       // Fallback to assuming connection is available
-      _hasInternet = true;
+      _deviceHasInternet = true;
       notifyListeners();
+    }
+  }
+
+  Future<void> _loadManualOfflineMode() async {
+    try {
+      _isManualOfflineMode =
+          await SharedPreferenceProvider().getManualOfflineMode();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading manual offline mode: $e');
+    }
+  }
+
+  Future<void> setManualOfflineMode(bool enabled) async {
+    if (_isManualOfflineMode == enabled) {
+      return;
+    }
+
+    _isManualOfflineMode = enabled;
+    notifyListeners();
+
+    try {
+      await SharedPreferenceProvider().saveManualOfflineMode(enabled);
+    } catch (e) {
+      debugPrint('Error saving manual offline mode: $e');
     }
   }
 

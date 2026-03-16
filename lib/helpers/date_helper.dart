@@ -263,4 +263,29 @@ class DateHelper {
       return '${minutes}m ago';
     }
   }
+
+  static String formatForApiDateTime([DateTime? date]) {
+    final baseDate = date ?? now();
+    final localDate = _convertToLocal(baseDate.toUtc());
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    return formatter.format(localDate);
+  }
+
+  static String normalizeToApiDateTime(String dateString) {
+    final value = dateString.trim();
+    if (value.isEmpty) return value;
+
+    try {
+      final parseCandidate =
+          value.contains('T') ? value : value.replaceFirst(' ', 'T');
+      final parsedDate = DateTime.parse(parseCandidate);
+      final localDate = _hasExplicitTimezone(value)
+          ? _convertToLocal(parsedDate)
+          : parsedDate;
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      return formatter.format(localDate);
+    } catch (e) {
+      return value;
+    }
+  }
 }

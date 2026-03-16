@@ -6,6 +6,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -21,17 +22,46 @@ class PaymentSummary extends StatelessWidget {
         Provider.of<LocalProductProvider>(context, listen: true);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: true);
+    final billingProvider = Provider.of<BillingProvider>(context, listen: true);
+    final deliveryMethodsProvider =
+      Provider.of<DeliveryMethodsProvider>(context, listen: true);
     final currency = appSettingsProvider.appSettings?.currency ?? '';
+
+    final thresholdEnabled =
+      appSettingsProvider.appSettings?.freeDeliveryEnabled ??
+        false;
+    final thresholdAmount = double.tryParse(
+        appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
+          '',
+      ) ??
+      0.0;
+
+    final discountedTotalForThreshold =
+      localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+
+    double deliveryCharge = 0.0;
+    if (thresholdEnabled &&
+      !(thresholdAmount > 0 && discountedTotalForThreshold >= thresholdAmount)) {
+      final selectedMethodId = billingProvider.deliveryMethodId;
+      final selectedMethodName = billingProvider.deliveryMethod;
+
+      for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if ((selectedMethodId.isNotEmpty && method.id == selectedMethodId) ||
+        (selectedMethodName.isNotEmpty && method.name == selectedMethodName)) {
+        deliveryCharge = method.basePrice ?? 0.0;
+        break;
+      }
+      }
+    }
 
     // Ensure priceSummary is computed
     localProductProvider.cartTotal;
 
     // Keep provider's total order amount in sync with cart total
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final bp = Provider.of<BillingProvider>(context, listen: false);
       final netTotal =
           localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
-      bp.setTotalOrderAmount(netTotal);
+      billingProvider.setTotalOrderAmount(netTotal + deliveryCharge);
     });
 
     if (compact) {
@@ -109,10 +139,28 @@ class PaymentSummary extends StatelessWidget {
                     ColorManager.kButtonGreen,
                   ),
                 ),
+          if (deliveryCharge > 0)
+            BuildPaymentRow(
+              amount: "$currency ${AmountHelper.formatAmount(deliveryCharge)}",
+              title: "Delivery Charge",
+              color: ColorManager.textColor,
+              firstRowTextStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s15,
+                0.18,
+                ColorManager.textColor,
+              ),
+              secondRowTextStyle: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s15,
+                0.18,
+                ColorManager.textColor,
+              ),
+            ),
           const Divider(thickness: 2),
           BuildPaymentRow(
             amount:
-                "$currency ${AmountHelper.roundOffAmount(localProductProvider.cartTotal)}",
+                "$currency ${AmountHelper.roundOffAmount(localProductProvider.cartTotal + deliveryCharge)}",
             title: "Total Payable",
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
@@ -135,9 +183,9 @@ class PaymentSummary extends StatelessWidget {
     String getFormattedTotal() {
       if (appSettingsProvider.appSettings?.priceRoundOff == true) {
         double roundedTotal = localProductProvider.getRoundedTotal(context);
-        return AmountHelper.formatAmount(roundedTotal);
+        return AmountHelper.formatAmount(roundedTotal + deliveryCharge);
       }
-      return AmountHelper.formatAmount(localProductProvider.cartTotal);
+      return AmountHelper.formatAmount(localProductProvider.cartTotal + deliveryCharge);
     }
 
     return Column(
@@ -174,11 +222,24 @@ class PaymentSummary extends StatelessWidget {
             ColorManager.textColor,
           ),
         ),
-        BuildPaymentRow(
-          amount: "$currency 0.00",
-          title: "Shipping",
-          color: ColorManager.textColor,
-        ),
+        if (deliveryCharge > 0)
+          BuildPaymentRow(
+            amount: "$currency ${AmountHelper.formatAmount(deliveryCharge)}",
+            title: "Delivery Charge",
+            color: ColorManager.textColor,
+            firstRowTextStyle: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s15,
+              0.18,
+              ColorManager.textColor,
+            ),
+            secondRowTextStyle: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s15,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
         BuildPaymentRow(
           amount:
               "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",

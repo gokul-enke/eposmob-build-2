@@ -30,10 +30,14 @@ class ProductProvider extends ChangeNotifier {
     double? purchasePrice,
     int? categoryId,
     int? rackNumber,
+    num? quantity,
+    List<Map<String, dynamic>>? productNames,
     required String accessToken,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException('API key not found. Please restart the app.');
     }
@@ -58,6 +62,10 @@ class ProductProvider extends ChangeNotifier {
       'unit': unit,
       if (unitId != null && unitId.isNotEmpty) 'unit_id': unitId,
       if (rackNumber != null) 'rack_number': rackNumber,
+      if (quantity != null) 'quantity': quantity,
+      'store_id': activeStoreId,
+      if (productNames != null && productNames.isNotEmpty)
+        'product_names': productNames,
     }..removeWhere((key, value) {
         if (value == null) return true;
         if (value is String) {

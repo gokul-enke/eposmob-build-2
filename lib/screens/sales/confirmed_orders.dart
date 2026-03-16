@@ -8,7 +8,9 @@ import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -33,6 +35,25 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
   int totalOrdersToSync = 0;
   // Function to update dialog state from outside
   void Function(void Function())? _dialogSetState;
+
+  double _calculateOrderDiscountAmount(SavedOrder order) {
+    final subtotal = order.items.fold<double>(
+      0.0,
+      (sum, item) =>
+          sum + ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+    );
+
+    final flatDiscount = order.flatDiscount ?? 0.0;
+    final percentageValue = order.percentageDiscount ?? 0.0;
+    final percentageDiscount = subtotal * percentageValue / 100;
+    final totalDiscount = flatDiscount + percentageDiscount;
+
+    if (totalDiscount > subtotal) {
+      return subtotal;
+    }
+
+    return totalDiscount;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -336,15 +357,20 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
       // Calculate discount amount
-      double discountAmount = (order.flatDiscount ?? 0.0) +
-          ((order.percentageDiscount ?? 0.0) > 0
-              ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
-              : 0.0);
+        final double discountAmount = _calculateOrderDiscountAmount(order);
 
       // Get paid amount
       double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
           ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
           : null;
+
+      // Parse multi-payment JSON into human-readable names and breakdown
+      final parsedPayment = PaymentHelper.parseLocalMultiPayment(
+          context, order.paymentMethod);
+      final String? displayPaymentMethod = parsedPayment?.paymentMethodDisplay
+          ?? order.paymentMethod;
+      final Map<String, dynamic>? paymentBreakdown =
+          parsedPayment?.paymentBreakdown;
 
       // Try auto-print with default printer first
       debugPrint("🖨️ Attempting auto-print for confirmed order #${order.orderNumber}");
@@ -360,7 +386,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         isFromLocalStorage: true,
         customerName: order.customerName,
         customerPhone: order.customerPhone,
-        paymentMethod: order.paymentMethod,
+        paymentMethod: displayPaymentMethod,
+        paymentBreakdown: paymentBreakdown,
         customerAlternatePhone: order.alternatePhone,
         orderComment: order.comment,
         deliveryMethod: order.deliveryMethod,
@@ -384,7 +411,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               isFromLocalStorage: true,
               customerName: order.customerName,
               customerPhone: order.customerPhone,
-              paymentMethod: order.paymentMethod,
+              paymentMethod: displayPaymentMethod,
+              paymentBreakdown: paymentBreakdown,
               customerAlternatePhone: order.alternatePhone,
               orderComment: order.comment,
               deliveryMethod: order.deliveryMethod,
@@ -655,15 +683,32 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             Map<String, dynamic> multiPaymentData = json.decode(paymentMethod);
             if (multiPaymentData['isMultiPayment'] == true) {
               // Extract multi-payment data
-              paymentMethods =
+              final selectedMethods =
                   List<String>.from(multiPaymentData['methods'] ?? []);
               Map<String, dynamic> amounts =
                   Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
 
+              // API expects numeric payment-method IDs only.
+              // Filter out non-numeric entries (e.g., DEBIT/customer-credit marker).
+              paymentMethods = selectedMethods
+                  .where((methodId) => RegExp(r'^\d+$').hasMatch(methodId))
+                  .toList();
+
+              // Also include numeric amount-keys that may be missing from methods list.
+              for (final entry in amounts.entries) {
+                final methodId = entry.key.toString();
+                if (RegExp(r'^\d+$').hasMatch(methodId) &&
+                    !paymentMethods.contains(methodId)) {
+                  final amount = double.tryParse(entry.value.toString()) ?? 0;
+                  if (amount > 0) {
+                    paymentMethods.add(methodId);
+                  }
+                }
+              }
+
               paidMethods = [];
-              
-              // Iterate through the selected methods and get their amounts
-              // This handles both dynamic IDs (e.g., "1", "2") and legacy strings ("CASH", "CARD")
+
+              // Build paid_methods only for numeric method IDs with positive amounts.
               for (String methodId in paymentMethods) {
                 final amountStr = amounts[methodId]?.toString();
                 if (amountStr != null && amountStr != "0" && amountStr.isNotEmpty) {
@@ -674,6 +719,30 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                       "amount": amount,
                     });
                   }
+                }
+              }
+
+              final billingProvider =
+                  Provider.of<BillingProvider>(context, listen: false);
+              final cashMethodId = billingProvider.cashPaymentMethodId;
+              final codMethodId = billingProvider.codPaymentMethodId;
+              final balanceAmountValue =
+                  double.tryParse(order.balanceAmount ?? '0') ?? 0.0;
+
+              if (balanceAmountValue > 0 && paidMethods.isNotEmpty) {
+                final adjustmentIndex = paidMethods.indexWhere((payment) {
+                  final methodId = payment['method']?.toString();
+                  return methodId == cashMethodId || methodId == codMethodId;
+                });
+
+                if (adjustmentIndex != -1) {
+                  final adjustedAmount =
+                      (paidMethods[adjustmentIndex]['amount'] as num).toDouble() -
+                          balanceAmountValue;
+                  paidMethods[adjustmentIndex] = {
+                    'method': paidMethods[adjustmentIndex]['method'],
+                    'amount': adjustedAmount > 0 ? adjustedAmount : 0.0,
+                  };
                 }
               }
 
@@ -732,14 +801,16 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           carNumber: order.carNumber,
           status:
               "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
+          deliveryDate: order.deliveryDate,
+          deliveryTime: order.deliveryTime,
+          tableId: order.tableId,
           // Include discount data from saved order
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
-          discountAmount: (order.flatDiscount ?? 0.0) +
-              ((order.percentageDiscount ?? 0.0) > 0
-                  ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
-                  : 0.0),
+          discountAmount: _calculateOrderDiscountAmount(order),
           toCustomerCredit: order.toCustomerCredit,
+          address: order.address,
+          deliveryCharge: order.deliveryCharge,
         );
 
         // AFTER the API call completes, update the index

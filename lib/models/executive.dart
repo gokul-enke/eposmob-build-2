@@ -45,6 +45,7 @@ class ExecutiveModelData {
   final String? userRole;
   final List<Store>? stores;
   // ZATCA fields for Saudi Arabia e-invoicing
+  final String? crNumber;
   final String? vatNumber;
   final String? zatcaCompanyName;
   final String? timeZone;
@@ -58,6 +59,7 @@ class ExecutiveModelData {
     this.companyName,
     this.userRole,
     this.stores,
+    this.crNumber,
     this.vatNumber,
     this.zatcaCompanyName,
     this.timeZone,
@@ -75,6 +77,7 @@ class ExecutiveModelData {
         stores: json["stores"] == null
             ? null
             : List<Store>.from(json["stores"].map((x) => Store.fromJson(x))),
+        crNumber: json["cr_number"]?.toString(),
         vatNumber: json["vat_number"],
         zatcaCompanyName: json["zatca_company_name"],
         timeZone: json["time_zone"],
@@ -91,6 +94,7 @@ class ExecutiveModelData {
         "stores": stores == null
             ? null
             : List<dynamic>.from(stores!.map((x) => x.toJson())),
+        "cr_number": crNumber,
         "vat_number": vatNumber,
         "zatca_company_name": zatcaCompanyName,
         "time_zone": timeZone,

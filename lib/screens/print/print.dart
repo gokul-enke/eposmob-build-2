@@ -9,6 +9,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +45,7 @@ class PrintPage extends StatefulWidget {
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final String? customerVatNumber;
+  final String? customerCrNumber;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
@@ -73,6 +75,7 @@ class PrintPage extends StatefulWidget {
     this.customerAlternatePhone,
     this.paymentMethod,
     this.customerVatNumber,
+    this.customerCrNumber,
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
@@ -107,6 +110,7 @@ class PrintPage extends StatefulWidget {
     String? customerAlternatePhone,
     String? paymentMethod,
     String? customerVatNumber,
+    String? customerCrNumber,
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
@@ -139,6 +143,7 @@ class PrintPage extends StatefulWidget {
           Provider.of<DocumentConfigProvider>(context, listen: false);
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
+        final bankProvider = Provider.of<BankProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
 
       if (appSettings == null) {
@@ -179,7 +184,6 @@ class PrintPage extends StatefulWidget {
 
       // Get receipt theme
       final theme = await _getReceiptThemeStatic(billDocumentConfig, prefs);
-      final layout = ReceiptLayoutFactory.getLayout(theme);
 
       // Fetch ZATCA credentials
       final sharedPrefProvider = SharedPreferenceProvider();
@@ -215,16 +219,19 @@ class PrintPage extends StatefulWidget {
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         customerVatNumber: customerVatNumber,
+        customerCrNumber: customerCrNumber,
         paymentBreakdown: paymentBreakdown,
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
         isDefaultCustomer: isDefaultCustomer,
         hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
         netExcTax: netExcTax,
+        bankDetails: bankProvider.banks,
       );
 
       // Print
       if (paperSize == '112mm' || paperSize == '80mm' || paperSize == '58mm') {
+        final layout = ReceiptLayoutFactory.getLayout(theme);
         await layout.printThermal(params);
       } else {
         // Use StandardPdfLayoutFactory for A4/A5 printing
@@ -649,6 +656,7 @@ class _PrintPageState extends State<PrintPage> {
 
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
+    final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -681,12 +689,14 @@ class _PrintPageState extends State<PrintPage> {
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
+      customerCrNumber: widget.customerCrNumber,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
+      bankDetails: bankProvider.banks,
     );
 
     // Print using the selected layout
@@ -739,6 +749,7 @@ class _PrintPageState extends State<PrintPage> {
 
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
+    final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -771,12 +782,14 @@ class _PrintPageState extends State<PrintPage> {
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
+      customerCrNumber: widget.customerCrNumber,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
+      bankDetails: bankProvider.banks,
     );
 
     // Print using the selected standard PDF layout

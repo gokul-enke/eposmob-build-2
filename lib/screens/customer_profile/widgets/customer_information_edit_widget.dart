@@ -53,6 +53,25 @@ class _CustomerInformationEditWidgetState
   PaymentType selectedPaymentType = PaymentType.to_pay;
   final _formKey = GlobalKey<FormState>();
 
+  String? _getSignedBalanceText() {
+    final balanceText = balanceController.text.trim();
+    if (balanceText.isEmpty) {
+      return null;
+    }
+
+    final parsedBalance = double.tryParse(balanceText);
+    if (parsedBalance == null) {
+      return balanceText;
+    }
+
+    final normalizedBalance = parsedBalance.abs();
+    final signedBalance = selectedPaymentType == PaymentType.to_pay
+        ? -normalizedBalance
+        : normalizedBalance;
+
+    return signedBalance.toStringAsFixed(2);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -350,6 +369,8 @@ class _CustomerInformationEditWidgetState
             selectedPaymentType == PaymentType.to_pay ? 'to_pay' : 'to_receive';
       }
 
+      final signedBalanceText = _getSignedBalanceText();
+
       final response = await customerProvider.updateCustomer(
         accessToken,
         phoneController.text,
@@ -365,7 +386,7 @@ class _CustomerInformationEditWidgetState
             ?.toIso8601String()
             .split('T')[0], // Format as YYYY-MM-DD
         storeId: widget.customer?.storeId ?? 1,
-        balance: balanceController.text.trim(),
+        balance: signedBalanceText,
         paymentType: paymentTypeValue,
         customerType: customerTypeToSend,
         crNumber: crToSend,
@@ -386,6 +407,8 @@ class _CustomerInformationEditWidgetState
 
         // Update the local customer data with the new information
         if (widget.customer != null) {
+          final updatedBalance = double.tryParse(signedBalanceText ?? '');
+
           // Create a new customer object with updated data
           final updatedCustomer = CustomerListModelData(
             id: widget.customer!.id,
@@ -413,8 +436,7 @@ class _CustomerInformationEditWidgetState
             membershipCode: widget.customer!.membershipCode,
             minRedeemablePoints: widget.customer!.minRedeemablePoints,
             pricePerPoint: widget.customer!.pricePerPoint,
-            balance: double.tryParse(balanceController.text.trim()) ??
-                widget.customer!.balance,
+            balance: updatedBalance ?? widget.customer!.balance,
             paymentType: paymentTypeValue ?? widget.customer!.paymentType,
             customerType: customerTypeToSend,
             address: widget.customer!.address,

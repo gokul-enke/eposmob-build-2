@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -9,6 +11,7 @@ import 'package:websafe_svg/websafe_svg.dart';
 
 import '../controllers/sidebar_controller.dart';
 import '../providers/auth_model.dart';
+import '../providers/admin_settings_provider.dart';
 import '../providers/authentication_providers.dart';
 
 import '../providers/sales_provider.dart';
@@ -190,13 +193,9 @@ class _SideMenuState extends State<SideMenu> {
           SizedBox(height: isExpanded ? 12 : 8),
           // Logo - only show when expanded
           if (isExpanded)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Image.asset(
-                ImageAssets.posImageLogo,
-                height: 35,
-                fit: BoxFit.contain,
-              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: SidebarBrandLogo(height: 35),
             ),
           if (!isExpanded) const SizedBox.shrink(),
           // const SizedBox(
@@ -1034,6 +1033,64 @@ class _SideMenuState extends State<SideMenu> {
             ),
         ],
       ),
+    );
+  }
+}
+
+class SidebarBrandLogo extends StatelessWidget {
+  final double height;
+
+  const SidebarBrandLogo({
+    super.key,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AdminSettingsProvider>(
+      builder: (context, adminSettingsProvider, child) {
+        final logoFilePath = adminSettingsProvider.logoFilePath;
+        final logoUrl = adminSettingsProvider.logoUrl;
+
+        if (logoFilePath != null && logoFilePath.trim().isNotEmpty) {
+          final logoFile = File(logoFilePath);
+          if (logoFile.existsSync()) {
+            return Image.file(
+              logoFile,
+              height: height,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildNetworkOrFallbackLogo(logoUrl);
+              },
+            );
+          }
+        }
+
+        return _buildNetworkOrFallbackLogo(logoUrl);
+      },
+    );
+  }
+
+  Widget _buildNetworkOrFallbackLogo(String? logoUrl) {
+    if (logoUrl != null && logoUrl.trim().isNotEmpty) {
+      return Image.network(
+        logoUrl,
+        height: height,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildFallbackLogo();
+        },
+      );
+    }
+
+    return _buildFallbackLogo();
+  }
+
+  Widget _buildFallbackLogo() {
+    return Image.asset(
+      ImageAssets.posImageLogo,
+      height: height,
+      fit: BoxFit.contain,
     );
   }
 }

@@ -1,12 +1,12 @@
 demo build
-git tag v0.1.0-dev.513
-git push build v0.1.0-dev.513
+git tag v0.1.0-dev.530
+git push build v0.1.0-dev.530
 
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
 git tag v0.1.0-dev.468
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git v0.1.0-dev.468
-
+`
 souq build
 git tag v0.1.0-dev.360
 git push build v0.1.0-dev.360
@@ -39,22 +39,16 @@ demo
 restaurantsales@chillis.com
 CHILLIS_RESTAURANT_xA0zcMObAQfrv7inwqOdwI8VbT4nA143
 
-
-ZAVIYA_AL_RAQI_Llh0LXAn1iatsjqF09FG9Kje27Xa8xo5
+EAZY_ZAVIYA_AL_RAQI_Llh0LXAn1iatsjqF09FG9Kje27Xa8xo5
 salesexecutive1@zaviyaalraqi.com
 
 API_MygoPT9qMHJqATZrK9xdGIpoN58fySya8UUyiIoD
 billingsp@gmail.com
 salesexe@ruknaltabir.com
 
-
-
-
-
 ezeee
 CHILLIS_RESTAURANT_RkgPh2sBuGjOx44lHU6GV5eKXAA1V3lh
 restaurantsales@chillis.in
 
-
-THAMVEENATH_AMANA_XAAl7emT6t2un7MqQsCUW4lXyM7oU3ui
+EAZY_THAMVEENATH_AMANA_XAAl7emT6t2un7MqQsCUW4lXyM7oU3ui
 salesexecutiveamana@thamveenath.com

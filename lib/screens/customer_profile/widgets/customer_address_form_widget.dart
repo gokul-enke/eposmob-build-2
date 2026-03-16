@@ -244,8 +244,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                           children: [
                             Expanded(
                               child: _buildLocationDropdown(
-                                title: "State",
-                                hint: "Select State",
+                                title: "States / Provinces",
+                                hint: "Select States / Provinces",
                                 value: selectedStateId,
                                 items: locationProvider.stateList,
                                 onChanged: (id) {
@@ -266,8 +266,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                             const SizedBox(width: 20),
                             Expanded(
                               child: _buildLocationDropdown(
-                                title: "District",
-                                hint: "Select District",
+                                title: "District / City",
+                                hint: "Select District / City",
                                 value: selectedDistrictId,
                                 items: locationProvider.districtList,
                                 onChanged: (id) {

@@ -37,11 +37,13 @@ class OrderDetailsModelData {
   final String? orderDate;
   final String? deliveryDate;
   final String? deliveryTime;
+  final num? deliveryCharge;
   final OrderDetailsModelDataCart? cart;
   final String? orderNumber;
   final String? tokenNumber;
   final String? orderStatus;
   final OrderDetailsModelDataCustomerDetails? customerDetails;
+  final OrderDetailsModelDataKycInfo? kycInfo;
   final OrderDetailsModelDataPriceSummary? priceSummary;
   final String? paymentStatus;
   final String? deliveryStatus;
@@ -52,6 +54,7 @@ class OrderDetailsModelData {
   final OrderReturns? orderReturns;
   final dynamic points;
   final Map<String, dynamic>? payments;
+  final String? invoiceHash;
 
   OrderDetailsModelData({
     this.ordersId,
@@ -60,11 +63,13 @@ class OrderDetailsModelData {
     this.orderDate,
     this.deliveryDate,
     this.deliveryTime,
+    this.deliveryCharge,
     this.cart,
     this.orderNumber,
     this.tokenNumber,
     this.orderStatus,
     this.customerDetails,
+    this.kycInfo,
     this.priceSummary,
     this.paymentStatus,
     this.deliveryStatus,
@@ -75,6 +80,7 @@ class OrderDetailsModelData {
     this.orderReturns,
     this.points,
     this.payments,
+    this.invoiceHash,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
@@ -87,6 +93,8 @@ class OrderDetailsModelData {
         orderDate: json["order_date"],
         deliveryDate: json["delivery_date"],
         deliveryTime: json["delivery_time"],
+        deliveryCharge: OrderDetailsModelDataPriceSummary._parseNum(
+            json["delivery_charge"]),
         cart: json["cart"] == null
             ? null
             : OrderDetailsModelDataCart.fromJson(json["cart"]),
@@ -97,6 +105,9 @@ class OrderDetailsModelData {
             ? null
             : OrderDetailsModelDataCustomerDetails.fromJson(
                 json["customer_details"]),
+        kycInfo: json["kyc_info"] == null
+            ? null
+            : OrderDetailsModelDataKycInfo.fromJson(json["kyc_info"]),
         priceSummary: json["order_price_summary"] == null
             ? null
             : OrderDetailsModelDataPriceSummary.fromJson(
@@ -118,6 +129,7 @@ class OrderDetailsModelData {
         payments: json["payments"] is Map<String, dynamic>
             ? Map<String, dynamic>.from(json["payments"])
             : null,
+        invoiceHash: json["invoice_hash"]?.toString(),
       );
 
   // Helper method to handle order_returns which can be null, empty List, or Map
@@ -161,6 +173,71 @@ class OrderDetailsModelData {
     return null;
   }
 
+  /// Returns a concise printable customer address.
+  /// Priority: `order_props` address -> `customer_details.address` first entry.
+  String? getCustomerAddressForDisplay() {
+    final fromProps = getCustomerAddressFromProps();
+    if (fromProps != null && fromProps.trim().isNotEmpty) {
+      return fromProps;
+    }
+
+    final addressList = customerDetails?.address;
+    if (addressList == null || addressList.isEmpty) {
+      return null;
+    }
+
+    final first = addressList.first;
+
+    if (first is Map) {
+      return _buildCustomerDetailsAddress(first);
+    }
+
+    final raw = first.toString();
+    if (raw.trim().isEmpty) {
+      return null;
+    }
+
+    if (raw.trim().startsWith('{') || raw.trim().startsWith('[')) {
+      final parsed = _formatAddress(raw);
+      return parsed.trim().isEmpty ? null : parsed;
+    }
+
+    return raw;
+  }
+
+  String? _buildCustomerDetailsAddress(Map<dynamic, dynamic> map) {
+    final parts = <String>[];
+
+    void addPart(dynamic value) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty && !parts.contains(text)) {
+        parts.add(text);
+      }
+    }
+
+    addPart(map['address']);
+    addPart(map['landmark']);
+    addPart(map['city']);
+
+    if (map['state'] != null) {
+      if (map['state'] is Map && map['state']['name'] != null) {
+        addPart(map['state']['name']);
+      } else {
+        addPart(map['state']);
+      }
+    }
+
+    if (map['pincode'] != null) {
+      if (map['pincode'] is Map && map['pincode']['pin_code'] != null) {
+        addPart(map['pincode']['pin_code']);
+      } else {
+        addPart(map['pincode']);
+      }
+    }
+
+    return parts.isEmpty ? null : parts.join(', ');
+  }
+
   // Helper to format address string from JSON string or raw string
   String _formatAddress(String rawAddress) {
     try {
@@ -168,7 +245,7 @@ class OrderDetailsModelData {
       if (rawAddress.trim().startsWith('{')) {
         // It might be a raw string representation of a Map like "{city: thalassery, ...}"
         // which is not valid JSON. We need to parse it carefully or use regex.
-        
+
         // If it's valid JSON, decode it
         try {
           final Map<String, dynamic> addressMap = json.decode(rawAddress);
@@ -176,68 +253,77 @@ class OrderDetailsModelData {
         } catch (e) {
           // Not valid JSON, try to parse the raw string representation
           // Example: {city: thalassery, name: Athira, ...}
-          
+
           String address = "";
           String city = "";
           String state = "";
           String pincode = "";
-          
+
           // Extract address
-          final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
-          if (addressMatch != null) address = addressMatch.group(1)?.trim() ?? "";
-          
+          final addressMatch =
+              RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
+          if (addressMatch != null)
+            address = addressMatch.group(1)?.trim() ?? "";
+
           // Extract city
           final cityMatch = RegExp(r'city:\s*([^,]+)').firstMatch(rawAddress);
           if (cityMatch != null) city = cityMatch.group(1)?.trim() ?? "";
-          
+
           // Extract state (might be nested or simple)
           final stateMatch = RegExp(r'state:\s*([^,]+)').firstMatch(rawAddress);
           if (stateMatch != null) {
-             // If state is an object {id: 10, name: KERALA...}
-             if (stateMatch.group(1)?.trim().startsWith('{') ?? false) {
-                final stateNameMatch = RegExp(r'name:\s*([^,]+)').firstMatch(stateMatch.group(1)!);
-                if (stateNameMatch != null) state = stateNameMatch.group(1)?.trim() ?? "";
-             } else {
-                state = stateMatch.group(1)?.trim() ?? "";
-             }
+            // If state is an object {id: 10, name: KERALA...}
+            if (stateMatch.group(1)?.trim().startsWith('{') ?? false) {
+              final stateNameMatch =
+                  RegExp(r'name:\s*([^,]+)').firstMatch(stateMatch.group(1)!);
+              if (stateNameMatch != null)
+                state = stateNameMatch.group(1)?.trim() ?? "";
+            } else {
+              state = stateMatch.group(1)?.trim() ?? "";
+            }
           }
-          
+
           // Extract pincode
-          final pincodeMatch = RegExp(r'pincode:\s*([^,]+)').firstMatch(rawAddress);
+          final pincodeMatch =
+              RegExp(r'pincode:\s*([^,]+)').firstMatch(rawAddress);
           if (pincodeMatch != null) {
-             // If pincode is an object {id: 3382, pin_code: 670101...}
-             if (pincodeMatch.group(1)?.trim().startsWith('{') ?? false) {
-                final pinCodeValMatch = RegExp(r'pin_code:\s*([^,]+)').firstMatch(pincodeMatch.group(1)!);
-                if (pinCodeValMatch != null) pincode = pinCodeValMatch.group(1)?.trim() ?? "";
-             } else {
-                pincode = pincodeMatch.group(1)?.trim() ?? "";
-             }
+            // If pincode is an object {id: 3382, pin_code: 670101...}
+            if (pincodeMatch.group(1)?.trim().startsWith('{') ?? false) {
+              final pinCodeValMatch = RegExp(r'pin_code:\s*([^,]+)')
+                  .firstMatch(pincodeMatch.group(1)!);
+              if (pinCodeValMatch != null)
+                pincode = pinCodeValMatch.group(1)?.trim() ?? "";
+            } else {
+              pincode = pincodeMatch.group(1)?.trim() ?? "";
+            }
           }
-          
+
           List<String> parts = [];
           if (address.isNotEmpty) parts.add(address);
           if (city.isNotEmpty) parts.add(city);
           if (state.isNotEmpty) parts.add(state);
           if (pincode.isNotEmpty) parts.add(pincode);
-          
+
           if (parts.isNotEmpty) return parts.join(', ');
         }
       }
-      
+
       // If it's a list string "[{...}]"
       if (rawAddress.trim().startsWith('[')) {
-         try {
-            final List<dynamic> list = json.decode(rawAddress);
-            if (list.isNotEmpty && list[0] is Map) {
-               return _buildAddressString(list[0]);
-            }
-         } catch (e) {
-            // Regex fallback for list string
-            final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
-            if (addressMatch != null) return addressMatch.group(1)?.trim() ?? rawAddress;
-         }
+        try {
+          final List<dynamic> list = json.decode(rawAddress);
+          if (list.isNotEmpty && list[0] is Map) {
+            return _buildAddressString(list[0]);
+          }
+        } catch (e) {
+          // Regex fallback for list string
+          final addressMatch =
+              RegExp(r'address:\s*([^,]+)').firstMatch(rawAddress);
+          if (addressMatch != null)
+            return addressMatch.group(1)?.trim() ?? rawAddress;
+        }
       }
-      
+
       return rawAddress;
     } catch (e) {
       return rawAddress;
@@ -246,26 +332,28 @@ class OrderDetailsModelData {
 
   String _buildAddressString(Map<dynamic, dynamic> map) {
     List<String> parts = [];
-    
+
     if (map['address'] != null) parts.add(map['address'].toString());
     if (map['city'] != null) parts.add(map['city'].toString());
-    
+
     if (map['state'] != null) {
       if (map['state'] is Map) {
-        if (map['state']['name'] != null) parts.add(map['state']['name'].toString());
+        if (map['state']['name'] != null)
+          parts.add(map['state']['name'].toString());
       } else {
         parts.add(map['state'].toString());
       }
     }
-    
+
     if (map['pincode'] != null) {
       if (map['pincode'] is Map) {
-        if (map['pincode']['pin_code'] != null) parts.add(map['pincode']['pin_code'].toString());
+        if (map['pincode']['pin_code'] != null)
+          parts.add(map['pincode']['pin_code'].toString());
       } else {
         parts.add(map['pincode'].toString());
       }
     }
-    
+
     return parts.join(', ');
   }
 
@@ -276,11 +364,13 @@ class OrderDetailsModelData {
         "order_date": orderDate,
         "delivery_date": deliveryDate,
         "delivery_time": deliveryTime,
+        "delivery_charge": deliveryCharge,
         "cart": cart?.toJson(),
         "order_number": orderNumber,
         "token_number": tokenNumber,
         "order_status": orderStatus,
         "customer_details": customerDetails?.toJson(),
+        "kyc_info": kycInfo?.toJson(),
         "order_price_summary": priceSummary?.toJson(),
         "payment_status": paymentStatus,
         "delivery_status": deliveryStatus,
@@ -293,6 +383,7 @@ class OrderDetailsModelData {
         "order_returns": orderReturns?.toJson(),
         "points": points,
         "payments": payments,
+        "invoice_hash": invoiceHash,
       };
 }
 
@@ -411,9 +502,11 @@ class OrderDetailsModelDataCartItem {
         updatedAt: json["updated_at"] == null
             ? null
             : DateTime.parse(json["updated_at"]),
-        names: json["product_names"] == null // Fix: Parse from "product_names" key (API returns this)
+        names: json["product_names"] ==
+                null // Fix: Parse from "product_names" key (API returns this)
             ? null
-            : json["product_names"] is List && (json["product_names"] as List).isEmpty
+            : json["product_names"] is List &&
+                    (json["product_names"] as List).isEmpty
                 ? null // Handle empty array case
                 : Names.fromJson(json["product_names"]),
       );
@@ -586,6 +679,27 @@ class OrderDetailsModelDataCustomerDetails {
         "customer_id": customerId,
         "address": address,
         "alternate_phone": alternatePhone,
+      };
+}
+
+class OrderDetailsModelDataKycInfo {
+  final String? crNumber;
+  final String? vatNumber;
+
+  OrderDetailsModelDataKycInfo({
+    this.crNumber,
+    this.vatNumber,
+  });
+
+  factory OrderDetailsModelDataKycInfo.fromJson(Map<String, dynamic> json) =>
+      OrderDetailsModelDataKycInfo(
+        crNumber: json["cr_number"]?.toString(),
+        vatNumber: json["vat_number"]?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "cr_number": crNumber,
+        "vat_number": vatNumber,
       };
 }
 

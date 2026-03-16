@@ -341,10 +341,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerName: orderData.customerDetails?.name,
         customerPhone: orderData.customerDetails?.phone,
         customerEmail: orderData.customerDetails?.email,
-        customerAddress: orderData.getCustomerAddressFromProps() ??
-            (orderData.customerDetails?.address?.isNotEmpty == true
-                ? orderData.customerDetails!.address!.join(', ')
-                : null),
+        customerAddress: orderData.getCustomerAddressForDisplay(),
         orderReturns: orderData.orderReturns,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
@@ -1351,9 +1348,12 @@ Powered by CloudPOS''',
                 String? customerEmail =
                     orderDetails.data?.customerDetails?.email;
                 String? customerAddress =
-                    orderDetails.data?.customerDetails?.address?.join(', ');
+                    orderDetails.data?.getCustomerAddressForDisplay();
                 String? customerAlternatePhone =
                     orderDetails.data?.customerDetails?.alternatePhone;
+                String? customerVatNumber =
+                    orderDetails.data?.kycInfo?.vatNumber;
+                String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
                 String? deliveryMethod = orderDetails.data?.deliveryMethodName;
@@ -1438,6 +1438,8 @@ Powered by CloudPOS''',
                   customerEmail: customerEmail,
                   customerAddress: customerAddress,
                   customerAlternatePhone: customerAlternatePhone,
+                  customerVatNumber: customerVatNumber,
+                  customerCrNumber: customerCrNumber,
                   paymentMethod: paymentMethod,
                   paymentBreakdown:
                       paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
@@ -1470,6 +1472,8 @@ Powered by CloudPOS''',
                         customerEmail: customerEmail,
                         customerAddress: customerAddress,
                         customerAlternatePhone: customerAlternatePhone,
+                        customerVatNumber: customerVatNumber,
+                        customerCrNumber: customerCrNumber,
                         paymentMethod: paymentMethod,
                         paymentBreakdown: paymentBreakdown.isNotEmpty
                             ? paymentBreakdown
@@ -1849,7 +1853,12 @@ Powered by CloudPOS''',
                             showDialog(
                               context: context,
                               builder: (dialogCtx) => CancelOrderModal(
-                                onConfirm: (paymentMethodId) async {
+                                initialRefundAmount:
+                                    order.priceSummary?.grandTotal ??
+                                        order.grantTotal ??
+                                        '',
+                                onConfirm: (paymentMethodId, refundAmount,
+                                    deliveryChargeRefundable) async {
                                   try {
                                     final authModel = Provider.of<AuthModel>(
                                         context,
@@ -1862,6 +1871,9 @@ Powered by CloudPOS''',
                                       accessToken: authModel.token ?? "",
                                       orderId: order.id.toString(),
                                       paymentMethod: paymentMethodId,
+                                      refundAmount: refundAmount,
+                                      deliveryChargeRefundable:
+                                          deliveryChargeRefundable,
                                     );
 
                                     if (context.mounted) {
@@ -2042,10 +2054,10 @@ Powered by CloudPOS''',
                         ListOrderModelData order = entry.value;
                         PriceSummary priceSummary =
                             order.priceSummary ?? PriceSummary();
-                        
+
                         // Calculate serial number based on pagination
                         int serialNumber = provider.paginationFrom + index;
-                        
+
                         return TableRow(
                           decoration: BoxDecoration(
                             color: index % 2 == 0

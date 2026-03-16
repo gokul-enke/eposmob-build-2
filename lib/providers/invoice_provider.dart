@@ -59,12 +59,28 @@ class InvoiceProvider extends ChangeNotifier {
       getVoucherAccountTypesModelData;
   Map<String, String>? get getInvoiceAccountTypes =>
       getInvoiceAccountTypesModelData;
+
+  void _debugPrintHttpFailure({
+    required String requestName,
+    required Uri uri,
+    required http.Response response,
+  }) {
+    debugPrint(
+        '[$requestName] HTTP ${response.statusCode} ${response.reasonPhrase ?? ''}');
+    debugPrint('[$requestName] Request URL: $uri');
+    debugPrint('[$requestName] Response headers: ${response.headers}');
+    debugPrint('[$requestName] Response body start');
+    debugPrint(response.body);
+    debugPrint('[$requestName] Response body end');
+  }
+
   Map<String, String>? get getPaymentType => paymentList;
 
   // Pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
   int _itemsPerPage = 20;
+  String? _lastInvoiceAccessToken;
   String? _filterName;
   String? _filterInvoiceNumber;
   String? _filterFromDate;
@@ -98,22 +114,65 @@ class InvoiceProvider extends ChangeNotifier {
   int get receiptTotalPages => _receiptTotalPages;
   int get receiptItemsPerPage => _receiptItemsPerPage;
 
+  String? _normalizeOptionalFilter(String? value) {
+    final normalized = value?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
+  }
+
+  String? _formatInvoiceApiDate(String? value) {
+    final normalized = _normalizeOptionalFilter(value);
+    if (normalized == null) {
+      return null;
+    }
+
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(normalized)) {
+      return normalized;
+    }
+
+    final parts = normalized.split('/');
+    if (parts.length == 3) {
+      final day = parts[0].padLeft(2, '0');
+      final month = parts[1].padLeft(2, '0');
+      final year = parts[2];
+      return '$year-$month-$day';
+    }
+
+    return normalized;
+  }
+
+  String? _mapZatcaStatusToApi(String? value) {
+    final normalized = _normalizeOptionalFilter(value)?.toLowerCase();
+    switch (normalized) {
+      case 'sent':
+      case 'success':
+        return 'sent';
+      case 'not sent':
+      case 'not_sent':
+        return 'not_sent';
+      case 'failed':
+      case 'fail':
+        return 'failed';
+      default:
+        return null;
+    }
+  }
+
   // Navigation methods
   void goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
 
-    applyFiltersLocally(
-      filterName: _filterName,
-      filterInvoiceNumber: _filterInvoiceNumber,
-      filterFromDate: _filterFromDate,
-      filterToDate: _filterToDate,
-      filterStatus: _filterStatus,
-      filterZatcaStatus: _filterZatcaStatus,
-      filterOrderNumber: _filterOrderNumber,
-      filterPhone: _filterPhone,
-      filterEmail: _filterEmail,
-      page: page,
-    );
+    _currentPage = page;
+    if (_lastInvoiceAccessToken != null) {
+      unawaited(
+        listAllInvoices(
+          accessToken: _lastInvoiceAccessToken!,
+          page: page,
+        ),
+      );
+    }
   }
 
   //          *********************** CUSTOMER TRANSACTIONS API ***************************************************
@@ -371,28 +430,27 @@ class InvoiceProvider extends ChangeNotifier {
       String? email,
       String? orderNumber,
       int page = 1}) {
-    _filterName = name;
-    _filterInvoiceNumber = invoiceNumber;
-    _filterFromDate = fromDate;
-    _filterToDate = toDate;
-    _filterStatus = status;
-    _filterZatcaStatus = zatcaStatus;
-    _filterOrderNumber = orderNumber;
-    _filterPhone = phone;
-    _filterEmail = email;
+    _filterName = _normalizeOptionalFilter(name);
+    _filterInvoiceNumber = _normalizeOptionalFilter(invoiceNumber);
+    _filterFromDate = _normalizeOptionalFilter(fromDate);
+    _filterToDate = _normalizeOptionalFilter(toDate);
+    _filterStatus = _normalizeOptionalFilter(status);
+    _filterZatcaStatus = _normalizeOptionalFilter(zatcaStatus);
+    _filterOrderNumber = _normalizeOptionalFilter(orderNumber);
+    _filterPhone = _normalizeOptionalFilter(phone);
+    _filterEmail = _normalizeOptionalFilter(email);
     _currentPage = page;
-    applyFiltersLocally(
-      filterName: name,
-      filterInvoiceNumber: invoiceNumber,
-      filterOrderNumber: orderNumber,
-      filterPhone: phone,
-      filterEmail: email,
-      filterFromDate: fromDate,
-      filterToDate: toDate,
-      filterStatus: status,
-      filterZatcaStatus: zatcaStatus,
-      page: page,
-    );
+
+    if (_lastInvoiceAccessToken != null) {
+      unawaited(
+        listAllInvoices(
+          accessToken: _lastInvoiceAccessToken!,
+          page: page,
+        ),
+      );
+    } else {
+      notifyListeners();
+    }
   }
 
   void applyReceiptFilters(
@@ -424,7 +482,7 @@ class InvoiceProvider extends ChangeNotifier {
         page: page);
   }
 
-  void resetFilters() {
+  void resetFilters({bool reload = true}) {
     _filterName = null;
     _filterInvoiceNumber = null;
     _filterFromDate = null;
@@ -435,7 +493,17 @@ class InvoiceProvider extends ChangeNotifier {
     _filterPhone = null;
     _filterEmail = null;
     _currentPage = 1;
-    applyFiltersLocally(page: 1);
+
+    if (reload && _lastInvoiceAccessToken != null) {
+      unawaited(
+        listAllInvoices(
+          accessToken: _lastInvoiceAccessToken!,
+          page: 1,
+        ),
+      );
+    } else {
+      notifyListeners();
+    }
   }
 
   void resetReceiptFilters() {
@@ -992,12 +1060,11 @@ class InvoiceProvider extends ChangeNotifier {
     // Build URL with store_id parameter
     final baseInvoiceAccountTypeUri = Uri.parse(APPUrl.listInvoiceAccountType);
     final queryParams =
-      Map<String, String>.from(baseInvoiceAccountTypeUri.queryParameters);
+        Map<String, String>.from(baseInvoiceAccountTypeUri.queryParameters);
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final url =
-      baseInvoiceAccountTypeUri.replace(queryParameters: queryParams);
+    final url = baseInvoiceAccountTypeUri.replace(queryParameters: queryParams);
 
     try {
       debugPrint("[InvoiceProvider] Fetching account types from: $url");
@@ -1045,12 +1112,12 @@ class InvoiceProvider extends ChangeNotifier {
 
     final baseVoucherAccountTypeUri = Uri.parse(APPUrl.listVoucherAccountType);
     final queryParameters =
-      Map<String, String>.from(baseVoucherAccountTypeUri.queryParameters);
+        Map<String, String>.from(baseVoucherAccountTypeUri.queryParameters);
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
     final url =
-      baseVoucherAccountTypeUri.replace(queryParameters: queryParameters);
+        baseVoucherAccountTypeUri.replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(url, headers: {
@@ -1090,8 +1157,8 @@ class InvoiceProvider extends ChangeNotifier {
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.listUser)
-        .replace(queryParameters: queryParameters);
+    final url =
+        Uri.parse(APPUrl.listUser).replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(url, headers: {
@@ -1286,7 +1353,8 @@ class InvoiceProvider extends ChangeNotifier {
     if (dateFrom != null) queryParams['date_from'] = dateFrom;
     if (dateTo != null) queryParams['date_to'] = dateTo;
     if (page != null) queryParams['page'] = page.toString();
-    if (activeStoreId != null) queryParams['store_id'] = activeStoreId.toString();
+    if (activeStoreId != null)
+      queryParams['store_id'] = activeStoreId.toString();
 
     // Build URL with query parameters
     Uri url = Uri.parse(APPUrl.listAllTransaction);
@@ -1385,21 +1453,74 @@ class InvoiceProvider extends ChangeNotifier {
   Future<dynamic> listAllInvoices({
     required String accessToken,
     String? name,
+    String? invoiceNumber,
+    String? fromDate,
+    String? toDate,
+    String? status,
+    String? zatcaStatus,
+    String? phone,
+    String? email,
+    String? orderNumber,
     int? page,
     int? perPage,
+    bool loadAll = false,
   }) async {
-    debugPrint("listAllInvoices called: name=$name, page=$page");
+    debugPrint("listAllInvoices called: name=$name, page=$page, loadAll=$loadAll");
     _isLoading = true;
     notifyListeners();
+    _lastInvoiceAccessToken = accessToken;
+
+    if (name != null) {
+      _filterName = _normalizeOptionalFilter(name);
+    }
+    if (invoiceNumber != null) {
+      _filterInvoiceNumber = _normalizeOptionalFilter(invoiceNumber);
+    }
+    if (fromDate != null) {
+      _filterFromDate = _normalizeOptionalFilter(fromDate);
+    }
+    if (toDate != null) {
+      _filterToDate = _normalizeOptionalFilter(toDate);
+    }
+    if (status != null) {
+      _filterStatus = _normalizeOptionalFilter(status);
+    }
+    if (zatcaStatus != null) {
+      _filterZatcaStatus = _normalizeOptionalFilter(zatcaStatus);
+    }
+    if (phone != null) {
+      _filterPhone = _normalizeOptionalFilter(phone);
+    }
+    if (email != null) {
+      _filterEmail = _normalizeOptionalFilter(email);
+    }
+    if (orderNumber != null) {
+      _filterOrderNumber = _normalizeOptionalFilter(orderNumber);
+    }
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
-    final queryParams = {
-      'page': '1', // Always fetch all invoices for local pagination
-      'per_page': '1000', // Get a large number for local filtering
+    final resolvedPage = loadAll ? 1 : (page ?? _currentPage);
+    final resolvedPerPage = loadAll ? (perPage ?? 1000) : (perPage ?? _itemsPerPage);
+    final mappedZatcaStatus = _mapZatcaStatusToApi(_filterZatcaStatus);
+
+    final queryParams = <String, String>{
+      'page': resolvedPage.toString(),
+      'per_page': resolvedPerPage.toString(),
+      if (_filterName != null) 'name': _filterName!,
+      if (_filterInvoiceNumber != null) 'invoice_number': _filterInvoiceNumber!,
+      if (_formatInvoiceApiDate(_filterFromDate) != null)
+        'date_from': _formatInvoiceApiDate(_filterFromDate)!,
+      if (_formatInvoiceApiDate(_filterToDate) != null)
+        'date_to': _formatInvoiceApiDate(_filterToDate)!,
+      if (_filterStatus != null) 'status': _filterStatus!,
+      if (mappedZatcaStatus != null) 'zatca_status': mappedZatcaStatus,
+      if (_filterPhone != null) 'phone': _filterPhone!,
+      if (_filterEmail != null) 'email': _filterEmail!,
+      if (_filterOrderNumber != null) 'order_number': _filterOrderNumber!,
     };
 
     if (activeStoreId != null) {
@@ -1426,40 +1547,41 @@ class InvoiceProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
 
-        // Store all invoices for local filtering
-        _allInvoices = listInvoiceModel.data.invoices;
+        final responseData = jsonData['data'] as Map<String, dynamic>? ?? {};
+        final fetchedInvoices = List<Invoice>.from(listInvoiceModel.data.invoices);
+
+        _allInvoices = fetchedInvoices;
+        _filteredInvoices = fetchedInvoices;
+        invoiceListDetails = fetchedInvoices;
+        _currentPage = loadAll ? 1 : listInvoiceModel.data.currentPage;
+        _totalPages = loadAll ? 1 : listInvoiceModel.data.lastPage;
+        _itemsPerPage = loadAll
+            ? resolvedPerPage
+            : int.tryParse(responseData['per_page']?.toString() ?? '') ??
+                resolvedPerPage;
         debugPrint(
             "[DEBUG][InvoiceProvider] API returned ${listInvoiceModel.data.total} total invoices.");
         debugPrint(
             "[DEBUG][InvoiceProvider] Received ${_allInvoices?.length ?? 0} invoices in the current batch.");
 
-        // Set filter name if provided
-        if (name != null) {
-          _filterName = name;
-        }
-
-        // Apply filters based on current state with all parameters
-        applyFiltersLocally(
-          filterName: _filterName,
-          filterInvoiceNumber: _filterInvoiceNumber,
-          filterFromDate: _filterFromDate,
-          filterToDate: _filterToDate,
-          filterStatus: _filterStatus,
-          filterZatcaStatus: _filterZatcaStatus,
-          filterOrderNumber: _filterOrderNumber,
-          filterPhone: _filterPhone,
-          filterEmail: _filterEmail,
-          page: page ?? 1,
-        );
-
         _isLoading = false;
         notifyListeners();
         return jsonData;
       } else {
-        debugPrint("Error fetching invoices: ${response.statusCode}");
+        _debugPrintHttpFailure(
+          requestName: 'listAllInvoices',
+          uri: uri,
+          response: response,
+        );
         _isLoading = false;
         notifyListeners();
-        return {'status': 'error', 'message': 'Failed to fetch invoices'};
+        return {
+          'status': 'error',
+          'message': 'Failed to fetch invoices',
+          'statusCode': response.statusCode,
+          'reasonPhrase': response.reasonPhrase,
+          'body': response.body,
+        };
       }
     } catch (e) {
       debugPrint("Exception fetching invoices: $e");
@@ -1720,8 +1842,7 @@ class InvoiceProvider extends ChangeNotifier {
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(
-        "${APPUrl.detailsOfReceipt}/$id")
+    final url = Uri.parse("${APPUrl.detailsOfReceipt}/$id")
         .replace(queryParameters: queryParameters);
 
     try {
@@ -1821,18 +1942,7 @@ class InvoiceProvider extends ChangeNotifier {
   }
 
   List<String> getZatcaStatusOptions() {
-    if (_allInvoices == null || _allInvoices!.isEmpty) {
-      return ["All ZATCA Status"];
-    }
-
-    final uniqueStatuses = _allInvoices!
-        .map(_getNormalizedZatcaLabel)
-        .where((status) => status.isNotEmpty)
-        .toSet()
-        .toList();
-
-    uniqueStatuses.sort();
-    return ["All ZATCA Status", ...uniqueStatuses];
+    return ["All ZATCA Status", "SENT", "NOT SENT", "FAILED"];
   }
 
   bool _matchesZatcaStatus(Invoice invoice, String selectedStatus) {
@@ -1844,7 +1954,14 @@ class InvoiceProvider extends ChangeNotifier {
     final String? zatcaStatus = invoice.zatcaStatus?.toLowerCase();
     final String? requestStatus = invoice.zatcaRequestStatus?.toLowerCase();
 
-    if (zatcaStatus == 'pass') return 'SUCCESS';
+    if (zatcaStatus == 'pass' ||
+        zatcaStatus == 'success' ||
+        zatcaStatus == 'sent') {
+      return 'SENT';
+    }
+    if (requestStatus == 'success' || requestStatus == 'sent') {
+      return 'SENT';
+    }
     if (requestStatus == 'failed') return 'FAILED';
     if (requestStatus == 'pending' || requestStatus == 'processing') {
       return 'PENDING';

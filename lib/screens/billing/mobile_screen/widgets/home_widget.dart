@@ -563,6 +563,7 @@ class _HomeWidgetState extends State<HomeWidget> {
           comment: provider.currentOrder?.comment ?? "",
           deliveryMethod:
               provider.currentOrder?.deliveryMethod ?? "Store Takeaway",
+          context: context,
         );
 
         showScaffold(

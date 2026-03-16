@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -70,6 +72,8 @@ class StoreSessionProvider extends ChangeNotifier {
 
     final generalSettingsProvider = context.read<GeneralSettingsProvider>();
     final appSettingsProvider = context.read<AppSettingsProvider>();
+    final adminSettingsProvider = context.read<AdminSettingsProvider>();
+    final bankProvider = context.read<BankProvider>();
     final invoiceProvider = context.read<InvoiceProvider>();
     final purchaseProvider = context.read<PurchaseProvider>();
     final docConfigProvider = context.read<DocumentConfigProvider>();
@@ -123,6 +127,16 @@ class StoreSessionProvider extends ChangeNotifier {
 
       await _updateStatus('Applying app preferences...');
       await appSettingsProvider.fetchAppSettings();
+
+      await _updateStatus('Loading branding assets...');
+      await adminSettingsProvider.fetchAdminSettings();
+
+      await _updateStatus('Syncing bank accounts...');
+      try {
+        await bankProvider.fetchBanks(accessToken: accessToken);
+      } catch (e) {
+        debugPrint('Warning: Failed to load banks after store selection: $e');
+      }
 
       await _updateStatus('Preparing invoices...');
       await invoiceProvider.listAllInvoiceAccountTypes(accessToken);

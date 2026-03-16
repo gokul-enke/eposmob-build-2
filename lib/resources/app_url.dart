@@ -184,11 +184,13 @@ class APPUrl {
   static String get listFaqs => '$baseURL/api/v1/faq/faqs/company/1';
   static String get getGeneralSettings => '$baseURL/api/v1/general';
   static String get getAppSettings => '$baseURL/api/v1/website-settings';
+  static String get adminSettings => '$baseURL/api/v1/admin-settings';
 
   static String get getDeliveryMethods =>
       '$baseURL/api/v1/logistics/list-delivery-methods';
   static String get getPaymentGateways =>
       '$baseURL/api/v1/payment-gateway/list-payment-gateways';
+  static String get getBanks => '$baseURL/api/v1/get-banks';
 
   static String get listSalesExecutives =>
       '$baseURL/api/v1/list-sales-executives';

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'standard_pdf_layout.dart';
 import 'classic_standard_pdf_layout.dart';
+import 'standard_tax_invoice_standard_pdf_layout.dart';
 import 'tax_invoice_standard_pdf_layout.dart';
 import 'detailed_tax_invoice_standard_pdf_layout.dart';
 
@@ -22,6 +23,7 @@ class StandardPdfLayoutFactory {
     'classic': () => ClassicStandardPdfLayout(),
     'tax_invoice': () => TaxInvoiceStandardPdfLayout(),
     'detailed_tax_invoice': () => DetailedTaxInvoiceStandardPdfLayout(),
+    'standard_tax_invoice': () => StandardTaxInvoiceStandardPdfLayout(),
   };
 
   /// Get a layout instance based on the theme identifier.

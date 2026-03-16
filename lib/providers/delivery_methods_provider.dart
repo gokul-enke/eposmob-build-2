@@ -6,6 +6,9 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DeliveryMethodsProvider with ChangeNotifier {
+  static const String _deliveryMethodsCacheKeyPrefix =
+      'delivery_methods_cache';
+
   List<DeliveryMethod> _deliveryMethods = [];
   bool _isLoading = false;
 
@@ -33,20 +36,94 @@ class DeliveryMethodsProvider with ChangeNotifier {
     // Removed direct fetch to prevent early crashes or unauthorized requests
   }
 
-  Future<void> fetchDeliveryMethods() async {
+  List<DeliveryMethod> _parseDeliveryMethods(dynamic rawData) {
+    final List<DeliveryMethod> parsedMethods = [];
+
+    if (rawData is List) {
+      for (final item in rawData) {
+        if (item is Map<String, dynamic>) {
+          final id = item['id']?.toString();
+          final name = item['name']?.toString();
+          final code = item['code']?.toString();
+
+          if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
+            // Parse prices array if available
+            final List<DeliveryPrice> prices = [];
+            if (item['prices'] is List) {
+              for (final priceItem in item['prices']) {
+                if (priceItem is Map<String, dynamic>) {
+                  try {
+                    prices.add(DeliveryPrice.fromJson(priceItem));
+                  } catch (e) {
+                    debugPrint('Error parsing delivery price: $e');
+                  }
+                }
+              }
+            }
+
+            parsedMethods.add(DeliveryMethod(
+              id: id,
+              name: name,
+              code: code,
+              prices: prices,
+            ));
+          }
+        }
+      }
+      return parsedMethods;
+    }
+
+    if (rawData is Map<String, dynamic>) {
+      rawData.forEach((key, value) {
+        if (value is String) {
+          parsedMethods.add(DeliveryMethod.fromJson(key, value));
+        } else if (value is Map<String, dynamic>) {
+          final id = value['id']?.toString() ?? key;
+          final name = value['name']?.toString() ?? value['label']?.toString();
+
+          if (name != null && name.isNotEmpty) {
+            parsedMethods.add(DeliveryMethod(id: id, name: name));
+          }
+        }
+      });
+    }
+
+    return parsedMethods;
+  }
+
+  Future<void> fetchDeliveryMethods({bool forceRefresh = false}) async {
+    if (!forceRefresh && _deliveryMethods.isNotEmpty) {
+      return;
+    }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (!forceRefresh) {
+      final cachedMethods = _loadDeliveryMethodsFromLocalCache(
+        prefs,
+        activeStoreId,
+      );
+      if (cachedMethods.isNotEmpty) {
+        _deliveryMethods = cachedMethods;
+        notifyListeners();
+        return;
+      }
+    }
+
     _isLoading = true;
     notifyListeners();
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
-      final int? activeStoreId = prefs.getInt('active_store_id');
 
       if (apiKey == null || apiKey.isEmpty) {
         debugPrint(
             '⚠️ DeliveryMethodsProvider: No API key found, skipping fetch.');
-        _isLoading = false;
-        notifyListeners();
+        _deliveryMethods = _loadDeliveryMethodsFromLocalCache(
+          prefs,
+          activeStoreId,
+        );
         return;
       }
 
@@ -70,25 +147,102 @@ class DeliveryMethodsProvider with ChangeNotifier {
         final data = json.decode(response.body);
 
         if (data['status'] == 'success') {
-          _deliveryMethods = [];
-          final methods = data['data'] as Map<String, dynamic>;
-
-          methods.forEach((key, value) {
-            _deliveryMethods.add(DeliveryMethod.fromJson(key, value));
-          });
+          _deliveryMethods = _parseDeliveryMethods(data['data']);
+          await _saveDeliveryMethodsToLocalCache(
+            prefs,
+            activeStoreId,
+            _deliveryMethods,
+          );
         } else {
-          // Handle other statuses if necessary
-          throw Exception(data['message']);
+          final cachedMethods = _loadDeliveryMethodsFromLocalCache(
+            prefs,
+            activeStoreId,
+          );
+          if (cachedMethods.isNotEmpty) {
+            _deliveryMethods = cachedMethods;
+          } else {
+            throw Exception(data['message']);
+          }
         }
       } else {
-        throw Exception('Failed to load delivery methods');
+        final cachedMethods = _loadDeliveryMethodsFromLocalCache(
+          prefs,
+          activeStoreId,
+        );
+        if (cachedMethods.isNotEmpty) {
+          _deliveryMethods = cachedMethods;
+        } else {
+          throw Exception('Failed to load delivery methods');
+        }
       }
     } catch (error) {
-      debugPrint('Error: $error');
-      throw Exception('Failed to load delivery methods: $error');
+      final cachedMethods = _loadDeliveryMethodsFromLocalCache(
+        prefs,
+        activeStoreId,
+      );
+      if (cachedMethods.isNotEmpty) {
+        _deliveryMethods = cachedMethods;
+        debugPrint('📦 Using cached delivery methods after fetch failure');
+      } else {
+        debugPrint('Error: $error');
+        throw Exception('Failed to load delivery methods: $error');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  List<DeliveryMethod> _loadDeliveryMethodsFromLocalCache(
+    SharedPreferences prefs,
+    int? activeStoreId,
+  ) {
+    final raw = prefs.getString(_deliveryMethodsCacheKey(activeStoreId));
+    if (raw == null || raw.isEmpty) {
+      return [];
+    }
+
+    try {
+      final decoded = json.decode(raw) as List<dynamic>;
+      return decoded
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => DeliveryMethod(
+              id: item['id']?.toString() ?? '',
+              name: item['name']?.toString() ?? '',
+              code: item['code']?.toString(),
+              prices: ((item['prices'] as List<dynamic>?) ?? const [])
+                  .whereType<Map<String, dynamic>>()
+                  .map(DeliveryPrice.fromJson)
+                  .toList(),
+            ),
+          )
+          .where((item) => item.id.isNotEmpty && item.name.isNotEmpty)
+          .toList();
+    } catch (error) {
+      debugPrint('❌ Failed to read cached delivery methods: $error');
+      return [];
+    }
+  }
+
+  Future<void> _saveDeliveryMethodsToLocalCache(
+    SharedPreferences prefs,
+    int? activeStoreId,
+    List<DeliveryMethod> methods,
+  ) async {
+    try {
+      await prefs.setString(
+        _deliveryMethodsCacheKey(activeStoreId),
+        json.encode(methods.map((item) => item.toJson()).toList()),
+      );
+    } catch (error) {
+      debugPrint('❌ Failed to cache delivery methods locally: $error');
+    }
+  }
+
+  String _deliveryMethodsCacheKey(int? activeStoreId) {
+    return activeStoreId == null
+        ? _deliveryMethodsCacheKeyPrefix
+        : '${_deliveryMethodsCacheKeyPrefix}_$activeStoreId';
   }
 }

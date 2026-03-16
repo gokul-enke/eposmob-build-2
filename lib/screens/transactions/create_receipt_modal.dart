@@ -285,6 +285,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
       if (authModel.token != null && authModel.token!.isNotEmpty) {
         await invoiceProvider.listAllInvoices(
           accessToken: authModel.token!,
+          loadAll: true,
         );
 
         setState(() {

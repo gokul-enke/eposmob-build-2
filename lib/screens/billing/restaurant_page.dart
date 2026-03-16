@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
@@ -704,12 +705,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (propsList is List) {
         try {
           final match = propsList.firstWhere(
-            (e) => (e is Map) &&
+            (e) =>
+                (e is Map) &&
                 (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
                     'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -916,7 +919,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _orderPanelKey.currentState?.refreshSavedOrders();
         }
 
-          // Check if KOT print is enabled in app settings
+        // Check if KOT print is enabled in app settings
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
@@ -945,7 +948,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       tableName: tableName,
                       orderTime: orderTime,
                       items: printItems,
-                      comment: currentComment.isNotEmpty ? currentComment : null,
+                      comment:
+                          currentComment.isNotEmpty ? currentComment : null,
                     ),
                   ),
                 );
@@ -981,6 +985,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
+      final orderPanelState = _orderPanelKey.currentState;
       final cartItems = localProductProvider.cartItems;
 
       if (cartItems.isEmpty) {
@@ -994,10 +999,27 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
       // Auto-save as pending draft with tableId
       localProductProvider.saveCurrentCartAsOrder(
-        comment: 'TABLE:$_activeTableId',
+        customerName: orderPanelState?.selectedCustomerNameForDraft,
+        customerPhone: orderPanelState?.selectedCustomerPhoneForDraft,
+        comment:
+            orderPanelState?.buildTaggedDraftComment(_activeTableId!) ??
+                'TABLE:$_activeTableId',
+        deliveryMethod: orderPanelState?.deliveryMethodForDraft,
+        customerId: orderPanelState?.selectedCustomerIdForDraft,
+        paymentMethod: orderPanelState?.paymentMethodForDraft,
+        paidAmount: orderPanelState?.paidAmountForDraft,
+        balanceAmount: orderPanelState?.balanceAmountForDraft,
+        transactionId: orderPanelState?.transactionNumberForDraft,
+        couponId: orderPanelState?.couponIdForDraft,
+        deliveryMethodId: orderPanelState?.deliveryMethodIdForDraft,
         status: 'pending',
+        deliveryDate: orderPanelState?.deliveryDateForDraft,
+        deliveryTime: orderPanelState?.deliveryTimeForDraft,
+        toCustomerCredit: orderPanelState?.toCustomerCreditForDraft,
         context: context,
         tableId: _activeTableId,
+        address: orderPanelState?.deliveryAddressForDraft,
+        deliveryCharge: orderPanelState?.deliveryChargeForDraft,
       );
 
       debugPrint('✅ Auto-saved pending draft for table $_activeTableId');
@@ -1912,7 +1934,7 @@ class _MenuPanelState extends State<_MenuPanel> {
         final categories = categoryProvider.category ?? [];
         final selectedCategoryId = widget.activeCategoryId ?? 0;
         final bool isProductsLoading =
-          productProvider.isLoading || _isResyncingProducts;
+            productProvider.isLoading || _isResyncingProducts;
 
         // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
@@ -2281,73 +2303,76 @@ class _MenuPanelState extends State<_MenuPanel> {
                         ),
                       )
                     : items.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.restaurant_menu,
-                              size: 48,
-                              color: ColorManager.textColor.withOpacity(0.3),
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.restaurant_menu,
+                                  size: 48,
+                                  color:
+                                      ColorManager.textColor.withOpacity(0.3),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No items in this category',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.21,
+                                      ColorManager.textColor.withOpacity(0.7)),
+                                ),
+                                const SizedBox(height: 12),
+                                CustomRoundButton(
+                                  title: _isResyncingProducts
+                                      ? 'Resyncing...'
+                                      : 'Resync Products',
+                                  fct: _isResyncingProducts
+                                      ? () {}
+                                      : _resyncProductsFromEmptyState,
+                                  width: 170,
+                                  height: 36,
+                                  fontSize: 11,
+                                  boxColor: ColorManager.kPrimaryColor,
+                                  borderColor: ColorManager.kPrimaryColor,
+                                  textColor: Colors.white,
+                                  radius: 8,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No items in this category',
-                              style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s14,
-                                  0.21,
-                                  ColorManager.textColor.withOpacity(0.7)),
+                          )
+                        : MouseRegion(
+                            cursor: SystemMouseCursors.grab,
+                            child: ScrollConfiguration(
+                              behavior:
+                                  ScrollConfiguration.of(context).copyWith(
+                                dragDevices: {
+                                  PointerDeviceKind.mouse,
+                                  PointerDeviceKind.touch,
+                                  PointerDeviceKind.stylus,
+                                  PointerDeviceKind.trackpad,
+                                },
+                              ),
+                              child: GridView.builder(
+                                padding:
+                                    EdgeInsets.all(widget.isCompact ? 6 : 8),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  mainAxisSpacing: widget.isCompact ? 6 : 8,
+                                  crossAxisSpacing: widget.isCompact ? 6 : 8,
+                                  childAspectRatio: childAspectRatio,
+                                ),
+                                itemCount: items.length,
+                                itemBuilder: (_, idx) {
+                                  final item = items[idx];
+                                  return _buildMenuItem(
+                                      item, widget.isCompact, context);
+                                },
+                                physics: const BouncingScrollPhysics(),
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                            CustomRoundButton(
-                              title: _isResyncingProducts
-                                  ? 'Resyncing...'
-                                  : 'Resync Products',
-                              fct: _isResyncingProducts
-                                  ? () {}
-                                  : _resyncProductsFromEmptyState,
-                              width: 170,
-                              height: 36,
-                              fontSize: 11,
-                              boxColor: ColorManager.kPrimaryColor,
-                              borderColor: ColorManager.kPrimaryColor,
-                              textColor: Colors.white,
-                              radius: 8,
-                            ),
-                          ],
-                        ),
-                      )
-                    : MouseRegion(
-                        cursor: SystemMouseCursors.grab,
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(
-                            dragDevices: {
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.stylus,
-                              PointerDeviceKind.trackpad,
-                            },
                           ),
-                          child: GridView.builder(
-                            padding: EdgeInsets.all(widget.isCompact ? 6 : 8),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              mainAxisSpacing: widget.isCompact ? 6 : 8,
-                              crossAxisSpacing: widget.isCompact ? 6 : 8,
-                              childAspectRatio: childAspectRatio,
-                            ),
-                            itemCount: items.length,
-                            itemBuilder: (_, idx) {
-                              final item = items[idx];
-                              return _buildMenuItem(
-                                  item, widget.isCompact, context);
-                            },
-                            physics: const BouncingScrollPhysics(),
-                          ),
-                        ),
-                      ),
               ),
             ],
           ),
@@ -2725,9 +2750,34 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
   String _orderComment = "";
   bool _hasOpenedPaymentModalOnce = false;
+  String _deliveryMethod = "Store Takeaway";
+  String _deliveryMethodId = "";
+  String _deliveryAddress = "";
+  String? _deliveryDate;
+  String? _deliveryTime;
+  double? _selectedDeliveryCharge;
 
   // Expose current comment to parent (RestaurantPage) for new order flow
   String get orderComment => _orderComment;
+    String? get selectedCustomerNameForDraft => _selectedCustomer?.name;
+    int? get selectedCustomerIdForDraft => _selectedCustomer?.id ?? _selectedCustomerID;
+    String? get selectedCustomerPhoneForDraft =>
+      _selectedCustomer?.phone ?? _selectedCustomerPhone;
+    String get deliveryMethodForDraft => _deliveryMethod;
+    String get deliveryMethodIdForDraft =>
+      _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId();
+    String? get deliveryDateForDraft => _deliveryDate;
+    String? get deliveryTimeForDraft => _deliveryTime;
+    String? get deliveryAddressForDraft =>
+      _deliveryAddress.isNotEmpty ? _deliveryAddress : null;
+    double get deliveryChargeForDraft => _getDeliveryChargeForOrder();
+    bool get toCustomerCreditForDraft => _toCustomerCreditEnabled;
+    String? get transactionNumberForDraft =>
+      _transactionNumber.isNotEmpty ? _transactionNumber : null;
+    String? get couponIdForDraft => _couponCode.isNotEmpty ? _couponCode : null;
+    String? get balanceAmountForDraft => _balanceAmount.toString();
+    String? get paymentMethodForDraft => _getLocalDraftPaymentData()['paymentMethod'];
+    String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
 
   // Customer Selection Variables
   CustomerListModelData? _selectedCustomer;
@@ -2898,6 +2948,186 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
+  Map<String, String?> _getLocalDraftPaymentData() {
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final paymentAmounts = <String, String>{};
+    final selectedMethods = <String>[];
+
+    void addMethod(bool isSelected, String amountText, String methodId) {
+      final amount = double.tryParse(amountText) ?? 0.0;
+      if (!isSelected || amount <= 0) return;
+      selectedMethods.add(methodId);
+      paymentAmounts[methodId] = amount.toStringAsFixed(2);
+    }
+
+    addMethod(_isCashSelected, _cashAmount, billingProvider.cashPaymentMethodId ?? 'CASH');
+    addMethod(_isCardSelected, _cardAmount, billingProvider.cardPaymentMethodId ?? 'CARD');
+    addMethod(_isUpiSelected, _upiAmount, billingProvider.upiPaymentMethodId ?? 'UPI');
+    addMethod(_isCodSelected, _codAmount, billingProvider.codPaymentMethodId ?? 'COD');
+    addMethod(_isDebitSelected, _debitAmount, 'DEBIT');
+
+    if (selectedMethods.isEmpty) {
+      return {'paymentMethod': null, 'paidAmount': null};
+    }
+
+    final totalPaid = paymentAmounts.values.fold<double>(
+      0.0,
+      (sum, amount) => sum + (double.tryParse(amount) ?? 0.0),
+    );
+
+    if (selectedMethods.length == 1) {
+      return {
+        'paymentMethod': selectedMethods.first,
+        'paidAmount': totalPaid.toStringAsFixed(2),
+      };
+    }
+
+    return {
+      'paymentMethod': json.encode({
+        'methods': selectedMethods,
+        'amounts': paymentAmounts,
+        'isMultiPayment': true,
+      }),
+      'paidAmount': totalPaid.toStringAsFixed(2),
+    };
+  }
+
+  String buildTaggedDraftComment(String tableId) {
+    return 'TABLE:$tableId' + (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
+  }
+
+  String? _resolveStoredPaymentMethodName(String? storedMethod) {
+    if (storedMethod == null || storedMethod.isEmpty) return null;
+
+    final normalized = storedMethod.trim().toUpperCase();
+    if (normalized == 'CASH' ||
+        normalized == 'CARD' ||
+        normalized == 'UPI' ||
+        normalized == 'COD' ||
+        normalized == 'DEBIT') {
+      return normalized;
+    }
+
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    if (storedMethod == billingProvider.cashPaymentMethodId) return 'CASH';
+    if (storedMethod == billingProvider.cardPaymentMethodId) return 'CARD';
+    if (storedMethod == billingProvider.upiPaymentMethodId) return 'UPI';
+    if (storedMethod == billingProvider.codPaymentMethodId) return 'COD';
+    if (normalized == 'DEBIT') return 'DEBIT';
+
+    return null;
+  }
+
+  CustomerListModelData? _resolveDraftCustomer(SavedOrder order) {
+    if (_customers.isEmpty) return null;
+
+    for (final customer in _customers) {
+      if (order.customerId != null && customer.id == order.customerId) {
+        return customer;
+      }
+    }
+
+    for (final customer in _customers) {
+      if ((order.customerPhone?.isNotEmpty ?? false) &&
+          customer.phone == order.customerPhone) {
+        return customer;
+      }
+    }
+
+    return null;
+  }
+
+  void _rehydrateLocalDraftMetadata(SavedOrder order) {
+    final matchedCustomer = _resolveDraftCustomer(order);
+    final parsedPayment =
+        PaymentHelper.parseLocalMultiPayment(context, order.paymentMethod);
+    final paymentBreakdown = parsedPayment?.paymentBreakdown;
+    final paidAmount = double.tryParse(order.paidAmount ?? '') ?? 0.0;
+    final singleMethodName = parsedPayment == null
+        ? _resolveStoredPaymentMethodName(order.paymentMethod)
+        : null;
+
+    double amountFor(String methodName) {
+      if (paymentBreakdown != null) {
+        return double.tryParse(paymentBreakdown[methodName]?.toString() ?? '') ?? 0.0;
+      }
+      return singleMethodName == methodName ? paidAmount : 0.0;
+    }
+
+    final cashAmount = amountFor('CASH');
+    final cardAmount = amountFor('CARD');
+    final upiAmount = amountFor('UPI');
+    final codAmount = amountFor('COD');
+    final debitAmount = amountFor('DEBIT');
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    if (matchedCustomer != null) {
+      customerSelectionProvider.setSelectedCustomer(
+        matchedCustomer,
+        isDefault: _isDefaultCustomerPhone(matchedCustomer.phone),
+      );
+    } else {
+      customerSelectionProvider.clearSelectedCustomer();
+      if (order.customerPhone?.isNotEmpty == true) {
+        customerSelectionProvider.updateCustomerPhone(order.customerPhone!);
+      }
+    }
+
+    setState(() {
+      _selectedCustomer = matchedCustomer;
+      _selectedCustomerID = matchedCustomer?.id ?? order.customerId;
+      _selectedCustomerPhone = matchedCustomer?.phone ?? order.customerPhone;
+      _isCustomerManuallySelected =
+          order.customerId != null || (order.customerPhone?.isNotEmpty ?? false);
+
+      _orderComment = _cleanDraftComment(order.comment);
+      _deliveryMethod = order.deliveryMethod ?? 'Store Takeaway';
+      _deliveryMethodId = order.deliveryMethodId ?? _getDefaultDeliveryMethodId();
+      _deliveryAddress = order.address ?? '';
+      _deliveryDate = order.deliveryDate;
+      _deliveryTime = order.deliveryTime;
+      _selectedDeliveryCharge = order.deliveryCharge;
+
+      _flatDiscount = order.flatDiscount ?? 0.0;
+      _percentageDiscount = order.percentageDiscount ?? 0.0;
+      _couponCode = order.couponId ?? '';
+      _isCouponApplied = _flatDiscount > 0 ||
+          _percentageDiscount > 0 ||
+          _couponCode.isNotEmpty;
+
+      _transactionNumber = order.transactionId ?? '';
+      _balanceAmount = double.tryParse(order.balanceAmount ?? '') ?? 0.0;
+      _toCustomerCreditEnabled = order.toCustomerCredit ?? false;
+      _toCustomerCreditAmount = 0.0;
+
+      _isCashSelected = cashAmount > 0;
+      _cashAmount = cashAmount > 0 ? cashAmount.toStringAsFixed(2) : '';
+      _isCardSelected = cardAmount > 0;
+      _cardAmount = cardAmount > 0 ? cardAmount.toStringAsFixed(2) : '';
+      _isUpiSelected = upiAmount > 0;
+      _upiAmount = upiAmount > 0 ? upiAmount.toStringAsFixed(2) : '';
+      _isCodSelected = codAmount > 0;
+      _codAmount = codAmount > 0 ? codAmount.toStringAsFixed(2) : '';
+      _isDebitSelected = debitAmount > 0;
+      _debitAmount = debitAmount > 0 ? debitAmount.toStringAsFixed(2) : '';
+      _hasOpenedPaymentModalOnce = _isCashSelected ||
+          _isCardSelected ||
+          _isUpiSelected ||
+          _isCodSelected ||
+          _isDebitSelected;
+    });
+  }
+
+  bool _isDefaultCustomerPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? '';
+    return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
   /// Fetch cart item statuses for Mark Served functionality
   Future<void> _fetchCartItemStatuses() async {
     debugPrint('🚀 === FETCHING CART ITEM STATUSES (Restaurant) ===');
@@ -2920,7 +3150,8 @@ class _OrderPanelState extends State<_OrderPanel> {
           debugPrint('   📊 ID: ${status.id}, Value: "${status.value}"');
         }
       } else {
-        debugPrint('❌ Failed to fetch cart item statuses: ${response['message']}');
+        debugPrint(
+            '❌ Failed to fetch cart item statuses: ${response['message']}');
       }
     } catch (e) {
       debugPrint('❌ Exception fetching cart item statuses: $e');
@@ -2953,9 +3184,9 @@ class _OrderPanelState extends State<_OrderPanel> {
     if (_selectedOrder == null) return;
 
     final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
-    final displayOrderId = _selectedOrder['order_number']?.toString() ?? 
-                           _selectedOrder['display_order_id']?.toString() ?? 
-                           orderId.toString();
+    final displayOrderId = _selectedOrder['order_number']?.toString() ??
+        _selectedOrder['display_order_id']?.toString() ??
+        orderId.toString();
 
     debugPrint('🚀 === MARKING ALL ORDER ITEMS AS SERVED ===');
     debugPrint('📦 Order ID: $orderId');
@@ -2984,10 +3215,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         debugPrint('✅ All order items updated to SERVED');
-        
+
         // Refresh the saved orders to get updated statuses
         await _refreshSavedOrdersSilently();
-        
+
         // Re-select the order to refresh details
         if (_selectedOrder != null) {
           final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
@@ -3128,30 +3359,11 @@ class _OrderPanelState extends State<_OrderPanel> {
       cartItems = _selectedOrder['order_items'];
     }
 
-    // Calculate order total dynamically from cart items
-    double orderTotal = 0.0;
-    for (var item in cartItems) {
-      final quantity =
-          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
-              item['price']?.toString() ??
-              item['product_price']?.toString() ??
-              '0') ??
-          0.0;
-      orderTotal += quantity * unitPrice;
-    }
-
-    // If we still have zero total, try getting it from order total as fallback
-    if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
-      orderTotal =
-          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
-              0.0;
-    }
-
-    // Apply discounts if any
-    double totalDiscountAmount =
-        _flatDiscount + (orderTotal * _percentageDiscount / 100);
-    orderTotal = orderTotal - totalDiscountAmount;
+    // Calculate effective total (discount + delivery charge)
+    final rawOrderTotal = _calculateOrderTotal();
+    final totalDiscountAmount =
+        _flatDiscount + (rawOrderTotal * _percentageDiscount / 100);
+    double orderTotal = _getEffectiveOrderTotal();
 
     debugPrint(
         '💰 Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
@@ -3240,7 +3452,9 @@ class _OrderPanelState extends State<_OrderPanel> {
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
-        isDefaultCustomer: Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer,
+        isDefaultCustomer:
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .isDefaultCustomer,
         onAfterApply: onAfterApply,
         onPaymentMethodSelected: (
           isCash,
@@ -4070,7 +4284,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
-              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
+              _hasOpenedPaymentModalOnce =
+                  false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data');
             } else {
               // Keep the current selection - don't clear it immediately
@@ -4139,7 +4354,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
-              _hasOpenedPaymentModalOnce = false; // Reset payment modal flag when switching orders
+              _hasOpenedPaymentModalOnce =
+                  false; // Reset payment modal flag when switching orders
               debugPrint('✅ Updated selected order with fresh data (silent)');
             } else {
               debugPrint(
@@ -4187,7 +4403,6 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-
   // Clear customer and payment state when switching orders
   void _clearOrderEditingState() {
     debugPrint('🧹 Clearing previous order editing state...');
@@ -4224,6 +4439,14 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       // Reset payment modal flag
       _hasOpenedPaymentModalOnce = false;
+
+      // Reset delivery state
+      _deliveryMethod = "Store Takeaway";
+      _deliveryMethodId = "";
+      _deliveryAddress = "";
+      _deliveryDate = null;
+      _deliveryTime = null;
+      _selectedDeliveryCharge = null;
     });
     debugPrint('✅ Order editing state cleared');
   }
@@ -4263,6 +4486,14 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     // Reset payment modal flag
     _hasOpenedPaymentModalOnce = false;
+
+    // Reset delivery state
+    _deliveryMethod = "Store Takeaway";
+    _deliveryMethodId = "";
+    _deliveryAddress = "";
+    _deliveryDate = null;
+    _deliveryTime = null;
+    _selectedDeliveryCharge = null;
 
     debugPrint('✅ Order editing state cleared');
   }
@@ -4400,6 +4631,28 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       setState(() {
         _orderComment = loadedComment ?? '';
+      });
+
+      // Load delivery information if available
+      final loadedDeliveryMethodId = order['delivery_method_id']?.toString() ??
+          _getDefaultDeliveryMethodId();
+      final loadedDeliveryMethodName =
+          order['delivery_method_name']?.toString() ??
+              order['delivery_method']?.toString() ??
+              "Store Takeaway";
+      final loadedDeliveryDate = order['delivery_date']?.toString();
+      final loadedDeliveryTime = order['delivery_time']?.toString();
+      final loadedDeliveryAddress = order['address']?.toString() ?? '';
+      final loadedDeliveryCharge =
+          double.tryParse(order['delivery_charge']?.toString() ?? '');
+
+      setState(() {
+        _deliveryMethodId = loadedDeliveryMethodId;
+        _deliveryMethod = loadedDeliveryMethodName;
+        _deliveryDate = loadedDeliveryDate;
+        _deliveryTime = loadedDeliveryTime;
+        _deliveryAddress = loadedDeliveryAddress;
+        _selectedDeliveryCharge = loadedDeliveryCharge;
       });
 
       // Load discount information if available
@@ -4598,9 +4851,10 @@ class _OrderPanelState extends State<_OrderPanel> {
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
       if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
         try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere((m) =>
-              m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-              m.id == appSettingsDefault);
+          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
+              (m) =>
+                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
+                  m.id == appSettingsDefault);
           return match.id;
         } catch (e) {
           // Not found
@@ -4613,6 +4867,65 @@ class _OrderPanelState extends State<_OrderPanel> {
     } catch (e) {
       return "11"; // Fallback to Store Takeaway ID from API
     }
+  }
+
+  double _getDiscountedOrderTotalWithoutDelivery() {
+    final orderTotal = _calculateOrderTotal();
+    final totalDiscountAmount =
+        _flatDiscount + (orderTotal * _percentageDiscount / 100);
+    final discountedTotal = orderTotal - totalDiscountAmount;
+    return discountedTotal < 0 ? 0.0 : discountedTotal;
+  }
+
+  bool _isfreeDeliveryMinimumAmount() {
+    final settings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    return settings?.freeDeliveryEnabled ?? false;
+  }
+
+  double _getFreeDeliveryMinimumAmount() {
+    final settings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final rawValue = settings?.freeDeliveryMinimumAmount.trim() ?? '';
+    return double.tryParse(rawValue) ?? 0.0;
+  }
+
+  double _getDeliveryChargeForOrder() {
+    if (!_isfreeDeliveryMinimumAmount()) {
+      return 0.0;
+    }
+
+    final minimumAmount = _getFreeDeliveryMinimumAmount();
+    final discountedTotal = _getDiscountedOrderTotalWithoutDelivery();
+    if (minimumAmount > 0 && discountedTotal >= minimumAmount) {
+      return 0.0;
+    }
+
+    if (_selectedDeliveryCharge != null) {
+      return _selectedDeliveryCharge!;
+    }
+
+    final effectiveDeliveryMethodId = _deliveryMethodId.isNotEmpty
+        ? _deliveryMethodId
+        : _getDefaultDeliveryMethodId();
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if ((effectiveDeliveryMethodId.isNotEmpty &&
+              method.id == effectiveDeliveryMethodId) ||
+          (_deliveryMethod.isNotEmpty && method.name == _deliveryMethod)) {
+        return method.basePrice ?? 0.0;
+      }
+    }
+
+    return 0.0;
+  }
+
+  double _getEffectiveOrderTotal() {
+    return _getDiscountedOrderTotalWithoutDelivery() +
+        _getDeliveryChargeForOrder();
   }
 
   Widget _buildPaymentSummary() {
@@ -4687,7 +5000,9 @@ class _OrderPanelState extends State<_OrderPanel> {
     final flatDiscountAmount = _flatDiscount;
     final percentageDiscountAmount = (orderTotal * _percentageDiscount / 100);
     final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-    final finalOrderTotal = orderTotal - totalDiscountAmount;
+    final finalOrderTotalWithoutDelivery = orderTotal - totalDiscountAmount;
+    final deliveryCharge = _getDeliveryChargeForOrder();
+    final finalOrderTotal = finalOrderTotalWithoutDelivery + deliveryCharge;
 
     // Calculate balance using the same logic as billing_page.dart
     double cashBalance = 0.0;
@@ -4841,6 +5156,14 @@ class _OrderPanelState extends State<_OrderPanel> {
               '${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
               color: const Color(0xFFDC2626),
             ),
+            if (_isfreeDeliveryMinimumAmount())
+              _buildSummaryRow(
+                'Delivery Charge',
+                '${deliveryCharge.toStringAsFixed(2)}',
+                color: deliveryCharge > 0
+                    ? const Color(0xFF8B5CF6)
+                    : const Color(0xFF059669),
+              ),
             _buildSummaryRow(
               'Final Total',
               '${finalOrderTotal.toStringAsFixed(2)}',
@@ -4848,9 +5171,17 @@ class _OrderPanelState extends State<_OrderPanel> {
               isBold: true,
             ),
           ] else ...[
+            if (_isfreeDeliveryMinimumAmount())
+              _buildSummaryRow(
+                'Delivery Charge',
+                '${deliveryCharge.toStringAsFixed(2)}',
+                color: deliveryCharge > 0
+                    ? const Color(0xFF8B5CF6)
+                    : const Color(0xFF059669),
+              ),
             _buildSummaryRow(
               'Final Total',
-              '${orderTotal.toStringAsFixed(2)}',
+              '${(orderTotal + deliveryCharge).toStringAsFixed(2)}',
               color: const Color(0xFF059669),
               isBold: true,
             ),
@@ -4872,8 +5203,9 @@ class _OrderPanelState extends State<_OrderPanel> {
           // ],
 
           // Only show customer balance if a customer is selected AND it's NOT the default customer
-          if (_selectedCustomer != null && 
-              !Provider.of<CustomerSelectionProvider>(context, listen: false).isDefaultCustomer) ...[
+          if (_selectedCustomer != null &&
+              !Provider.of<CustomerSelectionProvider>(context, listen: false)
+                  .isDefaultCustomer) ...[
             const SizedBox(height: 8),
             Container(
               height: 1,
@@ -5589,12 +5921,14 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (propsList is List) {
         try {
           final match = propsList.firstWhere(
-            (e) => (e is Map) &&
+            (e) =>
+                (e is Map) &&
                 (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
                     'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -5767,7 +6101,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       ).then((success) {
         // Only show print page if auto-print failed
         if (!success && mounted) {
-          debugPrint('🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
+          debugPrint(
+              '🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -6181,8 +6516,12 @@ class _OrderPanelState extends State<_OrderPanel> {
                       onTap: cartItems.isEmpty
                           ? null
                           : allItemsServed
-                              ? (_isLoadingConfirm ? null : () => _showCheckoutModal())
-                              : (_isMarkingServed ? null : () => _markAllOrderItemsServed()),
+                              ? (_isLoadingConfirm
+                                  ? null
+                                  : () => _showCheckoutModal())
+                              : (_isMarkingServed
+                                  ? null
+                                  : () => _markAllOrderItemsServed()),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -6196,9 +6535,12 @@ class _OrderPanelState extends State<_OrderPanel> {
                                       : const Color(0xFF2563EB))
                                   : (_isMarkingServed
                                       ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF059669)), // Green for Mark Served
+                                      : const Color(
+                                          0xFF059669)), // Green for Mark Served
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: cartItems.isNotEmpty && !_isLoadingConfirm && !_isMarkingServed
+                          boxShadow: cartItems.isNotEmpty &&
+                                  !_isLoadingConfirm &&
+                                  !_isMarkingServed
                               ? [
                                   BoxShadow(
                                     color: (allItemsServed
@@ -6234,7 +6576,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      allItemsServed ? 'Confirm' : 'Mark Served',
+                                      allItemsServed
+                                          ? 'Confirm'
+                                          : 'Mark Served',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
@@ -6283,7 +6627,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Apply discounts
     double totalDiscountAmount =
         _flatDiscount + (orderTotal * _percentageDiscount / 100);
-    double finalOrderTotal = orderTotal - totalDiscountAmount;
+    double finalOrderTotal =
+        (orderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -6356,8 +6701,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Reload payment methods and refresh BillingProvider method IDs
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    masterDataProvider.clearPaymentMethodsCache();
-    final methods = await masterDataProvider.fetchPaymentMethods();
+    final methods =
+        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
 
     if (methods != null && mounted) {
       final billingProvider =
@@ -6387,11 +6732,46 @@ class _OrderPanelState extends State<_OrderPanel> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
+        final deliveryMethodsProvider =
+            Provider.of<DeliveryMethodsProvider>(context, listen: false);
+        final deliveryEnabled =
+            deliveryMethodsProvider.deliveryMethods.isNotEmpty;
+
         return CheckoutModal(
           cartTotal: _calculateOrderTotal(),
           availableCustomers: _customers,
           selectedCustomer: _selectedCustomer,
-          
+          hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
+
+          // Delivery State
+          enableDelivery: deliveryEnabled,
+          deliveryMethod:
+              _deliveryMethod.isNotEmpty ? _deliveryMethod : "Store Takeaway",
+          deliveryMethodId: _deliveryMethodId.isNotEmpty
+              ? _deliveryMethodId
+              : _getDefaultDeliveryMethodId(),
+          deliveryComment: _orderComment,
+          deliveryAddress: _deliveryAddress,
+          deliveryDate: _deliveryDate,
+          deliveryTime: _deliveryTime,
+          initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
+          onDeliveryUpdated:
+              (method, methodId, carNo, comment, date, time, address) {
+            setState(() {
+              _deliveryMethod = method;
+              _deliveryMethodId = methodId;
+              _orderComment = comment;
+              _deliveryDate = date;
+              _deliveryTime = time;
+              _deliveryAddress = address;
+            });
+          },
+          onDeliveryChargeUpdated: (deliveryCharge) {
+            setState(() {
+              _selectedDeliveryCharge = deliveryCharge;
+            });
+          },
+
           // Payment State
           isCashSelected: _isCashSelected,
           isCardSelected: _isCardSelected,
@@ -6406,13 +6786,13 @@ class _OrderPanelState extends State<_OrderPanel> {
           transactionNumber: _transactionNumber,
           toCustomerCreditEnabled: _toCustomerCreditEnabled,
           toCustomerCreditAmount: _toCustomerCreditAmount,
-          
+
           // Discount State
           couponCode: _couponCode,
           flatDiscount: _flatDiscount,
           percentageDiscount: _percentageDiscount,
           isCouponApplied: _isCouponApplied,
-          
+
           onCustomerSelected: (customer) {
             setState(() {
               _selectedCustomer = customer;
@@ -6426,7 +6806,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           },
           onAddNewCustomer: (String searchQuery) async {
             // NOTE: Do not close the checkout dialog here. We will return the result.
-            
+
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
@@ -6435,11 +6815,9 @@ class _OrderPanelState extends State<_OrderPanel> {
               phoneToPreFill = normalizedSearchQuery;
             }
             final result = await showAddCustomerModal(
-              context, 
-              MediaQuery.of(context).size,
-              mobileNumber: phoneToPreFill
-            );
-            
+                context, MediaQuery.of(context).size,
+                mobileNumber: phoneToPreFill);
+
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
               final userData = responseData?['user'];
@@ -6500,8 +6878,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 final matchingCustomer = _customers.firstWhere(
                   (customer) {
                     final customerPhone =
-                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ??
-                            '';
+                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
                     return customerPhone == normalizedAddedPhone;
                   },
                   orElse: () => CustomerListModelData(),
@@ -6534,13 +6911,16 @@ class _OrderPanelState extends State<_OrderPanel> {
             });
 
             // Also update LocalProductProvider so the summary reflects the discount
-            final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
             localProductProvider.applyDiscount(
               flatDiscount: _flatDiscount,
               percentageDiscount: _percentageDiscount,
             );
           },
-          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card, upi, cod, debit, trans, toCredit, {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+          onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
+              upi, cod, debit, trans, toCredit,
+              {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
             setState(() {
               _isCashSelected = isCash;
               _isCardSelected = isCard;
@@ -6554,18 +6934,31 @@ class _OrderPanelState extends State<_OrderPanel> {
               _debitAmount = debit;
               _transactionNumber = trans;
               _toCustomerCreditEnabled = toCredit;
-              _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0; // Correctly update credit amount
+              _toCustomerCreditAmount = double.tryParse(debit) ??
+                  0.0; // Correctly update credit amount
               _hasOpenedPaymentModalOnce = true;
             });
-            
+
             // Update provider
-            final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+            final billingProvider =
+                Provider.of<BillingProvider>(context, listen: false);
             billingProvider.updatePaymentFromModal(
-              isCash: isCash, isCard: isCard, isUpi: isUpi, isCod: isCod, isDebit: isDebit,
-              cashAmount: cash, cardAmount: card, upiAmount: upi, codAmount: cod, debitAmount: debit,
-              transactionNumber: trans, toCustomerCredit: toCredit,
-              cashMethodId: cashMethodId, cardMethodId: cardMethodId, upiMethodId: upiMethodId, codMethodId: codMethodId
-            );
+                isCash: isCash,
+                isCard: isCard,
+                isUpi: isUpi,
+                isCod: isCod,
+                isDebit: isDebit,
+                cashAmount: cash,
+                cardAmount: card,
+                upiAmount: upi,
+                codAmount: cod,
+                debitAmount: debit,
+                transactionNumber: trans,
+                toCustomerCredit: toCredit,
+                cashMethodId: cashMethodId,
+                cardMethodId: cardMethodId,
+                upiMethodId: upiMethodId,
+                codMethodId: codMethodId);
           },
           onConfirmOrder: () async {
             setState(() {
@@ -6614,7 +7007,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     if (_selectedOrder == null) return;
 
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
 
       debugPrint('🔄 Syncing order items with LocalProductProvider cart...');
@@ -6641,12 +7035,13 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         if (product == null) continue;
 
-        final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-        final unitPrice = double.tryParse(
-          item['unit_price']?.toString() ??
-          item['price']?.toString() ??
-          item['product_price']?.toString() ?? '0'
-        ) ?? 0.0;
+        final quantity =
+            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+                item['price']?.toString() ??
+                item['product_price']?.toString() ??
+                '0') ??
+            0.0;
 
         // Find the stock entry if available
         Stock? selectedStock;
@@ -6669,7 +7064,8 @@ class _OrderPanelState extends State<_OrderPanel> {
           selectedStock: selectedStock,
         );
 
-        debugPrint('   ✓ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
+        debugPrint(
+            '   ✓ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
       }
 
       // Apply discounts from the order
@@ -6683,7 +7079,6 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('❌ Error syncing order items with cart: $e');
     }
   }
-
 
   // Wrapper method for quantity updates with loading state
   Future<void> _updateCartItemQuantityWithLoading(
@@ -7131,6 +7526,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     double? customerCurrentBalance,
     double? paidAmount,
     String? customerAlternatePhone,
+    String? customerVatNumber,
+    String? customerCrNumber,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -7159,6 +7556,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       customerCurrentBalance: customerCurrentBalance,
       paidAmount: paidAmount,
       customerAlternatePhone: customerAlternatePhone,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -7189,6 +7588,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             customerCurrentBalance: customerCurrentBalance,
             paidAmount: paidAmount,
             customerAlternatePhone: customerAlternatePhone,
+            customerVatNumber: customerVatNumber,
+            customerCrNumber: customerCrNumber,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -7252,7 +7653,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           String? customerPhone = orderDetails.data?.customerDetails?.phone;
           String? customerEmail = orderDetails.data?.customerDetails?.email;
           String? customerAddress =
-              orderDetails.data?.customerDetails?.address?.join(', ');
+              orderDetails.data?.getCustomerAddressForDisplay();
 
           String? customerAlternatePhone =
               orderDetails.data?.customerDetails?.alternatePhone;
@@ -7260,8 +7661,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               orderDetails.data?.paymentDetails?.paymentMethod;
 
           // Extract payment breakdown (method -> amount mapping from API)
-          Map<String, dynamic>? paymentBreakdown =
-              orderDetails.data?.payments;
+          Map<String, dynamic>? paymentBreakdown = orderDetails.data?.payments;
 
           String? orderComment;
           if (orderDetails.data?.orderProps != null) {
@@ -7434,7 +7834,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     if (!_hasOpenedPaymentModalOnce) {
-      _showPaymentMethodModal(onAfterApply: () => _confirmOrder(closeOnSuccess: closeOnSuccess));
+      _showPaymentMethodModal(
+          onAfterApply: () => _confirmOrder(closeOnSuccess: closeOnSuccess));
       return false;
     }
 
@@ -7503,7 +7904,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       final percentageDiscountAmount =
           (rawOrderTotal * _percentageDiscount / 100);
       final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-      final finalOrderTotal = rawOrderTotal - totalDiscountAmount;
+      final finalOrderTotal =
+          (rawOrderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
       final totalPrice = finalOrderTotal.toString();
       final transactionId = _transactionNumber.isNotEmpty
@@ -7588,7 +7990,8 @@ class _OrderPanelState extends State<_OrderPanel> {
           }
 
           // Keep for logs only; API will use paymentMethods/paidMethods format
-          paymentMethod = selectedMethods.length == 1 ? selectedMethods.first : null;
+          paymentMethod =
+              selectedMethods.length == 1 ? selectedMethods.first : null;
         }
       }
 
@@ -7659,13 +8062,17 @@ class _OrderPanelState extends State<_OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
-        deliveryMethodId: _getDefaultDeliveryMethodId(),
+        deliveryMethodId: _deliveryMethodId.isNotEmpty
+            ? _deliveryMethodId
+            : _getDefaultDeliveryMethodId(),
+        address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
         percentageDiscount:
             _percentageDiscount > 0 ? _percentageDiscount : null,
         discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
         toCustomerCredit: _toCustomerCreditEnabled,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       );
 
       debugPrint('\n📥 updateOrderAPI RESPONSE:');
@@ -8271,27 +8678,57 @@ class _OrderPanelState extends State<_OrderPanel> {
         return;
       }
 
-      // Prefix table tag into comment so we can filter drafts per table without Hive migration
-      final String taggedComment = 'TABLE:${widget.tableId}' +
-          (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
+      final paymentData = _getLocalDraftPaymentData();
+      final taggedComment = buildTaggedDraftComment(widget.tableId!);
 
       // If a local draft is loaded, update it instead of creating a new one
       if (_loadedLocalDraftId != null) {
         debugPrint('📝 Updating existing local draft $_loadedLocalDraftId');
         localProductProvider.updateSavedOrder(
           _loadedLocalDraftId!,
+          customerName: selectedCustomerNameForDraft,
+          customerPhone: selectedCustomerPhoneForDraft,
           comment: taggedComment,
+          deliveryMethod: deliveryMethodForDraft,
+          customerId: selectedCustomerIdForDraft,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: balanceAmountForDraft,
+          transactionId: transactionNumberForDraft,
+          couponId: couponIdForDraft,
+          deliveryMethodId: deliveryMethodIdForDraft,
           status: 'pending',
+          deliveryDate: deliveryDateForDraft,
+          deliveryTime: deliveryTimeForDraft,
+          toCustomerCredit: toCustomerCreditForDraft,
+          context: context,
           tableId: widget.tableId,
+          address: deliveryAddressForDraft,
+          deliveryCharge: deliveryChargeForDraft,
         );
         showScaffold(context: context, message: 'Updated local draft');
       } else {
         debugPrint('📝 Creating new local draft');
         final saved = localProductProvider.saveCurrentCartAsOrder(
+          customerName: selectedCustomerNameForDraft,
+          customerPhone: selectedCustomerPhoneForDraft,
           comment: taggedComment,
+          deliveryMethod: deliveryMethodForDraft,
+          customerId: selectedCustomerIdForDraft,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: balanceAmountForDraft,
+          transactionId: transactionNumberForDraft,
+          couponId: couponIdForDraft,
+          deliveryMethodId: deliveryMethodIdForDraft,
           status: 'pending',
+          deliveryDate: deliveryDateForDraft,
+          deliveryTime: deliveryTimeForDraft,
+          toCustomerCredit: toCustomerCreditForDraft,
           context: context,
           tableId: widget.tableId,
+          address: deliveryAddressForDraft,
+          deliveryCharge: deliveryChargeForDraft,
         );
         showScaffold(
             context: context,
@@ -8350,6 +8787,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               Provider.of<LocalProductProvider>(context, listen: false);
           _loadedLocalDraftId = order.id;
           localProductProvider.loadOrderForEditing(order.id);
+          _rehydrateLocalDraftMetadata(order);
           showCurrentOrderTab();
         },
         borderRadius: BorderRadius.circular(12),
@@ -9028,6 +9466,6 @@ class _OrderPanelState extends State<_OrderPanel> {
       _isLoadingOrderDetails = false;
       _error = null;
     });
+    widget.onOrderSelected(null);
   }
 }
-

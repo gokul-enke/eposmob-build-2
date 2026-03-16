@@ -417,7 +417,10 @@ class CategoryProvider extends ChangeNotifier {
       required String categoryNameArabic,
       required String imagePath,
       required String iconPath,
-      required String accessToken}) async {
+      required String accessToken,
+      String? description,
+      List<int>? productPropertyIds,
+      Map<String, String>? categoryLangNames}) async {
     // debugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
     // debugPrint("ADD CATEGORY  API categoryName $categoryName ");
     // debugPrint("ADD CATEGORY  API slug $slug ");
@@ -425,18 +428,6 @@ class CategoryProvider extends ChangeNotifier {
     // debugPrint("ADD CATEGORY  API categoryNameHindi $categoryNameHindi ");
     // debugPrint("ADD CATEGORY  API categoryNameArabic $categoryNameArabic ");
 
-    final Map<String, dynamic> apiBodyData = {
-      'name': categoryName,
-      'slug': slug,
-      'parent_category': parentCategory,
-      'category_lang_name[en]': categoryNameEnglish,
-      'category_lang_name[hi]': categoryNameHindi,
-      'category_lang_name[ar]': categoryNameArabic,
-      'image': imagePath,
-      'icon': iconPath
-    };
-
-    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addCategoryUrl);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -445,20 +436,90 @@ class CategoryProvider extends ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
-    try {
-      final response = await http.post(url, body: apiBodyData, headers: {
-        // 'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
+
+    final request = http.MultipartRequest('POST', url)
+      ..headers['Authorization'] = 'Bearer $accessToken'
+      ..headers['X-Tenant'] = apiKey
+      ..fields['name'] = categoryName
+      ..fields['slug'] = slug;
+
+    if (parentCategory.trim().isNotEmpty) {
+      request.fields['parent_category'] = parentCategory.trim();
+    }
+
+    final resolvedDescription = description?.trim() ?? '';
+    if (resolvedDescription.isNotEmpty) {
+      request.fields['description'] = resolvedDescription;
+    }
+
+    if (categoryNameEnglish.trim().isNotEmpty) {
+      request.fields['category_lang_name[en]'] = categoryNameEnglish.trim();
+    }
+    if (categoryNameHindi.trim().isNotEmpty) {
+      request.fields['category_lang_name[hi]'] = categoryNameHindi.trim();
+    }
+    if (categoryNameArabic.trim().isNotEmpty) {
+      request.fields['category_lang_name[ar]'] = categoryNameArabic.trim();
+    }
+
+    if (categoryLangNames != null && categoryLangNames.isNotEmpty) {
+      categoryLangNames.forEach((code, value) {
+        final trimmedValue = value.trim();
+        final trimmedCode = code.trim();
+        if (trimmedCode.isNotEmpty && trimmedValue.isNotEmpty) {
+          request.fields['category_lang_name[$trimmedCode]'] = trimmedValue;
+        }
       });
-      // debugPrint('inside ${response.statusCode}');
-      if (response.statusCode == 200) {
-        listAllCategory();
+    }
+
+    if (productPropertyIds != null && productPropertyIds.isNotEmpty) {
+      for (int index = 0; index < productPropertyIds.length; index++) {
+        request.fields['product_properties[$index]'] =
+            productPropertyIds[index].toString();
+      }
+    }
+
+    if (imagePath.trim().isNotEmpty) {
+      final imageFile = File(imagePath);
+      if (await imageFile.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imagePath),
+        );
+      } else {
+        request.fields['image'] = imagePath;
+      }
+    }
+
+    if (iconPath.trim().isNotEmpty) {
+      final iconFile = File(iconPath);
+      if (await iconFile.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('icon', iconPath),
+        );
+      } else {
+        request.fields['icon'] = iconPath;
+      }
+    }
+
+    try {
+      final streamedResponse = await request.send().timeout(
+            const Duration(seconds: 20),
+          );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await listAllCategory(force: true);
         notifyListeners();
-        // debugPrint(json.decode(response.body).toString());
-        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
-      } else {}
+      }
+
+      final decodedBody = response.body.isNotEmpty
+          ? json.decode(response.body)
+          : {
+              'status': 'error',
+              'message': 'Failed to add category',
+            };
+      return decodedBody;
     } finally {
       // _isLoading = false;
       // notifyListeners();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
@@ -28,6 +29,7 @@ class SessionResetService {
     'stores',
     'active_store_id',
     'time_zone',
+    'zatca_cr_number',
     'zatca_vat_number',
     'zatca_company_name',
     'default_printer',
@@ -42,6 +44,8 @@ class SessionResetService {
     'last_product_sync_iso',
     'document_configs_snapshot_json',
     'document_configs_snapshot_updated_at',
+    'admin_settings_logo_url',
+    'admin_settings_logo_file_path',
   ];
 
   static const List<String> _deviceScopedKeys = [
@@ -126,6 +130,7 @@ class SessionResetService {
     await context.read<LocalProductProvider>().clearAllLocalData();
     await context.read<CategoryProvider>().clearAllCategories();
     await context.read<DocumentConfigProvider>().clearAllCaches();
+    context.read<AdminSettingsProvider>().clear();
     context.read<StoreSessionProvider>().resetSession();
 
     if (clearAllPreferences) {

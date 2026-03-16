@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/models/language.dart';
-import 'package:pos_machine/providers/auth_model.dart';
+  import 'package:pos_machine/models/language.dart';
+  import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
@@ -49,6 +49,7 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
+  final Map<int, FocusNode> _translateButtonFocusNodes = {};
   bool _languagesRequested = false;
 
   // Focus nodes for each text field
@@ -60,10 +61,13 @@ class _AddProductWithBarcodeModalState
   final FocusNode _purchasePriceFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _generateBarcodeFocusNode = FocusNode();
 
   bool isLoading = false;
   bool isSaveAndCreateLoading = false;
   bool isBarcodeGenerating = false;
+  bool _isCheckingDuplicateBarcode = false;
+  String? _confirmedDuplicateBarcode;
   String? selectedUnit;
   Category? selectedCategory;
   bool isValidatedOnce = false;
@@ -78,7 +82,12 @@ class _AddProductWithBarcodeModalState
     _productQuantityController.text = '0';
     super.initState();
 
+    _barcodeFocusNode.addListener(_handleBarcodeFocusChange);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _productNameFocusNode.requestFocus();
+      }
       _fetchLanguages();
     });
   }
@@ -103,6 +112,559 @@ class _AddProductWithBarcodeModalState
     }
   }
 
+  void _handleBarcodeFocusChange() {
+    if (!_barcodeFocusNode.hasFocus) {
+      _ensureBarcodeDuplicateConfirmed();
+    }
+  }
+
+  List<GetProduct> _findExistingProductsByBarcode(String barcode) {
+    final trimmedBarcode = barcode.trim();
+    if (trimmedBarcode.isEmpty) {
+      return const <GetProduct>[];
+    }
+
+    return Provider.of<LocalProductProvider>(context, listen: false)
+        .filterProductByBarcode(barCode: trimmedBarcode);
+  }
+
+  Future<bool> _ensureBarcodeDuplicateConfirmed() async {
+    final barcode = _productBarcodeController.text.trim();
+    if (barcode.isEmpty) {
+      _confirmedDuplicateBarcode = null;
+      return true;
+    }
+
+    if (_confirmedDuplicateBarcode == barcode || _isCheckingDuplicateBarcode) {
+      return true;
+    }
+
+    final existingProducts = _findExistingProductsByBarcode(barcode);
+    if (existingProducts.isEmpty) {
+      _confirmedDuplicateBarcode = null;
+      return true;
+    }
+
+    _isCheckingDuplicateBarcode = true;
+    try {
+      final selectedProduct = await _showDuplicateBarcodeDialog(
+        barcode: barcode,
+        existingProducts: existingProducts,
+      );
+
+      if (!mounted) {
+        return false;
+      }
+
+      if (selectedProduct != null) {
+        _fillFormFromExistingProduct(selectedProduct);
+        setState(() {
+          _confirmedDuplicateBarcode = barcode;
+        });
+        return true;
+      }
+
+      setState(() {
+        _productBarcodeController.clear();
+        _confirmedDuplicateBarcode = null;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _barcodeFocusNode.requestFocus();
+        }
+      });
+      return false;
+    } finally {
+      _isCheckingDuplicateBarcode = false;
+    }
+  }
+
+  Future<GetProduct?> _showDuplicateBarcodeDialog({
+    required String barcode,
+    required List<GetProduct> existingProducts,
+  }) async {
+    final result = await showDialog<GetProduct>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final size = MediaQuery.of(dialogContext).size;
+        GetProduct selectedProduct = existingProducts.first;
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: size.width * 0.55,
+              maxHeight: size.height * 0.7,
+            ),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Duplicate Barcode Found',
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s20,
+                              0.30,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.black54),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          splashRadius: 20,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'There is already a product with the same barcode. Do you want to continue?',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s13,
+                        0.27,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Barcode: $barcode',
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s12,
+                        0.27,
+                        Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Select a product to copy its details into the form.',
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s11,
+                        0.27,
+                        Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: existingProducts.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final product = existingProducts[index];
+                          return _buildExistingProductCard(
+                            product,
+                            isSelected: identical(product, selectedProduct),
+                            onTap: () {
+                              setDialogState(() {
+                                selectedProduct = product;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: 110,
+                          height: 40,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            style: OutlinedButton.styleFrom(
+                              side:
+                                  BorderSide(color: ColorManager.kPrimaryColor),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: ColorManager.kPrimaryColor,
+                                fontSize: FontSize.s12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 130,
+                          height: 40,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(dialogContext)
+                                .pop(selectedProduct),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ColorManager.kPrimaryColor,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Continue',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: FontSize.s12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+
+    return result;
+  }
+
+  Widget _buildExistingProductCard(
+    GetProduct product, {
+    bool isSelected = false,
+    VoidCallback? onTap,
+  }) {
+    final categoryName = product.category?.name?.trim();
+    final sellingPrice = product.price?.price?.toString().trim();
+    final mrp = product.mrp?.toString().trim();
+    final unit = product.unit?.trim();
+    final availableQuantity = _getAvailableQuantity(product);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? ColorManager.kPrimaryColor.withOpacity(0.08)
+                : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? ColorManager.kPrimaryColor
+                  : Colors.grey.shade300,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      product.productName?.trim().isNotEmpty == true
+                          ? product.productName!.trim()
+                          : 'Unnamed Product',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.27,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(
+                      Icons.check_circle,
+                      color: ColorManager.kPrimaryColor,
+                      size: 18,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                runSpacing: 8,
+                spacing: 14,
+                children: [
+                  _buildProductDetailItem('Barcode', product.barcode ?? '-'),
+                  _buildProductDetailItem(
+                      'Category',
+                      categoryName != null && categoryName.isNotEmpty
+                          ? categoryName
+                          : '-'),
+                  _buildProductDetailItem(
+                      'Selling Price',
+                      sellingPrice != null && sellingPrice.isNotEmpty
+                          ? sellingPrice
+                          : '-'),
+                  _buildProductDetailItem(
+                      'MRP', mrp != null && mrp.isNotEmpty ? mrp : '-'),
+                  _buildProductDetailItem(
+                      'Unit', unit != null && unit.isNotEmpty ? unit : '-'),
+                  _buildProductDetailItem('Available Qty', availableQuantity),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductDetailItem(String label, String value) {
+    return SizedBox(
+      width: 150,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.27,
+              Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getAvailableQuantity(GetProduct product) {
+    final stockQuantity = product.stock?.fold<num>(
+      0,
+      (sum, stock) => sum + (stock.quantity ?? 0),
+    );
+
+    if (stockQuantity != null && stockQuantity > 0) {
+      return stockQuantity % 1 == 0
+          ? stockQuantity.toInt().toString()
+          : stockQuantity.toString();
+    }
+
+    final available = product.numberOfProductsAvailable?.trim();
+    if (available != null && available.isNotEmpty) {
+      return available;
+    }
+
+    return '-';
+  }
+
+  void _fillFormFromExistingProduct(GetProduct product) {
+    final resolvedUnit = _resolveUnitValue(product.unit);
+    final resolvedCategory = _resolveCategory(product);
+    final resolvedQuantity = _getAutofillQuantity(product);
+    final resolvedSellingPrice = _formatDynamicNumber(product.price?.price);
+    final resolvedMrp = _formatDynamicNumber(product.mrp);
+    final resolvedPurchasePrice = _formatDynamicNumber(product.purchasePrice);
+
+    setState(() {
+      _productNameController.text = product.productName?.trim() ?? '';
+      _productBarcodeController.text = product.barcode?.trim() ?? '';
+      _productSellingPriceController.text = resolvedSellingPrice;
+      _productMRPController.text = resolvedMrp;
+      _productPurchasePriceController.text = resolvedPurchasePrice;
+      _productQuantityController.text = resolvedQuantity;
+      selectedUnit = resolvedUnit;
+      selectedCategory = resolvedCategory;
+    });
+
+    _syncLanguageControllersFromProduct(product);
+  }
+
+  Category? _resolveCategory(GetProduct product) {
+    final categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
+    final categories = categoryProvider.category ?? const <Category>[];
+
+    if (product.categoryId != null) {
+      for (final category in categories) {
+        if (category.categoryId == product.categoryId) {
+          return category;
+        }
+      }
+    }
+
+    final productCategoryName = product.category?.name?.trim().toLowerCase();
+    if (productCategoryName != null && productCategoryName.isNotEmpty) {
+      for (final category in categories) {
+        if (category.categoryName?.trim().toLowerCase() ==
+            productCategoryName) {
+          return category;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _resolveUnitValue(String? unit) {
+    final trimmedUnit = unit?.trim();
+    if (trimmedUnit == null || trimmedUnit.isEmpty) {
+      return null;
+    }
+
+    final purchaseProvider =
+        Provider.of<PurchaseProvider>(context, listen: false);
+    final unitList = purchaseProvider.getUnitList ?? const <String, String>{};
+
+    if (unitList.containsKey(trimmedUnit)) {
+      return trimmedUnit;
+    }
+
+    final normalizedUnit = trimmedUnit.toLowerCase();
+    for (final entry in unitList.entries) {
+      if (entry.key.toLowerCase() == normalizedUnit ||
+          entry.value.toLowerCase() == normalizedUnit) {
+        return entry.key;
+      }
+    }
+
+    return trimmedUnit;
+  }
+
+  String _getAutofillQuantity(GetProduct product) {
+    final stockQuantity = product.stock?.fold<num>(
+      0,
+      (sum, stock) => sum + (stock.quantity ?? 0),
+    );
+
+    if (stockQuantity != null && stockQuantity > 0) {
+      return _formatNum(stockQuantity);
+    }
+
+    final available = product.numberOfProductsAvailable?.trim();
+    if (available != null && available.isNotEmpty) {
+      return available;
+    }
+
+    return '0';
+  }
+
+  String _formatDynamicNumber(dynamic value) {
+    if (value == null) {
+      return '';
+    }
+
+    if (value is num) {
+      return _formatNum(value);
+    }
+
+    final text = value.toString().trim();
+    if (text.isEmpty) {
+      return '';
+    }
+
+    final parsed = num.tryParse(text);
+    return parsed != null ? _formatNum(parsed) : text;
+  }
+
+  String _formatNum(num value) {
+    return value % 1 == 0 ? value.toInt().toString() : value.toString();
+  }
+
+  String _extractTranslatedName(dynamic names, Language language) {
+    if (names == null) return '';
+    final targetCode = language.code.toLowerCase();
+
+    if (names is Map) {
+      final direct = names[targetCode] ?? names[language.code];
+      if (direct != null) {
+        if (direct is String) return direct;
+        if (direct is Map) {
+          final fromMap = direct['name'] ?? direct['value'];
+          if (fromMap != null) return fromMap.toString();
+        }
+      }
+
+      for (final value in names.values) {
+        if (value is Map) {
+          final code = value['code']?.toString().toLowerCase() ??
+              value['language_code']?.toString().toLowerCase();
+          final languageId = value['language_id']?.toString();
+          if (code == targetCode || languageId == language.id.toString()) {
+            final name = value['name'] ?? value['value'];
+            if (name != null) return name.toString();
+          }
+        }
+      }
+    }
+
+    if (names is List) {
+      for (final value in names) {
+        if (value is Map) {
+          final code = value['code']?.toString().toLowerCase() ??
+              value['language_code']?.toString().toLowerCase();
+          final languageId = value['language_id']?.toString();
+          if (code == targetCode || languageId == language.id.toString()) {
+            final name = value['name'] ?? value['value'];
+            if (name != null) return name.toString();
+          }
+        }
+      }
+    }
+
+    return '';
+  }
+
+  void _syncLanguageControllersFromProduct(GetProduct product) {
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+    final activeLanguages = languageProvider.languages
+        .where((language) => language.active)
+        .toList(growable: false);
+    final baseLanguage = _getBaseLanguage(activeLanguages);
+
+    _syncLanguageControllers(activeLanguages, baseLanguage);
+
+    for (final language in activeLanguages) {
+      if (baseLanguage != null && language.id == baseLanguage.id) {
+        continue;
+      }
+
+      final translatedName = _extractTranslatedName(product.names, language);
+      _languageNameControllers[language.id]?.text = translatedName;
+      _languageTranslating.putIfAbsent(language.id, () => false);
+    }
+  }
+
   @override
   void dispose() {
     _productBarcodeController.dispose();
@@ -121,6 +683,10 @@ class _AddProductWithBarcodeModalState
     }
     _languageNameControllers.clear();
     _languageTranslating.clear();
+    for (final node in _translateButtonFocusNodes.values) {
+      node.dispose();
+    }
+    _translateButtonFocusNodes.clear();
 
     // Dispose focus nodes
     _barcodeFocusNode.dispose();
@@ -131,6 +697,7 @@ class _AddProductWithBarcodeModalState
     _purchasePriceFocusNode.dispose();
     _unitFocusNode.dispose();
     _categoryFocusNode.dispose();
+    _generateBarcodeFocusNode.dispose();
 
     isLoading = false;
     isSaveAndCreateLoading = false;
@@ -188,7 +755,37 @@ class _AddProductWithBarcodeModalState
         }
       }
       _languageTranslating.putIfAbsent(language.id, () => false);
+      _translateButtonFocusNodes.putIfAbsent(language.id, () => FocusNode());
     }
+  }
+
+  ButtonStyle _buildSquareActionButtonStyle() {
+    return ButtonStyle(
+      backgroundColor: WidgetStateProperty.all(ColorManager.kPrimaryColor),
+      foregroundColor: WidgetStateProperty.all(Colors.white),
+      padding: WidgetStateProperty.all(EdgeInsets.zero),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(7),
+        ),
+      ),
+      elevation: WidgetStateProperty.resolveWith<double>(
+        (states) => states.contains(WidgetState.focused) ? 9 : 4,
+      ),
+      shadowColor: WidgetStateProperty.resolveWith<Color>(
+        (states) => states.contains(WidgetState.focused)
+            ? ColorManager.kPrimaryColor.withOpacity(0.45)
+            : Colors.black.withOpacity(0.18),
+      ),
+      side: WidgetStateProperty.resolveWith<BorderSide>(
+        (states) => states.contains(WidgetState.focused)
+            ? BorderSide(
+                color: Colors.white.withOpacity(0.9),
+                width: 1.2,
+              )
+            : BorderSide.none,
+      ),
+    );
   }
 
   Future<void> _translateLanguage(Language language) async {
@@ -236,6 +833,11 @@ class _AddProductWithBarcodeModalState
     if (mounted) {
       setState(() {
         _languageTranslating[language.id] = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _translateButtonFocusNodes[language.id]?.requestFocus();
+        }
       });
     }
   }
@@ -309,7 +911,32 @@ class _AddProductWithBarcodeModalState
     List<Category>? categoryList = categoryProvider.category;
 
     final languageProvider = Provider.of<LanguageProvider>(context);
-    return Dialog(
+    return Focus(
+      autofocus: false,
+      canRequestFocus: false,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.f4) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            Navigator.pop(context, null);
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f8) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            _submitForm(keepOpen: true);
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f9) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            _submitForm(keepOpen: false);
+          }
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
@@ -478,7 +1105,7 @@ class _AddProductWithBarcodeModalState
                   children: [
                     // Close Button
                     SizedBox(
-                      width: 100,
+                      width: 115,
                       height: 40,
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context, null),
@@ -488,19 +1115,44 @@ class _AddProductWithBarcodeModalState
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: Text(
-                          "Close",
-                          style: TextStyle(
-                            color: ColorManager.kPrimaryColor,
-                            fontSize: FontSize.s12,
-                          ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Close',
+                              style: TextStyle(
+                                color: ColorManager.kPrimaryColor,
+                                fontSize: FontSize.s12,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: ColorManager.kPrimaryColor
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                'F4',
+                                style: TextStyle(
+                                  color: ColorManager.kPrimaryColor
+                                      .withOpacity(0.7),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     // Save and Create Button
                     SizedBox(
-                      width: 140,
+                      width: 172,
                       height: 40,
                       child: ElevatedButton(
                         onPressed: (isLoading || isSaveAndCreateLoading)
@@ -523,12 +1175,37 @@ class _AddProductWithBarcodeModalState
                                       ColorManager.kPrimaryColor),
                                 ),
                               )
-                            : Text(
-                                "Save and Create",
-                                style: TextStyle(
-                                  color: ColorManager.kPrimaryColor,
-                                  fontSize: FontSize.s12,
-                                ),
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Save and Create',
+                                    style: TextStyle(
+                                      color: ColorManager.kPrimaryColor,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: ColorManager.kPrimaryColor
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: Text(
+                                      'F8',
+                                      style: TextStyle(
+                                        color: ColorManager.kPrimaryColor
+                                            .withOpacity(0.7),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
@@ -557,12 +1234,35 @@ class _AddProductWithBarcodeModalState
                                       Colors.white),
                                 ),
                               )
-                            : const Text(
-                                "Save",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: FontSize.s12,
-                                ),
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Save',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: const Text(
+                                      'F9',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
@@ -573,7 +1273,8 @@ class _AddProductWithBarcodeModalState
           ),
         ),
       ),
-    );
+    ), // Dialog
+  ); // Focus
   }
 
   // Helper method for text fields
@@ -625,6 +1326,7 @@ class _AddProductWithBarcodeModalState
           child: TextFormField(
             controller: controller,
             focusNode: focusNode,
+            autofocus: focusNode == _productNameFocusNode,
             keyboardType: keyboardType,
             textInputAction: TextInputAction.next,
             onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
@@ -704,7 +1406,21 @@ class _AddProductWithBarcodeModalState
                   focusNode: _barcodeFocusNode,
                   readOnly: widget.barcode != null,
                   textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                  onChanged: (_) {
+                    if (_confirmedDuplicateBarcode != null) {
+                      setState(() {
+                        _confirmedDuplicateBarcode = null;
+                      });
+                    }
+                  },
+                  onFieldSubmitted: (_) async {
+                    final canContinue =
+                        await _ensureBarcodeDuplicateConfirmed();
+                    if (!mounted || !canContinue) {
+                      return;
+                    }
+                    FocusScope.of(context).nextFocus();
+                  },
                   cursorColor: ColorManager.kPrimaryColor,
                   onTap: () {
                     _unfocusAllExcept(_barcodeFocusNode);
@@ -733,16 +1449,18 @@ class _AddProductWithBarcodeModalState
               height: size.height * 0.048,
               width: size.height * 0.048,
               child: ElevatedButton(
-                onPressed: widget.barcode != null || isBarcodeGenerating
+                focusNode: _generateBarcodeFocusNode,
+                onPressed: widget.barcode != null
                     ? null
-                    : generateBarcode,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ColorManager.kPrimaryColor,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                ),
+                    : () async {
+                        _unfocusAllExcept(null);
+                        _generateBarcodeFocusNode.requestFocus();
+                        await generateBarcode();
+                        if (mounted) {
+                          _generateBarcodeFocusNode.requestFocus();
+                        }
+                      },
+                style: _buildSquareActionButtonStyle(),
                 child: isBarcodeGenerating
                     ? const SizedBox(
                         width: 16,
@@ -854,6 +1572,7 @@ class _AddProductWithBarcodeModalState
   Widget _buildLanguageField(Size size, Language language) {
     final controller = _languageNameControllers[language.id];
     final isTranslating = _languageTranslating[language.id] ?? false;
+    final translateFocusNode = _translateButtonFocusNodes[language.id];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -905,15 +1624,10 @@ class _AddProductWithBarcodeModalState
               child: Tooltip(
                 message: 'Translate',
                 child: ElevatedButton(
+                  focusNode: translateFocusNode,
                   onPressed:
                       isTranslating ? null : () => _translateLanguage(language),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ColorManager.kPrimaryColor,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                  ),
+                  style: _buildSquareActionButtonStyle(),
                   child: isTranslating
                       ? const SizedBox(
                           width: 16,
@@ -1083,6 +1797,11 @@ class _AddProductWithBarcodeModalState
     bool isCategoryValid = selectedCategory != null;
 
     if (isFormValid && isUnitValid && isCategoryValid) {
+      final canContinue = await _ensureBarcodeDuplicateConfirmed();
+      if (!canContinue) {
+        return;
+      }
+
       formKey.currentState!.save();
       setState(() {
         if (keepOpen) {
@@ -1222,6 +1941,7 @@ class _AddProductWithBarcodeModalState
       }
     }
     setState(() {
+      _confirmedDuplicateBarcode = null;
       selectedUnit = null;
       selectedCategory = null;
       isValidatedOnce = false;

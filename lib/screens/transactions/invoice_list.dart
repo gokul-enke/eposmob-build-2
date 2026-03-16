@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:async';
 import 'dart:ui';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -32,6 +33,7 @@ class InvoiceListScreen extends StatefulWidget {
 
 class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
+  InvoiceProvider? _invoiceProvider;
   Worker? _sidebarIndexWorker;
   bool isInitialized = false;
   final TextEditingController searchTextController = TextEditingController();
@@ -45,22 +47,30 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   String? selectedZatcaStatus; // For the ZATCA status dropdown
   final Set<int> selectedInvoiceIds = {};
   bool isBulkSending = false;
+  Timer? _invoiceSearchDebounce;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
       loadInvoices();
     });
 
     _sidebarIndexWorker = ever<int>(sideBarController.index, (currentIndex) {
       if (currentIndex != 21) {
-        _resetInvoiceFilters(clearProviderFilters: true);
+        _resetInvoiceFilters(
+          clearProviderFilters: true,
+          reloadProvider: false,
+        );
       }
     });
   }
 
-  void _resetInvoiceFilters({required bool clearProviderFilters}) {
+  void _resetInvoiceFilters({
+    required bool clearProviderFilters,
+    bool reloadProvider = false,
+  }) {
     searchTextController.clear();
     invoiceNumberController.clear();
     orderNumberController.clear();
@@ -73,14 +83,31 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     selectedInvoiceIds.clear();
 
     if (clearProviderFilters) {
-      Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
+      _invoiceProvider?.resetFilters(reload: reloadProvider);
     }
+  }
+
+  void _clearSelectedInvoices() {
+    if (selectedInvoiceIds.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() {
+      selectedInvoiceIds.clear();
+    });
+  }
+
+  void _debounceInvoiceSearch() {
+    _invoiceSearchDebounce?.cancel();
+    _invoiceSearchDebounce =
+        Timer(const Duration(milliseconds: 350), searchInvoices);
   }
 
   @override
   void dispose() {
+    _invoiceSearchDebounce?.cancel();
     _sidebarIndexWorker?.dispose();
-    _resetInvoiceFilters(clearProviderFilters: true);
+    _resetInvoiceFilters(clearProviderFilters: true, reloadProvider: false);
     searchTextController.dispose();
     invoiceNumberController.dispose();
     orderNumberController.dispose();
@@ -254,12 +281,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             invoice.zatcaRequestStatus?.toLowerCase();
 
         // Determine states
-        final bool isZatcaPass = (zatcaStatus == 'pass');
+        final bool isZatcaPass =
+          (zatcaStatus == 'pass' || zatcaStatus == 'success' || zatcaStatus == 'sent');
         final bool isZatcaWarning = (zatcaStatus == 'warning');
         final bool isRequestFailed = (zatcaRequestStatus == 'failed');
         final bool isRequestPending = (zatcaRequestStatus == 'pending' ||
             zatcaRequestStatus == 'processing');
-        final bool neverRequested = (zatcaRequestStatus == null);
+        final bool neverRequested =
+          (zatcaRequestStatus == null || zatcaRequestStatus == 'not_sent');
 
         final List<Widget> dynamicItems = [];
 
@@ -448,8 +477,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
 
       // 1. Check if already successfully sent
-      if (invoice.zatcaStatus?.toLowerCase() == 'pass' ||
-          invoice.zatcaStatus?.toLowerCase() == 'success') {
+        if (invoice.zatcaStatus?.toLowerCase() == 'pass' ||
+          invoice.zatcaStatus?.toLowerCase() == 'success' ||
+          invoice.zatcaStatus?.toLowerCase() == 'sent') {
         showScaffold(
           context: context,
           message:
@@ -539,6 +569,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   void searchInvoices() {
     debugPrint("Searching with filters");
+    _clearSelectedInvoices();
     InvoiceProvider provider =
         Provider.of<InvoiceProvider>(context, listen: false);
     provider.applyFilters(
@@ -556,6 +587,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   void resetSearch() {
     debugPrint("Resetting all filters");
+    _invoiceSearchDebounce?.cancel();
     setState(() {
       searchTextController.clear();
       invoiceNumberController.clear();
@@ -566,6 +598,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       dateToController.clear();
       selectedStatus = null;
       selectedZatcaStatus = null;
+      selectedInvoiceIds.clear();
     });
 
     Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
@@ -577,13 +610,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         Provider.of<AuthModel>(context, listen: false).token;
     if (accessToken == null || accessToken.isEmpty) return;
 
-    // Reset search field when refreshing
-    setState(() {
-      searchTextController.clear();
-    });
+    _invoiceSearchDebounce?.cancel();
+    _clearSelectedInvoices();
 
     await Provider.of<InvoiceProvider>(context, listen: false)
-        .listAllInvoices(accessToken: accessToken);
+        .listAllInvoices(
+      accessToken: accessToken,
+      page: Provider.of<InvoiceProvider>(context, listen: false).currentPage,
+    );
   }
 
   // Date selection method
@@ -620,7 +654,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       } else {
         dateToController.text = formattedDate;
       }
-      searchInvoices();
+      _debounceInvoiceSearch();
     }
   }
 
@@ -811,13 +845,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     }
 
                     // 1. Check if any selected invoices are already successfully sent
-                    final selectedInvoices = provider.allInvoices?.where(
-                            (inv) => selectedInvoiceIds.contains(inv.id)) ??
-                        [];
+                    final currentInvoices =
+                      provider.invoiceListDetails ?? const <Invoice>[];
+                    final selectedInvoices = currentInvoices
+                      .where((inv) => selectedInvoiceIds.contains(inv.id))
+                      .toList();
 
                     final alreadySentList = selectedInvoices.where((inv) =>
                         inv.zatcaStatus?.toLowerCase() == 'pass' ||
-                        inv.zatcaStatus?.toLowerCase() == 'success');
+                        inv.zatcaStatus?.toLowerCase() == 'success' ||
+                        inv.zatcaStatus?.toLowerCase() == 'sent');
 
                     if (alreadySentList.isNotEmpty) {
                       final confirmResend = await showDialog<bool>(
@@ -846,7 +883,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     final idsToSend = selectedInvoices
                         .where((inv) =>
                             inv.zatcaStatus?.toLowerCase() != 'pass' &&
-                            inv.zatcaStatus?.toLowerCase() != 'success')
+                            inv.zatcaStatus?.toLowerCase() != 'success' &&
+                            inv.zatcaStatus?.toLowerCase() != 'sent')
                         .map((inv) => inv.id)
                         .toList();
 
@@ -907,7 +945,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           const SizedBox(width: 10),
           const Spacer(),
           Text(
-            "${selectedInvoiceIds.length} records selected",
+            "${selectedInvoiceIds.length} records selected on this page",
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s12,
@@ -915,40 +953,26 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               ColorManager.textColor,
             ),
           ),
-          if (selectedInvoiceIds.length < provider.filteredInvoices.length ||
-              provider.filteredInvoices.isEmpty) ...[
+          if ((provider.invoiceListDetails?.isNotEmpty ?? false) &&
+              selectedInvoiceIds.length <
+                  (provider.invoiceListDetails?.length ?? 0)) ...[
             const SizedBox(width: 10),
             InkWell(
               onTap: () {
-                var allMatchingInvoices = provider.filteredInvoices;
+                final currentInvoices =
+                    provider.invoiceListDetails ?? const <Invoice>[];
 
-                // If filteredInvoices is empty but we have data, trigger a re-filter
-                if (allMatchingInvoices.isEmpty &&
-                    (provider.invoiceListDetails?.isNotEmpty ?? false)) {
-                  provider.reapplyCurrentFilters();
-                  allMatchingInvoices = provider.filteredInvoices;
-                }
-
-                if (allMatchingInvoices.isNotEmpty) {
-                  setState(() {
-                    for (final inv in allMatchingInvoices) {
-                      selectedInvoiceIds.add(inv.id);
-                    }
-                  });
-                } else if (provider.invoiceListDetails != null) {
-                  // Fallback to current page
-                  setState(() {
-                    for (final inv in provider.invoiceListDetails!) {
-                      selectedInvoiceIds.add(inv.id);
-                    }
-                  });
-                }
+                setState(() {
+                  for (final inv in currentInvoices) {
+                    selectedInvoiceIds.add(inv.id);
+                  }
+                });
 
                 debugPrint(
-                    "[DEBUG] Bulk Select: Found ${allMatchingInvoices.length}, Selected ${selectedInvoiceIds.length}");
+                    "[DEBUG] Bulk Select: Found ${currentInvoices.length}, Selected ${selectedInvoiceIds.length}");
               },
               child: Text(
-                "Select All",
+                "Select Page",
                 style: buildCustomStyle(
                   FontWeightManager.bold,
                   FontSize.s10,
@@ -999,7 +1023,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           circleRadius: 7,
           child: TextFormField(
             controller: invoiceNumberController,
-            onChanged: (value) => searchInvoices(),
+            onChanged: (value) => _debounceInvoiceSearch(),
             cursorColor: ColorManager.kPrimaryColor,
             cursorHeight: 13,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
@@ -1037,7 +1061,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             circleRadius: 7,
             child: TextFormField(
               controller: phoneController,
-              onChanged: (value) => searchInvoices(),
+              onChanged: (value) => _debounceInvoiceSearch(),
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
               keyboardType: TextInputType.phone,
@@ -1511,7 +1535,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {
-                searchInvoices();
+                _debounceInvoiceSearch();
               },
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
@@ -1967,13 +1991,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         invoice.zatcaRequestStatus?.toLowerCase();
 
     // Determine states based on backend values
-    final bool isZatcaPass = (zatcaStatus == 'pass');
+    final bool isZatcaPass =
+      (zatcaStatus == 'pass' || zatcaStatus == 'success' || zatcaStatus == 'sent');
     final bool isRequestFailed = (zatcaRequestStatus == 'failed');
     final bool isRequestPending =
         (zatcaRequestStatus == 'pending' || zatcaRequestStatus == 'processing');
 
     if (isZatcaPass) {
-      label = "SUCCESS";
+      label = "SENT";
       backgroundColor = Colors.green.withOpacity(0.12);
       textColor = Colors.green;
     } else if (isRequestFailed) {
@@ -2268,6 +2293,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         totalPages: invoiceProvider.totalPages,
         onPageChanged: (int page) {
           debugPrint("Page changed to: $page");
+          _invoiceSearchDebounce?.cancel();
+          _clearSelectedInvoices();
           invoiceProvider.goToPage(page);
         },
       );
