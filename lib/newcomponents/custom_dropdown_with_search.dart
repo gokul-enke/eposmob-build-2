@@ -97,6 +97,7 @@ class _CustomDropDownWithSearchState<T>
 
   @override
   Widget build(BuildContext context) {
+    final focusNode = widget.focusNode;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -119,33 +120,47 @@ class _CustomDropDownWithSearchState<T>
           margin: widget.margin ??
               const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           width: widget.width,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(7),
-              boxShadow: const [
-                BoxShadow(
-                  color: ColorManager.boxShadowColor,
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
+          child: ListenableBuilder(
+            listenable: focusNode ?? ValueNotifier<bool>(false),
+            builder: (context, _) {
+              final hasFocus = focusNode?.hasFocus ?? false;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(
+                    color: hasFocus
+                        ? ColorManager.kPrimaryColor
+                        : Colors.transparent,
+                    width: hasFocus ? 1.2 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: hasFocus
+                          ? ColorManager.kPrimaryColor.withOpacity(0.18)
+                          : ColorManager.boxShadowColor,
+                      blurRadius: hasFocus ? 6 : 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            constraints: BoxConstraints(
-              minHeight: widget.height ?? 48,
-              maxHeight: widget.height ?? 48,
-            ),
-            child: Focus(
-              focusNode: widget.focusNode,
-              onKey: (node, event) {
-                if (event is RawKeyDownEvent &&
-                    event.logicalKey == LogicalKeyboardKey.enter) {
-                  _dropdownKey.currentState?.openDropDownSearch();
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: DropdownSearch<T>(
+                constraints: BoxConstraints(
+                  minHeight: widget.height ?? 48,
+                  maxHeight: widget.height ?? 48,
+                ),
+                child: Focus(
+                  focusNode: focusNode,
+                  onKey: (node, event) {
+                    if (event is RawKeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.enter) {
+                      _dropdownKey.currentState?.openDropDownSearch();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: ExcludeFocusTraversal(
+                    child: DropdownSearch<T>(
                 key: _dropdownKey,
                 items: (filter, infiniteScrollProps) => widget.items,
                 dropdownBuilder: (context, selectedItem) {
@@ -382,8 +397,11 @@ class _CustomDropDownWithSearchState<T>
                     ),
                   ),
                 ),
-              ),
-            ),
+                  ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],

@@ -307,91 +307,140 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildHeader(Size size) {
+    final bool isCompactHeader = size.width < 700;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Sales Executive Dashboard",
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s20,
-                  0.30,
-                  ColorManager.textColor,
+      child: isCompactHeader
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeaderTitle(),
+                const SizedBox(height: 12),
+                _buildHeaderActions(isCompact: true),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildHeaderTitle()),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _buildHeaderActions(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                dashBoardModelData?.profileDetails?.isNotEmpty == true
-                    ? "Welcome, ${dashBoardModelData!.profileDetails![0].name}!"
-                    : "Welcome back!",
+              ],
+            ),
+    );
+  }
+
+  Widget _buildHeaderTitle() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Sales Executive Dashboard",
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s20,
+            0.30,
+            ColorManager.textColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          dashBoardModelData?.profileDetails?.isNotEmpty == true
+              ? "Welcome, ${dashBoardModelData!.profileDetails![0].name}!"
+              : "Welcome back!",
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.10,
+            Colors.grey[600]!,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeaderActions({bool isCompact = false}) {
+    final dateCard = ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: isCompact ? 46 : 50,
+        maxWidth: isCompact ? double.infinity : 220,
+      ),
+      child: BuildBoxShadowContainer(
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 14 : 12,
+          vertical: isCompact ? 10 : 12,
+        ),
+        circleRadius: 10,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: ColorManager.textColor,
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                DateHelper.formatDate(DateHelper.now()),
+                overflow: TextOverflow.ellipsis,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s12,
                   0.10,
-                  Colors.grey[600]!,
+                  ColorManager.textColor,
                 ),
               ),
-            ],
-          ),
-          Row(
-            children: [
-              // CustomRoundButtonWithIcon(
-              //   title: "Export",
-              //   fct: () {},
-              //   fontSize: 12,
-              //   height: 40,
-              //   width: 120,
-              //   size: size,
-              //   icon: const Icon(
-              //     Icons.download_outlined,
-              //     size: 16,
-              //     color: Colors.white,
-              //   ),
-              // ),
-              const SizedBox(width: 12),
-              IconButton(
-                onPressed: () {
-                  fetchDataForPeriod(value);
-                },
-                icon: Icon(
-                  Icons.refresh,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              BuildBoxShadowContainer(
-                padding: const EdgeInsets.all(12),
-                height: 50,
-                circleRadius: 8,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateHelper.formatDate(DateHelper.now()),
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.10,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
+    );
+
+    final refreshButton = BuildBoxShadowContainer(
+      padding: EdgeInsets.all(isCompact ? 10 : 8),
+      circleRadius: 10,
+      child: InkWell(
+        onTap: () {
+          fetchDataForPeriod(value);
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: const Icon(
+          Icons.refresh_rounded,
+          color: ColorManager.kPrimaryColor,
+          size: 24,
+        ),
+      ),
+    );
+
+    if (isCompact) {
+      return Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          refreshButton,
+          const SizedBox(width: 8),
+          Expanded(child: dateCard),
+        ],
+      );
+    }
+
+    return Wrap(
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        refreshButton,
+        dateCard,
+      ],
     );
   }
 

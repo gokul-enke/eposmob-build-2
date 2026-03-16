@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -14,6 +13,7 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -55,6 +55,7 @@ import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
+import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:provider/provider.dart';
 
 import 'package:websafe_svg/websafe_svg.dart';
@@ -179,10 +180,6 @@ class BillingPageState extends State<BillingPageRestaurant>
   List<CustomerListModelData> _currentCustomerOptions = [];
   final double _customerItemHeight = 48.0; // Height for customer list items
 
-  // Add this variable to track internet connectivity
-  bool _hasInternet = true;
-  StreamSubscription? _internetSubscription;
-
   // Add flag to track if customer was manually selected
   bool _isCustomerManuallySelected = false;
 
@@ -191,9 +188,13 @@ class BillingPageState extends State<BillingPageRestaurant>
   String? deliveryDate;
   String? deliveryTime;
   String deliveryAddress = "";
+  double? _selectedDeliveryCharge;
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
+
+  bool get _hasInternet =>
+      Provider.of<BillingProvider>(context, listen: false).hasInternet;
 
   VoidCallback? _appSettingsDebugListener;
   VoidCallback? _deliveryMethodListener;
@@ -324,7 +325,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         setState(() {});
       }
     });
-
   }
 
   @override
@@ -361,7 +361,6 @@ class BillingPageState extends State<BillingPageRestaurant>
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
-    _internetSubscription?.cancel(); // Cancel the subscription
 
     // Remove sales executive listener
     try {
@@ -412,47 +411,24 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   // Function to initialize the connectivity listener
   void _initConnectivityListener() async {
-    try {
-      // Check initial connectivity status
-      final hasConnection = await InternetConnection().hasInternetAccess;
-      if (mounted) {
-        setState(() {
-          _hasInternet = hasConnection;
-        });
-      }
+    Provider.of<BillingProvider>(context, listen: false)
+        .initConnectivityListener(
+      onConnectivityChanged: (message) {
+        if (!mounted) return;
 
-      // Listen for connectivity changes
-      _internetSubscription =
-          InternetConnection().onStatusChange.listen((InternetStatus status) {
-        final isConnected = status == InternetStatus.connected;
-        if (mounted) {
-          setState(() {
-            _hasInternet = isConnected;
-          });
-
-          // Optional: Show feedback when connectivity changes
-          if (!isConnected) {
-            showScaffoldError(
-              context: context,
-              message: 'billing.internet_lost'.tr,
-            );
-          } else {
-            showScaffold(
-              context: context,
-              message: 'billing.internet_restored'.tr,
-            );
-          }
+        if (message.contains('No internet')) {
+          showScaffoldError(
+            context: context,
+            message: 'billing.internet_lost'.tr,
+          );
+        } else {
+          showScaffold(
+            context: context,
+            message: 'billing.internet_restored'.tr,
+          );
         }
-      });
-    } catch (e) {
-      debugPrint('Error initializing connectivity listener: $e');
-      // Fallback to assuming connection is available
-      if (mounted) {
-        setState(() {
-          _hasInternet = true;
-        });
-      }
-    }
+      },
+    );
   }
 
   // Rehydrate all UI state from the provider's current order
@@ -574,30 +550,52 @@ class BillingPageState extends State<BillingPageRestaurant>
                 final Map<String, dynamic> amounts =
                     Map<String, dynamic>.from(multi['amounts'] ?? {});
 
-                if (methods.contains('CASH')) {
+                final billingProvider =
+                    Provider.of<BillingProvider>(context, listen: false);
+                final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
+                final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
+                final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
+                final codId = billingProvider.codPaymentMethodId ?? 'COD';
+
+                bool hasMethodOrAmount(List<String> candidates) {
+                  final hasMethod = methods.any(candidates.contains);
+                  final hasAmount = candidates.any((key) {
+                    final amount =
+                        double.tryParse((amounts[key] ?? '0').toString()) ?? 0;
+                    return amount > 0;
+                  });
+                  return hasMethod || hasAmount;
+                }
+
+                String firstAmount(List<String> candidates) {
+                  for (final key in candidates) {
+                    if (amounts.containsKey(key)) {
+                      return (amounts[key] ?? '0').toString();
+                    }
+                  }
+                  return '0';
+                }
+
+                if (hasMethodOrAmount(['CASH', cashId])) {
                   _isCashSelected = true;
-                  _cashAmountController.text =
-                      (amounts['CASH'] ?? '0').toString();
+                  _cashAmountController.text = firstAmount(['CASH', cashId]);
                 }
-                if (methods.contains('CARD')) {
+                if (hasMethodOrAmount(['CARD', cardId])) {
                   _isCardSelected = true;
-                  _cardAmountController.text =
-                      (amounts['CARD'] ?? '0').toString();
+                  _cardAmountController.text = firstAmount(['CARD', cardId]);
                 }
-                if (methods.contains('UPI')) {
+                if (hasMethodOrAmount(['UPI', upiId])) {
                   _isUpiSelected = true;
-                  _upiAmountController.text =
-                      (amounts['UPI'] ?? '0').toString();
+                  _upiAmountController.text = firstAmount(['UPI', upiId]);
                 }
-                if (methods.contains('DEBIT')) {
+                if (hasMethodOrAmount(['DEBIT'])) {
                   _isDebitSelected = true;
                   _debitAmountController.text =
                       (amounts['DEBIT'] ?? '0').toString();
                 }
-                if (methods.contains('COD')) {
+                if (hasMethodOrAmount(['COD', codId])) {
                   _isCodSelected = true;
-                  _codAmountController.text =
-                      (amounts['COD'] ?? '0').toString();
+                  _codAmountController.text = firstAmount(['COD', codId]);
                 }
               }
             } catch (e) {
@@ -605,11 +603,41 @@ class BillingPageState extends State<BillingPageRestaurant>
             }
           } else {
             // Single method
-            _isCashSelected = pm.toUpperCase() == 'CASH';
-            _isCardSelected = pm.toUpperCase() == 'CARD';
-            _isUpiSelected = pm.toUpperCase() == 'UPI';
-            _isCodSelected = pm.toUpperCase() == 'COD';
-            _isDebitSelected = pm.toUpperCase() == 'DEBIT';
+            final billingProvider =
+                Provider.of<BillingProvider>(context, listen: false);
+            final masterDataProvider =
+                Provider.of<MasterDataProvider>(context, listen: false);
+
+            final cashId = billingProvider.cashPaymentMethodId;
+            final cardId = billingProvider.cardPaymentMethodId;
+            final upiId = billingProvider.upiPaymentMethodId;
+            final codId = billingProvider.codPaymentMethodId;
+
+            String normalizedMethod = pm.toUpperCase();
+            final int? methodId = int.tryParse(pm);
+            if (methodId != null) {
+              final resolved =
+                  masterDataProvider.getPaymentMethodValue(methodId);
+              if (resolved != null && resolved.isNotEmpty) {
+                normalizedMethod = resolved.toUpperCase();
+              }
+            }
+
+            bool isMethodMatch(List<String> candidates) {
+              final upperCandidates = candidates
+                  .map((c) => c.toUpperCase())
+                  .toList(growable: false);
+              return upperCandidates.contains(normalizedMethod) ||
+                  upperCandidates.contains(pm.toUpperCase());
+            }
+
+            _isCashSelected =
+                isMethodMatch(['CASH', if (cashId != null) cashId]);
+            _isCardSelected =
+                isMethodMatch(['CARD', if (cardId != null) cardId]);
+            _isUpiSelected = isMethodMatch(['UPI', if (upiId != null) upiId]);
+            _isCodSelected = isMethodMatch(['COD', if (codId != null) codId]);
+            _isDebitSelected = isMethodMatch(['DEBIT']);
 
             final paid = currentOrder.paidAmount ?? '0.0';
             if (_isCashSelected) _cashAmountController.text = paid;
@@ -631,6 +659,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             currentOrder.deliveryMethod ?? "billing.store_takeaway".tr;
         deliveryMethodId =
             currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
+        _selectedDeliveryCharge = currentOrder.deliveryCharge;
         _commentController.text = currentOrder.comment ?? "";
         _carNumberController.text = currentOrder.carNumber ?? "";
         deliveryDate = currentOrder.deliveryDate;
@@ -653,6 +682,18 @@ class BillingPageState extends State<BillingPageRestaurant>
 
         // 6. Restore To Customer Credit flag
         _toCustomerCreditEnabled = currentOrder.toCustomerCredit ?? false;
+
+        _hasOpenedPaymentModalOnce = _isCashSelected ||
+            _isCardSelected ||
+            _isUpiSelected ||
+            _isCodSelected ||
+            _isDebitSelected ||
+            _toCustomerCreditEnabled ||
+            (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_debitAmountController.text) ?? 0) > 0;
       });
 
       // 7. Final UI Updates
@@ -676,7 +717,8 @@ class BillingPageState extends State<BillingPageRestaurant>
   }) async {
     // Set loading flag - check for duplicate calls first
     if (_isLoadingCustomers && !forceRefresh) {
-      debugPrint("🛡️ _fetchCustomers() already in progress, skipping duplicate call");
+      debugPrint(
+          "🛡️ _fetchCustomers() already in progress, skipping duplicate call");
       return;
     }
 
@@ -698,7 +740,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     // If customer was manually selected (either from list or phone entry), don't reset to default
     if (applyDefaultSelection &&
-      _isCustomerManuallySelected &&
+        _isCustomerManuallySelected &&
         (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
       debugPrint("🛡️ Customer manually selected, skipping reset to default");
       debugPrint("  - selectedCustomerID: $selectedCustomerID");
@@ -708,7 +750,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     // Additional check: if the text field contains user-entered data that's not the sales executive's info, preserve it
     if (applyDefaultSelection &&
-      mobileNumberTextController.text.isNotEmpty &&
+        mobileNumberTextController.text.isNotEmpty &&
         !mobileNumberTextController.text.contains(
             "${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.name ?? ''} ${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.phone ?? ''}")) {
       debugPrint("🛡️ Text field contains user data, preserving manual entry");
@@ -734,8 +776,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
     try {
-      final response = await CustomerProvider()
-          .listCustomer(accessToken: accessToken!, sortAscending: true, loadAll: true);
+      final response = await CustomerProvider().listCustomer(
+          accessToken: accessToken!, sortAscending: true, loadAll: true);
 
       if (response["status"] == "success") {
         CustomerListModel customerListModel =
@@ -887,8 +929,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   void _handleKeyPress(KeyEvent event) {
     final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null &&
-        focusedContext.widget is EditableText) {
+    if (focusedContext != null && focusedContext.widget is EditableText) {
       return;
     }
 
@@ -1155,7 +1196,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
 
     // Double-check customerList is not empty, if it is, try fetching one more time
-    if ((customerList == null || customerList!.isEmpty) && !_isLoadingCustomers) {
+    if ((customerList == null || customerList!.isEmpty) &&
+        !_isLoadingCustomers) {
       await _fetchCustomers();
       // Wait a bit for the fetch to complete
       await Future.delayed(const Duration(milliseconds: 500));
@@ -1164,8 +1206,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Reload payment methods
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    masterDataProvider.clearPaymentMethodsCache();
-    final methods = await masterDataProvider.fetchPaymentMethods();
+    final methods =
+        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
 
     if (methods != null && mounted) {
       final billingProvider =
@@ -1227,6 +1269,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryAddress: deliveryAddress,
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
+          initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
           onDeliveryUpdated:
               (method, methodId, carNo, comment, date, time, address) {
             setState(() {
@@ -1238,6 +1281,13 @@ class BillingPageState extends State<BillingPageRestaurant>
               deliveryTime = time;
               deliveryAddress = address;
             });
+            _updateBalanceAmount();
+          },
+          onDeliveryChargeUpdated: (deliveryCharge) {
+            setState(() {
+              _selectedDeliveryCharge = deliveryCharge;
+            });
+            _updateBalanceAmount();
           },
 
           // Payment State
@@ -1268,11 +1318,10 @@ class BillingPageState extends State<BillingPageRestaurant>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-            confirmButtonTitle:
-              isSaveMode ? 'billing.save_order'.tr : 'Confirm',
-            printButtonTitle:
+          confirmButtonTitle: isSaveMode ? 'billing.save_order'.tr : 'Confirm',
+          printButtonTitle:
               isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
-            requireCheckoutCompletion: !isSaveMode,
+          requireCheckoutCompletion: !isSaveMode,
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -1363,8 +1412,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 final byPhone = customerList!.firstWhere(
                   (customer) {
                     final customerPhone =
-                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ??
-                            '';
+                        customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
                     return customerPhone == normalizedAddedPhone;
                   },
                   orElse: () => CustomerListModelData(),
@@ -1490,6 +1538,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
+    context.watch<BillingProvider>().hasInternet;
 
     // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
     final currentOrder =
@@ -1746,9 +1795,11 @@ class BillingPageState extends State<BillingPageRestaurant>
     // CRITICAL: Access cartTotal FIRST to trigger priceSummary recalculation
     // priceSummary is only updated when cartTotal getter is accessed
     final _ = localProductProvider.cartTotal;
+    final footerPriceSummary = _getFooterPriceSummaryWithDeliveryCharge(
+        localProductProvider.priceSummary);
 
     return CheckoutFooter(
-      priceSummary: localProductProvider.priceSummary,
+      priceSummary: footerPriceSummary,
       currency: currency,
       taxNames: taxNames,
       totalPaid: _getTotalPaidAmount(),
@@ -1786,6 +1837,26 @@ class BillingPageState extends State<BillingPageRestaurant>
           ),
         );
       },
+    );
+  }
+
+  PriceSummary? _getFooterPriceSummaryWithDeliveryCharge(
+      PriceSummary? summary) {
+    if (summary == null) {
+      return null;
+    }
+
+    final deliveryCharge = _getDeliveryChargeForOrder();
+
+    return PriceSummary(
+      discount: summary.discount,
+      netPayable: summary.netPayable + deliveryCharge,
+      subTotal: summary.subTotal,
+      totalTax: summary.totalTax,
+      netTotal: summary.netTotal,
+      flatDiscount: summary.flatDiscount,
+      percentageDiscount: summary.percentageDiscount,
+      originalSubTotal: summary.originalSubTotal,
     );
   }
 
@@ -1837,6 +1908,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       customerPhone: selectedCustomerPhone ?? mobileNumberText,
                       comment: _commentController.text,
                       deliveryMethod: deliveryMethod,
+                      context: context,
                       deliveryDate: deliveryDate, // Pass deliveryDate
                       deliveryTime: deliveryTime, // Pass deliveryTime
                     );
@@ -1974,6 +2046,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                   },
                 );
               },
+            ),
+            OpenCashDrawerButton(
+              color: Colors.grey.shade600,
             ),
             // Sync button next to keyboard icon
             const SyncButton(
@@ -2988,17 +3063,24 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   // Helper method to get formatted total
   String _getFormattedTotal() {
+    return AmountHelper.formatAmount(_getEffectiveOrderTotal());
+  }
+
+  double _getEffectiveOrderTotal() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
+    final baseTotal = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
+
     if (appSettingsProvider.appSettings?.priceRoundOff == true) {
-      double roundedTotal = localProductProvider.getRoundedTotal(context);
-      return AmountHelper.formatAmount(roundedTotal);
+      return AmountHelper.roundOffAmount(baseTotal) +
+          _getDeliveryChargeForOrder();
     }
 
-    return AmountHelper.formatAmount(localProductProvider.cartTotal);
+    return baseTotal + _getDeliveryChargeForOrder();
   }
 
   Widget _buildMobileNumberInput({
@@ -3772,14 +3854,14 @@ class BillingPageState extends State<BillingPageRestaurant>
       if (propsList is List) {
         try {
           final match = propsList.firstWhere(
-            (e) => (e is Map) &&
-                (e['code'] ?? e['props_code'])
-                        ?.toString()
-                        .toUpperCase() ==
+            (e) =>
+                (e is Map) &&
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
                     'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -3796,8 +3878,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   /// Helper method to print KOT for delivery and takeaway
-    Future<void> _printKOT(
-      String orderNumber, List<LocalCartItem> cartItems,
+  Future<void> _printKOT(String orderNumber, List<LocalCartItem> cartItems,
       {String? tokenNumber, bool showTableLabel = true}) async {
     debugPrint("🖨️ Printing KOT for $orderNumber");
     debugPrint("🧾 KOT tokenNumber: ${tokenNumber ?? 'null'}");
@@ -3831,9 +3912,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         showTableLabel: showTableLabel,
         orderTime: orderTime,
         items: printItems,
-        comment: _commentController.text.isNotEmpty
-            ? _commentController.text
-            : null,
+        comment:
+            _commentController.text.isNotEmpty ? _commentController.text : null,
       );
 
       // Only show print page if auto-print failed
@@ -4005,6 +4085,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         _commentController.clear();
         _carNumberController.clear();
         deliveryAddress = "";
+        _selectedDeliveryCharge = null;
 
         // Clear customer-related state completely
         mobileNumberText = "";
@@ -4126,7 +4207,9 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
           toCustomerCredit: _toCustomerCreditEnabled,
+          context: context,
           address: deliveryAddress, // Pass address
+          deliveryCharge: _getDeliveryChargeForOrder(),
           // context: context, // Pass context
         );
 
@@ -4177,6 +4260,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           context: context, // Pass context
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress, // Pass address
+          deliveryCharge: _getDeliveryChargeForOrder(),
         );
 
         showScaffold(
@@ -4269,134 +4353,72 @@ class BillingPageState extends State<BillingPageRestaurant>
       SavedOrder? orderToUse;
 
       if (currentOrder != null) {
-        // We're editing an existing order, move it to confirmed orders
         debugPrint(
-            "💾 Moving existing order to confirmed: ${currentOrder.orderNumber}");
-        orderToUse =
-            localProductProvider.moveToConfirmedOrders(currentOrder.id);
+            "💾 Promoting saved order to confirmed: ${currentOrder.orderNumber}");
 
-        if (orderToUse != null) {
-          showScaffold(
-            context: context,
-            message: "billing.order_moved_confirmed".tr,
-          );
-        } else {
-          // If the order couldn't be moved (shouldn't happen), create a new confirmed order
-          debugPrint("💾 Creating new confirmed order (fallback)");
+        String? customerNameToSave = selectedCustomer?.name;
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
-          // **FIX**: Properly determine customer info for phone-only orders
-          String? customerNameToSave = selectedCustomer?.name;
-          String? customerPhoneToSave =
-              selectedCustomerPhone ?? mobileNumberText;
+        final paymentData = _getPaymentMethodData();
+        final currentOrderId = currentOrder.id;
+        localProductProvider.updateSavedOrder(
+          currentOrderId,
+          customerName: customerNameToSave,
+          customerPhone: customerPhoneToSave,
+          comment: _commentController.text,
+          deliveryMethod: deliveryMethod,
+          customerId: selectedCustomerID,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: 'saved',
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
+          toCustomerCredit: _toCustomerCreditEnabled,
+          context: context,
+          address: deliveryAddress,
+          deliveryCharge: _getDeliveryChargeForOrder(),
+        );
 
-          // Determine payment method and data using multi-payment JSON format
-          List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+        orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
+        orderToUse ??= localProductProvider.saveCurrentCartAsConfirmedOrder(
+          customerName: customerNameToSave,
+          customerPhone: customerPhoneToSave,
+          comment: _commentController.text,
+          deliveryMethod: deliveryMethod,
+          customerId: selectedCustomerID,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: 'confirmed',
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
+          context: context,
+          toCustomerCredit: _toCustomerCreditEnabled,
+          address: deliveryAddress,
+          deliveryCharge: _getDeliveryChargeForOrder(),
+        );
 
-          // Get payment method IDs from BillingProvider for consistency
-          final billingProvider =
-              Provider.of<BillingProvider>(context, listen: false);
-          final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
-          final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
-          final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
-          final codId = billingProvider.codPaymentMethodId ?? "COD";
-          // DEBIT is for customer credit/balance, not a standard payment method
-          const debitId = "DEBIT";
-
-          // Always use multi-payment JSON format for consistency with sync button
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              cashId: _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              cardId: _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              upiId: _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-              debitId: _debitAmountController.text.isNotEmpty
-                  ? _debitAmountController.text
-                  : "0",
-              codId: _codAmountController.text.isNotEmpty
-                  ? _codAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          String paymentMethod = json.encode(multiPaymentData);
-          String paidAmount = _getTotalPaidAmount().toString();
-
-          orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
-            customerName: customerNameToSave,
-            customerPhone: customerPhoneToSave,
-            comment: _commentController.text,
-            deliveryMethod: deliveryMethod,
-            // Include all API-compatible fields
-            customerId: selectedCustomerID,
-            paymentMethod: paymentMethod,
-            paidAmount: paidAmount,
-            balanceAmount: _balanceAmount.toString(),
-            transactionId: _transactionNumberController.text,
-            couponId: isCouponApplied ? coupenCodeTextController.text : null,
-            deliveryMethodId: deliveryMethodId,
-            carNumber: _carNumberController.text,
-            deliveryDate: deliveryDate, // Pass deliveryDate
-            deliveryTime: deliveryTime, // Pass deliveryTime
-            toCustomerCredit: _toCustomerCreditEnabled,
-            address: deliveryAddress, // Pass address
-          );
-
-          showScaffold(
-            context: context,
-            message: "billing.order_saved_confirmed".tr,
-          );
-        }
+        showScaffold(
+          context: context,
+          message: "billing.order_saved_success".tr,
+        );
       } else {
-        // Create a new confirmed order
-        debugPrint("💾 Creating new confirmed order");
+        debugPrint("💾 Creating new confirmed order for printing");
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
-        // Determine payment method and data using multi-payment JSON format
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-
-        // Get payment method IDs from BillingProvider for consistency
-        final billingProvider =
-            Provider.of<BillingProvider>(context, listen: false);
-        final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
-        final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
-        final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
-        final codId = billingProvider.codPaymentMethodId ?? "COD";
-        // DEBIT is for customer credit/balance, not a standard payment method
-        const debitId = "DEBIT";
-
-        // Always use multi-payment JSON format for consistency with sync button
-        Map<String, dynamic> multiPaymentData = {
-          "methods": selectedPaymentMethods,
-          "amounts": {
-            cashId: _cashAmountController.text.isNotEmpty
-                ? _cashAmountController.text
-                : "0",
-            cardId: _cardAmountController.text.isNotEmpty
-                ? _cardAmountController.text
-                : "0",
-            upiId: _upiAmountController.text.isNotEmpty
-                ? _upiAmountController.text
-                : "0",
-            debitId: _debitAmountController.text.isNotEmpty
-                ? _debitAmountController.text
-                : "0",
-            codId: _codAmountController.text.isNotEmpty
-                ? _codAmountController.text
-                : "0",
-          },
-          "isMultiPayment": true
-        };
-        String paymentMethod = json.encode(multiPaymentData);
-        String paidAmount = _getTotalPaidAmount().toString();
+        final paymentData = _getPaymentMethodData();
 
         orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
           customerName: customerNameToSave,
@@ -4405,28 +4427,32 @@ class BillingPageState extends State<BillingPageRestaurant>
           deliveryMethod: deliveryMethod,
           // Include all API-compatible fields
           customerId: selectedCustomerID,
-          paymentMethod: paymentMethod,
-          paidAmount: paidAmount,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
           balanceAmount: _balanceAmount.toString(),
           transactionId: _transactionNumberController.text,
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
+          status: 'confirmed',
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
+          context: context,
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress, // Pass address
+          deliveryCharge: _getDeliveryChargeForOrder(),
         );
 
         showScaffold(
           context: context,
-          message: "billing.order_saved_confirmed_alt".tr,
+          message: "billing.order_saved_success".tr,
         );
       }
 
       try {
-        // Print the order that was just confirmed
-        printFromSavedOrder(orderToUse);
+        if (orderToUse != null) {
+          await printFromSavedOrder(orderToUse);
+        }
       } catch (error) {
         debugPrint("Error printing saved order: ${error.toString()}");
       }
@@ -4434,17 +4460,15 @@ class BillingPageState extends State<BillingPageRestaurant>
       // KOT Print for all delivery methods
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
-      if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+      if ((appSettingsProvider.appSettings?.enableKOTPrint ?? true) &&
+          orderToUse != null) {
         List<LocalCartItem> kotCartItems = orderToUse.items;
         await _printKOT(orderToUse.orderNumber, kotCartItems,
-          showTableLabel: false);
+            showTableLabel: false);
       }
 
       resetAutocomplete();
-      // Centralized clear
-      // Clear cart without restoring stock (order is confirmed)
-      localProductProvider.clearCartAfterOrder();
-      localProductProvider.clearCurrentOrder();
+      _clearCart();
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -4646,6 +4670,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         discountAmount: priceSummary.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       )
           .then((response) async {
         debugPrint(
@@ -4726,9 +4751,10 @@ class BillingPageState extends State<BillingPageRestaurant>
             String? customerName = orderDetails.data?.customerDetails?.name;
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
             String? customerEmail = orderDetails.data?.customerDetails?.email;
+            String? customerVatNumber = orderDetails.data?.kycInfo?.vatNumber;
+            String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
             String? customerAddress =
-                orderDetails.data?.getCustomerAddressFromProps() ??
-                    orderDetails.data?.customerDetails?.address?.join(', ');
+                orderDetails.data?.getCustomerAddressForDisplay();
 
             // Calculate customer balance for print
             double? oldBalance = selectedCustomer?.balance;
@@ -4744,9 +4770,9 @@ class BillingPageState extends State<BillingPageRestaurant>
 
             orderDetailsTokenNumber = orderDetails.data?.tokenNumber;
             debugPrint(
-              "🧾 Order details token_number: ${orderDetailsTokenNumber ?? 'null'}");
+                "🧾 Order details token_number: ${orderDetailsTokenNumber ?? 'null'}");
             debugPrint(
-              "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
+                "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
             debugPrint(
                 "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
 
@@ -4770,10 +4796,13 @@ class BillingPageState extends State<BillingPageRestaurant>
                 customerCurrentBalance: currentBalance,
                 paidAmount: totalPaid > 0 ? totalPaid : null,
                 customerAlternatePhone: customerAlternatePhone,
+                customerVatNumber: customerVatNumber,
+                customerCrNumber: customerCrNumber,
                 paymentMethod: paymentMethod,
-                paymentBreakdown: paymentBreakdown, 
+                paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
-                deliveryMethod: orderDetails.data?.deliveryMethodName ?? deliveryMethod,
+                deliveryMethod:
+                    orderDetails.data?.deliveryMethodName ?? deliveryMethod,
                 isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                         context,
                         listen: false)
@@ -4797,19 +4826,18 @@ class BillingPageState extends State<BillingPageRestaurant>
               Provider.of<AppSettingsProvider>(context, listen: false);
           if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
             final responseTokenNumber =
-              _extractTokenNumberFromOrderData(responseData);
-            final tokenNumber =
-              orderDetailsTokenNumber ?? responseTokenNumber;
+                _extractTokenNumberFromOrderData(responseData);
+            final tokenNumber = orderDetailsTokenNumber ?? responseTokenNumber;
             final orderNumberForKot = (responseData["order_number"] ??
-                response["order_number"] ??
-                'ORD-${responseOrderId}')
-              .toString();
+                    response["order_number"] ??
+                    'ORD-${responseOrderId}')
+                .toString();
             debugPrint('🧾 KOT token from create order response: '
-              '${responseTokenNumber ?? 'null'}');
+                '${responseTokenNumber ?? 'null'}');
             debugPrint('🧾 Raw response token_number: '
-              '${responseData["token_number"]?.toString() ?? 'null'}');
+                '${responseData["token_number"]?.toString() ?? 'null'}');
             debugPrint(
-              '🧾 KOT token resolved (details/response): ${tokenNumber ?? 'null'}');
+                '🧾 KOT token resolved (details/response): ${tokenNumber ?? 'null'}');
             _printKOT(
               orderNumberForKot,
               cartItems,
@@ -5029,6 +5057,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -5099,6 +5128,8 @@ class BillingPageState extends State<BillingPageRestaurant>
   // Multi-payment helper methods
   Map<String, String> _getPaymentMethodData() {
     List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+    final List<String> selectedMethodsForStorage =
+        List<String>.from(selectedPaymentMethods);
     String paymentMethod = "";
     String paidAmount = "";
 
@@ -5109,11 +5140,18 @@ class BillingPageState extends State<BillingPageRestaurant>
     final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
     final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
     final codId = billingProvider.codPaymentMethodId ?? "COD";
+    const debitId = 'DEBIT';
 
-    if (selectedPaymentMethods.length > 1) {
+    final double debitAmount =
+        double.tryParse(_debitAmountController.text) ?? 0;
+    if (_toCustomerCreditEnabled && debitAmount > 0) {
+      selectedMethodsForStorage.add(debitId);
+    }
+
+    if (selectedMethodsForStorage.length > 1) {
       // Multi-payment: store as JSON with IDs as keys
       Map<String, dynamic> multiPaymentData = {
-        "methods": selectedPaymentMethods,
+        "methods": selectedMethodsForStorage,
         "amounts": {
           cashId: _cashAmountController.text.isNotEmpty
               ? _cashAmountController.text
@@ -5127,6 +5165,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           codId: _codAmountController.text.isNotEmpty
               ? _codAmountController.text
               : "0",
+          debitId: debitAmount > 0 ? _debitAmountController.text : '0',
         },
         "isMultiPayment": true
       };
@@ -5134,8 +5173,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       paidAmount = _getTotalPaidAmount().toString();
     } else {
       // Single payment method
-      if (selectedPaymentMethods.isNotEmpty) {
-        paymentMethod = selectedPaymentMethods.first;
+      if (selectedMethodsForStorage.isNotEmpty) {
+        paymentMethod = selectedMethodsForStorage.first;
         // Check by comparing with the stored IDs
         if (paymentMethod == cashId) {
           paidAmount = _cashAmountController.text;
@@ -5145,6 +5184,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           paidAmount = _upiAmountController.text;
         } else if (paymentMethod == codId) {
           paidAmount = _codAmountController.text;
+        } else if (paymentMethod == debitId) {
+          paidAmount = _debitAmountController.text;
         } else {
           // Fallback for legacy string checks
           if (_isCashSelected) {
@@ -5177,7 +5218,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-    double cartTotal = localProductProvider.cartTotal;
+    final _ = localProductProvider.cartTotal;
+    double cartTotal = _getEffectiveOrderTotal();
 
     // For balance calculation, only include actual cash payments (not debit/store credit)
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
@@ -5296,6 +5338,51 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Note: We don't include debit/toCustomerCredit in total paid amount
     // as it represents money going to customer credit, not money collected
     return cashAmount + cardAmount + upiAmount + codAmount;
+  }
+
+  double _getDeliveryChargeForOrder() {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final isDeliveryChargeEnabled =
+        appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
+
+    if (!isDeliveryChargeEnabled) {
+      return 0.0;
+    }
+
+    final minimumAmount = double.tryParse(
+            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
+                '') ??
+        0.0;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final netAmount = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
+
+    if (minimumAmount > 0 && netAmount >= minimumAmount) {
+      return 0.0;
+    }
+
+    if (_selectedDeliveryCharge != null) {
+      return _selectedDeliveryCharge!;
+    }
+
+    if (deliveryMethod.isEmpty) {
+      return 0.0;
+    }
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if ((deliveryMethodId.isNotEmpty && method.id == deliveryMethodId) ||
+          method.name == deliveryMethod) {
+        return method.basePrice ?? 0.0;
+      }
+    }
+
+    return 0.0;
   }
 
   List<String> _getSelectedPaymentMethods() {
@@ -5707,6 +5794,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       {VoidCallback? onAfterApply, String? customButtonTitle}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final effectiveTotal = _getEffectiveOrderTotal();
 
     // Prepare initial amounts
     String initialCash = _cashAmountController.text;
@@ -5723,8 +5811,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         (double.tryParse(initialDebit) ?? 0) > 0;
 
     // If no amount is entered yet, auto-fill the selected method with the full total
-    if (!hasAnyAmount && localProductProvider.cartTotal > 0) {
-      String totalStr = localProductProvider.cartTotal.toStringAsFixed(2);
+    if (!hasAnyAmount && effectiveTotal > 0) {
+      String totalStr = effectiveTotal.toStringAsFixed(2);
       if (_isCashSelected) {
         initialCash = totalStr;
       } else if (_isCardSelected) {
@@ -5751,7 +5839,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         !_isCodSelected) {
       autoSelectCash = true;
       if (initialCash.isEmpty || double.tryParse(initialCash) == 0) {
-        initialCash = localProductProvider.cartTotal.toStringAsFixed(2);
+        initialCash = effectiveTotal.toStringAsFixed(2);
       }
     }
 
@@ -5769,7 +5857,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialCodAmount: initialCod,
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
-        cartTotal: localProductProvider.cartTotal,
+        cartTotal: effectiveTotal,
         customerPrevBalance: selectedCustomer?.balance ?? 0.0,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,
@@ -5852,12 +5940,14 @@ class BillingPageState extends State<BillingPageRestaurant>
           setState(() {
             deliveryMethod = method;
             deliveryMethodId = methodId;
+            _selectedDeliveryCharge = null;
             _carNumberController.text = carNumber;
             _commentController.text = comment;
             deliveryDate = selectedDate;
             deliveryTime = selectedTime;
             deliveryAddress = address;
           });
+          _updateBalanceAmount();
         },
       ),
     );
@@ -6013,6 +6103,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
 
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      _selectedDeliveryCharge = null;
 
       // Find name for the ID
       String defaultName = "Store Takeaway";
@@ -6083,6 +6174,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     double? customerCurrentBalance,
     double? paidAmount,
     String? customerAlternatePhone,
+    String? customerVatNumber,
+    String? customerCrNumber,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -6111,6 +6204,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       customerCurrentBalance: customerCurrentBalance,
       paidAmount: paidAmount,
       customerAlternatePhone: customerAlternatePhone,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -6141,6 +6236,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             customerCurrentBalance: customerCurrentBalance,
             paidAmount: paidAmount,
             customerAlternatePhone: customerAlternatePhone,
+            customerVatNumber: customerVatNumber,
+            customerCrNumber: customerCrNumber,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -6223,10 +6320,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
       Future<bool> printOnce() {
+        final parsedPayment = PaymentHelper.parseLocalMultiPayment(
+            context, savedOrder.paymentMethod);
         return _printOrderDetailsWithFallback(
           storeName: storeName,
           cartItems: cartItems,
-          formattedTotal: netTotal.toString(),
+          formattedTotal: savedOrder.total.toString(),
           savedTotal: youSaved.toString(),
           discountAmount: savedOrder.flatDiscount != null ||
                   savedOrder.percentageDiscount != null
@@ -6243,14 +6342,16 @@ class BillingPageState extends State<BillingPageRestaurant>
           isFromLocalStorage: true,
           customerName: savedOrder.customerName,
           customerPhone: savedOrder.customerPhone,
-          paymentMethod: savedOrder.paymentMethod,
+          customerAddress: savedOrder.address,
+          paymentMethod:
+              parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
+          paymentBreakdown: parsedPayment?.paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
           orderComment: savedOrder.comment,
-            deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
-          paidAmount:
-              (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                  ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                  : null,
+          deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
+          paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+              ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+              : null,
           isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
           netExcTax: netExcTax.toString(),
         );
@@ -6369,6 +6470,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       // iconColor = 1; // Default to cash
       deliveryMethod = "Store Takeaway";
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      _selectedDeliveryCharge = null;
 
       // Clear all controllers
       coupenCodeTextController.clear();
@@ -6461,6 +6563,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     // Set initial default values
     deliveryMethod = "Store Takeaway";
     deliveryMethodId = "11"; // Updated to match API response
+    _selectedDeliveryCharge = null;
 
     // Listen for delivery methods to be loaded and update default
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -7623,162 +7726,168 @@ class BillingPageState extends State<BillingPageRestaurant>
                       ),
                     )
                   : products.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.inventory_2_outlined,
-                              size: 64, color: Colors.grey.shade300),
-                          const SizedBox(height: 16),
-                          Text(
-                            "No products available",
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 16,
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.inventory_2_outlined,
+                                  size: 64, color: Colors.grey.shade300),
+                              const SizedBox(height: 16),
+                              Text(
+                                "No products available",
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              CustomRoundButton(
+                                title: _isResyncingProducts
+                                    ? 'Resyncing...'
+                                    : 'Resync Products',
+                                fct: _isResyncingProducts
+                                    ? () {}
+                                    : _resyncProductsFromMainGrid,
+                                width: 170,
+                                height: 36,
+                                fontSize: 11,
+                                boxColor: ColorManager.kPrimaryColor,
+                                borderColor: ColorManager.kPrimaryColor,
+                                textColor: Colors.white,
+                                radius: 8,
+                              ),
+                            ],
+                          ),
+                        )
+                      : MouseRegion(
+                          cursor: SystemMouseCursors.grab,
+                          child: ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(context).copyWith(
+                              dragDevices: {
+                                PointerDeviceKind.mouse,
+                                PointerDeviceKind.touch,
+                                PointerDeviceKind.stylus,
+                                PointerDeviceKind.trackpad,
+                              },
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          CustomRoundButton(
-                            title: _isResyncingProducts
-                                ? 'Resyncing...'
-                                : 'Resync Products',
-                            fct: _isResyncingProducts
-                                ? () {}
-                                : _resyncProductsFromMainGrid,
-                            width: 170,
-                            height: 36,
-                            fontSize: 11,
-                            boxColor: ColorManager.kPrimaryColor,
-                            borderColor: ColorManager.kPrimaryColor,
-                            textColor: Colors.white,
-                            radius: 8,
-                          ),
-                        ],
-                      ),
-                    )
-                  : MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: Consumer<AppFontProvider>(
-                          builder: (context, fontProvider, child) {
-                            return LayoutBuilder(
-                              builder: (context, constraints) {
-                                // Calculate columns based on available width and font size level
-                                // Level 0 (Small): Compact Mode (No Image)
-                                // Level 1 (Medium): Normal Mode
-                                // Level 2 (Large): Large Mode
-                                final bool showImage =
-                                    fontProvider.fontSizeLevel > 0;
+                            child: Consumer<AppFontProvider>(
+                              builder: (context, fontProvider, child) {
+                                return LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Calculate columns based on available width and font size level
+                                    // Level 0 (Small): Compact Mode (No Image)
+                                    // Level 1 (Medium): Normal Mode
+                                    // Level 2 (Large): Large Mode
+                                    final bool showImage =
+                                        fontProvider.fontSizeLevel > 0;
 
-                                double baseWidth;
-                                double childAspectRatio;
+                                    double baseWidth;
+                                    double childAspectRatio;
 
-                                if (!showImage) {
-                                  // Compact mode - denser grid, no images
-                                  baseWidth = 110.0;
-                                  childAspectRatio = 1.3;
-                                } else {
-                                  // Normal/Large mode with images
-                                  // Modified to allow more products visible at a time (smaller cards)
-                                  // Level 1 -> 125, Level 2 -> 145 (previously 150 -> 190)
-                                  baseWidth = 125.0 +
-                                      ((fontProvider.fontSizeLevel - 1) * 20.0);
-                                  // Slightly adjusted aspect ratio
-                                  childAspectRatio = 0.80;
-                                }
-
-                                int columns =
-                                    (constraints.maxWidth / baseWidth).floor();
-                                columns = columns.clamp(2, 12);
-
-                                return GridView.builder(
-                                  padding: const EdgeInsets.all(8),
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: columns,
-                                    childAspectRatio: childAspectRatio,
-                                    crossAxisSpacing: 6,
-                                    mainAxisSpacing: 6,
-                                  ),
-                                  physics: const BouncingScrollPhysics(),
-                                  itemCount: products.length,
-                                  itemBuilder: (context, index) {
-                                    final product = products[index];
-                                    final isSelected = product ==
-                                        productProvider.selectedProduct;
-
-                                    String? primaryImage;
-                                    if (showImage &&
-                                        product.attachment != null &&
-                                        product.attachment!.isNotEmpty) {
-                                      for (final attachment
-                                          in product.attachment!) {
-                                        if (attachment.isPrimary == 1) {
-                                          primaryImage = attachment.filePath;
-                                          break;
-                                        }
-                                      }
-                                      primaryImage ??=
-                                          product.attachment!.first.filePath;
+                                    if (!showImage) {
+                                      // Compact mode - denser grid, no images
+                                      baseWidth = 110.0;
+                                      childAspectRatio = 1.3;
+                                    } else {
+                                      // Normal/Large mode with images
+                                      // Modified to allow more products visible at a time (smaller cards)
+                                      // Level 1 -> 125, Level 2 -> 145 (previously 150 -> 190)
+                                      baseWidth = 125.0 +
+                                          ((fontProvider.fontSizeLevel - 1) *
+                                              20.0);
+                                      // Slightly adjusted aspect ratio
+                                      childAspectRatio = 0.80;
                                     }
 
-                                    return GestureDetector(
-                                      onTap: () async {
-                                        await ProductCartHelper
-                                            .handleProductSelection(
-                                          context: context,
-                                          product: product,
-                                          addToCartDirectly: true,
+                                    int columns =
+                                        (constraints.maxWidth / baseWidth)
+                                            .floor();
+                                    columns = columns.clamp(2, 12);
+
+                                    return GridView.builder(
+                                      padding: const EdgeInsets.all(8),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: columns,
+                                        childAspectRatio: childAspectRatio,
+                                        crossAxisSpacing: 6,
+                                        mainAxisSpacing: 6,
+                                      ),
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: products.length,
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected = product ==
+                                            productProvider.selectedProduct;
+
+                                        String? primaryImage;
+                                        if (showImage &&
+                                            product.attachment != null &&
+                                            product.attachment!.isNotEmpty) {
+                                          for (final attachment
+                                              in product.attachment!) {
+                                            if (attachment.isPrimary == 1) {
+                                              primaryImage =
+                                                  attachment.filePath;
+                                              break;
+                                            }
+                                          }
+                                          primaryImage ??= product
+                                              .attachment!.first.filePath;
+                                        }
+
+                                        return GestureDetector(
+                                          onTap: () async {
+                                            await ProductCartHelper
+                                                .handleProductSelection(
+                                              context: context,
+                                              product: product,
+                                              addToCartDirectly: true,
+                                            );
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: isSelected
+                                                  ? Border.all(
+                                                      color: ColorManager
+                                                          .kPrimaryColor,
+                                                      width: 2)
+                                                  : Border.all(
+                                                      color:
+                                                          Colors.grey.shade200),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.grey
+                                                      .withOpacity(0.1),
+                                                  spreadRadius: 1,
+                                                  blurRadius: 2,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ],
+                                            ),
+                                            child: showImage
+                                                ? _buildProductCardWithImage(
+                                                    context,
+                                                    product,
+                                                    primaryImage,
+                                                    fontProvider)
+                                                : _buildCompactProductCard(
+                                                    context,
+                                                    product,
+                                                    fontProvider),
+                                          ),
                                         );
                                       },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border: isSelected
-                                              ? Border.all(
-                                                  color: ColorManager
-                                                      .kPrimaryColor,
-                                                  width: 2)
-                                              : Border.all(
-                                                  color: Colors.grey.shade200),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.grey.withOpacity(0.1),
-                                              spreadRadius: 1,
-                                              blurRadius: 2,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ],
-                                        ),
-                                        child: showImage
-                                            ? _buildProductCardWithImage(
-                                                context,
-                                                product,
-                                                primaryImage,
-                                                fontProvider)
-                                            : _buildCompactProductCard(
-                                                context, product, fontProvider),
-                                      ),
                                     );
                                   },
                                 );
                               },
-                            );
-                          },
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
             ),
           ],
         );

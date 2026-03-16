@@ -119,7 +119,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           ),
           const SizedBox(height: 15),
 
-          // Row 2: Phone, Address, Email (for modal) or Country
+          // Row 2: Phone, Building/Apartment, Email (for modal) or Country
           Row(
             children: [
               Expanded(
@@ -136,7 +136,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
               const SizedBox(width: 10),
               Expanded(
                 child: _buildTextField(
-                  "Address",
+                  "Building / Apartment",
                   addressTextController,
                   TextInputType.text,
                   size,
@@ -163,7 +163,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           ),
           const SizedBox(height: 15),
 
-          // Row 3: State, District, Pincode/Country
+          // Row 3: States/Provinces, District/City, Pincode/Country
           Row(
             children: [
               Expanded(
@@ -272,7 +272,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       children: [
         BuildDropDownWithSearch<String>(
           key: stateDropdownKey,
-          title: "State",
+          title: "States / Provinces",
           hintText: "Select State",
           value: selectedStateId,
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
@@ -307,7 +307,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       children: [
         BuildDropDownWithSearch<String>(
           key: districtDropdownKey,
-          title: "District",
+          title: "District / City",
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
           hintText: "Select District",
           value: selectedDistrictId,
@@ -339,7 +339,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
-          title: "State",
+          title: "States / Provinces",
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -425,7 +425,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
-          title: "District",
+          title: "District / City",
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,

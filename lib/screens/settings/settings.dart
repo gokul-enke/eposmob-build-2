@@ -15,6 +15,7 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,18 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _resyncProducts() async {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    if (!billingProvider.hasInternet) {
+      showScaffoldError(
+        context: context,
+        message: billingProvider.isManualOfflineMode
+            ? 'Offline Mode is enabled. Disable it to resync products.'
+            : 'No internet connection. Cannot resync products.',
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -170,6 +183,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _toggleManualOfflineMode() async {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final enableOfflineMode = !billingProvider.isManualOfflineMode;
+
+    await billingProvider.setManualOfflineMode(enableOfflineMode);
+
+    if (!mounted) return;
+    showScaffold(
+      context: context,
+      message: enableOfflineMode
+          ? 'Offline Mode enabled. Online actions are now blocked.'
+          : billingProvider.deviceHasInternet
+              ? 'Offline Mode disabled. Online actions are available again.'
+              : 'Offline Mode disabled, but internet is still unavailable.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -216,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisSpacing: 14,
                         childAspectRatio: 1.08,
                       ),
-                      itemCount: kDebugMode ? 7 : 6,
+                      itemCount: kDebugMode ? 8 : 7,
                       itemBuilder: (context, index) {
                         switch (index) {
                           case 0:
@@ -286,6 +317,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               },
                             );
                           case 5:
+                            return Consumer<BillingProvider>(
+                              builder: (context, billingProvider, _) {
+                                final isOfflineModeEnabled =
+                                    billingProvider.isManualOfflineMode;
+                                return _SettingsInfoCard(
+                                  title: 'Offline Mode',
+                                  subtitle: isOfflineModeEnabled
+                                      ? 'Manually enabled'
+                                      : 'Uses live internet status',
+                                  icon: isOfflineModeEnabled
+                                      ? Icons.wifi_off
+                                      : Icons.wifi,
+                                  backgroundColor: isOfflineModeEnabled
+                                      ? const Color(0xFFFFEBEE)
+                                      : const Color(0xFFE8F5E9),
+                                  iconColor: isOfflineModeEnabled
+                                      ? const Color(0xFFC62828)
+                                      : const Color(0xFF2E7D32),
+                                  onTap: () async {
+                                    await _toggleManualOfflineMode();
+                                  },
+                                );
+                              },
+                            );
+                          case 6:
                             return _SettingsCardWithIcon(
                               title: 'Clear Local Storage',
                               icon: FontAwesomeIcons.trashCan,
@@ -295,7 +351,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 await _clearLocalStorageAndLogout();
                               },
                             );
-                          case 6:
+                          case 7:
                             if (!kDebugMode) return const SizedBox.shrink();
                             return _SettingsCardWithIcon(
                               title: 'Clear Product Cache (Debug)',

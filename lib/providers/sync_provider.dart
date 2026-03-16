@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import '../providers/local_product_provider.dart';
 import '../providers/category_providers.dart';
 import '../providers/document_config_provider.dart';
@@ -37,6 +38,16 @@ class SyncProvider extends ChangeNotifier {
     if (_isSyncing) {
       debugPrint("Sync already in progress, skipping...");
       return;
+    }
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    if (!billingProvider.hasInternet) {
+      final message = billingProvider.isManualOfflineMode
+          ? 'Sync is unavailable while Offline Mode is enabled.'
+          : 'No internet connection. Sync is unavailable.';
+      _syncError(message);
+      throw Exception(message);
     }
 
     _startSync();

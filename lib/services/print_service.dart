@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 
 class PrintService {
   const PrintService();
@@ -149,13 +150,23 @@ class PrintService {
       // Get active store name
       final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
+        final parsedPayment =
+          PaymentHelper.parseLocalMultiPayment(context, savedOrder.paymentMethod);
+        final String? displayPaymentMethod =
+          parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod;
+        final Map<String, dynamic>? paymentBreakdown =
+          parsedPayment?.paymentBreakdown;
+        final double? paidAmount =
+          (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+            ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+            : null;
 
       // Try auto-print with default printer first
       final autoPrintSuccess = await PrintPage.autoPrint(
         context,
         storeName: storeName,
         cartItems: cartItems,
-        formattedTotal: netTotal.toString(),
+        formattedTotal: savedOrder.total.toString(),
         savedTotal: youSaved.toString(),
         discountAmount: (savedOrder.flatDiscount != null ||
                 savedOrder.percentageDiscount != null)
@@ -170,6 +181,15 @@ class PrintService {
         orderDate: savedOrder.createdAt,
         orderNumber: savedOrder.orderNumber,
         isFromLocalStorage: true,
+        customerName: savedOrder.customerName,
+        customerPhone: savedOrder.customerPhone,
+        customerAddress: savedOrder.address,
+        paymentMethod: displayPaymentMethod,
+        paymentBreakdown: paymentBreakdown,
+        customerAlternatePhone: savedOrder.alternatePhone,
+        orderComment: savedOrder.comment,
+        deliveryMethod: savedOrder.deliveryMethod,
+        paidAmount: paidAmount,
         isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
       );
 
@@ -181,7 +201,7 @@ class PrintService {
             builder: (context) => PrintPage(
               storeName: storeName,
               cartItems: cartItems,
-              formattedTotal: netTotal.toString(),
+              formattedTotal: savedOrder.total.toString(),
               savedTotal: youSaved.toString(),
               discountAmount: (savedOrder.flatDiscount != null ||
                       savedOrder.percentageDiscount != null)
@@ -196,6 +216,15 @@ class PrintService {
               orderDate: savedOrder.createdAt,
               orderNumber: savedOrder.orderNumber,
               isFromLocalStorage: true,
+              customerName: savedOrder.customerName,
+              customerPhone: savedOrder.customerPhone,
+              customerAddress: savedOrder.address,
+              paymentMethod: displayPaymentMethod,
+              paymentBreakdown: paymentBreakdown,
+              customerAlternatePhone: savedOrder.alternatePhone,
+              orderComment: savedOrder.comment,
+              deliveryMethod: savedOrder.deliveryMethod,
+              paidAmount: paidAmount,
               isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
             ),
           ),

@@ -111,6 +111,59 @@ class Invoice {
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
+    final dynamic rawZatcaStatus = json['zatca_status'];
+    final Map<String, dynamic>? zatcaStatusMap =
+        rawZatcaStatus is Map<String, dynamic>
+            ? rawZatcaStatus
+            : rawZatcaStatus is Map
+                ? Map<String, dynamic>.from(rawZatcaStatus)
+                : null;
+
+    final dynamic rawCustomer = json['customer'];
+    final Map<String, dynamic> customerJson =
+        rawCustomer is Map<String, dynamic>
+            ? rawCustomer
+            : rawCustomer is Map
+                ? Map<String, dynamic>.from(rawCustomer)
+                : {
+                    'id': json['customer_id'] ?? 0,
+                    'user_id': null,
+                    'user': {
+                      'id': json['customer_id'] ?? 0,
+                      'name': json['customer_name']?.toString() ?? '',
+                      'email': '',
+                      'phone': '',
+                    },
+                  };
+
+    final String? nestedStatus = zatcaStatusMap?['status']?.toString();
+    final String? nestedZatcaStatus =
+        zatcaStatusMap?['zatca_status']?.toString();
+
+    String? resolvedRequestStatus = json['zatca_request_status']?.toString();
+    String? resolvedZatcaStatus;
+
+    if (rawZatcaStatus is String || rawZatcaStatus is num || rawZatcaStatus is bool) {
+      resolvedZatcaStatus = rawZatcaStatus.toString();
+    } else {
+      resolvedZatcaStatus = nestedZatcaStatus;
+    }
+
+    if (resolvedRequestStatus == null || resolvedRequestStatus.isEmpty) {
+      if (nestedStatus == 'failed' ||
+          nestedStatus == 'pending' ||
+          nestedStatus == 'processing' ||
+          nestedStatus == 'success' ||
+          nestedStatus == 'sent') {
+        resolvedRequestStatus = nestedStatus;
+      }
+    }
+
+    if ((resolvedZatcaStatus == null || resolvedZatcaStatus.isEmpty) &&
+        (nestedStatus == 'sent' || nestedStatus == 'success')) {
+      resolvedZatcaStatus = 'success';
+    }
+
     return Invoice(
       id: json['id'] ?? 0,
       userId: json['user_id'],
@@ -131,11 +184,11 @@ class Invoice {
       createdBy: json['created_by'] ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
-      zatcaRequestStatus: json['zatca_request_status']?.toString(),
-      zatcaStatus: json['zatca_status']?.toString(),
+      zatcaRequestStatus: resolvedRequestStatus,
+      zatcaStatus: resolvedZatcaStatus,
       paidAmount: json['paid_amount']?.toString(),
       balanceAmount: json['balance_amount'],
-      customer: Customer.fromJson(json['customer'] ?? {}),
+      customer: Customer.fromJson(customerJson),
       zatcaInvoices: json['zatca_invoices'] as List<dynamic>?,
     );
   }

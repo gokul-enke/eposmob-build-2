@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import '../providers/billing_provider.dart';
 import '../providers/sync_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
@@ -28,8 +29,9 @@ class SyncButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SyncProvider>(
-      builder: (context, syncProvider, child) {
+    return Consumer2<SyncProvider, BillingProvider>(
+      builder: (context, syncProvider, billingProvider, child) {
+        final canSync = billingProvider.hasInternet;
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -55,13 +57,17 @@ class SyncButton extends StatelessWidget {
                           : Icons.sync,
                       color: syncProvider.hasError
                           ? Colors.red
+                          : !canSync
+                            ? Colors.grey.shade400
                           : syncProvider.lastSyncTime != null
                               ? ColorManager.kPrimaryColor
                               : Colors.grey.shade600,
                       size: size ?? 24,
                     ),
-              tooltip: showTooltip ? _getTooltipText(syncProvider) : null,
-              onPressed: syncProvider.isSyncing
+                    tooltip: showTooltip
+                      ? _getTooltipText(syncProvider, billingProvider)
+                      : null,
+                    onPressed: syncProvider.isSyncing || !canSync
                   ? null
                   : () => _handleSyncPress(context, syncProvider),
             ),
@@ -107,7 +113,16 @@ class SyncButton extends StatelessWidget {
     );
   }
 
-  String _getTooltipText(SyncProvider syncProvider) {
+  String _getTooltipText(
+    SyncProvider syncProvider,
+    BillingProvider billingProvider,
+  ) {
+    if (!billingProvider.hasInternet) {
+      return billingProvider.isManualOfflineMode
+          ? 'Offline Mode is enabled. Disable it in Settings to sync.'
+          : 'No internet connection available for sync.';
+    }
+
     if (syncProvider.isSyncing) {
       return syncProvider.syncMessage.isNotEmpty 
           ? syncProvider.syncMessage 

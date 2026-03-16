@@ -127,10 +127,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                     "⚠️ Could not find billing page state, updating with minimal info");
                 provider.updateSavedOrder(
                   provider.currentOrder!.id,
-                  customerName: null,
-                  customerPhone: null,
-                  comment: null,
-                  deliveryMethod: null,
+                  context: context,
                 );
               }
             }

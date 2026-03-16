@@ -12,6 +12,7 @@ import '../../providers/category_providers.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import '../../widgets/add_category_modal.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   const AddCategoryScreen({Key? key}) : super(key: key);
@@ -117,7 +118,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     super.dispose();
   }
 
-  void resetSearch() async {
+  Future<void> resetSearch() async {
     _searchController.clear();
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
@@ -146,7 +147,19 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
   }
 
   Future<void> refreshData() async {
-    resetSearch();
+    await resetSearch();
+  }
+
+  Future<void> _openAddCategoryModal() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AddCategoryModal(),
+    );
+
+    if (result == true && mounted) {
+      await resetSearch();
+    }
   }
 
   @override
@@ -185,7 +198,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                 //   style: buildCustomStyle(FontWeightManager.semiBold,
                 //       FontSize.s20, 0.30, ColorManager.textColor),
                 // ),
-                _buildHeader(categoryProvider, sideBarController),
+                  _buildHeader(categoryProvider, sideBarController),
                 const SizedBox(
                   height: 15,
                 ),
@@ -334,50 +347,16 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
             ColorManager.textColor,
           ),
         ),
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // SizedBox(
-            //   height: 45,
-            //   width: 180,
-            //   child: TextField(
-            //     controller: _searchController,
-            //     cursorWidth: 1,
-            //     cursorColor: ColorManager.kPrimaryColor,
-            //     onChanged: (query) {
-            //       categoryProvider.searchCategories(query);
-            //     },
-            //     decoration: InputDecoration(
-            //       prefixIcon: WebsafeSvg.asset(
-            //         ImageAssets.categorySearchIcon,
-            //         fit: BoxFit.none,
-            //       ),
-            //       labelStyle: buildCustomStyle(
-            //         FontWeightManager.regular,
-            //         FontSize.s10,
-            //         0.10,
-            //         ColorManager.textColor,
-            //       ),
-            //       hintText: 'Search category',
-            //       hintStyle: buildCustomStyle(
-            //         FontWeightManager.regular,
-            //         FontSize.s10,
-            //         0.13,
-            //         ColorManager.textColor1,
-            //       ),
-            //     ),
-            //   ),
-            // ),
-            // const SizedBox(width: 10),
-            // CustomRoundButton(
-            //   title: "Create New Category",
-            //   fct: () {
-            //     sideBarController.index.value = 16;
-            //   },
-            //   fontSize: 12,
-            //   height: 45,
-            //   width: 200,
-            // ),
+            CustomRoundButton(
+              title: "Create New Category",
+              fct: _openAddCategoryModal,
+              fontSize: 12,
+              height: 45,
+              width: 200,
+            ),
           ],
         ),
       ],

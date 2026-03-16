@@ -36,6 +36,7 @@ class OrdersTab extends StatelessWidget {
                           billingProvider.mobileNumberText,
                       comment: billingProvider.commentController.text,
                       deliveryMethod: billingProvider.deliveryMethod,
+                      context: context,
                       deliveryDate:
                           billingProvider.deliveryDate?.toIso8601String(),
                       deliveryTime: billingProvider.deliveryTime,

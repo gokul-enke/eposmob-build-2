@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
 import 'package:provider/provider.dart';
@@ -80,6 +81,9 @@ class ProductCartHelper {
         Provider.of<GeneralSettingsProvider>(context, listen: false);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
+    final storeSessionProvider =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+    final activeStore = storeSessionProvider.activeStore;
 
     // Check if stock management is enabled
     bool stockEnabled =
@@ -99,17 +103,30 @@ class ProductCartHelper {
     if (stockEnabled && product.stock != null && product.stock!.isNotEmpty) {
       debugPrint("📦 STEP 1: Handling stock selection...");
 
-      if (product.stock!.length > 1) {
+      final List<Stock> availableStocks =
+          localProductProvider.getStockOptionsForStore(
+        product,
+        activeStoreId: activeStore?.storeId,
+        activeStoreName: activeStore?.storeName,
+      );
+
+      debugPrint("🏪 Active store filter applied:");
+      debugPrint("  - Active Store ID: ${activeStore?.storeId}");
+      debugPrint("  - Active Store Name: ${activeStore?.storeName}");
+      debugPrint("  - Matching stock entries: ${availableStocks.length}");
+
+      if (availableStocks.isEmpty) {
+        debugPrint(
+            "⚠️ No current-store stock entries found - fallback to product base pricing");
+        finalPrice =
+            finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
+        finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
+      } else if (availableStocks.length > 1) {
         debugPrint(
             "📦 Multiple stock entries detected, filtering available stocks...");
         debugPrint("  - Total stock entries: ${product.stock!.length}");
 
-        // Get all stock options (don't filter by quantity - physical stock may be available)
-        // Physical stock at shop matters more than digital count
-        List<Stock> availableStocks = List.from(product.stock!);
-
-        debugPrint(
-            "📦 Available stocks: ${availableStocks.length}");
+        debugPrint("📦 Available stocks: ${availableStocks.length}");
         for (int i = 0; i < availableStocks.length; i++) {
           Stock stock = availableStocks[i];
           debugPrint(
@@ -176,7 +193,8 @@ class ProductCartHelper {
           debugPrint("  - Final Price: $finalPrice");
           debugPrint("  - Final MRP: $finalMrp");
         } else {
-          debugPrint("📦 Product has no stock entries, using basic product info...");
+          debugPrint(
+              "📦 Product has no stock entries, using basic product info...");
           finalPrice =
               finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
           finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
@@ -190,7 +208,7 @@ class ProductCartHelper {
             "📦 Product has single stock entry, extracting stock information...");
 
         // Single stock entry - extract the stock information
-        selectedStock = product.stock!.first;
+        selectedStock = availableStocks.first;
 
         debugPrint("📦 Single stock details:");
         debugPrint("  - Stock ID: ${selectedStock!.id}");
@@ -450,7 +468,7 @@ class ProductCartHelper {
         price:
             priceToUse, // 🔧 FIX: Pass null to preserve existing custom price, or explicit price
         mrp:
-            mrpToUse, // 🔧 FIX: Pass null to preserve existing custom MRP, or explicit MRP
+            mrpToUse, // � FIX: Pass null to preserve existing custom MRP, or explicit MRP
         selectedStock: selectedStock,
       );
 

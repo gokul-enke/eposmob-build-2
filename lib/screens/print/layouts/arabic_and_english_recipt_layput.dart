@@ -1446,7 +1446,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         rows.add(TextRow('$arabicText فقط.',
             scale: is58mm ? 0.7 : 0.85, isBold: true));
         rows.add(TextRow('$englishText Only.',
-            scale: is58mm ? 0.7 : 0.85, isBold: true));
+          scale: is58mm ? 0.7 : 0.85,
+          isBold: true,
+          textDirectionOverride: TextDirection.ltr));
       } else {
         final language =
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
@@ -2174,11 +2176,11 @@ class StandardBoxedTotalsRow extends ReceiptRow {
         // Draw Icon if present
         double valueOffsetX = padding;
         if (item.icon != null) {
-          final double iconSize = itemFontSize * 1.2;
+          final double iconSize = itemFontSize * 0.75;
           final src = Rect.fromLTWH(
               0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
           final dst = Rect.fromLTWH(
-              padding, currentY - (iconSize * 0.1), iconSize, iconSize);
+              padding, currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
           valueOffsetX += iconSize + 4; // Space after icon
         }

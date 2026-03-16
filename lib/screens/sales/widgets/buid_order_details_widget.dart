@@ -42,51 +42,86 @@ class OrderDetailWidget extends StatelessWidget {
     return totalMRP;
   }
 
+  OrderDetailsModelDataPriceSummary? _effectivePriceSummary() {
+    return priceSummary ??
+        orderDetailsModelData?.priceSummary ??
+        orderDetailsModelData?.cart?.priceSummary;
+  }
+
+  String? _getOrderPropValue(String code) {
+    final prop = orderDetailsModelData?.orderProps?.firstWhere(
+      (item) => item.propsCode?.toUpperCase() == code.toUpperCase(),
+      orElse: () => OrderDetailsModelDataOrderProp(),
+    );
+    final value = prop?.propsValue;
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  double _balanceAmount(OrderDetailsModelDataPriceSummary? summary) {
+    final propBalance = double.tryParse(_getOrderPropValue('BALANCE') ?? '');
+    if (propBalance != null) {
+      return propBalance;
+    }
+
+    final totalPaid =
+        _calculateTotalPayments(orderDetailsModelData?.payments ?? {});
+    final payable = (summary?.netPayable ?? summary?.netTotal ?? 0).toDouble();
+    final balance = payable - totalPaid;
+    return balance < 0 ? 0.0 : balance;
+  }
+
+  String _formatAmount(num? value) {
+    return (value ?? 0).toStringAsFixed(2);
+  }
+
   String _formatCustomerAddressList(List<dynamic>? addressList) {
     if (addressList == null || addressList.isEmpty) return '';
-    
+
     try {
       // If the first item is a Map (parsed JSON)
       if (addressList[0] is Map) {
         final map = addressList[0];
         List<String> parts = [];
-        
+
         if (map['address'] != null) parts.add(map['address'].toString());
         if (map['city'] != null) parts.add(map['city'].toString());
-        
+
         // Handle state
         if (map['state_id'] != null) {
-           // If we have state ID but no name, we might just show ID or skip
-           // Ideally we'd look up the name, but for now let's skip if no name
+          // If we have state ID but no name, we might just show ID or skip
+          // Ideally we'd look up the name, but for now let's skip if no name
         }
-        
+
         // Handle pincode
         if (map['pincode_id'] != null) {
-           // Same for pincode
+          // Same for pincode
         }
-        
+
         return parts.join(', ');
       }
-      
+
       // If it's a string representation of a map "{id: 6, ...}"
       String raw = addressList[0].toString();
       if (raw.startsWith('{')) {
-         String address = "";
-         String city = "";
-         
-         final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(raw);
-         if (addressMatch != null) address = addressMatch.group(1)?.trim() ?? "";
-         
-         final cityMatch = RegExp(r'city:\s*([^,]+)').firstMatch(raw);
-         if (cityMatch != null) city = cityMatch.group(1)?.trim() ?? "";
-         
-         List<String> parts = [];
-         if (address.isNotEmpty) parts.add(address);
-         if (city.isNotEmpty) parts.add(city);
-         
-         if (parts.isNotEmpty) return parts.join(', ');
+        String address = "";
+        String city = "";
+
+        final addressMatch = RegExp(r'address:\s*([^,]+)').firstMatch(raw);
+        if (addressMatch != null) address = addressMatch.group(1)?.trim() ?? "";
+
+        final cityMatch = RegExp(r'city:\s*([^,]+)').firstMatch(raw);
+        if (cityMatch != null) city = cityMatch.group(1)?.trim() ?? "";
+
+        List<String> parts = [];
+        if (address.isNotEmpty) parts.add(address);
+        if (city.isNotEmpty) parts.add(city);
+
+        if (parts.isNotEmpty) return parts.join(', ');
       }
-      
+
       return addressList.join(', ');
     } catch (e) {
       return addressList.join(', ');
@@ -95,7 +130,11 @@ class OrderDetailWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (customerDetails == null || cartItem == null || priceSummary == null) {
+    final effectivePriceSummary = _effectivePriceSummary();
+
+    if (customerDetails == null ||
+        cartItem == null ||
+        effectivePriceSummary == null) {
       return const Center(
         child: Text('Order details are not available.'),
       );
@@ -177,7 +216,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 // Displaying Price Summary
                                 BuildPaymentRow(
                                   amount:
-                                      "$currency ${priceSummary?.netTotal?.toStringAsFixed(2) ?? '0.00'}",
+                                      "$currency ${_formatAmount(effectivePriceSummary.netTotal)}",
                                   title: "Net amount",
                                   color: ColorManager.textColor,
                                   firstRowTextStyle: buildCustomStyle(
@@ -195,14 +234,14 @@ class OrderDetailWidget extends StatelessWidget {
                                 ),
                                 BuildPaymentRow(
                                   amount:
-                                      "$currency ${_calculateTotalMRP().toStringAsFixed(2)}",
+                                      "$currency ${_formatAmount(effectivePriceSummary.totalMrp ?? _calculateTotalMRP())}",
                                   title: "Total MRP",
                                   color: ColorManager.textColor,
                                 ),
-                                if ((priceSummary?.savedTotal ?? 0) > 0)
+                                if ((effectivePriceSummary.savedTotal ?? 0) > 0)
                                   BuildPaymentRow(
                                     amount:
-                                        "$currency ${priceSummary?.savedTotal?.toStringAsFixed(2) ?? '0.00'}",
+                                        "$currency ${_formatAmount(effectivePriceSummary.savedTotal)}",
                                     title: "You saved",
                                     color: ColorManager.textColor,
                                     // firstRowTextStyle: buildCustomStyle(
@@ -220,20 +259,20 @@ class OrderDetailWidget extends StatelessWidget {
                                   ),
                                 BuildPaymentRow(
                                   amount:
-                                      "$currency ${priceSummary?.discount?.toStringAsFixed(2) ?? '0.00'}",
+                                      "$currency ${_formatAmount(effectivePriceSummary.discount)}",
                                   title: "Discount",
                                   color: ColorManager.textColor,
                                 ),
                                 BuildPaymentRow(
                                   amount:
-                                      "$currency ${priceSummary?.totalTax?.toStringAsFixed(2) ?? '0.00'}",
+                                      "$currency ${_formatAmount(effectivePriceSummary.totalTax)}",
                                   title: "Tax Amount",
                                   color: ColorManager.textColor,
                                 ),
                                 const Divider(thickness: 2),
                                 BuildPaymentRow(
                                   amount:
-                                      "$currency ${priceSummary?.netPayable?.toStringAsFixed(2) ?? '0.00'}",
+                                      "$currency ${_formatAmount(effectivePriceSummary.netPayable)}",
                                   title: "Payable",
                                   secondRowTextStyle: buildCustomStyle(
                                     FontWeightManager.bold,
@@ -251,7 +290,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 ),
                                 BuildPaymentRow(
                                   amount:
-                                      "$currency 0.00", // Adjust if necessary
+                                      "$currency ${_balanceAmount(effectivePriceSummary).toStringAsFixed(2)}",
                                   title: "Balance amount",
                                   secondRowTextStyle: buildCustomStyle(
                                     FontWeightManager.medium,
@@ -349,8 +388,17 @@ class OrderDetailWidget extends StatelessWidget {
                                 'Delivery Method',
                                 orderDetailsModelData?.deliveryMethodName ??
                                     ''),
-                          _buildInfoRow(
-                              'Executive Name', 'Sales Executive eposEnke')
+                          if (orderDetailsModelData?.deliveryDate != null &&
+                              orderDetailsModelData!.deliveryDate!.isNotEmpty)
+                            _buildInfoRow('Delivery Date',
+                                orderDetailsModelData?.deliveryDate ?? ''),
+                          if (orderDetailsModelData?.deliveryTime != null &&
+                              orderDetailsModelData!.deliveryTime!.isNotEmpty)
+                            _buildInfoRow('Delivery Time',
+                                orderDetailsModelData?.deliveryTime ?? ''),
+                          if (orderDetailsModelData?.deliveryCharge != null)
+                            _buildInfoRow('Delivery Charge',
+                                '$currency ${_formatAmount(orderDetailsModelData?.deliveryCharge)}'),
                         ],
                       ),
                     ),
@@ -392,6 +440,14 @@ class OrderDetailWidget extends StatelessWidget {
                                 orderDetailsModelData
                                         ?.paymentDetails?.transactionId
                                         ?.toString() ??
+                                    ''),
+                          if (orderDetailsModelData
+                                  ?.paymentDetails?.paymentId !=
+                              null)
+                            _buildInfoRow(
+                                'Payment ID',
+                                orderDetailsModelData
+                                        ?.paymentDetails?.paymentId ??
                                     ''),
 
                           // Add payment breakdown
@@ -479,6 +535,10 @@ class OrderDetailWidget extends StatelessWidget {
 
                   // Customer Extended Info Section
                   if (customerDetails?.email != null ||
+                      customerDetails?.alternatePhone != null ||
+                      (orderDetailsModelData?.getCustomerAddressFromProps() ??
+                              '')
+                          .isNotEmpty ||
                       (customerDetails?.address != null &&
                           (customerDetails?.address?.isNotEmpty ?? false)))
                     BuildBoxShadowContainer(
@@ -503,12 +563,93 @@ class OrderDetailWidget extends StatelessWidget {
                           if (customerDetails?.email != null)
                             _buildInfoRow(
                                 'Email', customerDetails?.email ?? ''),
+                          if (customerDetails?.alternatePhone != null &&
+                              customerDetails!.alternatePhone!.isNotEmpty)
+                            _buildInfoRow('Alternate Phone',
+                                customerDetails?.alternatePhone ?? ''),
+                          if ((orderDetailsModelData
+                                      ?.getCustomerAddressFromProps() ??
+                                  '')
+                              .isNotEmpty)
+                            _buildInfoRow(
+                                'Address',
+                                orderDetailsModelData
+                                        ?.getCustomerAddressFromProps() ??
+                                    ''),
                           if (customerDetails?.address != null &&
-                              (customerDetails?.address?.isNotEmpty ?? false))
+                              (customerDetails?.address?.isNotEmpty ?? false) &&
+                              (orderDetailsModelData
+                                          ?.getCustomerAddressFromProps() ??
+                                      '')
+                                  .isEmpty)
                             _buildInfoRow(
                                 'Address',
                                 _formatCustomerAddressList(
                                     customerDetails?.address)),
+                        ],
+                      ),
+                    ),
+
+                  if (orderDetailsModelData?.kycInfo?.crNumber != null ||
+                      orderDetailsModelData?.kycInfo?.vatNumber != null)
+                    BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      padding: const EdgeInsets.all(16),
+                      margin:
+                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
+                      offsetValue: const Offset(1, 1),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'KYC Information',
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s16,
+                              0.24,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (orderDetailsModelData?.kycInfo?.crNumber != null)
+                            _buildInfoRow('CR Number',
+                                orderDetailsModelData?.kycInfo?.crNumber ?? ''),
+                          if (orderDetailsModelData?.kycInfo?.vatNumber != null)
+                            _buildInfoRow(
+                                'VAT Number',
+                                orderDetailsModelData?.kycInfo?.vatNumber ??
+                                    ''),
+                        ],
+                      ),
+                    ),
+
+                  if (orderDetailsModelData?.tokenNumber != null ||
+                      orderDetailsModelData?.invoiceHash != null)
+                    BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      padding: const EdgeInsets.all(16),
+                      margin:
+                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
+                      offsetValue: const Offset(1, 1),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order Metadata',
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s16,
+                              0.24,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (orderDetailsModelData?.tokenNumber != null)
+                            _buildInfoRow('Token Number',
+                                orderDetailsModelData?.tokenNumber ?? ''),
+                          if (orderDetailsModelData?.invoiceHash != null)
+                            _buildInfoRow('Invoice Hash',
+                                orderDetailsModelData?.invoiceHash ?? ''),
                         ],
                       ),
                     ),
@@ -642,6 +783,7 @@ class OrderDetailWidget extends StatelessWidget {
       String label, String value, String currency) {
     // Format specific order properties
     switch (label.toUpperCase()) {
+      case 'ORDER STATUS':
       case 'ORDER_STATUS':
         // Extract date from "confirmed - 2025-08-02 17:24:09" format
         if (value.contains(' - ')) {
@@ -658,12 +800,24 @@ class OrderDetailWidget extends StatelessWidget {
           }
         }
         return value;
+      case 'TOKEN NUMBER':
+      case 'ORDER TOKEN NUMBER':
+      case 'ORDER_TOKEN_NUMBER':
+        return value;
       case 'BALANCE':
         // Format balance with proper currency
         final balance = double.tryParse(value) ?? 0.0;
         return '$currency ${balance.toStringAsFixed(2)}';
+      case 'DELIVERY DATE':
+        try {
+          return DateHelper.formatISODate(value);
+        } catch (e) {
+          return value;
+        }
       case 'CUSTOMER_PHONE':
+      case 'CUSTOMER PHONE':
       case 'CUSTOMER_EMAIL':
+      case 'CUSTOMER EMAIL':
         // Keep as is for contact info
         return value;
       default:

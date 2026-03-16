@@ -821,6 +821,7 @@ class CartProvider with ChangeNotifier {
     double? discountAmount,
     bool? toCustomerCredit,
     String? address,
+    double? deliveryCharge,
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -842,6 +843,7 @@ class CartProvider with ChangeNotifier {
     debugPrint("🏷️ Flat Discount: $flatDiscount");
     debugPrint("📊 Percentage Discount: $percentageDiscount");
     debugPrint("💰 Discount Amount: $discountAmount");
+    debugPrint("🚚 Delivery Charge: ${deliveryCharge ?? 0.0}");
 
     DateTime now = DateHelper.now();
 
@@ -889,6 +891,7 @@ class CartProvider with ChangeNotifier {
       apiBodyData = {
         "items": items?.reversed.toList(),
         "phone": customerPhone,
+        if (customerId != null) "customer_id": customerId,
         "transaction_number": transactionId,
         "payment_method": paymentMethods,
         "paid_methods": finalPaidMethods,
@@ -905,15 +908,19 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,
+        "delivery_charge": deliveryCharge ?? 0.0,
       };
     } else {
       // Fallback to single payment method format
       apiBodyData = {
         "items": items?.reversed.toList(),
         "phone": customerPhone,
+        if (customerId != null) "customer_id": customerId,
         "transaction_number": transactionId,
         "payment_method": paymentMethod,
         "paid_amount": paidAmount,
@@ -930,9 +937,12 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,
+        "delivery_charge": deliveryCharge ?? 0.0,
       };
     }
 
@@ -1016,6 +1026,7 @@ class CartProvider with ChangeNotifier {
     double? discountAmount,
     bool? toCustomerCredit,
     String? address,
+    double? deliveryCharge,
   }) async {
     debugPrint("📤 UPDATE ORDER API - Starting request");
     DateTime now = DateTime.now();
@@ -1072,6 +1083,7 @@ class CartProvider with ChangeNotifier {
           "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
+        if (deliveryCharge != null) 'delivery_charge': deliveryCharge,
       };
     } else {
       // Fallback to single payment method format
@@ -1094,6 +1106,7 @@ class CartProvider with ChangeNotifier {
           "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
+        if (deliveryCharge != null) 'delivery_charge': deliveryCharge,
       };
     }
 

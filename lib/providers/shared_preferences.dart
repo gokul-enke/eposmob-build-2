@@ -3,6 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferenceProvider extends ChangeNotifier {
+  static const String _billingSidebarWidthKey =
+      'billing_sidebar_width_fraction';
+
+  String _billingSidebarWidthPrefKey({int? userId}) {
+    if (userId == null) {
+      return _billingSidebarWidthKey;
+    }
+    return '${_billingSidebarWidthKey}_$userId';
+  }
+
   saveAccessToken(String accessToken) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
@@ -21,6 +31,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     String? companyName,
     String? storesJson,
     String? timeZone,
+    String? countryName,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
@@ -45,6 +56,9 @@ class SharedPreferenceProvider extends ChangeNotifier {
     }
     if (timeZone != null) {
       prefs.setString('time_zone', timeZone);
+    }
+    if (countryName != null) {
+      prefs.setString('country_name', countryName);
     }
     // debugPrint('inside shared ,$customerName');
   }
@@ -72,8 +86,10 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('stores');
     prefs.remove('active_store_id');
     prefs.remove('time_zone');
+    prefs.remove('country_name');
 
     // Remove ZATCA fields
+    prefs.remove('zatca_cr_number');
     prefs.remove('zatca_vat_number');
     prefs.remove('zatca_company_name');
   }
@@ -156,6 +172,11 @@ class SharedPreferenceProvider extends ChangeNotifier {
     return prefs.getString('time_zone');
   }
 
+  Future<String?> getCountryName() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('country_name');
+  }
+
   Future<List<dynamic>?> getStores() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? storesJson = prefs.getString('stores');
@@ -219,12 +240,65 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.remove('last_product_sync_iso');
   }
 
+  Future<void> saveManualOfflineMode(bool enabled) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('manual_offline_mode', enabled);
+  }
+
+  Future<bool> getManualOfflineMode() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('manual_offline_mode') ?? false;
+  }
+
+  Future<void> clearManualOfflineMode() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('manual_offline_mode');
+  }
+
+  Future<void> saveBillingSidebarWidthFraction(
+    double fraction, {
+    int? userId,
+  }) async {
+    if (!fraction.isFinite || fraction <= 0) return;
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(
+      _billingSidebarWidthPrefKey(userId: userId),
+      fraction,
+    );
+  }
+
+  Future<double?> getBillingSidebarWidthFraction({int? userId}) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final scopedValue = prefs.getDouble(
+      _billingSidebarWidthPrefKey(userId: userId),
+    );
+    if (scopedValue != null) {
+      return scopedValue;
+    }
+
+    return prefs.getDouble(_billingSidebarWidthKey);
+  }
+
   // ==================== ZATCA METHODS ====================
 
   /// Save ZATCA VAT number for Saudi Arabia e-invoicing
   Future<void> saveZatcaVatNumber(String vatNumber) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('zatca_vat_number', vatNumber);
+  }
+
+  /// Save ZATCA CR number for Saudi Arabia e-invoicing
+  Future<void> saveZatcaCrNumber(String crNumber) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zatca_cr_number', crNumber);
+  }
+
+  /// Get ZATCA CR number
+  Future<String?> getZatcaCrNumber() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('zatca_cr_number');
   }
 
   /// Get ZATCA VAT number
@@ -247,10 +321,14 @@ class SharedPreferenceProvider extends ChangeNotifier {
 
   /// Save both ZATCA credentials at once
   Future<void> saveZatcaCredentials({
+    String? crNumber,
     String? vatNumber,
     String? companyName,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (crNumber != null && crNumber.isNotEmpty) {
+      await prefs.setString('zatca_cr_number', crNumber);
+    }
     if (vatNumber != null && vatNumber.isNotEmpty) {
       await prefs.setString('zatca_vat_number', vatNumber);
     }
@@ -273,6 +351,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
   /// Remove ZATCA credentials
   Future<void> removeZatcaCredentials() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('zatca_cr_number');
     await prefs.remove('zatca_vat_number');
     await prefs.remove('zatca_company_name');
   }

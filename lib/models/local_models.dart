@@ -43,6 +43,9 @@ class HiveLocalCartItem {
   @HiveField(7)
   double? taxRate;
 
+  @HiveField(8)
+  num stockDeducted;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -52,6 +55,7 @@ class HiveLocalCartItem {
     this.taxRate,
     required this.serializedProduct,
     this.serializedSelectedStock,
+    this.stockDeducted = 0,
   });
 }
 
@@ -137,6 +141,9 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(25)
   final String? address;
 
+  @HiveField(26)
+  final double? deliveryCharge;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -165,6 +172,7 @@ class HiveSavedOrder extends HiveObject {
     this.tableId,
     this.alternatePhone,
     this.address,
+    this.deliveryCharge,
   });
 }
 

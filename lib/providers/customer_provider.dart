@@ -493,6 +493,15 @@ class CustomerProvider extends ChangeNotifier {
     if (paymentType != null && paymentType.isNotEmpty) {
       apiBodyData['payment_type'] = paymentType;
     }
+    if (customerType != null && customerType.isNotEmpty) {
+      apiBodyData['customer_type'] = customerType;
+    }
+    if (crNumber != null && crNumber.isNotEmpty) {
+      apiBodyData['cr_number'] = crNumber;
+    }
+    if (vatNumber != null && vatNumber.isNotEmpty) {
+      apiBodyData['vat_number'] = vatNumber;
+    }
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.updateCustomerUrl);
     // Get API key from SharedPreferences

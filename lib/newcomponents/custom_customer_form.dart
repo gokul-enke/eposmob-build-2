@@ -5,6 +5,7 @@ import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/newcomponents/custom_radio_group.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 
@@ -76,6 +77,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       _showPhoneValidationOnLoad =
           normalizedPhone.isNotEmpty && normalizedPhone.length < 10;
     }
+    _prefillCountryFromLogin();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final locationProvider =
           Provider.of<LocationProvider>(context, listen: false);
@@ -83,6 +85,19 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           Provider.of<AuthModel>(context, listen: false).token;
       locationProvider.listAllStates(accessToken!);
     });
+  }
+
+  Future<void> _prefillCountryFromLogin() async {
+    final savedCountry = await SharedPreferenceProvider().getCountryName();
+    if (!mounted) {
+      return;
+    }
+    if ((countryTextController.text).trim().isEmpty &&
+        (savedCountry ?? '').trim().isNotEmpty) {
+      setState(() {
+        countryTextController.text = savedCountry!.trim();
+      });
+    }
   }
 
   @override
@@ -136,7 +151,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           ),
           const SizedBox(height: 20),
 
-          // Row 2: Phone Number, Address, Country
+          // Row 2: Phone Number, Building/Apartment, Country
           Row(
             children: [
               Expanded(
@@ -153,7 +168,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildTextField(
-                  "Address",
+                  "Building / Apartment",
                   addressTextController,
                   TextInputType.text,
                   size,
@@ -172,7 +187,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           ),
           const SizedBox(height: 20),
 
-          // Row 3: State, District, Pincode (both modes)
+          // Row 3: States/Provinces, District/City, Pincode (both modes)
           Row(
             children: [
               Expanded(
@@ -243,6 +258,14 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                     crNumberController,
                     TextInputType.text,
                     size,
+                    isRequired: selectedCustomerType == 'B2B',
+                    validator: (value) {
+                      if (selectedCustomerType == 'B2B' &&
+                          (value == null || value.trim().isEmpty)) {
+                        return 'CR Number is required for B2B';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -252,6 +275,14 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                     vatNumberController,
                     TextInputType.text,
                     size,
+                    isRequired: selectedCustomerType == 'B2B',
+                    validator: (value) {
+                      if (selectedCustomerType == 'B2B' &&
+                          (value == null || value.trim().isEmpty)) {
+                        return 'VAT Number is required for B2B';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
@@ -374,7 +405,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "State",
+          "States / Provinces",
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.27,
                   Colors.black.withOpacity(0.6))
               .copyWith(height: 1.0),
@@ -418,7 +449,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "District",
+          "District / City",
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.27,
                   Colors.black.withOpacity(0.6))
               .copyWith(height: 1.0),
@@ -459,7 +490,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "State",
+          "States / Provinces",
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -529,7 +560,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "District",
+          "District / City",
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,

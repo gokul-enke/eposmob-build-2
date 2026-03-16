@@ -416,9 +416,9 @@ class Names {
   });
 
   factory Names.fromJson(Map<String, dynamic> json) => Names(
-      en: json["en"] ?? json["EN"],
+        en: json["en"] ?? json["EN"],
         hi: json["hi"],
-      ar: json["ar"] ?? json["AR"],
+        ar: json["ar"] ?? json["AR"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -522,6 +522,8 @@ class Meta {
 class Stock {
   final int? id;
   final int? productId;
+  final int? storeId;
+  final String? storeName;
   final String? supplier;
   final num? quantity;
   final String? price;
@@ -537,6 +539,8 @@ class Stock {
   Stock({
     this.id,
     this.productId,
+    this.storeId,
+    this.storeName,
     this.supplier,
     this.quantity,
     this.price,
@@ -555,6 +559,12 @@ class Stock {
         productId: json["product_id"] is String
             ? int.tryParse(json["product_id"])
             : json["product_id"],
+        storeId: json["store_id"] is String
+            ? int.tryParse(json["store_id"])
+            : json["store_id"] ?? json["storeId"],
+        storeName: json["store_name"]?.toString() ??
+            json["store"]?.toString() ??
+            json["storeName"]?.toString(),
         supplier: json["supplier"]?.toString(),
         quantity: (() {
           final q = json["quantity"];
@@ -583,6 +593,8 @@ class Stock {
   Map<String, dynamic> toJson() => {
         "id": id,
         "product_id": productId,
+        "store_id": storeId,
+        "store_name": storeName,
         "supplier": supplier,
         "quantity": quantity,
         "price": price,

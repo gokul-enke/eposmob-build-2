@@ -43,7 +43,7 @@ import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 /// - Bilingual support (English/Arabic) like the reference
 /// - Streamlined totals section with clear hierarchy
 /// - Minimal, elegant footer
-class SupermarketLayout implements ReceiptLayout {
+class SupermarketReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Ultra-compact spacing for Supermarket
@@ -577,13 +577,9 @@ class SupermarketLayout implements ReceiptLayout {
         lang == 'ar' ? 'رقم الفاتورة:' : 'Invoice No:',
       );
 
-      final invoiceNumberText = '$invoicePrefix $strippedNumber';
-      rows.add(ReceiptTableRow([
-        ReceiptTableColumn(invoicePrefix,
-            weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
-        ReceiptTableColumn(strippedNumber,
-            weight: 0.65, align: TextAlign.left, scale: 0.75),
-      ]));
+      final invoiceNumberText =
+          _formatInvoiceIdentifier(invoicePrefix, strippedNumber);
+      rows.add(TextRow(invoiceNumberText, isBold: true, scale: 1.0));
       rows.add(SpacingRow(_itemGap));
     }
 
@@ -1459,7 +1455,9 @@ class SupermarketLayout implements ReceiptLayout {
         rows.add(TextRow('$arabicText فقط.',
             scale: is58mm ? 0.65 : 0.75, isBold: true));
         rows.add(TextRow('$englishText Only.',
-            scale: is58mm ? 0.65 : 0.75, isBold: true));
+          scale: is58mm ? 0.65 : 0.75,
+          isBold: true,
+          textDirectionOverride: TextDirection.ltr));
       } else {
         final language =
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
@@ -2021,6 +2019,22 @@ class SupermarketLayout implements ReceiptLayout {
     return '';
   }
 
+  String _formatInvoiceIdentifier(String prefix, String number) {
+    final trimmedPrefix = prefix.trim();
+    final needsTightJoin = trimmedPrefix.endsWith('-') ||
+        trimmedPrefix.endsWith('/') ||
+        trimmedPrefix.endsWith('#');
+    final joined = needsTightJoin
+        ? '$trimmedPrefix$number'
+        : '$trimmedPrefix $number';
+
+    if (RegExp(r'^[A-Za-z0-9\-/#\s]+$').hasMatch(trimmedPrefix)) {
+      return '\u202A$joined\u202C';
+    }
+
+    return joined;
+  }
+
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
     if (url == null || url.isEmpty) return null;
 
@@ -2269,18 +2283,18 @@ class StandardBoxedTotalsRow extends ReceiptRow {
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
             final dst = Rect.fromLTWH(iconX,
-                currentY + (itemFontSize - iconSize) / 2, iconSize, iconSize);
+                currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
           }
         } else {
           // Arabic: Value + Icon on Left, Label on Right
           double valueOffsetX = padding;
           if (item.icon != null) {
-            final double iconSize = itemFontSize * 1.2;
+            final double iconSize = itemFontSize * 0.75;
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
             final dst = Rect.fromLTWH(
-                padding, currentY - (iconSize * 0.1), iconSize, iconSize);
+                padding, currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
             valueOffsetX += iconSize + 4;
           }
@@ -2406,19 +2420,26 @@ class TextRow extends ReceiptRow {
   final TextAlign align;
   final bool isBold;
   final double scale;
+  final TextDirection? textDirectionOverride;
 
   TextRow(this.text,
-      {this.align = TextAlign.center, this.isBold = false, this.scale = 1.0});
+      {this.align = TextAlign.center,
+      this.isBold = false,
+      this.scale = 1.0,
+      this.textDirectionOverride});
 
   @override
   double calculateHeight(
           double width, double fontSize, TextDirection textDirection) =>
-      _createPainter(width, fontSize, textDirection).height;
+      _createPainter(
+              width, fontSize, textDirectionOverride ?? textDirection)
+          .height;
 
   @override
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
-    final tp = _createPainter(width, fontSize, textDirection);
+    final tp = _createPainter(
+        width, fontSize, textDirectionOverride ?? textDirection);
     double x = 0;
     if (align == TextAlign.center) {
       x = (width - tp.width) / 2;

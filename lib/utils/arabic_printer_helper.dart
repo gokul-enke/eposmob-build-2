@@ -61,25 +61,29 @@ class TextRow extends ReceiptRow {
   final double scale;
   final double verticalPadding;
   final double verticalOffset;
+  final TextDirection? textDirectionOverride;
 
   TextRow(this.text,
       {this.align = TextAlign.center,
       this.isBold = false,
       this.scale = 1.0,
       this.verticalPadding = 6.0,
-      this.verticalOffset = 2.0});
+      this.verticalOffset = 2.0,
+      this.textDirectionOverride});
 
   @override
   double calculateHeight(
       double width, double fontSize, TextDirection textDirection) {
-    final tp = _createPainter(width, fontSize, textDirection);
+    final tp =
+        _createPainter(width, fontSize, textDirectionOverride ?? textDirection);
     return tp.height + verticalPadding;
   }
 
   @override
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
-    final tp = _createPainter(width, fontSize, textDirection);
+    final tp =
+        _createPainter(width, fontSize, textDirectionOverride ?? textDirection);
     double x = 0;
     if (align == TextAlign.center) {
       x = (width - tp.width) / 2;

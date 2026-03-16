@@ -75,12 +75,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 15),
-              Center(
-                child: Image.asset(
-                  ImageAssets.posImageLogo,
-                  height: 30,
-                  fit: BoxFit.contain,
-                ),
+              const Center(
+                child: SidebarBrandLogo(height: 30),
               ),
               // const SizedBox(height: 5),
               // Center(
