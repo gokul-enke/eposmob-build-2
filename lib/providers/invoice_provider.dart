@@ -363,11 +363,14 @@ class InvoiceProvider extends ChangeNotifier {
   Future<dynamic> zatcaBulkSend({
     required List<int> ids,
     required String accessToken,
+    bool bulkNotSend = false,
+    bool bulkFailed = false,
   }) async {
     final uri = Uri.parse(APPUrl.zatcaBulkSend);
 
     debugPrint('[ZATCA][Provider] Bulk Send URL: $uri (POST)');
     debugPrint('[ZATCA][Provider] Sending IDs: ${ids.join(',')}');
+    debugPrint('[ZATCA][Provider] Flags - bulkNotSend: $bulkNotSend, bulkFailed: $bulkFailed');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -386,7 +389,11 @@ class InvoiceProvider extends ChangeNotifier {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
             },
-            body: json.encode({'ids': ids}),
+            body: json.encode({
+              'ids': ids,
+              'bulk_not_send': bulkNotSend,
+              'bulk_failed': bulkFailed,
+            }),
           )
           .timeout(const Duration(seconds: 40));
 
