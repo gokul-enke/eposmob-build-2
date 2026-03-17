@@ -55,6 +55,8 @@ class KotPrintPage extends StatefulWidget {
     bool showTableLabel = true,
   }) async {
     try {
+      final printableItems = List<Map<String, dynamic>>.from(items.reversed);
+
       final prefs = await SharedPreferences.getInstance();
       // Try KOT printer first, fallback to default printer
       String? printerJson = prefs.getString('kot_printer');
@@ -116,7 +118,7 @@ class KotPrintPage extends StatefulWidget {
           tableName: tableName,
           showTableLabel: showTableLabel,
           orderTime: formattedTime,
-          items: items,
+          items: printableItems,
           comment: comment,
           selectedPaperSize: paperSize,
           kotDocumentConfig: kotDocumentConfig,
@@ -131,7 +133,7 @@ class KotPrintPage extends StatefulWidget {
           tableName: tableName,
           showTableLabel: showTableLabel,
           orderTime: formattedTime,
-          items: items,
+          items: printableItems,
           comment: comment,
           selectedPaperSize: paperSize,
           kotDocumentConfig: kotDocumentConfig,
@@ -478,6 +480,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
   Future<void> _printThermalKot() async {
     try {
       final kotPrinter = KotThermalPrinter(context);
+      final printableItems =
+          List<Map<String, dynamic>>.from(widget.items.reversed);
 
       // Ensure time is in 12-hour format
       String formattedTime = DateHelper.formatISODateToIST(widget.orderTime);
@@ -489,7 +493,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         tableName: widget.tableName,
         showTableLabel: widget.showTableLabel,
         orderTime: formattedTime,
-        items: widget.items,
+        items: printableItems,
         comment: widget.comment,
         selectedPaperSize: selectedPaperSize,
         kotDocumentConfig: _kotDocumentConfig,
@@ -516,6 +520,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
   Future<void> _generateAndPrintPDF() async {
     try {
       final kotStandardPrinter = KotStandardPrinter(context);
+      final printableItems =
+          List<Map<String, dynamic>>.from(widget.items.reversed);
 
       // Ensure time is in 12-hour format
       String formattedTime = DateHelper.formatISODateToIST(widget.orderTime);
@@ -526,7 +532,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         tableName: widget.tableName,
         showTableLabel: widget.showTableLabel,
         orderTime: formattedTime,
-        items: widget.items,
+        items: printableItems,
         comment: widget.comment,
         selectedPaperSize: selectedPaperSize,
         kotDocumentConfig: _kotDocumentConfig,
