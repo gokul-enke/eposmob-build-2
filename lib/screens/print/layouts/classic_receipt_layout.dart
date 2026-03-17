@@ -238,11 +238,30 @@ class ClassicReceiptLayout implements ReceiptLayout {
     final billDocumentConfig = params.billDocumentConfig;
     final isEnglish = params.isEnglish;
 
-    // Store Name - use displayConfig value, then billDocumentConfig.header, then default
+    final documentHeader = (billDocumentConfig.header ?? '').trim();
+    final documentSubheader = (billDocumentConfig.subheader ?? '').trim();
+
+    if (documentHeader.isNotEmpty) {
+      rows.add(TextRow(documentHeader,
+          isBold: true,
+          scale: 1.1,
+          verticalPadding: 3,
+          verticalOffset: 1));
+    }
+
+    if (documentSubheader.isNotEmpty) {
+      rows.add(TextRow(documentSubheader,
+          isBold: true,
+          scale: 0.95,
+          verticalPadding: 2,
+          verticalOffset: 0));
+    }
+
+    // Store Name - use displayConfig value only, then default
     if (displayConfig?['showStoreName']?.visible == true) {
       final storeName = _getDisplayValue(
         displayConfig?['showStoreName']?.value,
-        billDocumentConfig.header,
+        null,
         'STORE NAME',
       );
 
@@ -260,11 +279,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
           verticalOffset: 1));
     }
 
-    // Description/Subheader - use displayConfig value, then billDocumentConfig.subheader
+    // Description - use displayConfig value only
     if (displayConfig?['showDescription']?.visible == true) {
       final description = _getDisplayValue(
         displayConfig?['showDescription']?.value,
-        billDocumentConfig.subheader,
+        null,
         '',
       );
       if (description.isNotEmpty) {
@@ -333,7 +352,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(6));
 
     // Invoice Title - use displayConfig value, then appSettings.printTitle, then default
-    // Note: billDocumentConfig.header is the store name, NOT the invoice title
+    // Invoice title is controlled by display config, separate from document header/subheader.
     if (displayConfig?['showInvoiceTitle']?.visible == true) {
       final invoiceTitle = _getDisplayValue(
         displayConfig?['showInvoiceTitle']?.value,
@@ -1379,11 +1398,19 @@ class ClassicReceiptLayout implements ReceiptLayout {
         rows.add(TextRow(qrMessage, isBold: true, scale: 0.9));
         rows.add(QrRow(qrData, size: 220));
 
-        // Show VAT number below QR for ZATCA receipts
-        if (params.hasZatcaCredentials && params.zatcaVatNumber != null) {
+        // Show VAT footer based on document display configuration.
+        final bool showVatFooter =
+            displayConfig?['showVATFooter']?.visible == true;
+        if (showVatFooter &&
+            params.hasZatcaCredentials &&
+            params.zatcaVatNumber != null) {
           rows.add(SpacingRow(5));
-          final vatLabel = isEnglish ? 'VAT No:' : 'الرقم الضريبي:';
-          rows.add(TextRow('$vatLabel ${params.zatcaVatNumber}', scale: 0.8));
+          final vatLabel =
+              (displayConfig?['showVATFooter']?.value as String? ?? '').trim();
+          final vatText = vatLabel.isNotEmpty
+              ? '$vatLabel ${params.zatcaVatNumber}'
+              : '${params.zatcaVatNumber}';
+          rows.add(TextRow(vatText, scale: 0.8));
         }
       }
     }

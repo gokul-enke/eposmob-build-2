@@ -257,10 +257,28 @@ class PremiumReceiptLayout implements ReceiptLayout {
   ) {
     final billDocumentConfig = params.billDocumentConfig;
 
+    final documentHeader = (billDocumentConfig.header ?? '').trim();
+    final documentSubheader = (billDocumentConfig.subheader ?? '').trim();
+
+    if (documentHeader.isNotEmpty) {
+      rows.add(TextRow(documentHeader,
+          isBold: true,
+          scale: 1.1,
+          verticalPadding: 3,
+          verticalOffset: 1));
+    }
+
+    if (documentSubheader.isNotEmpty) {
+      rows.add(TextRow(documentSubheader,
+          isBold: true,
+          scale: 0.95,
+          verticalPadding: 2,
+          verticalOffset: 0));
+    }
+
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
       final storeName = displayConfig?['showStoreName']?.value as String? ??
-          billDocumentConfig.header ??
           'STORE NAME';
 
       // Dynamic scaling based on name length
@@ -281,7 +299,6 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Description/Subheader - Arabic subtitle style
     if (displayConfig?['showDescription']?.visible == true) {
       final description = displayConfig?['showDescription']?.value as String? ??
-          billDocumentConfig.subheader ??
           '';
       if (description.isNotEmpty) {
         rows.add(SpacingRow(2));
@@ -1416,11 +1433,19 @@ class PremiumReceiptLayout implements ReceiptLayout {
         rows.add(SpacingRow(5));
         rows.add(QrRow(qrData, size: 220));
 
-        // Show VAT number below QR for ZATCA receipts
-        if (params.hasZatcaCredentials && params.zatcaVatNumber != null) {
+        // Show VAT footer based on document display configuration.
+        final bool showVatFooter =
+            displayConfig?['showVATFooter']?.visible == true;
+        if (showVatFooter &&
+            params.hasZatcaCredentials &&
+            params.zatcaVatNumber != null) {
           rows.add(SpacingRow(5));
-          final vatLabel = isEnglish ? 'VAT No:' : 'الرقم الضريبي:';
-          rows.add(TextRow('$vatLabel ${params.zatcaVatNumber}', scale: 0.8));
+          final vatLabel =
+              (displayConfig?['showVATFooter']?.value as String? ?? '').trim();
+          final vatText = vatLabel.isNotEmpty
+              ? '$vatLabel ${params.zatcaVatNumber}'
+              : '${params.zatcaVatNumber}';
+          rows.add(TextRow(vatText, scale: 0.8));
         }
       }
     }
