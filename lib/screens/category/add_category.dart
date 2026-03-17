@@ -203,7 +203,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                 //   style: buildCustomStyle(FontWeightManager.semiBold,
                 //       FontSize.s20, 0.30, ColorManager.textColor),
                 // ),
-                  _buildHeader(categoryProvider, sideBarController),
+                _buildHeader(categoryProvider, sideBarController),
                 const SizedBox(
                   height: 15,
                 ),
@@ -352,7 +352,6 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
             ColorManager.textColor,
           ),
         ),
-<<<<<<< HEAD
         CustomRoundButton(
           title: "Add Category",
           fct: () {
@@ -361,19 +360,6 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
           fontSize: 12,
           height: 45,
           width: 180,
-=======
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            CustomRoundButton(
-              title: "Create New Category",
-              fct: _openAddCategoryModal,
-              fontSize: 12,
-              height: 45,
-              width: 200,
-            ),
-          ],
->>>>>>> e86d9c65bb28b60c09b2deb4496d08117639acdf
         ),
       ],
     );
