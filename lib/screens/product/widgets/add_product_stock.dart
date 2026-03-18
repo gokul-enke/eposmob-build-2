@@ -5604,6 +5604,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             .processPendingStockItems(accessToken);
 
                         debugPrint('📡 BATCH PROCESSING RESULT: $batchResult');
+                        debugPrint('📡 BATCH PROCESSING RESULT (PRETTY):');
+                        debugPrint(const JsonEncoder.withIndent('  ')
+                          .convert(batchResult));
 
                         if (batchResult['success'] == true) {
                           final summary =
@@ -5636,6 +5639,39 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           if (successful > 0) {
                             final successfulItems = summary['successfulItems']
                                 as List<Map<String, dynamic>>;
+
+                            debugPrint(
+                                '🧾 DEBUG SUCCESSFUL ITEMS API RESPONSE DUMP START');
+                            for (int i = 0; i < successfulItems.length; i++) {
+                              final item = successfulItems[i];
+                              final apiResponse = item['apiResponse'];
+                              debugPrint(
+                                  '   • Successful item #${i + 1} | localId=${item['localId']}');
+                              if (apiResponse == null) {
+                                debugPrint('     - apiResponse: null');
+                                continue;
+                              }
+
+                              try {
+                                debugPrint('     - apiResponse (pretty):');
+                                debugPrint(const JsonEncoder.withIndent('  ')
+                                    .convert(apiResponse));
+                              } catch (_) {
+                                debugPrint('     - apiResponse: $apiResponse');
+                              }
+
+                              if (apiResponse is Map<String, dynamic>) {
+                                final dataNode = apiResponse['data'];
+                                debugPrint(
+                                    '     - apiResponse data runtimeType: ${dataNode.runtimeType}');
+                                if (dataNode is Map<String, dynamic>) {
+                                  debugPrint(
+                                      '     - apiResponse data keys: ${dataNode.keys.toList()}');
+                                }
+                              }
+                            }
+                            debugPrint(
+                                '🧾 DEBUG SUCCESSFUL ITEMS API RESPONSE DUMP END');
 
                             // Look for purchase_voucher_id in the successful API responses
                             String? purchaseId;

@@ -5637,8 +5637,9 @@ class BillingPageState extends State<BillingPage>
       selectedMethodsForStorage.add(debitId);
     }
 
-    if (selectedMethodsForStorage.length > 1) {
-      // Multi-payment: store as JSON with IDs as keys
+    if (selectedMethodsForStorage.isNotEmpty) {
+      // Always store payment as multi-payment JSON (even when a single method is selected).
+      // This keeps local-save and sync request bodies in the same structure.
       Map<String, dynamic> multiPaymentData = {
         "methods": selectedMethodsForStorage,
         "amounts": {
@@ -5661,37 +5662,9 @@ class BillingPageState extends State<BillingPage>
       paymentMethod = json.encode(multiPaymentData);
       paidAmount = _getTotalPaidAmount().toString();
     } else {
-      // Single payment method
-      if (selectedMethodsForStorage.isNotEmpty) {
-        paymentMethod = selectedMethodsForStorage.first;
-        // Check by comparing with the stored IDs
-        if (paymentMethod == cashId) {
-          paidAmount = _cashAmountController.text;
-        } else if (paymentMethod == cardId) {
-          paidAmount = _cardAmountController.text;
-        } else if (paymentMethod == upiId) {
-          paidAmount = _upiAmountController.text;
-        } else if (paymentMethod == codId) {
-          paidAmount = _codAmountController.text;
-        } else if (paymentMethod == debitId) {
-          paidAmount = _debitAmountController.text;
-        } else {
-          // Fallback for legacy string checks
-          if (_isCashSelected) {
-            paidAmount = _cashAmountController.text;
-          } else if (_isCardSelected) {
-            paidAmount = _cardAmountController.text;
-          } else if (_isUpiSelected) {
-            paidAmount = _upiAmountController.text;
-          } else if (_isCodSelected) {
-            paidAmount = _codAmountController.text;
-          }
-        }
-      } else {
-        // No payment method selected - leave empty
-        paymentMethod = "";
-        paidAmount = "0";
-      }
+      // No payment method selected - leave empty
+      paymentMethod = "";
+      paidAmount = "0";
     }
 
     return {
