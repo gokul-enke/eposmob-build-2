@@ -143,10 +143,30 @@ class Invoice {
     String? resolvedRequestStatus = json['zatca_request_status']?.toString();
     String? resolvedZatcaStatus;
 
+    String? normalizeZatcaStatus(String? value) {
+      final normalized = value?.trim().toLowerCase();
+      switch (normalized) {
+        case 'pass':
+        case 'success':
+        case 'sent':
+        case 'reported':
+        case 'cleared':
+          return 'success';
+        case 'failed':
+        case 'fail':
+          return 'failed';
+        case 'pending':
+        case 'processing':
+          return 'pending';
+        default:
+          return value;
+      }
+    }
+
     if (rawZatcaStatus is String || rawZatcaStatus is num || rawZatcaStatus is bool) {
-      resolvedZatcaStatus = rawZatcaStatus.toString();
+      resolvedZatcaStatus = normalizeZatcaStatus(rawZatcaStatus.toString());
     } else {
-      resolvedZatcaStatus = nestedZatcaStatus;
+      resolvedZatcaStatus = normalizeZatcaStatus(nestedZatcaStatus);
     }
 
     if (resolvedRequestStatus == null || resolvedRequestStatus.isEmpty) {

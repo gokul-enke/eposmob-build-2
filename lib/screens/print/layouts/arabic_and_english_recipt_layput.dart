@@ -260,6 +260,25 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     final bool isDualLanguage =
       (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
+    final documentHeader = (billDocumentConfig.header ?? '').trim();
+    final documentSubheader = (billDocumentConfig.subheader ?? '').trim();
+
+    if (documentHeader.isNotEmpty) {
+      rows.add(TextRow(documentHeader,
+          isBold: true,
+          scale: 1.1,
+          verticalPadding: 3,
+          verticalOffset: 1));
+    }
+
+    if (documentSubheader.isNotEmpty) {
+      rows.add(TextRow(documentSubheader,
+          isBold: true,
+          scale: 0.95,
+          verticalPadding: 2,
+          verticalOffset: 0));
+    }
+
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
       String storeNameText;
@@ -274,7 +293,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
         // Only use fallback if both config values are empty
         if (arabicName.isEmpty && englishName.isEmpty) {
-          englishName = billDocumentConfig.header ?? 'STORE NAME';
+          englishName = 'STORE NAME';
         }
 
         storeNameText =
@@ -282,7 +301,6 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       } else {
         // Single language mode
         storeNameText = displayConfig?['showStoreName']?.value as String? ??
-            billDocumentConfig.header ??
             'STORE NAME';
       }
 
@@ -319,14 +337,13 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
         // Only use fallback if both config values are empty
         if (arabicDesc.isEmpty && englishDesc.isEmpty) {
-          englishDesc = billDocumentConfig.subheader ?? '';
+          englishDesc = '';
         }
 
         descriptionText =
             _getBilingualText(arabic: arabicDesc, english: englishDesc);
       } else {
         descriptionText = displayConfig?['showDescription']?.value as String? ??
-            billDocumentConfig.subheader ??
             '';
       }
 
@@ -1684,13 +1701,19 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         rows.add(SpacingRow(5));
         rows.add(QrRow(qrData, size: 220));
 
-        // Show VAT number below QR for ZATCA receipts
-        if (params.hasZatcaCredentials && params.zatcaVatNumber != null) {
+        // Show VAT footer based on document display configuration.
+        final bool showVatFooter =
+            displayConfig?['showVATFooter']?.visible == true;
+        if (showVatFooter &&
+            params.hasZatcaCredentials &&
+            params.zatcaVatNumber != null) {
           rows.add(SpacingRow(5));
-          final vatLabel = isDualLanguage
-              ? 'الرقم الضريبي:   VAT No:'
-              : (isEnglish ? 'VAT No:' : 'الرقم الضريبي:');
-          rows.add(TextRow('$vatLabel ${params.zatcaVatNumber}', scale: 0.8));
+          final vatLabel =
+              (displayConfig?['showVATFooter']?.value as String? ?? '').trim();
+          final vatText = vatLabel.isNotEmpty
+              ? '$vatLabel ${params.zatcaVatNumber}'
+              : '${params.zatcaVatNumber}';
+          rows.add(TextRow(vatText, scale: 0.8));
         }
       }
     }

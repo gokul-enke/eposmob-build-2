@@ -152,6 +152,44 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     return total;
   }
 
+  double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '0') ?? 0.0;
+  }
+
+  Map<String, double> _getPurchaseTaxBreakdown() {
+    if (widget.stockItems == null || widget.stockItems!.isEmpty) {
+      return {
+        'includedTax': 0.0,
+        'additionalTax': 0.0,
+      };
+    }
+
+    double includedTax = 0.0;
+    double additionalTax = 0.0;
+
+    for (final item in widget.stockItems!) {
+      final qty = _toDouble(item['quantity']);
+      final taxPerUnit = _toDouble(item['taxAmountPurchase']);
+      final itemTax = taxPerUnit * qty;
+      final bool taxInclude = item['taxInclude'] == true;
+
+      if (taxInclude) {
+        includedTax += itemTax;
+      } else {
+        additionalTax += itemTax;
+      }
+    }
+
+    debugPrint(
+        '🧾 [StockConfirm] Purchase tax breakdown | includedTax=${includedTax.toStringAsFixed(2)} | additionalTax=${additionalTax.toStringAsFixed(2)}');
+
+    return {
+      'includedTax': includedTax,
+      'additionalTax': additionalTax,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool hasPayment =
@@ -373,6 +411,15 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     final List<Map<String, dynamic>> visibleItems =
         _isItemsExpanded ? items : items.take(_maxVisibleItems).toList();
 
+    double previewTaxTotal = 0.0;
+    for (final item in visibleItems) {
+      final qty = _toDouble(item['quantity']);
+      final taxPerUnit = _toDouble(item['taxAmountPurchase']);
+      previewTaxTotal += qty * taxPerUnit;
+    }
+    debugPrint(
+        '🧾 [StockConfirm] Table preview | rows=${visibleItems.length} | taxTotal=${previewTaxTotal.toStringAsFixed(2)}');
+
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
@@ -432,6 +479,19 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 SizedBox(
                   width: 70,
                   child: Text(
+                    'Tax',
+                    textAlign: TextAlign.right,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s11,
+                      0.27,
+                      Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 70,
+                  child: Text(
                     'Total',
                     textAlign: TextAlign.right,
                     style: buildCustomStyle(
@@ -455,6 +515,8 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
             final purchaseRate =
                 double.tryParse(item['purchaseRate']?.toString() ?? '0') ?? 0;
+            final taxPerUnit = _toDouble(item['taxAmountPurchase']);
+            final taxAmount = taxPerUnit * quantity;
             final total = quantity * purchaseRate;
 
             return Container(
@@ -503,6 +565,19 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                         FontSize.s11,
                         0.27,
                         Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 70,
+                    child: Text(
+                      '${taxAmount.toStringAsFixed(2)}',
+                      textAlign: TextAlign.right,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s11,
+                        0.27,
+                        Colors.teal.shade700,
                       ),
                     ),
                   ),
@@ -579,6 +654,10 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     required double supplierOldBalance,
     required double currentSupplierBalance,
   }) {
+    final purchaseTax = _getPurchaseTaxBreakdown();
+    final includedTax = purchaseTax['includedTax'] ?? 0.0;
+    final additionalTax = purchaseTax['additionalTax'] ?? 0.0;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -619,6 +698,31 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             isBold: true,
             valueColor: ColorManager.textColor,
           ),
+
+          if (includedTax > 0) ...[
+            const SizedBox(height: 4),
+            _buildSummaryRow(
+              "Included Purchase Tax",
+              "${includedTax.toStringAsFixed(2)}",
+              valueColor: Colors.teal.shade700,
+            ),
+          ],
+
+          if (additionalTax > 0) ...[
+            const SizedBox(height: 4),
+            _buildSummaryRow(
+              "Additional Purchase Tax",
+              "${additionalTax.toStringAsFixed(2)}",
+              valueColor: Colors.orange.shade700,
+            ),
+            const SizedBox(height: 4),
+            _buildSummaryRow(
+              "Total Purchase + Tax",
+              "${(widget.totalAmount + additionalTax).toStringAsFixed(2)}",
+              isBold: true,
+              valueColor: Colors.black87,
+            ),
+          ],
 
           // Old Supplier Balance
           if (supplierOldBalance != 0) ...[

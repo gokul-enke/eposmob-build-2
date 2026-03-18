@@ -251,8 +251,10 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     bool _cfgVisible(String key) => dc?[key]?.visible == true;
 
     // ── Store info from config ──────────────────────────────────────
-    final storeName = _cfgVal('showStoreName', config.header ?? 'STORE NAME');
-    final storeDesc = _cfgVal('showDescription', config.subheader ?? '');
+    final documentHeader = (config.header ?? '').trim();
+    final documentSubheader = (config.subheader ?? '').trim();
+    final storeName = _cfgVal('showStoreName', 'STORE NAME');
+    final storeDesc = _cfgVal('showDescription', '');
     final storeAddress = _cfgVal('showStoreAddress', '');
     final storeFssai = _cfgVal('showFssaiInfo', '');
     final storeTel = _cfgVal('showTel', params.customerCareNumber);
@@ -325,6 +327,10 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Container(height: 40, child: pw.Image(logoImage)),
                         pw.SizedBox(height: 3),
                       ],
+                      if (documentHeader.isNotEmpty)
+                        pw.Text(documentHeader, style: storeNameStyle),
+                      if (documentSubheader.isNotEmpty)
+                        pw.Text(documentSubheader, style: storeInfoStyle),
                       if (_cfgVisible('showStoreName'))
                         pw.Text(storeName, style: storeNameStyle),
                       if (_cfgVisible('showDescription') &&
@@ -360,13 +366,12 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     pw.Text('فاتورة ضريبية',
                         style: taxInvoiceArabicStyle,
                         textDirection: pw.TextDirection.rtl),
-                    if (params.zatcaVatNumber?.isNotEmpty == true) ...[
+                    if (_cfgVisible('showVATFooter') &&
+                        params.zatcaVatNumber?.isNotEmpty == true) ...[
                       pw.SizedBox(height: 2),
-                      pw.Text('VAT No: ${params.zatcaVatNumber}',
+                      pw.Text(
+                          '${(_cfgVal('showVATFooter', '')).trim().isNotEmpty ? '${_cfgVal('showVATFooter', '').trim()} ' : ''}${params.zatcaVatNumber}',
                           style: vatNoStyle),
-                      pw.Text('الرقم الضريبي',
-                          style: vatNoArabicStyle,
-                          textDirection: pw.TextDirection.rtl),
                     ],
                   ],
                 ),

@@ -622,13 +622,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
       final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
+      final resolvedCustomerId =
+          _orderPanelKey.currentState?.selectedCustomerIdForDraft;
       final response = await cartProvider.addToOrderAPI(
         items: items,
         cartIds: 0, // Use 0 for new cart since we're creating a new order
         accessToken: authModel.token ?? "",
         transactionId: "", // Not applicable for initial kitchen order
         totalPrice: total.toStringAsFixed(2),
-        customerId: authModel.userId ?? 1,
+        customerId: resolvedCustomerId,
         customerPhone: null, // Not applicable
         paymentMethod: null, // Not applicable
         paidAmount: null, // Not applicable
@@ -844,13 +846,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Print: Calling CartProvider.addToOrderAPI');
+      final resolvedCustomerId =
+          _orderPanelKey.currentState?.selectedCustomerIdForDraft;
       final response = await cartProvider.addToOrderAPI(
         items: items,
         cartIds: 0,
         accessToken: authModel.token ?? "",
         transactionId: "",
         totalPrice: total.toStringAsFixed(2),
-        customerId: authModel.userId ?? 1,
+        customerId: resolvedCustomerId,
         customerPhone: null,
         paymentMethod: null,
         paidAmount: null,

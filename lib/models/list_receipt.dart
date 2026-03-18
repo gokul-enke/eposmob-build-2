@@ -168,7 +168,6 @@ class Receipt {
   });
 
   factory Receipt.fromJson(Map<String, dynamic> json) {
-    debugPrint("🔍 Receipt.fromJson called with: ${json.toString()}");
     final paymentsJson = (json['receipt_payments'] as List?) ?? [];
     final payments = paymentsJson
         .map((e) => ReceiptPayment.fromJson(e as Map<String, dynamic>))
@@ -227,7 +226,6 @@ class Company {
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
-    debugPrint("🔍 Company.fromJson called with: ${json.toString()}");
     return Company(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -279,7 +277,6 @@ class Customer {
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) {
-    debugPrint("🔍 Customer.fromJson called with: ${json.toString()}");
     return Customer(
       id: json['id'] ?? 0,
       dob: json['dob'],
@@ -325,7 +322,6 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    debugPrint("🔍 User.fromJson called with: ${json.toString()}");
     return User(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',

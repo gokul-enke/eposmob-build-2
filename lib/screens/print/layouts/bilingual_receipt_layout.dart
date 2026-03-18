@@ -258,6 +258,19 @@ class BilingualReceiptLayout implements ReceiptLayout {
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
+    final documentHeader = (billDocumentConfig.header ?? '').trim();
+    final documentSubheader = (billDocumentConfig.subheader ?? '').trim();
+
+    if (documentHeader.isNotEmpty) {
+      rows.add(TextRow(documentHeader, isBold: true, scale: 1.0));
+      rows.add(SpacingRow(_itemGap));
+    }
+
+    if (documentSubheader.isNotEmpty) {
+      rows.add(TextRow(documentSubheader, isBold: true, scale: 0.85));
+      rows.add(SpacingRow(_itemGap));
+    }
+
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
       String storeNameText;
@@ -265,13 +278,12 @@ class BilingualReceiptLayout implements ReceiptLayout {
       if (isDualLanguage) {
         storeNameText = _getDisplayValue(
           displayConfig?['showStoreName']?.value,
-          billDocumentConfig.header,
+          null,
           'STORE NAME',
         );
       } else {
         // Single language mode
         storeNameText = displayConfig?['showStoreName']?.value as String? ??
-            billDocumentConfig.header ??
             'STORE NAME';
       }
 
@@ -299,12 +311,11 @@ class BilingualReceiptLayout implements ReceiptLayout {
       if (isDualLanguage) {
         descriptionText = _getDisplayValue(
           displayConfig?['showDescription']?.value,
-          billDocumentConfig.subheader,
+          null,
           '',
         );
       } else {
         descriptionText = displayConfig?['showDescription']?.value as String? ??
-            billDocumentConfig.subheader ??
             '';
       }
 
@@ -1581,13 +1592,19 @@ class BilingualReceiptLayout implements ReceiptLayout {
         rows.add(SpacingRow(_itemGap));
         rows.add(QrRow(qrData, size: 220));
 
-        // Show VAT number below QR for ZATCA receipts
-        if (params.hasZatcaCredentials && params.zatcaVatNumber != null) {
+        // Show VAT footer based on document display configuration.
+        final bool showVatFooter =
+            displayConfig?['showVATFooter']?.visible == true;
+        if (showVatFooter &&
+            params.hasZatcaCredentials &&
+            params.zatcaVatNumber != null) {
           rows.add(SpacingRow(_itemGap));
-          final vatLabel = isDualLanguage
-              ? 'الرقم الضريبي:   VAT No:'
-              : (isEnglish ? 'VAT No:' : 'الرقم الضريبي:');
-          rows.add(TextRow('$vatLabel ${params.zatcaVatNumber}', scale: 0.8));
+          final vatLabel =
+              (displayConfig?['showVATFooter']?.value as String? ?? '').trim();
+          final vatText = vatLabel.isNotEmpty
+              ? '$vatLabel ${params.zatcaVatNumber}'
+              : '${params.zatcaVatNumber}';
+          rows.add(TextRow(vatText, scale: 0.8));
         }
       }
     }

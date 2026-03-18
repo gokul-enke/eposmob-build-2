@@ -16,6 +16,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// - Updating existing stock details
 /// - Stock details retrieval
 class StockProvider extends ChangeNotifier {
+  double? _parseNullableDouble(dynamic value) {
+    if (value == null) return null;
+    final String normalized = value.toString().trim();
+    if (normalized.isEmpty) return null;
+    return double.tryParse(normalized);
+  }
+
+  int _parseIntOrDefault(dynamic value, int fallback) {
+    if (value == null) return fallback;
+    return int.tryParse(value.toString()) ?? fallback;
+  }
+
   // Stock data management
   List<stock_models.ListStockModelData>? _listStockModelDataList = [];
   List<stock_models.ListStockModelData>? _allStocks =
@@ -470,11 +482,12 @@ class StockProvider extends ChangeNotifier {
           'wholesale_min_unit': stockItem['wholesaleMinUnit'] != null &&
                   stockItem['wholesaleMinUnit'].toString().isNotEmpty
               ? int.parse(stockItem['wholesaleMinUnit'].toString())
-              : 1,
+              : 0,
           'tax_include': stockItem['taxInclude'] ?? false,
           'rack': stockItem['rack']?.toString() ?? '',
-          'tax_amount_retail': stockItem['taxAmountRetail']?.toString(),
-          'tax_amount_wholesale': stockItem['taxAmountWholesale']?.toString(),
+            'tax_amount_retail': _parseNullableDouble(stockItem['taxAmountRetail']),
+            'tax_amount_wholesale':
+              _parseNullableDouble(stockItem['taxAmountWholesale']),
           'initial_retail_price': stockItem['initialRetailPrice'] != null &&
                   stockItem['initialRetailPrice'].toString().isNotEmpty
               ? double.parse(stockItem['initialRetailPrice'].toString())
@@ -484,8 +497,9 @@ class StockProvider extends ChangeNotifier {
                       stockItem['initialWholesalePrice'].toString().isNotEmpty
                   ? double.parse(stockItem['initialWholesalePrice'].toString())
                   : 0.0,
-          'retail_price_tax': stockItem['retailPriceTax']?.toString(),
-          'wholesale_price_tax': stockItem['wholesalePriceTax']?.toString(),
+          'retail_price_tax': _parseNullableDouble(stockItem['retailPriceTax']),
+          'wholesale_price_tax':
+              _parseNullableDouble(stockItem['wholesalePriceTax']),
         });
       }
 
@@ -620,13 +634,13 @@ class StockProvider extends ChangeNotifier {
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'products': products,
-      'supplier_id': int.parse(supplierId),
-      'store_id': int.parse(storeId),
+      'supplier_id': _parseIntOrDefault(supplierId, 0),
+      'store_id': _parseIntOrDefault(storeId, 0),
       'purchase_date': purchaseDate,
     };
 
-    debugPrint(
-        '📦 ADD BULK STOCK API REQUEST BODY: ${json.encode(apiBodyData)}');
+    debugPrint('📦 ADD STOCK API REQUEST BODY:');
+    debugPrint(const JsonEncoder.withIndent('  ').convert(apiBodyData));
 
     final url = Uri.parse(APPUrl.addBulkStock);
     // Get API key from SharedPreferences

@@ -852,23 +852,40 @@ class PurchaseProvider extends ChangeNotifier {
     List<String>? paymentMethods,
     List<Map<String, dynamic>>? paidMethods,
   }) async {
-    debugPrint("FINISH PURCHASE ORDER API CALLED");
-    debugPrint("Purchase ID: $purchaseId");
-    debugPrint("Purchase Voucher ID: $purchaseVoucherId");
-    debugPrint("Payment Methods: $paymentMethods");
-    debugPrint("Paid Methods: $paidMethods");
+    final int? parsedPurchaseId = (purchaseId != null && purchaseId.isNotEmpty)
+        ? int.tryParse(purchaseId)
+        : null;
+    final int? parsedPurchaseVoucherId =
+        (purchaseVoucherId != null && purchaseVoucherId.isNotEmpty)
+            ? int.tryParse(purchaseVoucherId)
+            : null;
+
+    final List<Map<String, dynamic>> normalizedPaidMethods =
+        (paidMethods ?? []).map((method) {
+      final int? parsedMethodId =
+          int.tryParse(method['method']?.toString() ?? '');
+      final double parsedAmount =
+          double.tryParse(method['amount']?.toString() ?? '0') ?? 0.0;
+
+      return {
+        'method': parsedMethodId ?? method['method'],
+        'amount': parsedAmount,
+      };
+    }).toList();
 
     final Map<String, dynamic> apiBodyData = {
-      'purchase_id': purchaseVoucherId,
-      if (purchaseVoucherId != null) 'purchase_voucher_id': purchaseVoucherId,
-      'payment_method': (paymentMethods != null && paymentMethods.isNotEmpty)
-          ? paymentMethods
-          : [],
-      'paid_methods':
-          (paidMethods != null && paidMethods.isNotEmpty) ? paidMethods : [],
+      if (parsedPurchaseId != null) 'purchase_id': parsedPurchaseId,
+      if (parsedPurchaseVoucherId != null)
+        'purchase_voucher_id': parsedPurchaseVoucherId,
+      'paid_methods': normalizedPaidMethods,
+      if (paymentMethods != null && paymentMethods.isNotEmpty)
+        'payment_methods': paymentMethods
+            .map((methodId) => int.tryParse(methodId) ?? methodId)
+            .toList(),
     };
 
-    debugPrint("API Body Data: $apiBodyData");
+    debugPrint('📦 COMPLETE PURCHASE API REQUEST BODY:');
+    debugPrint(const JsonEncoder.withIndent('  ').convert(apiBodyData));
 
     final url = Uri.parse(APPUrl.finishPurchaseOrder);
 

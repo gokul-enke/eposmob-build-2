@@ -47,6 +47,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   String? selectedZatcaStatus; // For the ZATCA status dropdown
   final Set<int> selectedInvoiceIds = {};
   bool isBulkSending = false;
+  String? activeBulkSyncType;
   Timer? _invoiceSearchDebounce;
 
   @override
@@ -489,7 +490,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
 
       // 2. Show stylized confirmation dialog
-      final shouldSend = await _showZatcaConfirmationDialog(1);
+      final shouldSend = await _showZatcaConfirmationDialog(count: 1);
       if (shouldSend != true) return;
 
       showScaffold(context: context, message: 'Sending to ZATCA...');
@@ -814,190 +815,283 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildSelectionActions() {
-    if (selectedInvoiceIds.isEmpty) return const SizedBox.shrink();
+  Future<void> _performBulkZatcaSync({
+    required List<int> idsToSync,
+    required String syncType, // 'selected', 'all', 'failed', 'not_sent'
+    required String accessToken,
+  }) async {
+    // Only selected mode requires explicit IDs from UI selection.
+    if (syncType == 'selected' && idsToSync.isEmpty) {
+      showScaffold(
+        context: context,
+        message: "No invoices to sync.",
+      );
+      return;
+    }
 
+    String confirmationMessage;
+    switch (syncType) {
+      case 'all':
+        confirmationMessage =
+            'This will sync all NOT SENT and FAILED invoices.';
+        break;
+      case 'failed':
+        confirmationMessage =
+            'This will sync all FAILED invoices.';
+        break;
+      case 'not_sent':
+        confirmationMessage =
+            'This will sync all NOT SENT invoices.';
+        break;
+      default:
+        confirmationMessage =
+            'You are about to sync ${idsToSync.length} selected invoice(s) to ZATCA. Do you want to continue?';
+    }
+
+    // Show confirmation dialog
+    final shouldSend = await _showZatcaConfirmationDialog(
+      count: idsToSync.length,
+      message: confirmationMessage,
+    );
+    if (shouldSend != true) return;
+
+    setState(() {
+      isBulkSending = true;
+      activeBulkSyncType = syncType;
+    });
+
+    try {
+      final provider = Provider.of<InvoiceProvider>(context, listen: false);
+      
+      // Determine flags based on sync type
+      bool bulkNotSend = false;
+      bool bulkFailed = false;
+      
+      if (syncType == 'all') {
+        bulkNotSend = true;
+        bulkFailed = true;
+      } else if (syncType == 'not_sent') {
+        bulkNotSend = true;
+        bulkFailed = false;
+      } else if (syncType == 'failed') {
+        bulkNotSend = false;
+        bulkFailed = true;
+      }
+      // 'selected' has both false (backend syncs all provided IDs)
+      
+      // Debug: Print API request body
+      debugPrint('[ZATCA][Bulk Sync] API Request Body:');
+      debugPrint('  syncType: $syncType');
+      debugPrint('  ids: $idsToSync');
+      debugPrint('  bulkNotSend: $bulkNotSend');
+      debugPrint('  bulkFailed: $bulkFailed');
+      debugPrint('  idsCount: ${idsToSync.length}');
+
+      final result = await provider.zatcaBulkSend(
+        ids: idsToSync,
+        accessToken: accessToken,
+        bulkNotSend: bulkNotSend,
+        bulkFailed: bulkFailed,
+      );
+
+      if (result != null && result['status'] == 'success') {
+        showScaffold(
+          context: context,
+          message: result['message'] ?? "ZATCA sync successful",
+        );
+        setState(() {
+          selectedInvoiceIds.clear();
+        });
+        await refreshData();
+      } else {
+        final errorMsg = result?['message'] ?? "ZATCA sync failed";
+        showScaffoldError(context: context, message: errorMsg);
+      }
+    } catch (e) {
+      showScaffoldError(context: context, message: "An error occurred: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isBulkSending = false;
+          activeBulkSyncType = null;
+        });
+      }
+    }
+  }
+
+  List<int> _getFailedInvoiceIds() {
+    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false).invoiceListDetails ?? <Invoice>[];
+    return allInvoices
+        .where((inv) => inv.zatcaRequestStatus?.toLowerCase() == 'failed')
+        .map((inv) => inv.id)
+        .toList();
+  }
+
+  List<int> _getNotSentInvoiceIds() {
+    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false).invoiceListDetails ?? <Invoice>[];
+    return allInvoices
+        .where((inv) =>
+            inv.zatcaStatus?.toLowerCase() != 'pass' &&
+            inv.zatcaStatus?.toLowerCase() != 'success' &&
+            inv.zatcaStatus?.toLowerCase() != 'sent')
+        .map((inv) => inv.id)
+        .toList();
+  }
+
+  List<int> _getAllInvoiceIds() {
+    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false).invoiceListDetails ?? <Invoice>[];
+    return allInvoices.map((inv) => inv.id).toList();
+  }
+
+  Widget _buildSelectionActions() {
     final provider = Provider.of<InvoiceProvider>(context);
+    final String? token = Provider.of<AuthModel>(context, listen: false).token;
+    final hasSelection = selectedInvoiceIds.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Row(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CustomRoundButton(
-            title: "Send to ZATCA",
-            boxColor: Colors.lightBlue,
-            textColor: Colors.white,
-            isLoading: isBulkSending,
-            fct: isBulkSending
-                ? () {
-                    debugPrint(
-                        "[DEBUG][ZATCA] Button clicked while already sending. Ignoring.");
-                  }
-                : () async {
-                    final String? token =
-                        Provider.of<AuthModel>(context, listen: false).token;
-
-                    if (token == null || token.isEmpty) {
-                      showScaffold(
-                          context: context,
-                          message: "Authentication required.");
-                      return;
-                    }
-
-                    // 1. Check if any selected invoices are already successfully sent
-                    final currentInvoices =
-                      provider.invoiceListDetails ?? const <Invoice>[];
-                    final selectedInvoices = currentInvoices
-                      .where((inv) => selectedInvoiceIds.contains(inv.id))
-                      .toList();
-
-                    final alreadySentList = selectedInvoices.where((inv) =>
-                        inv.zatcaStatus?.toLowerCase() == 'pass' ||
-                        inv.zatcaStatus?.toLowerCase() == 'success' ||
-                        inv.zatcaStatus?.toLowerCase() == 'sent');
-
-                    if (alreadySentList.isNotEmpty) {
-                      final confirmResend = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text("Already Sent"),
-                          content: Text(
-                              "${alreadySentList.length} of the selected invoices have already been successfully sent to ZATCA. Do you want to continue sending the rest?"),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text("Cancel"),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Continue"),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirmResend != true) return;
-                    }
-
-                    // Filter out already sent invoices to avoid redundant processing
-                    final idsToSend = selectedInvoices
-                        .where((inv) =>
-                            inv.zatcaStatus?.toLowerCase() != 'pass' &&
-                            inv.zatcaStatus?.toLowerCase() != 'success' &&
-                            inv.zatcaStatus?.toLowerCase() != 'sent')
-                        .map((inv) => inv.id)
-                        .toList();
-
-                    if (idsToSend.isEmpty) {
-                      showScaffold(
-                        context: context,
-                        message:
-                            "All selected invoices are already successfully sent to ZATCA.",
-                      );
-                      return;
-                    }
-
-                    // 2. Show the stylized confirmation dialog
-                    final shouldSend =
-                        await _showZatcaConfirmationDialog(idsToSend.length);
-
-                    if (shouldSend != true) return;
-
-                    setState(() {
-                      isBulkSending = true;
-                    });
-
-                    try {
-                      final result = await provider.zatcaBulkSend(
-                        ids: idsToSend,
-                        accessToken: token,
-                      );
-
-                      if (result != null && result['status'] == 'success') {
-                        showScaffold(
-                            context: context,
-                            message: result['message'] ??
-                                "ZATCA bulk send successful");
-                        setState(() {
-                          selectedInvoiceIds.clear();
-                        });
-                        await refreshData();
-                      } else {
-                        final errorMsg =
-                            result?['message'] ?? "ZATCA bulk send failed";
-                        showScaffoldError(context: context, message: errorMsg);
-                      }
-                    } catch (e) {
-                      showScaffoldError(
-                          context: context, message: "An error occurred: $e");
-                    } finally {
-                      if (mounted) {
-                        setState(() {
-                          isBulkSending = false;
-                        });
-                      }
-                    }
-                  },
-            height: 40,
-            width: 130,
-            fontSize: FontSize.s10,
-          ),
-          const SizedBox(width: 10),
-          const Spacer(),
-          Text(
-            "${selectedInvoiceIds.length} records selected on this page",
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s12,
-              0.18,
-              ColorManager.textColor,
-            ),
-          ),
-          if ((provider.invoiceListDetails?.isNotEmpty ?? false) &&
-              selectedInvoiceIds.length <
-                  (provider.invoiceListDetails?.length ?? 0)) ...[
-            const SizedBox(width: 10),
-            InkWell(
-              onTap: () {
-                final currentInvoices =
-                    provider.invoiceListDetails ?? const <Invoice>[];
-
-                setState(() {
-                  for (final inv in currentInvoices) {
-                    selectedInvoiceIds.add(inv.id);
-                  }
-                });
-
-                debugPrint(
-                    "[DEBUG] Bulk Select: Found ${currentInvoices.length}, Selected ${selectedInvoiceIds.length}");
-              },
-              child: Text(
-                "Select Page",
+          // Single row: 4 sync buttons + selection info
+          Row(
+            children: [
+              CustomRoundButton(
+                title: "Sync ALL",
+                boxColor: Colors.blueAccent,
+                textColor: Colors.white,
+                borderColor: Colors.transparent,
+                isLoading: isBulkSending && activeBulkSyncType == 'all',
+                fct: isBulkSending || token == null || token.isEmpty
+                    ? () {}
+                    : () async {
+                        await _performBulkZatcaSync(
+                          idsToSync: const <int>[],
+                          syncType: 'all',
+                          accessToken: token,
+                        );
+                      },
+                height: 40,
+                width: 110,
+                fontSize: FontSize.s10,
+              ),
+              const SizedBox(width: 8),
+              CustomRoundButton(
+                title: "Sync Failed",
+                boxColor: Colors.redAccent,
+                textColor: Colors.white,
+                borderColor: Colors.transparent,
+                isLoading: isBulkSending && activeBulkSyncType == 'failed',
+                fct: isBulkSending || token == null || token.isEmpty
+                    ? () {}
+                    : () async {
+                        await _performBulkZatcaSync(
+                          idsToSync: const <int>[],
+                          syncType: 'failed',
+                          accessToken: token,
+                        );
+                      },
+                height: 40,
+                width: 110,
+                fontSize: FontSize.s10,
+              ),
+              const SizedBox(width: 8),
+              CustomRoundButton(
+                title: "Sync Not Send",
+                boxColor: Colors.orangeAccent,
+                textColor: Colors.white,
+                borderColor: Colors.transparent,
+                isLoading: isBulkSending && activeBulkSyncType == 'not_sent',
+                fct: isBulkSending || token == null || token.isEmpty
+                    ? () {}
+                    : () async {
+                        await _performBulkZatcaSync(
+                          idsToSync: const <int>[],
+                          syncType: 'not_sent',
+                          accessToken: token,
+                        );
+                      },
+                height: 40,
+                width: 130,
+                fontSize: FontSize.s10,
+              ),
+              const SizedBox(width: 8),
+              CustomRoundButton(
+                title: "Sync Selected",
+                boxColor: hasSelection ? Colors.lightBlue : Colors.grey,
+                textColor: Colors.white,
+                borderColor: Colors.transparent,
+                isLoading: isBulkSending && activeBulkSyncType == 'selected',
+                fct: (isBulkSending || !hasSelection || token == null || token.isEmpty)
+                    ? () {}
+                    : () async {
+                        final selectedList = selectedInvoiceIds.toList();
+                        await _performBulkZatcaSync(
+                          idsToSync: selectedList,
+                          syncType: 'selected',
+                          accessToken: token,
+                        );
+                      },
+                height: 40,
+                width: 130,
+                fontSize: FontSize.s10,
+              ),
+              const Spacer(),
+              // Selection info on the right
+              Text(
+                "${selectedInvoiceIds.length} records selected",
                 style: buildCustomStyle(
-                  FontWeightManager.bold,
-                  FontSize.s10,
-                  0.18,
-                  ColorManager.kPrimaryColor,
+                  FontWeightManager.medium,
+                  FontSize.s14,
+                  0.20,
+                  ColorManager.textColor,
                 ),
               ),
-            ),
-          ],
-          const SizedBox(width: 15),
-          InkWell(
-            onTap: () {
-              setState(() {
-                selectedInvoiceIds.clear();
-              });
-            },
-            child: Text(
-              "Unselect",
-              style: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s10,
-                0.18,
-                const Color.fromARGB(255, 198, 78, 78),
+              if ((provider.invoiceListDetails?.isNotEmpty ?? false) &&
+                  selectedInvoiceIds.length <
+                      (provider.invoiceListDetails?.length ?? 0)) ...[
+                const SizedBox(width: 15),
+                InkWell(
+                  onTap: () {
+                    final currentInvoices =
+                        provider.invoiceListDetails ?? const <Invoice>[];
+                    setState(() {
+                      for (final inv in currentInvoices) {
+                        selectedInvoiceIds.add(inv.id);
+                      }
+                    });
+                    debugPrint(
+                        "[DEBUG] Bulk Select: Found ${currentInvoices.length}, Selected ${selectedInvoiceIds.length}");
+                  },
+                  child: Text(
+                    "Select Page",
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s11,
+                      0.18,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 15),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    selectedInvoiceIds.clear();
+                  });
+                },
+                child: Text(
+                  "Unselect",
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s11,
+                    0.18,
+                    const Color.fromARGB(255, 198, 78, 78),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -2029,15 +2123,20 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Future<bool> _showZatcaConfirmationDialog(int count) async {
+  Future<bool> _showZatcaConfirmationDialog({
+    required int count,
+    String? message,
+  }) async {
     return await showDialog<bool>(
           context: context,
           builder: (context) => Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             child: Container(
-              width: 400,
+              constraints: const BoxConstraints(maxWidth: 460),
               padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -2083,8 +2182,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "You are about to send $count invoice(s) to ZATCA. Do you want to continue?",
+                    message ??
+                        "You are about to send $count invoice(s) to ZATCA. Do you want to continue?",
                     textAlign: TextAlign.center,
+                    softWrap: true,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s14,
