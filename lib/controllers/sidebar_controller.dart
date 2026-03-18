@@ -28,6 +28,8 @@ import 'package:pos_machine/screens/product/widgets/view_product.dart';
 import 'package:pos_machine/screens/purchase/purchase.dart';
 import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart';
 import 'package:pos_machine/screens/product/stock.dart';
+import 'package:pos_machine/screens/purchase/purchase_orders.dart';
+import 'package:pos_machine/screens/purchase/widgets/create_purchase_order.dart';
 import 'package:pos_machine/screens/purchase/purchase_voucher.dart';
 import 'package:pos_machine/screens/purchase/widgets/add_purchase.dart';
 import 'package:pos_machine/screens/profile/open_profile.dart';
@@ -177,5 +179,7 @@ class SideBarController extends GetxController {
     DailySalesCloseListScreen(), // 78 Daily Sales Close List
     DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
     ConsumedStocksReportScreen(), // 80 Consumed Stocks Report
+    AddPurchaseOrderScreen(), // 81 Purchase Order Screen
+    CreatePurchaseOrderScreen(), // 82 Create Purchase Order Screen
   ];
 }

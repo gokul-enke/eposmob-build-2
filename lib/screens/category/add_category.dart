@@ -47,10 +47,12 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
 
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      
+
       // Check if categories are already loaded from login
-      if (categoryProvider.isCategoriesLoaded && categoryProvider.hasValidCategories) {
-        debugPrint("✅ [AddCategory] Using already loaded categories: ${categoryProvider.categoryList?.length} categories");
+      if (categoryProvider.isCategoriesLoaded &&
+          categoryProvider.hasValidCategories) {
+        debugPrint(
+            "✅ [AddCategory] Using already loaded categories: ${categoryProvider.categoryList?.length} categories");
         // Use the already loaded categories for search display
         if (mounted) {
           setState(() {
@@ -63,7 +65,8 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         categoryProvider.totalPages = 1;
         categoryProvider.notifyListeners();
       } else {
-        debugPrint("📥 [AddCategory] Loading categories from API - not loaded or empty");
+        debugPrint(
+            "📥 [AddCategory] Loading categories from API - not loaded or empty");
         if (mounted) {
           setState(() {
             categoryList = categoryProvider.category;
@@ -122,9 +125,10 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     _searchController.clear();
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
-    
+
     // Use already loaded categories if available, otherwise make API call
-    if (categoryProvider.isCategoriesLoaded && categoryProvider.hasValidCategories) {
+    if (categoryProvider.isCategoriesLoaded &&
+        categoryProvider.hasValidCategories) {
       debugPrint("✅ [AddCategory] Reset using cached categories");
       // Reset to show all loaded categories
       categoryProvider.searchCategoryList = categoryProvider.categoryList;
@@ -132,12 +136,13 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       categoryProvider.totalPages = 1;
       categoryProvider.notifyListeners();
     } else {
-      debugPrint("📥 [AddCategory] Reset with API call - categories not cached");
+      debugPrint(
+          "📥 [AddCategory] Reset with API call - categories not cached");
       await categoryProvider.searchAllCategory(
         page: 1,
       );
     }
-    
+
     if (mounted) {
       setState(() {
         selectedCategoryId = null;
@@ -198,7 +203,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                 //   style: buildCustomStyle(FontWeightManager.semiBold,
                 //       FontSize.s20, 0.30, ColorManager.textColor),
                 // ),
-                  _buildHeader(categoryProvider, sideBarController),
+                _buildHeader(categoryProvider, sideBarController),
                 const SizedBox(
                   height: 15,
                 ),
@@ -347,17 +352,14 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
             ColorManager.textColor,
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            CustomRoundButton(
-              title: "Create New Category",
-              fct: _openAddCategoryModal,
-              fontSize: 12,
-              height: 45,
-              width: 200,
-            ),
-          ],
+        CustomRoundButton(
+          title: "Add Category",
+          fct: () {
+            sideBarController.index.value = 16;
+          },
+          fontSize: 12,
+          height: 45,
+          width: 180,
         ),
       ],
     );
@@ -394,6 +396,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                     0: FlexColumnWidth(1.0), // No
                     1: FlexColumnWidth(3.0), // Category Name
                     2: FlexColumnWidth(3.0), // Slug
+                    3: FlexColumnWidth(1.2), // Action
                   },
                   border: null,
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -403,6 +406,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                         _buildTableHeader("No"),
                         _buildTableHeader("Category Name"),
                         _buildTableHeader("Slug"),
+                        _buildTableHeader("Action"),
                       ],
                     ),
                   ],
@@ -455,6 +459,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                 0: FlexColumnWidth(1.0), // No
                                 1: FlexColumnWidth(3.0), // Category Name
                                 2: FlexColumnWidth(3.0), // Slug
+                                3: FlexColumnWidth(1.2), // Action
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -480,6 +485,16 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                           category.categoryName ?? ""),
                                       _buildTableCell(
                                           category.categorySlug ?? ""),
+                                      Center(
+                                        child: _buildActionButton(
+                                          Icons.edit,
+                                          Colors.blue.shade50,
+                                          Colors.blue,
+                                          () {
+                                            sideBarController.index.value = 34;
+                                          },
+                                        ),
+                                      ),
                                     ],
                                   );
                                 }).toList(),

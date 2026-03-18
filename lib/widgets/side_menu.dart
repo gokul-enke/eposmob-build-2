@@ -516,6 +516,38 @@ class _SideMenuState extends State<SideMenu> {
               );
             },
           ),
+
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              // Check permissions for each sub-item
+              final hasProductPermission =
+                  roleProvider.currentUserHasPermissionSync('view_product');
+              final hasStockPermission = roleProvider
+                  .currentUserHasPermissionSync('page_StockManagement');
+
+              // Only show the expandable menu if user has at least one permission
+              if (!hasProductPermission && !hasStockPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTileExpandableColumn(
+                    onTapTitle1: () {
+                      sideBarController.index.value = 81;
+                    },
+                    listTitle1: "Purchase Orders",
+                    // Permission-based visibility
+                    showTitle1: hasProductPermission,
+                    showTitle2: hasStockPermission,
+                    icon: fa.FontAwesomeIcons.cube,
+                    title: 'Purchase',
+                    onTap: () async {
+                      sideBarController.index.value = 81;
+                    },
+                    selected: sideBarController.index.value == 81),
+              );
+            },
+          ),
           // 8. REPORTS (Index: 58) [EXPANDABLE]
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {

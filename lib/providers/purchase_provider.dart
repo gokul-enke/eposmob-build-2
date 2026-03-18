@@ -168,10 +168,9 @@ class PurchaseProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final baseUri = Uri.parse(APPUrl.getStores);
-    final queryParameters =
-        Map<String, String>.from(baseUri.queryParameters);
+    final queryParameters = Map<String, String>.from(baseUri.queryParameters);
     if (storeName != null && storeName.isNotEmpty) {
       queryParameters['store_name'] = storeName;
     }
@@ -220,7 +219,8 @@ class PurchaseProvider extends ChangeNotifier {
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.getSuppliers).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.getSuppliers)
+        .replace(queryParameters: queryParameters);
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
@@ -258,12 +258,13 @@ class PurchaseProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final Map<String, String> queryParameters = {};
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.listUnits).replace(queryParameters: queryParameters);
+    final url =
+        Uri.parse(APPUrl.listUnits).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -299,12 +300,13 @@ class PurchaseProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final Map<String, String> queryParameters = {'code': code};
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.getMasterDataValues).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.getMasterDataValues)
+        .replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -637,12 +639,13 @@ class PurchaseProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final Map<String, String> queryParameters = {};
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.listPurchaseItems).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.listPurchaseItems)
+        .replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");

@@ -469,7 +469,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     FocusScope.of(context).unfocus();
 
-    debugPrint('🛠️ [ProductDetailsDialog] Save started for productId=${selectedProduct?.productId}');
+    debugPrint(
+        '🛠️ [ProductDetailsDialog] Save started for productId=${selectedProduct?.productId}');
 
     setState(() {
       _isSaving = true;
@@ -573,13 +574,16 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       final String successMessage = response['message']?.toString() ??
           'Product details updated successfully.';
 
-        debugPrint('✅ [ProductDetailsDialog] Server edit success for id=$productId: $successMessage');
+      debugPrint(
+          '✅ [ProductDetailsDialog] Server edit success for id=$productId: $successMessage');
 
-        debugPrint('🔄 [ProductDetailsDialog] Refreshing local product cache via fetchProductsFromAPI()...');
+      debugPrint(
+          '🔄 [ProductDetailsDialog] Refreshing local product cache via fetchProductsFromAPI()...');
 
       await localProductProvider.fetchProductsFromAPI();
 
-        debugPrint('✅ [ProductDetailsDialog] Product cache refresh finished for id=$productId');
+      debugPrint(
+          '✅ [ProductDetailsDialog] Product cache refresh finished for id=$productId');
 
       ProductPrice? updatedProductPrice;
       if (product.price != null) {
@@ -675,12 +679,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           localProductProvider.getProductById(int.parse(productId)) ??
               updatedProduct;
 
-        debugPrint('🧩 [ProductDetailsDialog] Using product snapshot source: '
+      debugPrint('🧩 [ProductDetailsDialog] Using product snapshot source: '
           '${localProductProvider.getProductById(int.parse(productId)) != null ? "provider" : "fallback_local"}');
 
       localProductProvider.updateProduct(resolvedUpdatedProduct);
 
-        debugPrint('💾 [ProductDetailsDialog] Product snapshot updated in provider/Hive for id=$productId');
+      debugPrint(
+          '💾 [ProductDetailsDialog] Product snapshot updated in provider/Hive for id=$productId');
 
       final updatedTaxValue = double.tryParse(_taxController.text) ?? 0.0;
       localProductProvider.updateProductPricingInCart(
@@ -691,7 +696,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         updatedProduct: resolvedUpdatedProduct,
       );
 
-      debugPrint('🛒 [ProductDetailsDialog] Cart and saved orders refresh requested for id=$productId '
+      debugPrint(
+          '🛒 [ProductDetailsDialog] Cart and saved orders refresh requested for id=$productId '
           '(price=$updatedPriceValue, mrp=$updatedMrpValue, tax=$updatedTaxValue)');
 
       if (!mounted) return;
@@ -707,7 +713,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         context: context,
         message: successMessage,
       );
-      debugPrint('🏁 [ProductDetailsDialog] Save flow completed for id=$productId');
+      debugPrint(
+          '🏁 [ProductDetailsDialog] Save flow completed for id=$productId');
     } catch (error) {
       debugPrint('❌ [ProductDetailsDialog] Save flow failed: $error');
       if (mounted) {
@@ -880,7 +887,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           SizedBox(
             width: 150,
             child: Text(
-              '$label: ',
+              '$label:',
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s14,
@@ -890,7 +897,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ),
           ),
           Expanded(
-            child: Text(
+            child: SelectableText(
               value,
               style: buildCustomStyle(
                 FontWeightManager.regular,
@@ -898,9 +905,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 0.20,
                 ColorManager.textColor,
               ),
-              softWrap: true, // Enable text wrapping
-              overflow: TextOverflow
-                  .visible, // Allow text to wrap instead of truncating
+              //               softWrap: true, // Enable text wrapping
+              // overflow: TextOverflow
+              //     .visible, // Allow text to wrap instead of truncating
             ),
           ),
         ],
@@ -1063,125 +1070,185 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             .appSettings
             ?.currency ??
         'INR';
-    return ListView(
-      shrinkWrap: true,
-      physics: const BouncingScrollPhysics(),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                children: [
-                  _buildDetailRow('Product Name', product.productName ?? 'N/A'),
-                  _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
-                  _buildDetailRow('Category', product.category?.name ?? 'N/A'),
-                  _buildDetailRowWithCopy('Barcode', product.barcode ?? 'N/A'),
-                  _buildDetailRow('Unit', product.unit ?? 'N/A'),
-                  if (product.taxes != null && product.taxes!.isNotEmpty)
-                    ...product.taxes!.map((tax) => _buildDetailRow(
-                          tax.name ?? 'Tax',
-                          '${tax.rate ?? 0}%',
-                        )),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                children: [
-                  _buildDetailRow(
-                      'Price',
-                      product.price?.price != null
-                          ? '$currency ${product.price!.price}'
-                          : 'N/A'),
-                  _buildDetailRow('MRP',
-                      product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
-                  _buildDetailRow(
-                    'Purchase Price',
-                    (product.purchasePrice != null &&
-                            product.purchasePrice!.isNotEmpty
-                        ? '$currency ${product.purchasePrice}'
-                        : (product.stock != null && product.stock!.isNotEmpty
-                            ? (product.stock!.first.purchasePrice != null &&
-                                    product
-                                        .stock!.first.purchasePrice!.isNotEmpty
-                                ? '$currency ${product.stock!.first.purchasePrice}'
-                                : 'N/A')
-                            : 'N/A')),
-                  ),
-                  _buildDetailRow(
-                      'Offer Price',
-                      product.offerPrice != null
-                          ? '$currency ${product.offerPrice}'
-                          : 'N/A'),
-                  _buildDetailRow('SKU', product.sku ?? 'Not Available'),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                children: [
-                  _buildDetailRow('Rating', product.rating ?? 'N/A'),
-                  _buildDetailRow('Available Qty',
-                      product.numberOfProductsAvailable ?? 'N/A'),
-                  _buildDetailRow(
-                      'Location', product.productLocation?.toString() ?? 'N/A'),
-                  if (product.weightInfo != null) ...[
-                    _buildDetailRow('Weight',
-                        product.weightInfo!.weight?.toString() ?? 'N/A'),
-                    _buildDetailRow('Is Weighted',
-                        product.weightInfo!.isWeighted == true ? 'Yes' : 'No'),
-                  ] else ...[
-                    _buildDetailRow('Weight', 'N/A'),
-                    _buildDetailRow('Is Weighted', 'N/A'),
+    return SelectionArea(
+      child: ListView(
+        shrinkWrap: true,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildDetailRow(
+                        'Product Name', product.productName ?? 'N/A'),
+                    _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
+                    _buildDetailRow(
+                        'Category', product.category?.name ?? 'N/A'),
+                    _buildDetailRowWithCopy(
+                        'Barcode', product.barcode ?? 'N/A'),
+                    _buildDetailRow('Unit', product.unit ?? 'N/A'),
+                    if (product.taxes != null && product.taxes!.isNotEmpty)
+                      ...product.taxes!.map((tax) => _buildDetailRow(
+                            tax.name ?? 'Tax',
+                            '${tax.rate ?? 0}%',
+                          )),
                   ],
-                ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildDetailRow(
+                        'Price',
+                        product.price?.price != null
+                            ? '$currency ${product.price!.price}'
+                            : 'N/A'),
+                    _buildDetailRow(
+                        'MRP',
+                        product.mrp != null
+                            ? '$currency ${product.mrp}'
+                            : 'N/A'),
+                    _buildDetailRow(
+                      'Purchase Price',
+                      (product.purchasePrice != null &&
+                              product.purchasePrice!.isNotEmpty
+                          ? '$currency ${product.purchasePrice}'
+                          : (product.stock != null && product.stock!.isNotEmpty
+                              ? (product.stock!.first.purchasePrice != null &&
+                                      product.stock!.first.purchasePrice!
+                                          .isNotEmpty
+                                  ? '$currency ${product.stock!.first.purchasePrice}'
+                                  : 'N/A')
+                              : 'N/A')),
+                    ),
+                    _buildDetailRow(
+                        'Offer Price',
+                        product.offerPrice != null
+                            ? '$currency ${product.offerPrice}'
+                            : 'N/A'),
+                    _buildDetailRow('SKU', product.sku ?? 'Not Available'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildDetailRow('Rating', product.rating ?? 'N/A'),
+                    _buildDetailRow('Available Qty',
+                        product.numberOfProductsAvailable ?? 'N/A'),
+                    _buildDetailRow('Location',
+                        product.productLocation?.toString() ?? 'N/A'),
+                    if (product.weightInfo != null) ...[
+                      _buildDetailRow('Weight',
+                          product.weightInfo!.weight?.toString() ?? 'N/A'),
+                      _buildDetailRow(
+                          'Is Weighted',
+                          product.weightInfo!.isWeighted == true
+                              ? 'Yes'
+                              : 'No'),
+                    ] else ...[
+                      _buildDetailRow('Weight', 'N/A'),
+                      _buildDetailRow('Is Weighted', 'N/A'),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (product.description != null &&
+              product.description.toString().isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Description',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s16,
+                0.20,
+                ColorManager.kPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Text(
+                product.description.toString(),
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s14,
+                  0.20,
+                  ColorManager.textColor,
+                ),
               ),
             ),
           ],
-        ),
-        if (product.description != null &&
-            product.description.toString().isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Description',
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s16,
-              0.20,
-              ColorManager.kPrimaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withOpacity(0.3)),
-            ),
-            child: Text(
-              product.description.toString(),
+          if (product.productProps != null &&
+              product.productProps!.isNotEmpty &&
+              product.productProps!.any((prop) =>
+                  (prop.label?.isNotEmpty ?? false) ||
+                  (prop.masterValue?.isNotEmpty ?? false))) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Product Properties',
               style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
+                FontWeightManager.semiBold,
+                FontSize.s16,
                 0.20,
-                ColorManager.textColor,
+                ColorManager.kPrimaryColor,
               ),
             ),
-          ),
-        ],
-        if (product.productProps != null &&
-            product.productProps!.isNotEmpty &&
-            product.productProps!.any((prop) =>
-                (prop.label?.isNotEmpty ?? false) ||
-                (prop.masterValue?.isNotEmpty ?? false))) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: product.productProps!
+                    .where((prop) =>
+                        (prop.label?.isNotEmpty ?? false) ||
+                        (prop.masterValue?.isNotEmpty ?? false))
+                    .map((prop) {
+                  return Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                          color: ColorManager.kPrimaryColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '${prop.label ?? ''}: ${prop.masterValue ?? ''}',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.18,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Text(
-            'Product Properties',
+            'Stock Information',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -1190,121 +1257,22 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ),
           ),
           const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withOpacity(0.3)),
-            ),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: product.productProps!
-                  .where((prop) =>
-                      (prop.label?.isNotEmpty ?? false) ||
-                      (prop.masterValue?.isNotEmpty ?? false))
-                  .map((prop) {
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                        color: ColorManager.kPrimaryColor.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    '${prop.label ?? ''}: ${prop.masterValue ?? ''}',
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.18,
-                      ColorManager.kPrimaryColor,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        Text(
-          'Stock Information',
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s16,
-            0.20,
-            ColorManager.kPrimaryColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (product.stock != null && product.stock!.isNotEmpty)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withOpacity(0.3)),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    color: ColorManager.tableBGColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(8),
-                      topRight: Radius.circular(8),
-                    ),
-                  ),
-                  child: Table(
-                    columnWidths: const {
-                      0: FlexColumnWidth(0.6),
-                      1: FlexColumnWidth(1.2),
-                      2: FlexColumnWidth(1.2),
-                      3: FlexColumnWidth(1.2),
-                      4: FlexColumnWidth(1.2),
-                      5: FlexColumnWidth(1.4),
-                      6: FlexColumnWidth(1.4),
-                      7: FlexColumnWidth(1.0),
-                      8: FlexColumnWidth(1.2),
-                      9: FlexColumnWidth(1.2),
-                      10: FlexColumnWidth(1.0),
-                      11: FlexColumnWidth(0.8),
-                    },
-                    border: null,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      TableRow(
-                        children: [
-                          _buildStockTableHeader('Sl No'),
-                          _buildStockTableHeader('Quantity'),
-                          _buildStockTableHeader('Price'),
-                          _buildStockTableHeader('MRP'),
-                          _buildStockTableHeader('Purchase Price'),
-                          _buildStockTableHeader('Supplier'),
-                          _buildStockTableHeader('Store Name'),
-                          _buildStockTableHeader('SKU'),
-                          _buildStockTableHeader('Date'),
-                          _buildStockTableHeader('Expiry Date'),
-                          _buildStockTableHeader('Rack'),
-                          _buildStockTableHeader('Action'),
-                        ],
+          if (product.stock != null && product.stock!.isNotEmpty)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: ColorManager.tableBGColor,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        topRight: Radius.circular(8),
                       ),
-                    ],
-                  ),
-                ),
-                ...product.stock!.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final originalStock = entry.value;
-                  final stock = originalStock.id != null
-                      ? (_editedStockRows[originalStock.id!] ?? originalStock)
-                      : originalStock;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: index % 2 == 0
-                          ? Colors.white
-                          : Colors.grey.withOpacity(0.05),
                     ),
                     child: Table(
                       columnWidths: const {
@@ -1327,58 +1295,110 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       children: [
                         TableRow(
                           children: [
-                            _buildStockTableCell('${index + 1}'),
-                            _buildStockTableCell(
-                                stock.quantity?.toString() ?? 'N/A'),
-                            _buildStockTableCell(
-                                stock.price != null && stock.price!.isNotEmpty
-                                    ? '$currency ${stock.price}'
-                                    : 'N/A'),
-                            _buildStockTableCell(
-                                stock.mrp != null && stock.mrp!.isNotEmpty
-                                    ? '$currency ${stock.mrp}'
-                                    : 'N/A'),
-                            _buildStockTableCell(stock.purchasePrice != null &&
-                                    stock.purchasePrice!.isNotEmpty
-                                ? '$currency ${stock.purchasePrice}'
-                                : 'N/A'),
-                            _buildStockTableCell(stock.supplier ?? 'N/A'),
-                            _buildStockTableCell(stock.storeName ?? 'N/A'),
-                            _buildStockTableCell(stock.sku ?? 'N/A'),
-                            _buildStockTableCell(stock.date ?? 'N/A'),
-                            _buildStockTableCell(stock.expiryDate ?? 'N/A'),
-                            _buildStockTableCell(stock.rack ?? 'N/A'),
-                            _buildRackTableCell(stock),
+                            _buildStockTableHeader('Sl No'),
+                            _buildStockTableHeader('Quantity'),
+                            _buildStockTableHeader('Price'),
+                            _buildStockTableHeader('MRP'),
+                            _buildStockTableHeader('Purchase Price'),
+                            _buildStockTableHeader('Supplier'),
+                            _buildStockTableHeader('Store Name'),
+                            _buildStockTableHeader('SKU'),
+                            _buildStockTableHeader('Date'),
+                            _buildStockTableHeader('Expiry Date'),
+                            _buildStockTableHeader('Rack'),
+                            _buildStockTableHeader('Action'),
                           ],
                         ),
                       ],
                     ),
-                  );
-                }).toList(),
-              ],
-            ),
-          )
-        else
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withOpacity(0.3)),
-            ),
-            child: Center(
-              child: Text(
-                'No stock information available',
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s14,
-                  0.20,
-                  Colors.grey[600]!,
+                  ),
+                  ...product.stock!.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final originalStock = entry.value;
+                    final stock = originalStock.id != null
+                        ? (_editedStockRows[originalStock.id!] ?? originalStock)
+                        : originalStock;
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: index % 2 == 0
+                            ? Colors.white
+                            : Colors.grey.withOpacity(0.05),
+                      ),
+                      child: Table(
+                        columnWidths: const {
+                          0: FlexColumnWidth(0.6),
+                          1: FlexColumnWidth(1.2),
+                          2: FlexColumnWidth(1.2),
+                          3: FlexColumnWidth(1.2),
+                          4: FlexColumnWidth(1.2),
+                          5: FlexColumnWidth(1.4),
+                          6: FlexColumnWidth(1.4),
+                          7: FlexColumnWidth(1.0),
+                          8: FlexColumnWidth(1.2),
+                          9: FlexColumnWidth(1.2),
+                          10: FlexColumnWidth(1.0),
+                          11: FlexColumnWidth(0.8),
+                        },
+                        border: null,
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.middle,
+                        children: [
+                          TableRow(
+                            children: [
+                              _buildStockTableCell('${index + 1}'),
+                              _buildStockTableCell(
+                                  stock.quantity?.toString() ?? 'N/A'),
+                              _buildStockTableCell(
+                                  stock.price != null && stock.price!.isNotEmpty
+                                      ? '$currency ${stock.price}'
+                                      : 'N/A'),
+                              _buildStockTableCell(
+                                  stock.mrp != null && stock.mrp!.isNotEmpty
+                                      ? '$currency ${stock.mrp}'
+                                      : 'N/A'),
+                              _buildStockTableCell(
+                                  stock.purchasePrice != null &&
+                                          stock.purchasePrice!.isNotEmpty
+                                      ? '$currency ${stock.purchasePrice}'
+                                      : 'N/A'),
+                              _buildStockTableCell(stock.supplier ?? 'N/A'),
+                              _buildStockTableCell(stock.storeName ?? 'N/A'),
+                              _buildStockTableCell(stock.sku ?? 'N/A'),
+                              _buildStockTableCell(stock.date ?? 'N/A'),
+                              _buildStockTableCell(stock.expiryDate ?? 'N/A'),
+                              _buildStockTableCell(stock.rack ?? 'N/A'),
+                              _buildRackTableCell(stock),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Center(
+                child: Text(
+                  'No stock information available',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s14,
+                    0.20,
+                    Colors.grey[600]!,
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1717,7 +1737,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
         child: Center(
-          child: Text(
+          child: SelectableText(
             text,
             style: buildCustomStyle(
               FontWeightManager.medium,
