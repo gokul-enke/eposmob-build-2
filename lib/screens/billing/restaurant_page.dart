@@ -33,7 +33,6 @@ import '../../components/build_round_button.dart'; // Add button import
 import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/screens/print/print.dart';
@@ -1005,9 +1004,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       localProductProvider.saveCurrentCartAsOrder(
         customerName: orderPanelState?.selectedCustomerNameForDraft,
         customerPhone: orderPanelState?.selectedCustomerPhoneForDraft,
-        comment:
-            orderPanelState?.buildTaggedDraftComment(_activeTableId!) ??
-                'TABLE:$_activeTableId',
+        comment: orderPanelState?.buildTaggedDraftComment(_activeTableId!) ??
+            'TABLE:$_activeTableId',
         deliveryMethod: orderPanelState?.deliveryMethodForDraft,
         customerId: orderPanelState?.selectedCustomerIdForDraft,
         paymentMethod: orderPanelState?.paymentMethodForDraft,
@@ -2763,25 +2761,28 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Expose current comment to parent (RestaurantPage) for new order flow
   String get orderComment => _orderComment;
-    String? get selectedCustomerNameForDraft => _selectedCustomer?.name;
-    int? get selectedCustomerIdForDraft => _selectedCustomer?.id ?? _selectedCustomerID;
-    String? get selectedCustomerPhoneForDraft =>
+  String? get selectedCustomerNameForDraft => _selectedCustomer?.name;
+  int? get selectedCustomerIdForDraft =>
+      _selectedCustomer?.id ?? _selectedCustomerID;
+  String? get selectedCustomerPhoneForDraft =>
       _selectedCustomer?.phone ?? _selectedCustomerPhone;
-    String get deliveryMethodForDraft => _deliveryMethod;
-    String get deliveryMethodIdForDraft =>
-      _deliveryMethodId.isNotEmpty ? _deliveryMethodId : _getDefaultDeliveryMethodId();
-    String? get deliveryDateForDraft => _deliveryDate;
-    String? get deliveryTimeForDraft => _deliveryTime;
-    String? get deliveryAddressForDraft =>
+  String get deliveryMethodForDraft => _deliveryMethod;
+  String get deliveryMethodIdForDraft => _deliveryMethodId.isNotEmpty
+      ? _deliveryMethodId
+      : _getDefaultDeliveryMethodId();
+  String? get deliveryDateForDraft => _deliveryDate;
+  String? get deliveryTimeForDraft => _deliveryTime;
+  String? get deliveryAddressForDraft =>
       _deliveryAddress.isNotEmpty ? _deliveryAddress : null;
-    double get deliveryChargeForDraft => _getDeliveryChargeForOrder();
-    bool get toCustomerCreditForDraft => _toCustomerCreditEnabled;
-    String? get transactionNumberForDraft =>
+  double get deliveryChargeForDraft => _getDeliveryChargeForOrder();
+  bool get toCustomerCreditForDraft => _toCustomerCreditEnabled;
+  String? get transactionNumberForDraft =>
       _transactionNumber.isNotEmpty ? _transactionNumber : null;
-    String? get couponIdForDraft => _couponCode.isNotEmpty ? _couponCode : null;
-    String? get balanceAmountForDraft => _balanceAmount.toString();
-    String? get paymentMethodForDraft => _getLocalDraftPaymentData()['paymentMethod'];
-    String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
+  String? get couponIdForDraft => _couponCode.isNotEmpty ? _couponCode : null;
+  String? get balanceAmountForDraft => _balanceAmount.toString();
+  String? get paymentMethodForDraft =>
+      _getLocalDraftPaymentData()['paymentMethod'];
+  String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
 
   // Customer Selection Variables
   CustomerListModelData? _selectedCustomer;
@@ -2789,7 +2790,6 @@ class _OrderPanelState extends State<_OrderPanel> {
   String? _selectedCustomerPhone;
   List<CustomerListModelData> _customers = [];
   bool _customersInitialized = false;
-  bool _isLoadingCustomers = false;
   bool _isCustomerManuallySelected = false; // Flag to track manual override
 
   // Discount Variables
@@ -2805,6 +2805,9 @@ class _OrderPanelState extends State<_OrderPanel> {
   @override
   void initState() {
     super.initState();
+    _hydrateCustomerListFromProviderCache();
+    _customersInitialized = true;
+
     // Load saved orders and local drafts when the widget is first created with a tableId
     if (widget.tableId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2821,12 +2824,10 @@ class _OrderPanelState extends State<_OrderPanel> {
   @override
   void didUpdateWidget(covariant _OrderPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Initialize customers only once
+    // Initialize customer list from provider cache once
     if (!_customersInitialized) {
       _customersInitialized = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fetchCustomers();
-      });
+      _hydrateCustomerListFromProviderCache();
     }
 
     // Only react when tableId actually changes
@@ -2917,43 +2918,47 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-  Future<void> _fetchCustomers() async {
-    if (_isLoadingCustomers) return; // Prevent duplicate calls
-
+  void _hydrateCustomerListFromProviderCache() {
+    if (!mounted) return;
+    final customerProvider =
+        Provider.of<CustomerProvider>(context, listen: false);
+    final customersFromProvider = customerProvider.allCustomers ?? [];
     setState(() {
-      _isLoadingCustomers = true;
+      _customers = List<CustomerListModelData>.from(customersFromProvider);
     });
 
-    debugPrint("🔍 [DEBUG] Restaurant: _fetchCustomers called");
-    try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final customerProvider =
-          Provider.of<CustomerProvider>(context, listen: false);
+    _applyDefaultCustomer();
+    debugPrint(
+        '🗂️ Restaurant order panel hydrated customers from provider cache: ${_customers.length}');
+  }
 
-      debugPrint("🔍 [DEBUG] Restaurant: Loading customers from provider...");
-      await customerProvider.loadAllCustomers(
-        authModel.token ?? '',
-      );
+  void _refreshCustomersInBackgroundAfterSale() {
+    if (!mounted) return;
+    debugPrint(
+        '🔄 Refreshing customers in background after successful confirm (restaurant order panel)');
 
-      setState(() {
-        _customers = customerProvider.allCustomers ?? [];
-        _isLoadingCustomers = false;
+    Future.microtask(() async {
+      try {
+        final authModel = Provider.of<AuthModel>(context, listen: false);
+        final customerProvider =
+            Provider.of<CustomerProvider>(context, listen: false);
+        await customerProvider.fetchCustomers(
+          accessToken: authModel.token ?? '',
+          listAll: true,
+        );
+
+        if (!mounted) return;
+        _hydrateCustomerListFromProviderCache();
+      } catch (e) {
         debugPrint(
-            "🔍 [DEBUG] Restaurant: Fetched ${_customers.length} total customers (incl. background load)");
-      });
-
-      // Apply default customer logic after fetching
-      _applyDefaultCustomer();
-    } catch (e) {
-      setState(() {
-        _isLoadingCustomers = false;
-      });
-      debugPrint('❌ [DEBUG] Error fetching customers: $e');
-    }
+            '⚠️ Background customer refresh failed after confirm (restaurant order panel): $e');
+      }
+    });
   }
 
   Map<String, String?> _getLocalDraftPaymentData() {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     final paymentAmounts = <String, String>{};
     final selectedMethods = <String>[];
 
@@ -2964,10 +2969,14 @@ class _OrderPanelState extends State<_OrderPanel> {
       paymentAmounts[methodId] = amount.toStringAsFixed(2);
     }
 
-    addMethod(_isCashSelected, _cashAmount, billingProvider.cashPaymentMethodId ?? 'CASH');
-    addMethod(_isCardSelected, _cardAmount, billingProvider.cardPaymentMethodId ?? 'CARD');
-    addMethod(_isUpiSelected, _upiAmount, billingProvider.upiPaymentMethodId ?? 'UPI');
-    addMethod(_isCodSelected, _codAmount, billingProvider.codPaymentMethodId ?? 'COD');
+    addMethod(_isCashSelected, _cashAmount,
+        billingProvider.cashPaymentMethodId ?? 'CASH');
+    addMethod(_isCardSelected, _cardAmount,
+        billingProvider.cardPaymentMethodId ?? 'CARD');
+    addMethod(_isUpiSelected, _upiAmount,
+        billingProvider.upiPaymentMethodId ?? 'UPI');
+    addMethod(_isCodSelected, _codAmount,
+        billingProvider.codPaymentMethodId ?? 'COD');
     addMethod(_isDebitSelected, _debitAmount, 'DEBIT');
 
     if (selectedMethods.isEmpty) {
@@ -2979,14 +2988,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       (sum, amount) => sum + (double.tryParse(amount) ?? 0.0),
     );
 
-    if (selectedMethods.length == 1) {
-      return {
-        'paymentMethod': selectedMethods.first,
-        'paidAmount': totalPaid.toStringAsFixed(2),
-      };
-    }
-
     return {
+      // Always persist draft payment as multi-payment JSON so sync payloads stay consistent.
       'paymentMethod': json.encode({
         'methods': selectedMethods,
         'amounts': paymentAmounts,
@@ -2997,7 +3000,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   String buildTaggedDraftComment(String tableId) {
-    return 'TABLE:$tableId' + (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
+    return 'TABLE:$tableId' +
+        (_orderComment.isNotEmpty ? ' | ' + _orderComment : '');
   }
 
   String? _resolveStoredPaymentMethodName(String? storedMethod) {
@@ -3012,7 +3016,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       return normalized;
     }
 
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     if (storedMethod == billingProvider.cashPaymentMethodId) return 'CASH';
     if (storedMethod == billingProvider.cardPaymentMethodId) return 'CARD';
     if (storedMethod == billingProvider.upiPaymentMethodId) return 'UPI';
@@ -3053,7 +3058,9 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     double amountFor(String methodName) {
       if (paymentBreakdown != null) {
-        return double.tryParse(paymentBreakdown[methodName]?.toString() ?? '') ?? 0.0;
+        return double.tryParse(
+                paymentBreakdown[methodName]?.toString() ?? '') ??
+            0.0;
       }
       return singleMethodName == methodName ? paidAmount : 0.0;
     }
@@ -3082,12 +3089,13 @@ class _OrderPanelState extends State<_OrderPanel> {
       _selectedCustomer = matchedCustomer;
       _selectedCustomerID = matchedCustomer?.id ?? order.customerId;
       _selectedCustomerPhone = matchedCustomer?.phone ?? order.customerPhone;
-      _isCustomerManuallySelected =
-          order.customerId != null || (order.customerPhone?.isNotEmpty ?? false);
+      _isCustomerManuallySelected = order.customerId != null ||
+          (order.customerPhone?.isNotEmpty ?? false);
 
       _orderComment = _cleanDraftComment(order.comment);
       _deliveryMethod = order.deliveryMethod ?? 'Store Takeaway';
-      _deliveryMethodId = order.deliveryMethodId ?? _getDefaultDeliveryMethodId();
+      _deliveryMethodId =
+          order.deliveryMethodId ?? _getDefaultDeliveryMethodId();
       _deliveryAddress = order.address ?? '';
       _deliveryDate = order.deliveryDate;
       _deliveryTime = order.deliveryTime;
@@ -3814,33 +3822,45 @@ class _OrderPanelState extends State<_OrderPanel> {
                                         showAddCustomerModal(context,
                                                 MediaQuery.of(context).size,
                                                 mobileNumber: phoneToPreFill)
-                                            .then((result) {
+                                            .then((result) async {
                                           if (result != null &&
                                               result['status'] == 'success') {
-                                            _fetchCustomers().then((_) {
-                                              // Find and auto-select the newly added customer by phone
-                                              final addedPhone =
-                                                  result['phone'];
-                                              final matchingCustomer =
-                                                  _customers.firstWhere(
-                                                (customer) =>
-                                                    customer.phone ==
-                                                    addedPhone,
-                                                orElse: () =>
-                                                    CustomerListModelData(),
-                                              );
-                                              if (matchingCustomer.phone ==
-                                                  addedPhone) {
-                                                setState(() {
-                                                  _selectedCustomer =
-                                                      matchingCustomer;
-                                                  _selectedCustomerID =
-                                                      matchingCustomer.id;
-                                                  _selectedCustomerPhone =
-                                                      matchingCustomer.phone;
-                                                });
-                                              }
-                                            });
+                                            final authModel =
+                                                Provider.of<AuthModel>(context,
+                                                    listen: false);
+                                            final customerProvider =
+                                                Provider.of<CustomerProvider>(
+                                                    context,
+                                                    listen: false);
+                                            await customerProvider
+                                                .fetchCustomers(
+                                              accessToken:
+                                                  authModel.token ?? '',
+                                              listAll: true,
+                                            );
+                                            if (!mounted) return;
+                                            _hydrateCustomerListFromProviderCache();
+
+                                            // Find and auto-select the newly added customer by phone
+                                            final addedPhone = result['phone'];
+                                            final matchingCustomer =
+                                                _customers.firstWhere(
+                                              (customer) =>
+                                                  customer.phone == addedPhone,
+                                              orElse: () =>
+                                                  CustomerListModelData(),
+                                            );
+                                            if (matchingCustomer.phone ==
+                                                addedPhone) {
+                                              setState(() {
+                                                _selectedCustomer =
+                                                    matchingCustomer;
+                                                _selectedCustomerID =
+                                                    matchingCustomer.id;
+                                                _selectedCustomerPhone =
+                                                    matchingCustomer.phone;
+                                              });
+                                            }
                                           }
                                         });
                                       },
@@ -4095,25 +4115,35 @@ class _OrderPanelState extends State<_OrderPanel> {
                           showAddCustomerModal(
                                   context, MediaQuery.of(context).size,
                                   mobileNumber: phoneToPreFill)
-                              .then((result) {
+                              .then((result) async {
                             if (result != null &&
                                 result['status'] == 'success') {
-                              _fetchCustomers().then((_) {
-                                // Find and auto-select the newly added customer by phone
-                                final addedPhone = result['phone'];
-                                final matchingCustomer = _customers.firstWhere(
-                                  (customer) => customer.phone == addedPhone,
-                                  orElse: () => CustomerListModelData(),
-                                );
-                                if (matchingCustomer.phone == addedPhone) {
-                                  setState(() {
-                                    _selectedCustomer = matchingCustomer;
-                                    _selectedCustomerID = matchingCustomer.id;
-                                    _selectedCustomerPhone =
-                                        matchingCustomer.phone;
-                                  });
-                                }
-                              });
+                              final authModel = Provider.of<AuthModel>(context,
+                                  listen: false);
+                              final customerProvider =
+                                  Provider.of<CustomerProvider>(context,
+                                      listen: false);
+                              await customerProvider.fetchCustomers(
+                                accessToken: authModel.token ?? '',
+                                listAll: true,
+                              );
+                              if (!mounted) return;
+                              _hydrateCustomerListFromProviderCache();
+
+                              // Find and auto-select the newly added customer by phone
+                              final addedPhone = result['phone'];
+                              final matchingCustomer = _customers.firstWhere(
+                                (customer) => customer.phone == addedPhone,
+                                orElse: () => CustomerListModelData(),
+                              );
+                              if (matchingCustomer.phone == addedPhone) {
+                                setState(() {
+                                  _selectedCustomer = matchingCustomer;
+                                  _selectedCustomerID = matchingCustomer.id;
+                                  _selectedCustomerPhone =
+                                      matchingCustomer.phone;
+                                });
+                              }
                             }
                           });
                         },
@@ -6663,39 +6693,14 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Release any current focus so checkout modal text fields receive input cleanly.
     FocusManager.instance.primaryFocus?.unfocus();
 
+    // Rehydrate latest cached customers before opening checkout so default
+    // customer auto-selection is applied when data is already available.
+    _hydrateCustomerListFromProviderCache();
+
     // Mark that payment modal opportunity has been given (via checkout dialog)
     setState(() {
       _hasOpenedPaymentModalOnce = false;
     });
-
-    // Wait for customers to finish loading if they're still being fetched
-    if (_isLoadingCustomers) {
-      // Show a loading dialog while waiting for customers
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-
-      // Wait for customers to finish loading
-      while (_isLoadingCustomers) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      // Close loading dialog
-      if (!mounted) return;
-      Navigator.pop(context);
-    }
-
-    // Double-check _customers is not empty, if it is, try fetching one more time
-    if (_customers.isEmpty && !_isLoadingCustomers) {
-      await _fetchCustomers();
-      // Wait a bit for the fetch to complete
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
 
     if (!mounted) return;
 
@@ -6871,8 +6876,16 @@ class _OrderPanelState extends State<_OrderPanel> {
                 return createdCustomer;
               }
 
-              // Fallback: refresh and match by normalized phone
-              await _fetchCustomers();
+              // Fallback: refresh provider cache and match by normalized phone
+              final authModel = Provider.of<AuthModel>(context, listen: false);
+              final customerProvider =
+                  Provider.of<CustomerProvider>(context, listen: false);
+              await customerProvider.fetchCustomers(
+                accessToken: authModel.token ?? '',
+                listAll: true,
+              );
+              if (!mounted) return null;
+              _hydrateCustomerListFromProviderCache();
               final addedPhone = result['phone'];
               final normalizedAddedPhone =
                   addedPhone?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
@@ -8092,6 +8105,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (response != null &&
           (response['status']?.toLowerCase() == 'success' ||
               response['status']?.toLowerCase() == 'sucesss')) {
+        _refreshCustomersInBackgroundAfterSale();
+
         showScaffold(
           context: context,
           message: 'Order $orderNumber confirmed successfully!',

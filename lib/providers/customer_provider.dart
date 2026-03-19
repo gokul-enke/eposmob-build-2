@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../resources/app_url.dart';
 
 class CustomerProvider extends ChangeNotifier {
+  static const String _customerCacheBoxName = 'customer_cache';
   List<CustomerListModelData>? customerList = [];
   List<CustomerListModelData>? _allCustomers =
       []; // Store all customers for local filtering
@@ -197,6 +199,71 @@ class CustomerProvider extends ChangeNotifier {
 
   //                 *********************** LIST CUSTOMER API ***************************************************
 
+  String _buildCustomerCacheKey(int? storeId) {
+    if (storeId == null) return 'store_unknown';
+    return 'store_$storeId';
+  }
+
+  Future<Box> _openCustomerCacheBox() async {
+    if (Hive.isBoxOpen(_customerCacheBoxName)) {
+      return Hive.box(_customerCacheBoxName);
+    }
+    return await Hive.openBox(_customerCacheBoxName);
+  }
+
+  Future<void> _saveCustomersToCache({
+    required int? storeId,
+    required List<CustomerListModelData>? customers,
+  }) async {
+    if (customers == null) return;
+
+    final box = await _openCustomerCacheBox();
+    final cacheKey = _buildCustomerCacheKey(storeId);
+
+    await box.put(cacheKey, {
+      'cached_at': DateTime.now().toIso8601String(),
+      'data': customers.map((customer) => customer.toJson()).toList(),
+    });
+  }
+
+  Future<List<CustomerListModelData>?> _loadCustomersFromCache({
+    required int? storeId,
+  }) async {
+    final box = await _openCustomerCacheBox();
+    final cacheKey = _buildCustomerCacheKey(storeId);
+    final cached = box.get(cacheKey);
+
+    if (cached is! Map) {
+      return null;
+    }
+
+    final rawData = cached['data'];
+    if (rawData is! List) {
+      return null;
+    }
+
+    try {
+      return rawData
+          .map((item) => CustomerListModelData.fromJson(
+              Map<String, dynamic>.from(item as Map)))
+          .toList();
+    } catch (e) {
+      debugPrint('Failed to parse cached customers: $e');
+      return null;
+    }
+  }
+
+  Future<bool> _tryApplyCachedCustomers({required int? storeId}) async {
+    final cachedCustomers = await _loadCustomersFromCache(storeId: storeId);
+    if (cachedCustomers == null || cachedCustomers.isEmpty) {
+      return false;
+    }
+
+    _allCustomers = cachedCustomers;
+    applyFiltersLocally(page: 1);
+    return true;
+  }
+
   Future<dynamic> listCustomer({
     required String accessToken,
     String? filterName,
@@ -237,7 +304,21 @@ class CustomerProvider extends ChangeNotifier {
     final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
+      if (loadAll && await _tryApplyCachedCustomers(storeId: activeStoreId)) {
+        _isLoading = false;
+        notifyListeners();
+        return {
+          "status": "success",
+          "message": "Loaded customers from local cache",
+        };
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return {
+        "status": "error",
+        "message": "API key not found. Please restart the app.",
+      };
     }
 
     // Add store_id to query parameters
@@ -270,6 +351,10 @@ class CustomerProvider extends ChangeNotifier {
           // Store all customers for local filtering and pagination
           _allCustomers = customerListModel.data;
           applyFiltersLocally(page: 1);
+          await _saveCustomersToCache(
+            storeId: activeStoreId,
+            customers: customerListModel.data,
+          );
         } else {
           customerList = customerListModel.data;
           notifyListeners();
@@ -280,6 +365,15 @@ class CustomerProvider extends ChangeNotifier {
         return jsonData;
       } else {
         debugPrint('Error in API response: ${response.reasonPhrase}');
+        if (loadAll && await _tryApplyCachedCustomers(storeId: activeStoreId)) {
+          _isLoading = false;
+          notifyListeners();
+          return {
+            "status": "success",
+            "message": "Loaded customers from local cache",
+          };
+        }
+
         _isLoading = false;
         notifyListeners();
         return {
@@ -289,6 +383,16 @@ class CustomerProvider extends ChangeNotifier {
       }
     } catch (error) {
       debugPrint('Exception in listCustomer: $error');
+
+      if (loadAll && await _tryApplyCachedCustomers(storeId: activeStoreId)) {
+        _isLoading = false;
+        notifyListeners();
+        return {
+          "status": "success",
+          "message": "Loaded customers from local cache",
+        };
+      }
+
       _isLoading = false;
       notifyListeners();
       return {

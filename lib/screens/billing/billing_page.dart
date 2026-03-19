@@ -128,7 +128,6 @@ class BillingPageState extends State<BillingPage>
   bool _isDebitSelected = false;
   bool _hasOpenedPaymentModalOnce = false;
   bool isInitLoading = false;
-  bool _isLoadingCustomers = false; // Track if customers are being loaded
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
   List<ListCartModelDataCartItem>? cartProductItems = [];
@@ -248,8 +247,7 @@ class BillingPageState extends State<BillingPage>
     _isUpiSelected = false;
     _isDebitSelected = false;
     _isCodSelected = false;
-
-    _fetchCustomers();
+    _hydrateCustomerListFromProviderCache();
 
     // After first frame, rehydrate UI from any saved order/discounts
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -730,211 +728,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  Future<void> _fetchCustomers({
-    bool forceRefresh = false,
-    bool applyDefaultSelection = true,
-  }) async {
-    // Set loading flag - check for duplicate calls first
-    if (_isLoadingCustomers && !forceRefresh) {
-      debugPrint(
-          "🛡️ _fetchCustomers() already in progress, skipping duplicate call");
-      return;
-    }
-
-    // Early guard: if editing a saved order, do not override customer with defaults
-    final currentOrder =
-        Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
-    if (currentOrder != null && !forceRefresh) {
-      debugPrint(
-          "🛡️ Skipping default customer fetch because a saved order is being edited");
-      return;
-    }
-
-    debugPrint("🔍 _fetchCustomers() called");
-    debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
-    debugPrint("  - selectedCustomerID: $selectedCustomerID");
-    debugPrint("  - mobileNumberText: '$mobileNumberText'");
-    debugPrint(
-        "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-
-    // If customer was manually selected (either from list or phone entry), don't reset to default
-    if (applyDefaultSelection &&
-        _isCustomerManuallySelected &&
-        (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
-      debugPrint("🛡️ Customer manually selected, skipping reset to default");
-      debugPrint("  - selectedCustomerID: $selectedCustomerID");
-      debugPrint("  - mobileNumberText: '$mobileNumberText'");
-      return;
-    }
-
-    // Additional check: if the text field contains user-entered data that's not the sales executive's info, preserve it
-    if (applyDefaultSelection &&
-        mobileNumberTextController.text.isNotEmpty &&
-        !mobileNumberTextController.text.contains(
-            "${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.name ?? ''} ${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.phone ?? ''}")) {
-      debugPrint("🛡️ Text field contains user data, preserving manual entry");
-      debugPrint(
-          "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-
-      // Mark as manually selected and preserve the current state
-      setState(() {
-        _isCustomerManuallySelected = true;
-        if (mobileNumberText?.isEmpty == true) {
-          mobileNumberText = mobileNumberTextController.text;
-        }
-      });
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoadingCustomers = true;
-      });
-    }
-
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-
-    try {
-      final response = await CustomerProvider().listCustomer(
-          accessToken: accessToken!, sortAscending: true, loadAll: true);
-
-      if (response["status"] == "success") {
-        CustomerListModel customerListModel =
-            CustomerListModel.fromJson(response);
-        setState(() {
-          customerList = customerListModel.data; // Store the customer list
-
-          if (!applyDefaultSelection) {
-            debugPrint(
-                "🔄 Customer list refreshed without modifying current selection");
-            return;
-          }
-
-          // Check if auto-assign is enabled in app settings
-          final appSettingsProvider =
-              Provider.of<AppSettingsProvider>(context, listen: false);
-          final bool autoAssignEnabled =
-              appSettingsProvider.appSettings?.autoAssignDefaultCustomer ??
-                  false;
-
-          if (!autoAssignEnabled) {
-            debugPrint(
-                "🔧 APP SETTINGS: Auto-assign default customer is DISABLED - only fetching customer list");
-            return; // Exit early, only customer list is fetched
-          }
-
-          CustomerListModelData? defaultCustomer;
-
-          if (customerList!.isNotEmpty) {
-            // Get the default customer phone from app settings
-            final defaultPhone = appSettingsProvider
-                    .appSettings?.autoAssignDefaultCustomerPhone ??
-                "";
-
-            debugPrint(
-                "🏢 BILLING: Setting up default customer from app settings phone");
-            debugPrint("  - Default phone from settings: '$defaultPhone'");
-            debugPrint(
-                "  - Available customers in list: ${customerList!.length}");
-            // Debug: print first 5 customer phones for comparison
-            debugPrint("  - First 5 customer phones in list:");
-            for (int i = 0; i < customerList!.length && i < 5; i++) {
-              debugPrint(
-                  "    [$i] ${customerList![i].name}: '${customerList![i].phone}'");
-            }
-
-            if (defaultPhone.isNotEmpty) {
-              // Try to find customer by phone number
-              try {
-                defaultCustomer = customerList!.firstWhere(
-                  (customer) => customer.phone == defaultPhone,
-                );
-                debugPrint(
-                    "✅ Found customer by phone: ${defaultCustomer.name} (${defaultCustomer.phone})");
-
-                debugPrint(
-                    "🎯 Selected default customer: ${defaultCustomer.name} (${defaultCustomer.phone})");
-
-                debugPrint("📝 SETTING DEFAULT CUSTOMER STATE:");
-                salesExecutivemobileNumberText = defaultCustomer.phone ?? "";
-                mobileNumberText = defaultCustomer.phone ?? "";
-                mobileNumberTextController.text =
-                    "${defaultCustomer.name ?? ''} ${defaultCustomer.phone ?? ''}"
-                        .trim();
-
-                debugPrint(
-                    "  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-                debugPrint("  - Set mobileNumberText: '$mobileNumberText'");
-                debugPrint(
-                    "  - Set mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-
-                // Set the default customer in the global provider and mark as default
-                Provider.of<CustomerSelectionProvider>(context, listen: false)
-                    .setSelectedCustomer(defaultCustomer, isDefault: true);
-
-                selectedCustomerID = defaultCustomer.id;
-                selectedCustomerPhone = defaultCustomer.phone;
-                selectedCustomer = defaultCustomer;
-
-                debugPrint("  - Set selectedCustomerID: $selectedCustomerID");
-                debugPrint(
-                    "  - Set selectedCustomerPhone: $selectedCustomerPhone");
-                debugPrint(
-                    "  - Set selectedCustomer: ${selectedCustomer?.name}");
-              } catch (e) {
-                // Customer not found - just show the phone number from settings
-                debugPrint(
-                    "⚠️ No customer found with phone '$defaultPhone', using phone number only");
-
-                debugPrint("📝 SETTING PHONE NUMBER ONLY (no customer found):");
-                salesExecutivemobileNumberText = defaultPhone;
-                mobileNumberText = defaultPhone;
-                mobileNumberTextController.text = defaultPhone;
-
-                // Clear any previous customer selection
-                selectedCustomerID = null;
-                selectedCustomerPhone = defaultPhone;
-                selectedCustomer = null;
-
-                // Clear the provider selection
-                Provider.of<CustomerSelectionProvider>(context, listen: false)
-                    .clearSelectedCustomer();
-
-                debugPrint(
-                    "  - Set mobileNumberTextController.text: '$defaultPhone'");
-                debugPrint("  - Cleared selectedCustomerID");
-              }
-            } else {
-              debugPrint(
-                  "⚠️ No default phone configured, leaving customer field empty");
-              // Don't set any customer - leave the field empty
-            }
-          }
-        });
-      }
-    } catch (error) {
-      debugPrint("❌ EXCEPTION in _fetchCustomers: $error");
-    } finally {
-      // Always clear the loading flag, even on error or early return
-      if (mounted) {
-        setState(() {
-          _isLoadingCustomers = false;
-        });
-      }
-      debugPrint("🏁 _fetchCustomers() completed");
-    }
-  }
-
   void _focusTextField() {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final customerProvider =
-        Provider.of<CustomerProvider>(context, listen: false);
-    if ((customerProvider.allCustomers == null ||
-            customerProvider.allCustomers!.isEmpty) &&
-        accessToken != null &&
-        accessToken.isNotEmpty) {
-      customerProvider.loadAllCustomers(accessToken);
-    }
     // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -4216,7 +4010,6 @@ class BillingPageState extends State<BillingPage>
           shouldFetchCustomers:
               false); // Don't reset customer selection when clearing cart
       _focusTextField();
-      _fetchCustomers();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
       // showScaffold(
@@ -4380,7 +4173,7 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "billing.order_saved_success".tr,
         );
-        resetAutocomplete();
+        resetAutocomplete(shouldFetchCustomers: false);
         // Centralized clear
         _clearCart();
       }
@@ -4569,7 +4362,7 @@ class BillingPageState extends State<BillingPage>
         debugPrint("Error printing saved order: ${error.toString()}");
       }
 
-      resetAutocomplete();
+      resetAutocomplete(shouldFetchCustomers: false);
       _clearCart();
     } catch (error) {
       debugPrint(error.toString());
@@ -4809,6 +4602,7 @@ class BillingPageState extends State<BillingPage>
             context: context,
             message: "billing.order_saved_successfully".tr,
           );
+          _refreshCustomersInBackgroundAfterSale();
 
           // Delete the current order if it exists in local storage
           if (localProductProvider.currentOrder != null) {
@@ -5156,6 +4950,7 @@ class BillingPageState extends State<BillingPage>
             context: context,
             message: "billing.order_confirmed_successfully".tr,
           );
+          _refreshCustomersInBackgroundAfterSale();
 
           // Delete the current order if it exists in local storage
           if (localProductProvider.currentOrder != null) {
@@ -5216,6 +5011,136 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
+  void _refreshCustomersInBackgroundAfterSale() {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final accessToken = authModel.token;
+
+      if (accessToken == null || accessToken.isEmpty) {
+        debugPrint(
+            "🔄 Skipping background customer refresh: access token unavailable");
+        return;
+      }
+
+      unawaited(() async {
+        try {
+          debugPrint("🔄 Background customer refresh started after sale");
+          await customerProvider.fetchCustomers(
+            accessToken: accessToken,
+            listAll: true,
+          );
+
+          final refreshedCustomers = customerProvider.allCustomers;
+          if (!mounted ||
+              refreshedCustomers == null ||
+              refreshedCustomers.isEmpty) {
+            return;
+          }
+
+          setState(() {
+            customerList = List<CustomerListModelData>.from(refreshedCustomers);
+          });
+          debugPrint(
+              "✅ Background customer refresh completed: ${refreshedCustomers.length} customers");
+        } catch (error) {
+          // Keep existing list on any failure.
+          debugPrint("❌ Background customer refresh failed: $error");
+        }
+      }());
+    } catch (error) {
+      debugPrint("❌ Failed to start background customer refresh: $error");
+    }
+  }
+
+  void _hydrateCustomerListFromProviderCache() {
+    try {
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final cachedCustomers = customerProvider.allCustomers;
+      if (cachedCustomers == null || cachedCustomers.isEmpty || !mounted) {
+        return;
+      }
+
+      setState(() {
+        customerList = List<CustomerListModelData>.from(cachedCustomers);
+      });
+      _applyDefaultCustomerFromCacheIfNeeded();
+      debugPrint(
+          "📦 Hydrated customer cache from provider: ${cachedCustomers.length} customers");
+    } catch (error) {
+      debugPrint("❌ Failed to hydrate customer cache: $error");
+    }
+  }
+
+  void _applyDefaultCustomerFromCacheIfNeeded() {
+    if (!mounted) return;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder != null) {
+      return;
+    }
+
+    if (_isCustomerManuallySelected &&
+        (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
+      return;
+    }
+
+    if (selectedCustomer != null ||
+        selectedCustomerID != null ||
+        (selectedCustomerPhone?.isNotEmpty ?? false)) {
+      return;
+    }
+
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final autoAssignEnabled =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? false;
+    if (!autoAssignEnabled) return;
+
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? '';
+    if (defaultPhone.isEmpty) return;
+
+    final customers = customerList;
+    if (customers == null || customers.isEmpty) return;
+
+    CustomerListModelData? matched;
+    try {
+      matched =
+          customers.firstWhere((customer) => customer.phone == defaultPhone);
+    } catch (_) {}
+
+    if (matched != null) {
+      setState(() {
+        selectedCustomer = matched;
+        selectedCustomerID = matched!.id;
+        selectedCustomerPhone = matched.phone;
+        salesExecutivemobileNumberText = matched.phone ?? '';
+        mobileNumberText = matched.phone ?? '';
+        mobileNumberTextController.text =
+            '${matched.name ?? ''} ${matched.phone ?? ''}'.trim();
+      });
+
+      Provider.of<CustomerSelectionProvider>(context, listen: false)
+          .setSelectedCustomer(matched, isDefault: true);
+      return;
+    }
+
+    setState(() {
+      salesExecutivemobileNumberText = defaultPhone;
+      mobileNumberText = defaultPhone;
+      mobileNumberTextController.text = defaultPhone;
+      selectedCustomerID = null;
+      selectedCustomerPhone = defaultPhone;
+      selectedCustomer = null;
+    });
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
+  }
+
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
   /// This is called when clicking Confirm Order or Confirm & Print buttons
   void _showCheckoutModal(
@@ -5226,42 +5151,9 @@ class BillingPageState extends State<BillingPage>
     _focusNode.unfocus();
     FocusManager.instance.primaryFocus?.unfocus();
 
-    // Wait for customers to finish loading if they're still being fetched
-    if (_isLoadingCustomers) {
-      // Show a loading dialog while waiting for customers
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-
-      // Wait for customers to finish loading
-      while (_isLoadingCustomers) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      // Close loading dialog
-      if (!mounted) return;
-      Navigator.pop(context);
-    }
-
-    // Double-check customerList is not empty, if it is, try fetching one more time
-    if ((customerList == null || customerList!.isEmpty) &&
-        !_isLoadingCustomers) {
-      final isEditingSavedOrder =
-          Provider.of<LocalProductProvider>(context, listen: false)
-                  .currentOrder !=
-              null;
-      await _fetchCustomers(
-        forceRefresh: isEditingSavedOrder,
-        applyDefaultSelection: false,
-      );
-      // Wait a bit for the fetch to complete
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
+    // Ensure default customer is resolved from cached list before opening checkout.
+    _hydrateCustomerListFromProviderCache();
+    _applyDefaultCustomerFromCacheIfNeeded();
 
     // Reload payment methods
     final masterDataProvider =
@@ -5483,12 +5375,6 @@ class BillingPageState extends State<BillingPage>
 
                 return createdCustomer;
               }
-
-              // Fallback: refresh list only if response didn't contain enough data
-              await _fetchCustomers(
-                forceRefresh: true,
-                applyDefaultSelection: false,
-              );
 
               final addedPhone = result['phone'];
               final normalizedAddedPhone =
@@ -6443,7 +6329,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  void resetAutocomplete({bool shouldFetchCustomers = true}) {
+  void resetAutocomplete({bool shouldFetchCustomers = false}) {
     debugPrint(
         "🔄 resetAutocomplete called - shouldFetchCustomers: $shouldFetchCustomers");
     debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
@@ -6455,14 +6341,9 @@ class BillingPageState extends State<BillingPage>
       _autocompleteProductKey = GlobalKey();
       isCustomerFound = false;
 
-      // Only fetch customers if requested AND no customer was manually selected
-      if (shouldFetchCustomers && !_isCustomerManuallySelected) {
+      if (shouldFetchCustomers) {
         debugPrint(
-            "  - Calling _fetchCustomers() because no manual selection detected");
-        _fetchCustomers();
-      } else if (shouldFetchCustomers && _isCustomerManuallySelected) {
-        debugPrint(
-            "  - Skipping _fetchCustomers() because customer was manually selected");
+            "  - Customer fetch from resetAutocomplete is disabled by design");
       }
 
       deliveryMethodId = _getDefaultDeliveryMethodId();
@@ -6804,8 +6685,8 @@ class BillingPageState extends State<BillingPage>
       _isCustomerManuallySelected = false;
     });
 
-    // Re-fetch customers to set new default based on new executive
-    _fetchCustomers();
+    // Do not fetch customers here. Customer list is refreshed on store selection
+    // and in background after successful confirmed sale.
   }
 
   // Public method to reset to default sales executive (for external calls)
@@ -6909,8 +6790,8 @@ class BillingPageState extends State<BillingPage>
       _autocompletePhoneKey = GlobalKey(); // Reset autocomplete
     });
 
-    // Re-fetch customers to set new default based on new executive
-    _fetchCustomers();
+    // Do not fetch customers here. Customer list is refreshed on store selection
+    // and in background after successful confirmed sale.
   }
 
   void _initializeDeliveryMethod() {
