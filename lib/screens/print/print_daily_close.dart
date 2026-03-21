@@ -23,6 +23,64 @@ class DailyClosePrintPage extends StatefulWidget {
     required this.data,
   });
 
+  /// Auto-print with default printer without opening the print page UI.
+  /// Returns true if printing succeeds, false if default printer is missing or printing fails.
+  static Future<bool> autoPrint(
+    BuildContext context, {
+    required DailySalesCloseData data,
+    required bool includeTransactions,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final defaultPrinterJson = prefs.getString('default_printer');
+
+      if (defaultPrinterJson == null) {
+        debugPrint('[DailyClosePrintPage] No default printer found for auto print');
+        return false;
+      }
+
+      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
+      final selectedPrinter = BluetoothPrinter(
+        deviceName: printerData['deviceName'],
+        address: printerData['address'],
+        vendorId: printerData['vendorId'],
+        productId: printerData['productId'],
+        typePrinter: PrinterType.values.firstWhere(
+          (e) => e.toString() == printerData['typePrinter'],
+        ),
+      );
+
+      String paperSize = prefs.getString('default_paper_size') ?? '80mm';
+      if (paperSize == 'Thermal') {
+        paperSize = '80mm';
+      }
+
+      if (paperSize == '112mm' || paperSize == '80mm' || paperSize == '58mm') {
+        final thermalPrinter = DailyCloseThermalPrinter(context);
+        await thermalPrinter.printDailyClose(
+          selectedPrinter: selectedPrinter,
+          data: data,
+          selectedPaperSize: paperSize,
+          includeTransactions: includeTransactions,
+        );
+      } else {
+        final standardPrinter = DailyCloseStandardPrinter(context);
+        await standardPrinter.generateAndPrintDailyClosePDF(
+          data: data,
+          selectedPaperSize: paperSize,
+          includeTransactions: includeTransactions,
+        );
+      }
+
+      debugPrint('[DailyClosePrintPage] Auto print successful');
+      return true;
+    } catch (e, st) {
+      debugPrint('[DailyClosePrintPage] Auto print failed: $e');
+      debugPrint('[DailyClosePrintPage] Stacktrace: $st');
+      return false;
+    }
+  }
+
   @override
   State<DailyClosePrintPage> createState() => _DailyClosePrintPageState();
 }
@@ -266,6 +324,15 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
   }
 
   Future<void> _handlePrinting() async {
+    final includeTransactions = await _askIncludeTransactions();
+    if (includeTransactions == null) {
+      return;
+    }
+
+    await _printByPaperType(includeTransactions: includeTransactions);
+  }
+
+  Future<void> _printByPaperType({required bool includeTransactions}) async {
     if (selectedPrinter == null) {
       if (mounted) {
         showScaffoldError(
@@ -279,13 +346,41 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     if (selectedPaperSize == '112mm' ||
         selectedPaperSize == '80mm' ||
         selectedPaperSize == '58mm') {
-      await _printThermalDailyClose();
+      await _printThermalDailyClose(includeTransactions: includeTransactions);
     } else {
-      await _generateAndPrintPDF();
+      await _generateAndPrintPDF(includeTransactions: includeTransactions);
     }
   }
 
-  Future<void> _printThermalDailyClose() async {
+  Future<bool?> _askIncludeTransactions() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Print Transaction List?'),
+          content: const Text(
+            'Do you want to include transaction details in this print?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('No'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _printThermalDailyClose({required bool includeTransactions}) async {
     try {
       final printer = DailyCloseThermalPrinter(context);
 
@@ -293,6 +388,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
         selectedPrinter: selectedPrinter!,
         data: widget.data,
         selectedPaperSize: selectedPaperSize,
+        includeTransactions: includeTransactions,
       );
 
       if (mounted) {
@@ -312,13 +408,14 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     }
   }
 
-  Future<void> _generateAndPrintPDF() async {
+  Future<void> _generateAndPrintPDF({required bool includeTransactions}) async {
     try {
       final printer = DailyCloseStandardPrinter(context);
 
       await printer.generateAndPrintDailyClosePDF(
         data: widget.data,
         selectedPaperSize: selectedPaperSize,
+        includeTransactions: includeTransactions,
       );
 
       if (mounted) {

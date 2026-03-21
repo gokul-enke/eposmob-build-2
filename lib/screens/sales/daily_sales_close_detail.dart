@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
@@ -79,6 +80,59 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
       _paymentTypeFilter = 'All';
       _filterTransactions();
     });
+  }
+
+  Future<bool?> _askIncludeTransactions() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Print Transaction List?'),
+          content: const Text(
+            'Do you want to include transaction details in this print?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('No'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handlePrint(DailySalesCloseData data) async {
+    final includeTransactions = await _askIncludeTransactions();
+    if (includeTransactions == null) {
+      return;
+    }
+
+    final autoPrinted = await DailyClosePrintPage.autoPrint(
+      context,
+      data: data,
+      includeTransactions: includeTransactions,
+    );
+
+    if (autoPrinted) {
+      if (!mounted) return;
+      showScaffold(
+        context: context,
+        message: 'Daily Close Report printed successfully!',
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    Get.to(() => DailyClosePrintPage(data: data));
   }
 
   @override
@@ -468,7 +522,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: () {
-              Get.to(() => DailyClosePrintPage(data: data));
+              _handlePrint(data);
             },
             height: 50,
             width: size.width * 0.19,
