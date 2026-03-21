@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:flutter/material.dart';
 import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
-import 'package:pos_machine/models/customer_list.dart';
 // Add this import for CalendarPickerTableCell component
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:intl/intl.dart';
@@ -33,8 +32,13 @@ class CustomerTransactionsWidget extends StatefulWidget {
 
 class _CustomerTransactionsWidgetState
     extends State<CustomerTransactionsWidget> {
-  late List<CustomerTransaction> transactions;
-  late List<CustomerTransaction> filteredTransactions;
+  List<CustomerTransaction> transactions = [];
+  List<CustomerTransaction> filteredTransactions = [];
+
+  bool _isLoading = false;
+  int _currentPage = 1;
+  int _lastPage = 1;
+  final int _perPage = 20;
 
   // Controllers for filters
   final TextEditingController _referenceController = TextEditingController();
@@ -58,7 +62,19 @@ class _CustomerTransactionsWidgetState
     super.initState();
     transactions = widget.customer.transactions ?? [];
     filteredTransactions = List.from(transactions);
-    _applyFilters(); // Apply initial filters
+    _applyFilters();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTransactions(page: 1, showLoader: true);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomerTransactionsWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.customer.id != widget.customer.id) {
+      _loadTransactions(page: 1, showLoader: true);
+    }
   }
 
   // Helper method to determine if transaction is credit or debit
@@ -67,7 +83,78 @@ class _CustomerTransactionsWidgetState
         (transaction.amount != null && transaction.amount!.contains('+'));
   }
 
-  // Apply filters to the transactions
+  Future<void> _loadTransactions({
+    required int page,
+    bool showLoader = false,
+  }) async {
+    final token = Provider.of<AuthModel>(context, listen: false).token;
+    final customerId = widget.customer.id?.toString();
+
+    if (token == null ||
+        token.isEmpty ||
+        customerId == null ||
+        customerId.isEmpty) {
+      return;
+    }
+
+    if (showLoader && mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    try {
+      final invoiceProvider =
+          Provider.of<InvoiceProvider>(context, listen: false);
+      final response = await invoiceProvider.listCustomerTransactions(
+        accessToken: token,
+        customerId: customerId,
+        dateFrom: _filterFromDate != null
+            ? DateFormat('yyyy-MM-dd').format(_filterFromDate!)
+            : null,
+        dateTo: _filterToDate != null
+            ? DateFormat('yyyy-MM-dd').format(_filterToDate!)
+            : null,
+        type: _filterType?.toLowerCase(),
+        perPage: _perPage,
+        page: page,
+      );
+
+      final data = response['data'];
+      final rows = (data is Map && data['data'] is List)
+          ? data['data'] as List
+          : const [];
+
+      final parsedTransactions = rows
+          .whereType<Map>()
+          .map((row) =>
+              CustomerTransaction.fromJson(Map<String, dynamic>.from(row)))
+          .toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        transactions = parsedTransactions;
+        _currentPage = (data is Map && data['current_page'] is num)
+            ? (data['current_page'] as num).toInt()
+            : page;
+        _lastPage = (data is Map && data['last_page'] is num)
+            ? (data['last_page'] as num).toInt()
+            : 1;
+        _isLoading = false;
+      });
+
+      _applyFilters();
+    } catch (e) {
+      debugPrint('Failed to load customer transactions: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Apply local filters on top of API results
   void _applyFilters() {
     setState(() {
       filteredTransactions = transactions.where((transaction) {
@@ -133,9 +220,10 @@ class _CustomerTransactionsWidgetState
       _filterFromDate = null;
       _filterToDate = null;
       _filterType = null;
-      filteredTransactions = List.from(transactions);
       _isFilterPanelVisible = false;
     });
+
+    _loadTransactions(page: 1, showLoader: true);
   }
 
   // Toggle filter panel visibility
@@ -157,10 +245,15 @@ class _CustomerTransactionsWidgetState
 
   // Apply filters and close panel
   void _applyFiltersAndClose() {
-    _applyFilters();
+    _loadTransactions(page: 1, showLoader: true);
     setState(() {
       _isFilterPanelVisible = false;
     });
+  }
+
+  void _onPageChanged(int page) {
+    if (page < 1 || page > _lastPage || page == _currentPage) return;
+    _loadTransactions(page: page, showLoader: true);
   }
 
   // Print function similar to the one in simple_transaction_details_screen
@@ -169,7 +262,7 @@ class _CustomerTransactionsWidgetState
     debugPrint("Starting print report generation...");
     debugPrint("Total transactions: ${transactions.length}");
     debugPrint("Filtered transactions: ${filteredTransactions.length}");
-    
+
     // Show loading indicator
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,7 +277,7 @@ class _CustomerTransactionsWidgetState
     String customerName = widget.customer.name ?? "";
     String customerPhone = widget.customer.phone ?? "";
     String customerEmail = widget.customer.email ?? "";
-    
+
     debugPrint("\n--- Customer Details ---");
     debugPrint("Customer Name: '$customerName'");
     debugPrint("Customer Phone: '$customerPhone'");
@@ -220,7 +313,7 @@ class _CustomerTransactionsWidgetState
         filteredTransactions.asMap().entries.map((entry) {
       int index = entry.key;
       var transaction = entry.value;
-      
+
       debugPrint("Transaction $index:");
       debugPrint("  - ID: ${transaction.id}");
       debugPrint("  - Order ID: ${transaction.orderId}");
@@ -230,7 +323,7 @@ class _CustomerTransactionsWidgetState
       debugPrint("  - Transaction Type: ${transaction.transactionType}");
       debugPrint("  - Amount: ${transaction.amount}");
       debugPrint("  - Status: ${transaction.status}");
-      
+
       return {
         'id': transaction.id,
         'order_id': transaction.orderId,
@@ -269,7 +362,7 @@ class _CustomerTransactionsWidgetState
 
     // Calculate total amount (for backwards compatibility)
     double totalAmount = totalCredit - totalDebit;
-    
+
     debugPrint("Total Credit: ${totalCredit.toStringAsFixed(2)}");
     debugPrint("Total Debit: ${totalDebit.toStringAsFixed(2)}");
     debugPrint("Balance: ${totalAmount.toStringAsFixed(2)}");
@@ -278,19 +371,21 @@ class _CustomerTransactionsWidgetState
     double savedAmount = 0.0;
 
     // Get current date and time for the report
-    String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateHelper.now());
-    String orderNumber = "TXN-REPORT-${DateHelper.now().millisecondsSinceEpoch}";
+    String orderDate =
+        DateFormat('yyyy-MM-dd HH:mm:ss').format(DateHelper.now());
+    String orderNumber =
+        "TXN-REPORT-${DateHelper.now().millisecondsSinceEpoch}";
 
     // Get date range values
     String? fromDate =
         _fromDateController.text.isNotEmpty ? _fromDateController.text : null;
     String? toDate =
         _toDateController.text.isNotEmpty ? _toDateController.text : null;
-    
+
     debugPrint("\n--- Date Range ---");
     debugPrint("From Date: ${fromDate ?? 'Not set'}");
     debugPrint("To Date: ${toDate ?? 'Not set'}");
-    
+
     debugPrint("\n--- Navigating to Print Page ---");
     debugPrint("Cart Items Count: ${cartItems.length}");
     debugPrint("Total Amount: ${totalAmount.toStringAsFixed(2)}");
@@ -350,15 +445,32 @@ class _CustomerTransactionsWidgetState
             // Filter panel that shows/hides below header
             if (_isFilterPanelVisible) _buildFilterPanel(),
             Expanded(
-              child: filteredTransactions.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: filteredTransactions.length,
-                      itemBuilder: (context, index) => _buildTransactionCard(
-                          context, filteredTransactions[index]),
-                    ),
+              child: _isLoading && filteredTransactions.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredTransactions.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredTransactions.length,
+                          itemBuilder: (context, index) =>
+                              _buildTransactionCard(
+                                  context, filteredTransactions[index]),
+                        ),
             ),
+            if (_isLoading && filteredTransactions.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
+            if (_lastPage > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: PaginationControl(
+                  currentPage: _currentPage,
+                  totalPages: _lastPage,
+                  onPageChanged: _onPageChanged,
+                ),
+              ),
           ],
         ),
       ),
@@ -384,7 +496,7 @@ class _CustomerTransactionsWidgetState
                   color: Color(0xFF3C92F5), size: 28),
               const SizedBox(width: 12),
               Text(
-                'Transactions (${filteredTransactions.length})',
+                'Transactions (${filteredTransactions.length})  Page $_currentPage/$_lastPage',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -738,8 +850,7 @@ class _CustomerTransactionsWidgetState
         children: [
           _buildDetailRow(
               'Transaction ID', transaction.id?.toString() ?? 'N/A'),
-          _buildDetailRow(
-              'Reference', transaction.reference ?? 'N/A'),
+          _buildDetailRow('Reference', transaction.reference ?? 'N/A'),
           _buildDetailRow('Type', transaction.type ?? 'N/A'),
           _buildDetailRow('Payment Method', transaction.paymentMethod ?? 'N/A'),
           if (transaction.transactionComment != null)
