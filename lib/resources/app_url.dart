@@ -114,6 +114,11 @@ class APPUrl {
   static String get updateSupplier => '$baseURL/api/v1/update-suppliers';
   static String get listPurchases =>
       '$baseURL/api/v1/purchases/list-purchase-order';
+  static String get listPurchaseOrder =>
+      '$baseURL/api/v1/purchase/list-purchase-order';
+  static String get addPurchaseOrder =>
+      '$baseURL/api/v1/purchase/add-purchase-order';
+  static String receivePurchaseOrder(String purchaseId) => '$baseURL/api/v1/purchase/receive-purchase-order/$purchaseId';
   static String get listPurchaseVoucher =>
       '$baseURL/api/v1/purchases/voucher-searchbar';
   static String get addToPurchaseItem =>

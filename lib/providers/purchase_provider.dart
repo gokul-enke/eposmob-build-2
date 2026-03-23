@@ -13,10 +13,16 @@ import '../models/get_store.dart';
 import '../models/get_suppliers.dart';
 import '../models/list_purchase.dart';
 
+import '../models/purchase_order_model.dart';
 import '../resources/app_url.dart';
 
 class PurchaseProvider extends ChangeNotifier {
   bool isLoading = false;
+  ListPurchaseOrderModel? listPurchaseOrderModel;
+  List<PurchaseOrderData> purchaseOrdersList = [];
+  int listPurchaseOrderCurrentPage = 1;
+  int listPurchaseOrderTotalPages = 1;
+
   List<GetStoreModelData> storeList = [];
   List<GetSuppliersModelData> supplierList = [];
   List<PurchaseItem> purchaseItems = [];
@@ -52,6 +58,8 @@ class PurchaseProvider extends ChangeNotifier {
   Map<String, String>? unitList;
   Map<String, String>? get getUnitList => unitList;
   Map<String, String>? masterDataValues;
+  Map<String, dynamic>? activePurchaseOrderDetails;
+
   Map<String, String>? get getMasterDataValues => masterDataValues;
   List<VoucherDetail>? get getVoucherDetailsList => voucherDetailsList;
   List<PurchaseItem> get getPurchaseDetailsList {
@@ -932,4 +940,251 @@ class PurchaseProvider extends ChangeNotifier {
       };
     }
   }
+
+  Future<void> listPurchaseOrders({
+    required String accessToken,
+    String? storeId,
+    String? supplierId,
+    String? filterDate,
+    int? page,
+  }) async {
+    debugPrint("listPurchaseOrders method called with page: $page");
+    
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    final queryParameters = <String, String>{
+      'page': page?.toString() ?? '1',
+    };
+
+    if (storeId != null && storeId.toLowerCase() != "all") {
+      queryParameters['store_id'] = storeId;
+    } else if (storeId == null && activeStoreId != null) {
+      // Default to active store only if no specific store_id was requested (not even "all")
+      queryParameters['store_id'] = activeStoreId.toString();
+    }
+    // If storeId is "all", we skip adding 'store_id' to queryParameters to fetch everything.
+
+    if (supplierId != null) queryParameters['supplier_id'] = supplierId;
+    if (filterDate != null && filterDate.isNotEmpty) {
+      queryParameters['filter_date'] = filterDate;
+    }
+
+    final url = Uri.parse(APPUrl.listPurchaseOrder)
+        .replace(queryParameters: queryParameters);
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData["status"] == "success") {
+          listPurchaseOrderModel = ListPurchaseOrderModel.fromJson(jsonData);
+          listPurchaseOrderCurrentPage = listPurchaseOrderModel?.data?.currentPage ?? 1;
+          listPurchaseOrderTotalPages = listPurchaseOrderModel?.data?.lastPage ?? 1;
+          purchaseOrdersList = listPurchaseOrderModel?.data?.data ?? [];
+        } else {
+          purchaseOrdersList = [];
+        }
+        notifyListeners();
+      } else {
+        purchaseOrdersList = [];
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error making API request: $e");
+      purchaseOrdersList = [];
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchPurchaseOrderDetails({
+    required String accessToken,
+    required String purchaseId,
+  }) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      final url = Uri.parse(APPUrl.receivePurchaseOrder(purchaseId));
+
+      debugPrint("Fetching purchase details from: $url");
+
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey ?? '',
+      });
+
+      debugPrint("Details response status: ${response.statusCode}");
+      debugPrint("Details response body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['status'] == 'success' && jsonData['data'] != null) {
+          activePurchaseOrderDetails = jsonData['data'];
+          
+          // Map to PurchaseItem for ViewPurchaseWidget compatibility
+          if (jsonData['data']['purchase_items'] != null) {
+            listPurchaseItemView = List<PurchaseItem>.from(
+                (jsonData['data']['purchase_items'] as List)
+                    .map((x) => PurchaseItem.fromJson(x)));
+            
+            // Map header data to voucherDetails
+            voucherDetails = VoucherDetail.fromJson(jsonData['data']);
+            
+            // Map to ListPurchaseModelDataDetails for ViewPurchaseWidget compatibility
+            ListPurchaseModelDataDetails = ListPurchaseModelData.fromJson(jsonData['data']);
+          } else {
+
+            listPurchaseItemView = [];
+            voucherDetails = null;
+          }
+        }
+      } else {
+        debugPrint("Failed to fetch details: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Error fetching purchase details: $e");
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+
+  Future<dynamic> createPurchaseOrder({
+    required String accessToken,
+    required String purchaseDate,
+    required String supplierId,
+    required String storeId,
+    String? voucherNumber,
+    String? invoiceRef,
+    bool receiveNow = false,
+    List<String>? paymentMethods,
+    Map<String, dynamic>? paidAmounts,
+    required List<Map<String, dynamic>> items,
+    int? purchaseId, // NEW!
+  }) async {
+    final Map<String, dynamic> apiBodyData = {
+      'purchase_date': purchaseDate,
+      'supplier_id': supplierId,
+      'store_id': storeId,
+      'receive_now': receiveNow,
+      'items': items,
+    };
+
+    if (purchaseId != null) {
+      apiBodyData['purchase_id'] = purchaseId;
+    }
+
+    
+    if (voucherNumber != null && voucherNumber.isNotEmpty) {
+      apiBodyData['voucher_number'] = voucherNumber;
+    }
+    if (invoiceRef != null && invoiceRef.isNotEmpty) {
+      apiBodyData['invoice_ref'] = invoiceRef;
+    }
+    
+    if (paymentMethods != null) apiBodyData['payment_methods'] = paymentMethods;
+    if (paidAmounts != null) apiBodyData['paid_amounts'] = paidAmounts;
+
+    final url = Uri.parse(APPUrl.addPurchaseOrder);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        return {
+          'status': 'failed',
+          'message': 'API request failed with status: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'status': 'failed',
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
+
+  Future<dynamic> receivePurchaseOrder({
+    required String accessToken,
+    required String purchaseId,
+    required List<Map<String, dynamic>> items,
+    String? invoiceRef, // NEW!
+    List<String>? paymentMethods,
+    Map<String, dynamic>? paidAmounts,
+  }) async {
+    final Map<String, dynamic> apiBodyData = {
+      'items': items,
+    };
+    if (invoiceRef != null && invoiceRef.isNotEmpty) {
+      apiBodyData['invoice_ref'] = invoiceRef;
+    }
+
+    if (paymentMethods != null) apiBodyData['payment_methods'] = paymentMethods;
+    if (paidAmounts != null) apiBodyData['paid_amounts'] = paidAmounts;
+
+    final url = Uri.parse(APPUrl.receivePurchaseOrder(purchaseId));
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    try {
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        return {
+          'status': 'failed',
+          'message': 'API request failed with status: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'status': 'failed',
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
 }
+
+
