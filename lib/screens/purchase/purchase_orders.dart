@@ -226,20 +226,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Text("Filters",
-                        style: buildCustomStyle(FontWeightManager.bold,
-                            FontSize.s16, 0.2, ColorManager.textColor)),
-                    const SizedBox(width: 20),
-                    TextButton(
-                      onPressed: resetSearch,
-                      child: Text("Reset",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s14, 0.2, Colors.red)),
-                    ),
-                  ],
-                ),
+                Text("Purchase Order",
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.3, ColorManager.textColor)),
                 CustomRoundButton(
                   title: "Create Purchase Order",
                   fct: () {
@@ -247,24 +236,53 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                     sideBarController.index.value = 82;
                   },
                   fontSize: 12,
-                  height: 40,
+                  height: 45,
                   width: 180,
                 ),
               ],
             ),
             const SizedBox(height: 10),
             // Filters Row
-            Row(
+            Column(
               children: [
-                _buildFilterDropdown("Supplier", supplierController, suppliers,
-                    supplierSearchController),
-                const SizedBox(width: 15),
-                _buildFilterDropdown(
-                    "Store", storeController, stores, storeSearchController),
-                const SizedBox(width: 15),
-                _buildFilterDate("From Date", fromDateController),
-                const SizedBox(width: 15),
-                _buildFilterDate("To Date", toDateController),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildFilterDropdown("Supplier", supplierController,
+                        suppliers, supplierSearchController),
+                    const SizedBox(width: 15),
+                    _buildFilterDropdown("Store", storeController, stores,
+                        storeSearchController),
+                    const SizedBox(width: 15),
+                    _buildFilterDate("From Date", fromDateController),
+                    const SizedBox(width: 15),
+                    _buildFilterDate("To Date", toDateController),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: Container()),
+                    const SizedBox(width: 15),
+                    Expanded(child: Container()),
+                    const SizedBox(width: 15),
+                    Expanded(child: Container()),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: CustomRoundButton(
+                        title: "Reset",
+                        boxColor: Colors.white,
+                        textColor: ColorManager.kPrimaryColor,
+                        borderColor: ColorManager.kPrimaryColor,
+                        fct: resetSearch,
+                        height: 45,
+                        width: double.infinity,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 25),
@@ -465,7 +483,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   }
 
   Widget _buildFilterDropdown(String label, TextEditingController controller,
-      List<String> items, TextEditingController search) {
+      List<String> items, TextEditingController searchController) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,8 +503,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
               _fetchPurchases();
             },
             displayText: (val) => val,
-            searchController: search,
-            height: 40,
+            searchController: searchController,
+            height: 45,
             margin: EdgeInsets.zero,
           ),
         ],
@@ -503,42 +521,47 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.2, ColorManager.textColor)),
           const SizedBox(height: 5),
-          Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                        hintText: "mm/dd/yyyy",
-                        border: InputBorder.none,
-                        isDense: true),
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s12, 0.2, ColorManager.textColor),
-                    readOnly: true,
-                    onTap: () async {
-                      DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100));
-                      if (picked != null) {
-                        setState(() => controller.text =
-                            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}");
-                        _fetchPurchases();
-                      }
-                    },
-                  ),
+          GestureDetector(
+            onTap: () async {
+              DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+              );
+              if (picked != null) {
+                setState(() {
+                  controller.text =
+                      "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                });
+                _fetchPurchases();
+              }
+            },
+            child: AbsorbPointer(
+              child: BuildBoxShadowContainer(
+                circleRadius: 7,
+                height: 45,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                            hintText: "yyyy-mm-dd",
+                            border: InputBorder.none,
+                            isDense: true),
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s12, 0.2, ColorManager.textColor),
+                        readOnly: true,
+                      ),
+                    ),
+                    const Icon(Icons.calendar_today_outlined,
+                        size: 16, color: Colors.grey),
+                  ],
                 ),
-                const Icon(Icons.calendar_today_outlined,
-                    size: 16, color: Colors.grey),
-              ],
+              ),
             ),
           ),
         ],

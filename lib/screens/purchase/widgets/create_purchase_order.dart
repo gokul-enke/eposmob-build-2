@@ -264,16 +264,27 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     return total;
   }
 
-  void _syncPaidAmount() {
-    if (receiveNow || purchaseOrderId != null) {
-      if (_selectedPaymentMethods.isNotEmpty) {
-        // Clear all first
-        _paymentControllers.forEach((key, controller) => controller.clear());
-
-        // Put full amount into the first selected method
-        String firstMethod = _selectedPaymentMethods.first;
-        _paymentControllers[firstMethod]?.text = totalAmount.toStringAsFixed(2);
+  double get totalReceivedAmount {
+    double total = 0;
+    for (var item in orderItems) {
+      if (item.receive) {
+        double qty = double.tryParse(item.quantity) ?? 0;
+        double rate = double.tryParse(item.purchaseRate) ?? 0;
+        total += (qty * rate);
       }
+    }
+    return total;
+  }
+
+  void _syncPaidAmount() {
+    double amtToPay = totalReceivedAmount;
+    if (_selectedPaymentMethods.isNotEmpty) {
+      // Clear all first
+      _paymentControllers.forEach((key, controller) => controller.clear());
+
+      // Put the amount into the first selected method
+      String firstMethod = _selectedPaymentMethods.first;
+      _paymentControllers[firstMethod]?.text = amtToPay.toStringAsFixed(2);
     }
   }
 
@@ -948,8 +959,13 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                     dataRowMinHeight: 60,
                     dataRowMaxHeight: 60,
                     columns: [
-                      // DataColumn(label: Text("Receive\nProduct", style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12, 0.2, Colors.grey.shade600))),
-
+                      DataColumn(
+                          label: Text("Receive",
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s12,
+                                  0.2,
+                                  Colors.grey.shade600))),
                       DataColumn(
                           label: Text("Product",
                               style: buildCustomStyle(
@@ -1011,21 +1027,18 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                       ...orderItems.asMap().entries.map((e) {
                         var item = e.value;
                         return DataRow(cells: [
-                          /* DataCell(
-                          Checkbox(
+                          DataCell(Checkbox(
                             value: item.receive,
                             onChanged: (v) {
                               setState(() {
                                 item.receive = v ?? false;
-                                if (item.receive) {
-                                  receiveNow = true;
-                                }
+                                _syncPaidAmount();
                               });
                             },
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4)),
                             activeColor: Colors.blueAccent,
-                          )
-                        ), */
+                          )),
                           DataCell(Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1298,15 +1311,19 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             Text("Total Amount",
                 style: buildCustomStyle(
                     FontWeightManager.medium, FontSize.s12, 0.2, Colors.grey)),
-            Text("SAR ${totalAmount.toStringAsFixed(2)}",
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
+            Text(
+                "Order: SAR ${totalAmount.toStringAsFixed(2)}\nReceive: SAR ${totalReceivedAmount.toStringAsFixed(2)}",
+                textAlign: TextAlign.right,
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s15,
                     0.2, ColorManager.textColor)),
           ],
         ),
         const SizedBox(width: 30),
         Expanded(
           child: CustomRoundButton(
-            title: receiveNow ? "Finish" : "Create Purchase Order",
+            title: (receiveNow || totalReceivedAmount > 0 || purchaseOrderId != null)
+                ? "Finish"
+                : "Create Purchase Order",
             fct: () async {
               if (_formKey.currentState!.validate()) {
                 if (selectedSupplier == null || selectedStore == null) {
@@ -1351,12 +1368,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 for (var i in orderItems) {
                   // Mode: Receiving an existing order
                   if (purchaseOrderId != null) {
-                    if (i.id != null) {
-                      apiItems.add({
-                        "purchase_item_id": i.id,
-                        "quantity": double.tryParse(i.quantity) ?? 1,
-                        "unit_price": double.tryParse(i.purchaseRate) ?? 0,
-                        "status": "Y", // FORCE "Y" FOR ALL IF IN RECEIVE MODE
+                    apiItems.add({
+                      "purchase_item_id": i.id,
+                      "quantity": double.tryParse(i.quantity) ?? 1,
+                      "unit_price": double.tryParse(i.purchaseRate) ?? 0,
+                      "receive": i.receive,
+                      if (i.receive) ...{
                         "retail_price": double.tryParse(i.retailPrice) ?? 0,
                         "wholesale_price":
                             double.tryParse(i.wholesalePrice) ?? 0,
@@ -1370,26 +1387,30 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                           "expiry_date":
                               "${i.expDate!.year}-${i.expDate!.month.toString().padLeft(2, '0')}-${i.expDate!.day.toString().padLeft(2, '0')}",
                         "batch_number": i.barcode.isNotEmpty ? i.barcode : null,
-                      });
-                    }
+                      }
+                    });
                   }
                   // Mode: Creating a new order
-                  else if (i.productData != null) {
+                  else {
                     apiItems.add({
                       "product_id": i.productData?.productId,
                       "quantity": double.tryParse(i.quantity) ?? 1,
                       "unit_price": double.tryParse(i.purchaseRate) ?? 0,
-                      "status": receiveNow ? "Y" : "N", // FOLLOW MASTER TOGGLE
-                      "retail_price": double.tryParse(i.retailPrice) ?? 0,
-                      "wholesale_price": double.tryParse(i.wholesalePrice) ?? 0,
-                      "mrp": double.tryParse(i.mrp) ?? 0,
-                      if (receiveNow)
-                        "wholesale_min_unit":
-                            double.tryParse(i.wholesaleMinUnit) ?? 1,
-                      if (receiveNow && i.rack.isNotEmpty) "rack": i.rack,
-                      "expiry_date": i.expDate != null
-                          ? "${i.expDate!.year}-${i.expDate!.month.toString().padLeft(2, '0')}-${i.expDate!.day.toString().padLeft(2, '0')}"
-                          : "",
+                      "receive": i.receive,
+                      if (i.receive) ...{
+                        "retail_price": double.tryParse(i.retailPrice) ?? 0,
+                        "wholesale_price":
+                            double.tryParse(i.wholesalePrice) ?? 0,
+                        "mrp": double.tryParse(i.mrp) ?? 0,
+                        "tax_include": i.taxInclude,
+                        if (i.wholesaleMinUnit.isNotEmpty)
+                          "wholesale_min_unit":
+                              double.tryParse(i.wholesaleMinUnit) ?? 1,
+                        if (i.rack.isNotEmpty) "rack": i.rack,
+                        "expiry_date": i.expDate != null
+                            ? "${i.expDate!.year}-${i.expDate!.month.toString().padLeft(2, '0')}-${i.expDate!.day.toString().padLeft(2, '0')}"
+                            : "",
+                      }
                     });
                   }
                 }
