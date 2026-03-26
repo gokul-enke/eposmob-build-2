@@ -52,3 +52,8 @@ restaurantsales@chillis.in
 
 EAZY_THAMVEENATH_AMANA_XAAl7emT6t2un7MqQsCUW4lXyM7oU3ui
 salesexecutiveamana@thamveenath.com
+
+live - souq
+ENKE_SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
+salesexecutive1@souqpoint.in
+123456
