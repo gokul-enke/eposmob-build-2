@@ -2315,12 +2315,12 @@ class OrderPanelState extends State<OrderPanel> {
 
           debugPrint('➡️ Calling CartProvider.addToCartAPI for item comment update');
           debugPrint(
-              '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 1, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
+              '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
 
           final response = await cartProvider.addToCartAPI(
             customerId: int.parse(customerId.toString()),
             productId: int.parse(productId.toString()),
-            quantity: 1,
+            quantity: 0,
             unitPrice: unitPrice,
             comment: comment,
             accessToken: authModel.token ?? '',
