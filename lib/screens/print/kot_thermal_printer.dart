@@ -377,13 +377,15 @@ class KotThermalPrinter {
         }
 
         // Add item-level notes if present
-        final itemNotes = item['notes']?.toString();
+        final itemNotes =
+            item['notes']?.toString() ?? item['comment']?.toString();
         if (itemNotes != null && itemNotes.isNotEmpty) {
           rows.add(_KotTextRow(
             '  Note: $itemNotes',
-            scale: getSmallScale(is58mm),
+            scale: getSmallScale(is58mm) * 1.50,
             indent: 0,
             wrapText: true,
+            isBold: true,
           ));
         }
 

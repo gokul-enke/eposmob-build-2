@@ -119,9 +119,11 @@ class StoreSessionProvider extends ChangeNotifier {
 
       await _updateStatus('Syncing delivery methods...');
       try {
+        debugPrint('🚚 [StoreBootstrap] Fetching delivery methods during store selection...');
         await deliveryMethodsProvider.fetchDeliveryMethods();
+        debugPrint('🚚 [StoreBootstrap] ✅ Delivery methods loaded: ${deliveryMethodsProvider.deliveryMethods.length} methods in provider memory');
       } catch (e) {
-        debugPrint('Warning: Failed to load delivery methods: $e');
+        debugPrint('🚚 [StoreBootstrap] ⚠️ Failed to load delivery methods: $e');
       }
 
       await _updateStatus('Loading general settings...');

@@ -30,6 +30,9 @@ class LocalCartItem {
   /// Used for accurate stock restoration on cart removal / clear.
   num stockDeducted;
 
+  /// Optional per-item comment/note (e.g. "no ice", "extra spicy")
+  String? comment;
+
   LocalCartItem({
     required this.product,
     this.price,
@@ -39,6 +42,7 @@ class LocalCartItem {
     this.quantity = 1,
     this.selectedStock,
     this.stockDeducted = 0,
+    this.comment,
   });
 }
 
@@ -361,6 +365,7 @@ class LocalProductProvider extends ChangeNotifier {
             taxRate: hiveCartItem.taxRate,
             selectedStock: selectedStock,
             stockDeducted: hiveCartItem.stockDeducted,
+            comment: hiveCartItem.comment,
           );
         }).toList();
 
@@ -433,6 +438,7 @@ class LocalProductProvider extends ChangeNotifier {
                 HiveStringValue(json.encode(item.product.toJson())),
             serializedSelectedStock: serializedStock,
             stockDeducted: item.stockDeducted,
+            comment: item.comment,
           );
         }).toList();
 
@@ -519,6 +525,7 @@ class LocalProductProvider extends ChangeNotifier {
         taxRate: hiveCartItem.taxRate,
         selectedStock: selectedStock,
         stockDeducted: hiveCartItem.stockDeducted,
+        comment: hiveCartItem.comment,
       ));
     }
     notifyListeners();
@@ -553,6 +560,7 @@ class LocalProductProvider extends ChangeNotifier {
           taxRate: hiveCartItem.taxRate,
           selectedStock: selectedStock,
           stockDeducted: hiveCartItem.stockDeducted,
+          comment: hiveCartItem.comment,
         );
       }).toList();
 
@@ -649,6 +657,7 @@ class LocalProductProvider extends ChangeNotifier {
             HiveStringValue(json.encode(cartItem.product.toJson())),
         serializedSelectedStock: serializedStock,
         stockDeducted: cartItem.stockDeducted,
+        comment: cartItem.comment,
       );
       _cartItemsBox.add(hiveCartItem);
       debugPrint(
@@ -685,6 +694,7 @@ class LocalProductProvider extends ChangeNotifier {
               HiveStringValue(json.encode(item.product.toJson())),
           serializedSelectedStock: serializedStock,
           stockDeducted: item.stockDeducted,
+          comment: item.comment,
         );
       }).toList();
 
@@ -1492,6 +1502,19 @@ class LocalProductProvider extends ChangeNotifier {
     return _cartItems;
   }
 
+  /// Updates the comment on a specific cart item by product ID and stock.
+  void updateCartItemComment(int productId, Stock? selectedStock, String? comment) {
+    final index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+    if (index != -1) {
+      _cartItems[index].comment = comment;
+      _saveCartToHive();
+      notifyListeners();
+    }
+  }
+
   void removeFromCart(int productId, Stock? selectedStock) {
     debugPrint("🗑️ REMOVE FROM CART STARTED");
     debugPrint("Product ID: $productId");
@@ -1598,6 +1621,7 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: item.quantity,
             selectedStock: item.selectedStock,
             stockDeducted: item.stockDeducted,
+            comment: item.comment,
           );
         } else {
           item.price = newPrice;
@@ -1627,6 +1651,7 @@ class LocalProductProvider extends ChangeNotifier {
               quantity: orderItem.quantity,
               selectedStock: orderItem.selectedStock,
               stockDeducted: orderItem.stockDeducted,
+              comment: orderItem.comment,
             );
           } else {
             orderItem.price = newPrice;
@@ -1686,6 +1711,7 @@ class LocalProductProvider extends ChangeNotifier {
           quantity: item.quantity,
           selectedStock: updatedStock ?? item.selectedStock,
           stockDeducted: item.stockDeducted,
+          comment: item.comment,
         );
         cartUpdated = true;
         cartUpdatedCount++;
@@ -1708,6 +1734,7 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: orderItem.quantity,
             selectedStock: updatedStock ?? orderItem.selectedStock,
             stockDeducted: orderItem.stockDeducted,
+            comment: orderItem.comment,
           );
           savedOrdersUpdated = true;
           savedOrderItemUpdatedCount++;
@@ -2123,6 +2150,7 @@ class LocalProductProvider extends ChangeNotifier {
               taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
               stockDeducted: item.stockDeducted,
+              comment: item.comment,
             ))
         .toList();
 
@@ -2321,6 +2349,7 @@ class LocalProductProvider extends ChangeNotifier {
               taxAmount: item.taxAmount,
               selectedStock: item.selectedStock,
               stockDeducted: item.stockDeducted,
+              comment: item.comment,
             ))
         .toList();
 
@@ -2445,6 +2474,7 @@ class LocalProductProvider extends ChangeNotifier {
           taxRate: item.taxRate,
           selectedStock: item.selectedStock,
           stockDeducted: stockDeducted,
+          comment: item.comment,
         ));
       }
 
@@ -2513,6 +2543,7 @@ class LocalProductProvider extends ChangeNotifier {
                 taxAmount: item.taxAmount,
                 selectedStock: item.selectedStock,
                 stockDeducted: item.stockDeducted,
+                comment: item.comment,
               ))
           .toList();
 
