@@ -520,8 +520,8 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
-              final hasPurchasePermission =
-                  roleProvider.currentUserHasPermissionSync('view_purchase_permission');
+              final hasPurchasePermission = roleProvider
+                  .currentUserHasPermissionSync('view_purchase_permission');
 
               // Only show the expandable menu if user has at least one permission
               if (!hasPurchasePermission) {
