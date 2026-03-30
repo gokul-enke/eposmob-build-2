@@ -4805,11 +4805,6 @@ class OrderPanelState extends State<OrderPanel> {
         final productId =
             cartItem['product_id']; // Assuming product_id is available
         final unitPrice = cartItem['unit_price']?.toString();
-        final currentComment = cartItem['comment']?.toString();
-        final normalizedComment =
-          (currentComment != null && currentComment.trim().isNotEmpty)
-            ? currentComment.trim()
-            : null;
 
         if (productId == null) {
           showScaffoldError(
@@ -4819,7 +4814,7 @@ class OrderPanelState extends State<OrderPanel> {
 
         debugPrint('➡️ Calling CartProvider.addToCartAPI for increment');
         debugPrint(
-          '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId, comment: $normalizedComment}');
+          '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
         debugPrint('🔍 Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.addToCartAPI(
@@ -4827,7 +4822,6 @@ class OrderPanelState extends State<OrderPanel> {
           productId: int.parse(productId.toString()),
           quantity: deltaQuantity,
           unitPrice: unitPrice,
-          comment: normalizedComment,
           accessToken: authModel.token ?? '',
           cartId: orderCartId,
         );
