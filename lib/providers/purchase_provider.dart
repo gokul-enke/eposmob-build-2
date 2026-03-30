@@ -945,11 +945,12 @@ class PurchaseProvider extends ChangeNotifier {
     required String accessToken,
     String? storeId,
     String? supplierId,
-    String? filterDate,
+    String? dateFrom,
+    String? dateTo,
     int? page,
   }) async {
     debugPrint("listPurchaseOrders method called with page: $page");
-    
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
@@ -966,9 +967,16 @@ class PurchaseProvider extends ChangeNotifier {
     }
     // If storeId is "all", we skip adding 'store_id' to queryParameters to fetch everything.
 
-    if (supplierId != null) queryParameters['supplier_id'] = supplierId;
-    if (filterDate != null && filterDate.isNotEmpty) {
-      queryParameters['filter_date'] = filterDate;
+    if (supplierId != null && supplierId.isNotEmpty) {
+      queryParameters['supplier_id'] = supplierId;
+    }
+    if (dateFrom != null && dateFrom.isNotEmpty) {
+      queryParameters['date_from'] = dateFrom;
+      // Backward compatibility for APIs still expecting a single-date filter.
+      queryParameters['filter_date'] = dateFrom;
+    }
+    if (dateTo != null && dateTo.isNotEmpty) {
+      queryParameters['date_to'] = dateTo;
     }
 
     final url = Uri.parse(APPUrl.listPurchaseOrder)
@@ -987,8 +995,10 @@ class PurchaseProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         if (jsonData["status"] == "success") {
           listPurchaseOrderModel = ListPurchaseOrderModel.fromJson(jsonData);
-          listPurchaseOrderCurrentPage = listPurchaseOrderModel?.data?.currentPage ?? 1;
-          listPurchaseOrderTotalPages = listPurchaseOrderModel?.data?.lastPage ?? 1;
+          listPurchaseOrderCurrentPage =
+              listPurchaseOrderModel?.data?.currentPage ?? 1;
+          listPurchaseOrderTotalPages =
+              listPurchaseOrderModel?.data?.lastPage ?? 1;
           purchaseOrdersList = listPurchaseOrderModel?.data?.data ?? [];
         } else {
           purchaseOrdersList = [];
@@ -1032,20 +1042,20 @@ class PurchaseProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         if (jsonData['status'] == 'success' && jsonData['data'] != null) {
           activePurchaseOrderDetails = jsonData['data'];
-          
+
           // Map to PurchaseItem for ViewPurchaseWidget compatibility
           if (jsonData['data']['purchase_items'] != null) {
             listPurchaseItemView = List<PurchaseItem>.from(
                 (jsonData['data']['purchase_items'] as List)
                     .map((x) => PurchaseItem.fromJson(x)));
-            
+
             // Map header data to voucherDetails
             voucherDetails = VoucherDetail.fromJson(jsonData['data']);
-            
-            // Map to ListPurchaseModelDataDetails for ViewPurchaseWidget compatibility
-            ListPurchaseModelDataDetails = ListPurchaseModelData.fromJson(jsonData['data']);
-          } else {
 
+            // Map to ListPurchaseModelDataDetails for ViewPurchaseWidget compatibility
+            ListPurchaseModelDataDetails =
+                ListPurchaseModelData.fromJson(jsonData['data']);
+          } else {
             listPurchaseItemView = [];
             voucherDetails = null;
           }
@@ -1060,7 +1070,6 @@ class PurchaseProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-
 
   Future<dynamic> createPurchaseOrder({
     required String accessToken,
@@ -1087,14 +1096,13 @@ class PurchaseProvider extends ChangeNotifier {
       apiBodyData['purchase_id'] = purchaseId;
     }
 
-    
     if (voucherNumber != null && voucherNumber.isNotEmpty) {
       apiBodyData['voucher_number'] = voucherNumber;
     }
     if (invoiceRef != null && invoiceRef.isNotEmpty) {
       apiBodyData['invoice_ref'] = invoiceRef;
     }
-    
+
     if (paymentMethods != null) apiBodyData['payment_methods'] = paymentMethods;
     if (paidAmounts != null) apiBodyData['paid_amounts'] = paidAmounts;
 
@@ -1186,5 +1194,3 @@ class PurchaseProvider extends ChangeNotifier {
     }
   }
 }
-
-

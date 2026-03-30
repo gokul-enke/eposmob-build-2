@@ -92,7 +92,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           final supplier = provider.supplierList.firstWhere(
               (s) => (s.user?.name ?? s.name) == supplierController.text,
               orElse: () => provider.supplierDemo);
-          selectedSupplierId = supplier.id?.toString();
+          if ((supplier.id ?? 0) > 0) {
+            selectedSupplierId = supplier.id?.toString();
+          }
         }
 
         String? selectedStoreId;
@@ -100,16 +102,28 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           final store = provider.storeList.firstWhere(
               (s) => s.name == storeController.text,
               orElse: () => provider.storeDemo);
-          selectedStoreId = store.id?.toString();
+          if ((store.id ?? 0) > 0) {
+            selectedStoreId = store.id?.toString();
+          } else {
+            selectedStoreId = "all";
+          }
         } else {
           selectedStoreId = "all";
         }
+
+        final String? dateFrom = fromDateController.text.trim().isEmpty
+            ? null
+            : fromDateController.text.trim();
+        final String? dateTo = toDateController.text.trim().isEmpty
+            ? null
+            : toDateController.text.trim();
 
         await provider.listPurchaseOrders(
           accessToken: token,
           storeId: selectedStoreId,
           supplierId: selectedSupplierId,
-          filterDate: fromDateController.text,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
           page: page,
         );
       }
