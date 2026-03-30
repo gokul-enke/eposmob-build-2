@@ -541,7 +541,8 @@ class _SideMenuState extends State<SideMenu> {
                     onTap: () async {
                       sideBarController.index.value = 81;
                     },
-                    selected: sideBarController.index.value == 81),
+                    selected: [81, 82, 36]
+                        .contains(sideBarController.index.value)),
               );
             },
           ),

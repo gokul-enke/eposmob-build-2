@@ -32,6 +32,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   final TextEditingController toDateController = TextEditingController();
 
   bool initLoading = false;
+  static const int _itemsPerPage = 15;
   List<String> suppliers = ["All"];
   List<String> stores = ["All"];
 
@@ -61,7 +62,6 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           accessToken: token,
           storeId: "all", // Align with UI default "All"
         );
-
 
         if (mounted) {
           setState(() {
@@ -105,7 +105,6 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           selectedStoreId = "all";
         }
 
-
         await provider.listPurchaseOrders(
           accessToken: token,
           storeId: selectedStoreId,
@@ -119,7 +118,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     }
   }
 
-  Future<void> _handleOrderAction(PurchaseOrderData item, int targetIndex) async {
+  Future<void> _handleOrderAction(
+      PurchaseOrderData item, int targetIndex) async {
     final token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null) return;
 
@@ -130,22 +130,28 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
       // 1. Prepare data for CreatePurchaseOrderScreen (index 82)
       // We map the item back to a Map format so the Screen's pre-population logic works even if detail API fails
       provider.activePurchaseOrderDetails = {
-          'id': item.id,
-          'voucher_number': item.voucherNumber,
-          'purchase_date': item.purchaseDate,
-          'amount_total': item.amountTotal,
-          'status': item.status,
-          'items': item.items?.map((i) => {
-            'id': i.id,
-            'product_id': i.productId,
-            'product_name': i.productName,
-            'quantity': i.quantity,
-            'unit_price': i.unitPrice,
-            'unit': i.unit,
-            'status': i.status,
-          }).toList(),
-          'store': item.store != null ? { 'id': item.store?.id, 'name': item.store?.name } : null,
-          'supplier': item.supplier != null ? { 'id': item.supplier?.id, 'name': item.supplier?.name } : null,
+        'id': item.id,
+        'voucher_number': item.voucherNumber,
+        'purchase_date': item.purchaseDate,
+        'amount_total': item.amountTotal,
+        'status': item.status,
+        'items': item.items
+            ?.map((i) => {
+                  'id': i.id,
+                  'product_id': i.productId,
+                  'product_name': i.productName,
+                  'quantity': i.quantity,
+                  'unit_price': i.unitPrice,
+                  'unit': i.unit,
+                  'status': i.status,
+                })
+            .toList(),
+        'store': item.store != null
+            ? {'id': item.store?.id, 'name': item.store?.name}
+            : null,
+        'supplier': item.supplier != null
+            ? {'id': item.supplier?.id, 'name': item.supplier?.name}
+            : null,
       };
 
       // 2. Prepare data for ViewPurchaseWidget (index 36)
@@ -188,8 +194,6 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     Get.find<SideBarController>().index.value = targetIndex;
   }
 
-
-
   void resetSearch() {
     setState(() {
       supplierController.text = "All";
@@ -208,6 +212,10 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<PurchaseProvider>(context);
     final purchases = provider.purchaseOrdersList;
+    final currentPage = provider.listPurchaseOrderCurrentPage <= 0
+        ? 1
+        : provider.listPurchaseOrderCurrentPage;
+    final startSerial = (currentPage - 1) * _itemsPerPage;
     final totalAmount = purchases.fold<double>(0,
         (sum, item) => sum + (double.tryParse(item.amountTotal ?? '0') ?? 0.0));
 
@@ -343,8 +351,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                     ),
                                   )
                                 : BuildBoxShadowContainer(
-                                    margin:
-                                        const EdgeInsets.symmetric(horizontal: 0),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 0),
                                     width: double.infinity,
                                     circleRadius: 7,
                                     offsetValue: const Offset(2, 2),
@@ -365,19 +373,22 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                           ),
                                           child: Table(
                                             columnWidths: const {
-                                              0: FractionColumnWidth(0.16),
-                                              1: FractionColumnWidth(0.18),
-                                              2: FractionColumnWidth(0.22),
-                                              3: FractionColumnWidth(0.14),
-                                              4: FractionColumnWidth(0.14),
-                                              5: FractionColumnWidth(0.16),
+                                              0: FractionColumnWidth(0.08),
+                                              1: FractionColumnWidth(0.14),
+                                              2: FractionColumnWidth(0.16),
+                                              3: FractionColumnWidth(0.20),
+                                              4: FractionColumnWidth(0.12),
+                                              5: FractionColumnWidth(0.14),
+                                              6: FractionColumnWidth(0.16),
                                             },
                                             border: null,
                                             defaultVerticalAlignment:
-                                                TableCellVerticalAlignment.middle,
+                                                TableCellVerticalAlignment
+                                                    .middle,
                                             children: [
                                               TableRow(
                                                 children: [
+                                                  _buildTableHeader("SL"),
                                                   _buildTableHeader(
                                                       "Purchase Date"),
                                                   _buildTableHeader("Store"),
@@ -398,12 +409,13 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                                 const BouncingScrollPhysics(),
                                             child: Table(
                                               columnWidths: const {
-                                                0: FractionColumnWidth(0.16),
-                                                1: FractionColumnWidth(0.18),
-                                                2: FractionColumnWidth(0.22),
-                                                3: FractionColumnWidth(0.14),
-                                                4: FractionColumnWidth(0.14),
-                                                5: FractionColumnWidth(0.16),
+                                                0: FractionColumnWidth(0.08),
+                                                1: FractionColumnWidth(0.14),
+                                                2: FractionColumnWidth(0.16),
+                                                3: FractionColumnWidth(0.20),
+                                                4: FractionColumnWidth(0.12),
+                                                5: FractionColumnWidth(0.14),
+                                                6: FractionColumnWidth(0.16),
                                               },
                                               border: null,
                                               defaultVerticalAlignment:
@@ -417,20 +429,23 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                                   final int index = entry.key;
                                                   final PurchaseOrderData item =
                                                       entry.value;
+                                                  final int serialNumber =
+                                                      startSerial + index + 1;
 
                                                   bool canReceive = false;
-                                                  if (item.itemsReceived != null) {
+                                                  if (item.itemsReceived !=
+                                                      null) {
                                                     final parts = item
                                                         .itemsReceived!
                                                         .split('/');
                                                     if (parts.length == 2) {
                                                       final received =
-                                                          int.tryParse(
-                                                                  parts[0].trim()) ??
+                                                          int.tryParse(parts[0]
+                                                                  .trim()) ??
                                                               0;
                                                       final total =
-                                                          int.tryParse(
-                                                                  parts[1].trim()) ??
+                                                          int.tryParse(parts[1]
+                                                                  .trim()) ??
                                                               0;
                                                       canReceive =
                                                           received < total &&
@@ -447,13 +462,17 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                                     ),
                                                     children: [
                                                       _buildTableCell(
+                                                        serialNumber.toString(),
+                                                      ),
+                                                      _buildTableCell(
                                                         item.purchaseDate ?? "",
                                                       ),
                                                       _buildTableCell(
                                                         item.store?.name ?? "",
                                                       ),
                                                       _buildTableCell(
-                                                        item.supplier?.name ?? "",
+                                                        item.supplier?.name ??
+                                                            "",
                                                       ),
                                                       _buildTableCell(
                                                         "SAR ${item.amountTotal}",
@@ -464,7 +483,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                                                 item.itemsReceived!
                                                                     .isEmpty)
                                                             ? "0 / 0"
-                                                            : item.itemsReceived!,
+                                                            : item
+                                                                .itemsReceived!,
                                                       ),
                                                       _buildActionCell(
                                                         item: item,
@@ -773,21 +793,21 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           child: Container(
             constraints: const BoxConstraints(minWidth: 84),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: borderColor,
-              width: 1.4,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: borderColor.withOpacity(0.14),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: borderColor,
+                width: 1.4,
               ),
-            ],
-          ),
+              boxShadow: [
+                BoxShadow(
+                  color: borderColor.withOpacity(0.14),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
