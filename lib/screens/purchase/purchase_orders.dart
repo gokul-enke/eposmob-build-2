@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/models/list_purchase.dart';
 
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
@@ -32,46 +35,6 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   List<String> suppliers = ["All"];
   List<String> stores = ["All"];
 
-  // Dummy data matching the provided image
-  final List<Map<String, dynamic>> dummyPurchases = [
-    {
-      "date": "2026-01-19",
-      "store": "EEZEE DEMO Store",
-      "supplier": "Supplier EEZEE DEMO",
-      "price": "₹7,784.00",
-      "received": 7,
-      "total": 7,
-      "selected": false,
-    },
-    {
-      "date": "2026-01-07",
-      "store": "EEZEE DEMO Store",
-      "supplier": "Arban supplier",
-      "price": "₹1,350.00",
-      "received": 1,
-      "total": 1,
-      "selected": false,
-    },
-    {
-      "date": "2026-01-03",
-      "store": "EEZEE DEMO Store",
-      "supplier": "Arban supplier",
-      "price": "₹480.00",
-      "received": 0,
-      "total": 1,
-      "selected": false,
-    },
-    {
-      "date": "2026-01-03",
-      "store": "EEZEE DEMO Store",
-      "supplier": "Arban supplier",
-      "price": "₹4,590.00",
-      "received": 3,
-      "total": 3,
-      "selected": false,
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -81,13 +44,24 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   }
 
   void loadInitData() async {
+    final provider = Provider.of<PurchaseProvider>(context, listen: false);
+    provider.activePurchaseOrderDetails = null;
+    provider.voucherDetails = null;
+    provider.listPurchaseItemView = [];
+
     setState(() => initLoading = true);
+
     try {
       String? token = Provider.of<AuthModel>(context, listen: false).token;
       if (token != null && token.isNotEmpty) {
         final provider = Provider.of<PurchaseProvider>(context, listen: false);
         await provider.listAllStores(token, null);
         await provider.listAllSuppliers(token, null);
+        await provider.listPurchaseOrders(
+          accessToken: token,
+          storeId: "all", // Align with UI default "All"
+        );
+
 
         if (mounted) {
           setState(() {
@@ -106,21 +80,134 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     }
   }
 
+  Future<void> _fetchPurchases({int? page}) async {
+    setState(() => initLoading = true);
+    try {
+      String? token = Provider.of<AuthModel>(context, listen: false).token;
+      if (token != null && token.isNotEmpty) {
+        final provider = Provider.of<PurchaseProvider>(context, listen: false);
+
+        String? selectedSupplierId;
+        if (supplierController.text != "All") {
+          final supplier = provider.supplierList.firstWhere(
+              (s) => (s.user?.name ?? s.name) == supplierController.text,
+              orElse: () => provider.supplierDemo);
+          selectedSupplierId = supplier.id?.toString();
+        }
+
+        String? selectedStoreId;
+        if (storeController.text != "All") {
+          final store = provider.storeList.firstWhere(
+              (s) => s.name == storeController.text,
+              orElse: () => provider.storeDemo);
+          selectedStoreId = store.id?.toString();
+        } else {
+          selectedStoreId = "all";
+        }
+
+
+        await provider.listPurchaseOrders(
+          accessToken: token,
+          storeId: selectedStoreId,
+          supplierId: selectedSupplierId,
+          filterDate: fromDateController.text,
+          page: page,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => initLoading = false);
+    }
+  }
+
+  Future<void> _handleOrderAction(PurchaseOrderData item, int targetIndex) async {
+    final token = Provider.of<AuthModel>(context, listen: false).token;
+    if (token == null) return;
+
+    final provider = Provider.of<PurchaseProvider>(context, listen: false);
+
+    // If we have items in the list (new API format), use them for both View and Create/Receive
+    if (item.items != null && item.items!.isNotEmpty) {
+      // 1. Prepare data for CreatePurchaseOrderScreen (index 82)
+      // We map the item back to a Map format so the Screen's pre-population logic works even if detail API fails
+      provider.activePurchaseOrderDetails = {
+          'id': item.id,
+          'voucher_number': item.voucherNumber,
+          'purchase_date': item.purchaseDate,
+          'amount_total': item.amountTotal,
+          'status': item.status,
+          'items': item.items?.map((i) => {
+            'id': i.id,
+            'product_id': i.productId,
+            'product_name': i.productName,
+            'quantity': i.quantity,
+            'unit_price': i.unitPrice,
+            'unit': i.unit,
+            'status': i.status,
+          }).toList(),
+          'store': item.store != null ? { 'id': item.store?.id, 'name': item.store?.name } : null,
+          'supplier': item.supplier != null ? { 'id': item.supplier?.id, 'name': item.supplier?.name } : null,
+      };
+
+      // 2. Prepare data for ViewPurchaseWidget (index 36)
+      provider.listPurchaseItemView = item.items!
+          .map((i) => PurchaseItem(
+                id: i.id,
+                productId: i.productId,
+                name: i.productName,
+                quantity: int.tryParse(i.quantity ?? "0") ?? 0,
+                unitPrice: int.tryParse(i.unitPrice?.split('.')[0] ?? "0") ?? 0,
+                unit: i.unit,
+              ))
+          .toList();
+
+      provider.voucherDetails = VoucherDetail(
+        id: item.id,
+        voucherNumber: item.voucherNumber,
+        purchaseDate: item.purchaseDate,
+        amountTotal: int.tryParse(item.amountTotal?.split('.')[0] ?? "0") ?? 0,
+        status: item.status,
+      );
+
+      provider.ListPurchaseModelDataDetails = ListPurchaseModelData(
+        id: item.id,
+        amountTotal: int.tryParse(item.amountTotal?.split('.')[0] ?? "0") ?? 0,
+        status: item.status,
+      );
+
+      Get.find<SideBarController>().index.value = targetIndex;
+      return;
+    }
+
+    // Fallback: fetch details if items are missing in the list
+    await provider.fetchPurchaseOrderDetails(
+      accessToken: token,
+      purchaseId: item.id.toString(),
+    );
+
+    // Navigate
+    Get.find<SideBarController>().index.value = targetIndex;
+  }
+
+
+
   void resetSearch() {
+
     setState(() {
       supplierController.text = "All";
       storeController.text = "All";
       fromDateController.clear();
       toDateController.clear();
     });
-  }
-
-  void _showPurchaseDetails(Map<String, dynamic> purchase) {
-    // Standard view details logic
+    _fetchPurchases();
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<PurchaseProvider>(context);
+    final purchases = provider.purchaseOrdersList;
+    final totalAmount = purchases.fold<double>(0,
+        (sum, item) => sum + (double.tryParse(item.amountTotal ?? '0') ?? 0.0));
+
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.all(10),
@@ -139,20 +226,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Text("Filters",
-                        style: buildCustomStyle(FontWeightManager.bold,
-                            FontSize.s16, 0.2, ColorManager.textColor)),
-                    const SizedBox(width: 20),
-                    TextButton(
-                      onPressed: resetSearch,
-                      child: Text("Reset",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s14, 0.2, Colors.red)),
-                    ),
-                  ],
-                ),
+                Text("Purchase Order",
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.3, ColorManager.textColor)),
                 CustomRoundButton(
                   title: "Create Purchase Order",
                   fct: () {
@@ -160,24 +236,53 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                     sideBarController.index.value = 82;
                   },
                   fontSize: 12,
-                  height: 40,
+                  height: 45,
                   width: 180,
                 ),
               ],
             ),
             const SizedBox(height: 10),
             // Filters Row
-            Row(
+            Column(
               children: [
-                _buildFilterDropdown("Supplier", supplierController, suppliers,
-                    supplierSearchController),
-                const SizedBox(width: 15),
-                _buildFilterDropdown(
-                    "Store", storeController, stores, storeSearchController),
-                const SizedBox(width: 15),
-                _buildFilterDate("From Date", fromDateController),
-                const SizedBox(width: 15),
-                _buildFilterDate("To Date", toDateController),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildFilterDropdown("Supplier", supplierController,
+                        suppliers, supplierSearchController),
+                    const SizedBox(width: 15),
+                    _buildFilterDropdown("Store", storeController, stores,
+                        storeSearchController),
+                    const SizedBox(width: 15),
+                    _buildFilterDate("From Date", fromDateController),
+                    const SizedBox(width: 15),
+                    _buildFilterDate("To Date", toDateController),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: Container()),
+                    const SizedBox(width: 15),
+                    Expanded(child: Container()),
+                    const SizedBox(width: 15),
+                    Expanded(child: Container()),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: CustomRoundButton(
+                        title: "Reset",
+                        boxColor: Colors.white,
+                        textColor: ColorManager.kPrimaryColor,
+                        borderColor: ColorManager.kPrimaryColor,
+                        fct: resetSearch,
+                        height: 45,
+                        width: double.infinity,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 25),
@@ -249,12 +354,23 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                 defaultVerticalAlignment:
                                     TableCellVerticalAlignment.middle,
                                 children: [
-                                  ...dummyPurchases
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
+                                  ...purchases.asMap().entries.map((entry) {
                                     final int index = entry.key;
-                                    final item = entry.value;
+                                    final PurchaseOrderData item = entry.value;
+
+                                    bool canReceive = false;
+                                    if (item.itemsReceived != null) {
+                                      final parts =
+                                          item.itemsReceived!.split('/');
+                                      if (parts.length == 2) {
+                                        int r =
+                                            int.tryParse(parts[0].trim()) ?? 0;
+                                        int t =
+                                            int.tryParse(parts[1].trim()) ?? 0;
+                                        canReceive = r < t && t > 0;
+                                      }
+                                    }
+
                                     return TableRow(
                                       decoration: BoxDecoration(
                                         color: index % 2 == 0
@@ -262,12 +378,17 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                             : Colors.grey.withOpacity(0.1),
                                       ),
                                       children: [
-                                        _buildTableCell(item['date']),
-                                        _buildTableCell(item['store']),
-                                        _buildTableCell(item['supplier']),
-                                        _buildTableCell(item['price']),
+                                        _buildTableCell(
+                                            item.purchaseDate ?? ""),
+                                        _buildTableCell(item.store?.name ?? ""),
+                                        _buildTableCell(
+                                            item.supplier?.name ?? ""),
+                                        _buildTableCell(
+                                            "SAR ${item.amountTotal}"),
                                         _buildReceivedBadge(
-                                            item['received'], item['total']),
+                                            (item.itemsReceived == null || item.itemsReceived!.isEmpty) 
+                                                ? "0 / 0" 
+                                                : item.itemsReceived!),
                                         Center(
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
@@ -277,18 +398,17 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                                     Icons.visibility_outlined,
                                                     color: Colors.blueAccent,
                                                     size: 18),
-                                                onPressed: () =>
-                                                    _showPurchaseDetails(item),
+                                                onPressed: () => _handleOrderAction(item, 36), // ViewPurchaseWidget
+
                                                 padding: EdgeInsets.zero,
                                                 constraints:
                                                     const BoxConstraints(),
                                               ),
-                                              if (item['received'] ==
-                                                  item['total']) ...[
+                                              if (canReceive) ...[
                                                 const SizedBox(width: 8),
                                                 GestureDetector(
-                                                  onTap: () =>
-                                                      debugPrint("Add action"),
+                                                   onTap: () => _handleOrderAction(item, 82), // Create/Receive screen
+
                                                   child: Container(
                                                     padding:
                                                         const EdgeInsets.all(4),
@@ -336,7 +456,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                       Text("Total Price",
                           style: buildCustomStyle(FontWeightManager.medium,
                               FontSize.s12, 0.2, Colors.grey)),
-                      Text("₹14,204.00",
+                      Text("SAR ${totalAmount.toStringAsFixed(2)}",
                           style: buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s14, 0.2, ColorManager.textColor)),
                     ],
@@ -346,41 +466,16 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
               ),
             ),
             // Footer
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Showing 1 to 4 of 4 results",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s12, 0.2, Colors.grey)),
-                Row(
-                  children: [
-                    Text("Per page",
-                        style: buildCustomStyle(FontWeightManager.medium,
-                            FontSize.s12, 0.2, Colors.grey)),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: 10,
-                          items: [10, 20, 50]
-                              .map((e) =>
-                                  DropdownMenuItem(value: e, child: Text("$e")))
-                              .toList(),
-                          onChanged: (v) {},
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.2, ColorManager.textColor),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              ],
-            )
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: PaginationControl(
+                currentPage: provider.listPurchaseOrderCurrentPage,
+                totalPages: provider.listPurchaseOrderTotalPages,
+                onPageChanged: (page) {
+                  _fetchPurchases(page: page);
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -388,7 +483,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   }
 
   Widget _buildFilterDropdown(String label, TextEditingController controller,
-      List<String> items, TextEditingController search) {
+      List<String> items, TextEditingController searchController) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,10 +498,13 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             hintText: "All",
             value: controller.text == "All" ? null : controller.text,
             items: items.where((e) => e != "All").toList(),
-            onChanged: (val) => setState(() => controller.text = val ?? "All"),
+            onChanged: (val) {
+              setState(() => controller.text = val ?? "All");
+              _fetchPurchases();
+            },
             displayText: (val) => val,
-            searchController: search,
-            height: 40,
+            searchController: searchController,
+            height: 45,
             margin: EdgeInsets.zero,
           ),
         ],
@@ -423,40 +521,47 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.2, ColorManager.textColor)),
           const SizedBox(height: 5),
-          Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                        hintText: "mm/dd/yyyy",
-                        border: InputBorder.none,
-                        isDense: true),
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s12, 0.2, ColorManager.textColor),
-                    readOnly: true,
-                    onTap: () async {
-                      DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100));
-                      if (picked != null)
-                        setState(() => controller.text =
-                            "${picked.month}/${picked.day}/${picked.year}");
-                    },
-                  ),
+          GestureDetector(
+            onTap: () async {
+              DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+              );
+              if (picked != null) {
+                setState(() {
+                  controller.text =
+                      "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                });
+                _fetchPurchases();
+              }
+            },
+            child: AbsorbPointer(
+              child: BuildBoxShadowContainer(
+                circleRadius: 7,
+                height: 45,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                            hintText: "yyyy-mm-dd",
+                            border: InputBorder.none,
+                            isDense: true),
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s12, 0.2, ColorManager.textColor),
+                        readOnly: true,
+                      ),
+                    ),
+                    const Icon(Icons.calendar_today_outlined,
+                        size: 16, color: Colors.grey),
+                  ],
                 ),
-                const Icon(Icons.calendar_today_outlined,
-                    size: 16, color: Colors.grey),
-              ],
+              ),
             ),
           ),
         ],
@@ -505,18 +610,28 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     );
   }
 
-  Widget _buildReceivedBadge(int received, int total) {
-    bool isFull = received == total;
+  Widget _buildReceivedBadge(String itemsReceived) {
+    bool isFull = false;
+    final parts = itemsReceived.split('/');
+    if (parts.length == 2 &&
+        parts[0].trim() == parts[1].trim() &&
+        parts[1].trim() != "0") {
+      isFull = true;
+    }
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isFull ? Colors.green.shade50 : Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(6),
+          color: isFull ? Colors.green.shade100 : Colors.blue.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: isFull ? Colors.green.shade400 : Colors.blue.shade400, width: 1.5),
         ),
-        child: Text("$received / $total",
-            style: buildCustomStyle(FontWeightManager.bold, FontSize.s12, 0.2,
-                isFull ? Colors.green.shade700 : Colors.orange.shade700)),
+        child: Text(itemsReceived,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Colors.black,
+            )),
       ),
     );
   }
