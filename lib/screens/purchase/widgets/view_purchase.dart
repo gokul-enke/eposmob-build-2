@@ -6,8 +6,8 @@ import 'package:pos_machine/components/build_detail_row.dart';
 import 'package:provider/provider.dart';
 
 import '../../../components/build_container_box.dart';
-import '../../../components/build_round_button.dart';
 import '../../../controllers/sidebar_controller.dart';
+
 import '../../../models/list_purchase.dart';
 
 import '../../../providers/grid_provider.dart';
@@ -75,8 +75,9 @@ class ViewPurchaseWidget extends StatelessWidget {
           children: [
             CustomBackButton(
               onPressed: () {
-                sideBarController.index.value = 19;
+                sideBarController.index.value = 81;
               },
+
               text: 'All Purchases',
               // Optionally, you can customize the color and size
               // color: ColorManager.customColor,
@@ -490,21 +491,8 @@ class ViewPurchaseWidget extends StatelessWidget {
                             ],
                           ),
                         )),
-                    const SizedBox(height: 50),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0),
-                      child: CustomRoundButton(
-                        title: "Back",
-                        boxColor: Colors.white,
-                        textColor: ColorManager.kPrimaryColor,
-                        fct: () async {
-                          sideBarController.index.value = 19;
-                        },
-                        height: 50,
-                        width: size.width * 0.19,
-                        fontSize: FontSize.s12,
-                      ),
-                    ),
+                    const SizedBox(height: 20),
+
                   ],
                 )),
           ],

@@ -142,13 +142,13 @@ class _BuildDropDownWithSearchState<T>
                 final TextStyle style = hasValue
                     ? buildCustomStyle(
                         FontWeightManager.medium,
-                        FontSize.s13,
+                        FontSize.s12, // Standardized to 12
                         0.27,
-                        ColorManager.textColor.withOpacity(.5),
+                        ColorManager.textColor.withOpacity(.8), // Darker for readability
                       )
                     : buildCustomStyle(
                         FontWeightManager.medium,
-                        FontSize.s11,
+                        FontSize.s12, // Standardized to 12
                         0.27,
                         ColorManager.textColor.withOpacity(.5),
                       );
@@ -163,9 +163,11 @@ class _BuildDropDownWithSearchState<T>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+
                     ),
                   ),
                 );
+
               },
               decoratorProps: DropDownDecoratorProps(
                 decoration: InputDecoration(
@@ -184,7 +186,8 @@ class _BuildDropDownWithSearchState<T>
                   fillColor: Colors.white,
                   isDense: true,
                   contentPadding:
-                      widget.contentPadding ?? const EdgeInsets.only(left: 15),
+                      widget.contentPadding ?? EdgeInsets.zero, // Use zero to allow Align to center it
+
                   suffixIcon: Center(
                     child: Icon(
                       Icons.arrow_drop_down,
