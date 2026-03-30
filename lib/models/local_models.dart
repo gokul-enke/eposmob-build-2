@@ -46,6 +46,9 @@ class HiveLocalCartItem {
   @HiveField(8)
   num stockDeducted;
 
+  @HiveField(9)
+  String? comment;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -56,6 +59,7 @@ class HiveLocalCartItem {
     required this.serializedProduct,
     this.serializedSelectedStock,
     this.stockDeducted = 0,
+    this.comment,
   });
 }
 

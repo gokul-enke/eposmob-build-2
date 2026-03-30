@@ -130,7 +130,7 @@ class KotStandardPrinter {
       );
       final commentStyle = pw.TextStyle(
         font: regularFont,
-        fontSize: isA5 ? 8.0 : 9.0,
+        fontSize: isA5 ? 9.0 : 10.0,
         fontStyle: pw.FontStyle.italic,
       );
 
@@ -390,7 +390,8 @@ class KotStandardPrinter {
                         ));
                       }
                       if (showParticulars) {
-                        final itemNotes = item['notes']?.toString();
+                        final itemNotes = item['notes']?.toString() ??
+                            item['comment']?.toString();
                         rowCells.add(pw.Padding(
                           padding: const pw.EdgeInsets.symmetric(vertical: 3),
                           child: pw.Column(

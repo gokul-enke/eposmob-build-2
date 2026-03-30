@@ -414,6 +414,8 @@ class SalesProvider with ChangeNotifier {
       queryParameters['store_id'] = activeStoreId.toString();
     }
     final finalUrl = url.replace(queryParameters: queryParameters);
+    debugPrint('🌐 ORDER DETAILS API URL: ${finalUrl.toString()}');
+    debugPrint('📤 ORDER DETAILS request body: {}');
 
     try {
       final response = await http.get(finalUrl, headers: {
@@ -421,10 +423,8 @@ class SalesProvider with ChangeNotifier {
         'content-type': 'application/json',
         'X-Tenant': apiKey,
       });
-      // if (response.statusCode == 200) {
-      debugPrint('List listOrderDetails  inside');
-
-      debugPrint(json.decode(response.body).toString());
+      debugPrint('📥 ORDER DETAILS response status: ${response.statusCode}');
+      debugPrint('📥 ORDER DETAILS response body: ${response.body}');
       final jsonData = json.decode(response.body);
 
       debugPrint("status ${jsonData["status"]}");

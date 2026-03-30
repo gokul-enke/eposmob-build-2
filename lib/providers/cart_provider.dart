@@ -243,6 +243,7 @@ class CartProvider with ChangeNotifier {
     required int productId,
     required num quantity,
     String? unitPrice,
+    String? comment,
     required String accessToken,
     int? cartId,
   }) async {
@@ -261,13 +262,14 @@ class CartProvider with ChangeNotifier {
       'source_type': "executive",
       if (cartId != null) "cart_id": cartId.toString(),
       if (unitPrice != null) "price": unitPrice,
+      if (comment != null) "comment": comment,
       // 'address_id':1,
       // "type": 1
     };
 
     // debugPrint("productId $productId");
     // debugPrint("customerId $customerId");
-    debugPrint("customerId $apiBodyData");
+    debugPrint('📤 ADD TO CART request body: ${json.encode(apiBodyData)}');
     final url = Uri.parse(APPUrl.addToCartUrl);
     debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
@@ -285,10 +287,8 @@ class CartProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      debugPrint('inside ${response.statusCode}');
-      debugPrint('inside 200');
-
-      debugPrint(response.body);
+      debugPrint('📥 ADD TO CART response status: ${response.statusCode}');
+      debugPrint('📥 ADD TO CART response body: ${response.body}');
       final jsonData = json.decode(response.body);
 
       AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
@@ -1357,6 +1357,7 @@ class CartProvider with ChangeNotifier {
   Future<Map<String, dynamic>> listSavedOrders({
     required String accessToken,
     required String? tableId,
+    String? deliveryMethodId,
   }) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -1370,11 +1371,13 @@ class CartProvider with ChangeNotifier {
       };
     }
     try {
-      // Build URL with table query parameter if tableId is provided
+      // Build URL with table/delivery_method query parameters
       final Map<String, String> queryParameters = {};
 
       if (tableId != null && tableId.isNotEmpty) {
         queryParameters['table'] = tableId;
+      } else if (deliveryMethodId != null && deliveryMethodId.isNotEmpty) {
+        queryParameters['delivery_method_id'] = deliveryMethodId;
       }
 
       if (activeStoreId != null) {
@@ -1426,6 +1429,9 @@ class CartProvider with ChangeNotifier {
     try {
       final url = Uri.parse(APPUrl.getListOrderDetails);
       debugPrint('🌐 API URL: ${url.toString()}');
+      final requestBody = {'order_id': orderId};
+      debugPrint(
+          '📤 ORDER DETAILS request body: ${json.encode(requestBody)}');
       final response = await http.post(
         url,
         headers: {
@@ -1433,8 +1439,10 @@ class CartProvider with ChangeNotifier {
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
         },
-        body: json.encode({'order_id': orderId}),
+        body: json.encode(requestBody),
       );
+      debugPrint('📥 ORDER DETAILS response status: ${response.statusCode}');
+      debugPrint('📥 ORDER DETAILS response body: ${response.body}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         return {'status': 'success', 'order_details': jsonData['order']};

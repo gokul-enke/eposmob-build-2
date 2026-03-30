@@ -61,10 +61,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'premium1', 'name': 'Premium 1'},
     {'id': 'standard', 'name': 'Standard'},
     {'id': 'arabic_and_english', 'name': 'Arabic&English'},
-    {
-      'id': 'arabic_english_table_headers',
-      'name': 'Arabic&English 2'
-    },
+    {'id': 'arabic_english_table_headers', 'name': 'Arabic&English 2'},
+    {'id': 'arabic_and_english_3', 'name': 'Arabic&English 3'},
     {'id': 'supermarket', 'name': 'Supermarket'},
     {'id': 'bilingual', 'name': 'Bilingual'},
   ];
@@ -112,6 +110,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'Bilingual layout optimized for Arabic and English';
       case 'arabic_english_table_headers':
         return 'Arabic and English layout with bilingual table headers only';
+      case 'arabic_and_english_3':
+        return 'Bilingual layout with English name only.';
       case 'premium':
         return 'Premium design with enhanced visual styling and layout';
       case 'premium1':

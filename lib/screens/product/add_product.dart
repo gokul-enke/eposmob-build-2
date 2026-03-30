@@ -598,21 +598,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     // Third row - Reset button
                     Row(
                       children: [
-                        Expanded(flex: 2, child: Container()),
+                        const Expanded(flex: 1, child: SizedBox()),
+                        const SizedBox(width: 15),
+                        const Expanded(flex: 1, child: SizedBox()),
+                        const SizedBox(width: 15),
+                        const Expanded(flex: 1, child: SizedBox()),
                         const SizedBox(width: 15),
                         Expanded(
                           flex: 1,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 0),
-                            child: CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width: 100,
-                              fontSize: FontSize.s12,
-                            ),
+                          child: CustomRoundButton(
+                            title: "Reset",
+                            boxColor: Colors.white,
+                            textColor: ColorManager.kPrimaryColor,
+                            fct: resetSearch,
+                            height: 45,
+                            width: 100,
+                            fontSize: FontSize.s12,
                           ),
                         ),
                       ],

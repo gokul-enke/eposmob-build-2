@@ -6,6 +6,7 @@ import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
@@ -81,6 +82,7 @@ class StoreSessionProvider extends ChangeNotifier {
     final localProductProvider = context.read<LocalProductProvider>();
     final roleProvider = context.read<RoleProvider>();
     final deliveryMethodsProvider = context.read<DeliveryMethodsProvider>();
+    final customerProvider = context.read<CustomerProvider>();
 
     try {
       if (didStoreChange) {
@@ -117,9 +119,11 @@ class StoreSessionProvider extends ChangeNotifier {
 
       await _updateStatus('Syncing delivery methods...');
       try {
+        debugPrint('🚚 [StoreBootstrap] Fetching delivery methods during store selection...');
         await deliveryMethodsProvider.fetchDeliveryMethods();
+        debugPrint('🚚 [StoreBootstrap] ✅ Delivery methods loaded: ${deliveryMethodsProvider.deliveryMethods.length} methods in provider memory');
       } catch (e) {
-        debugPrint('Warning: Failed to load delivery methods: $e');
+        debugPrint('🚚 [StoreBootstrap] ⚠️ Failed to load delivery methods: $e');
       }
 
       await _updateStatus('Loading general settings...');
@@ -127,6 +131,19 @@ class StoreSessionProvider extends ChangeNotifier {
 
       await _updateStatus('Applying app preferences...');
       await appSettingsProvider.fetchAppSettings();
+
+      await _updateStatus('Syncing customer directory...');
+      if (accessToken.isNotEmpty) {
+        try {
+          await customerProvider.fetchCustomers(
+            accessToken: accessToken,
+            listAll: true,
+          );
+        } catch (e) {
+          debugPrint(
+              'Warning: Failed to load customers after store selection: $e');
+        }
+      }
 
       await _updateStatus('Loading branding assets...');
       await adminSettingsProvider.fetchAdminSettings();

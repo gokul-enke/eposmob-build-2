@@ -1257,6 +1257,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           oldItem.mrp != currentItem.mrp ||
           oldItem.wholesale != currentItem.wholesale ||
           oldItem.purchaseRate != currentItem.purchaseRate ||
+          oldItem.taxInclude != currentItem.taxInclude ||
           oldItem.batchNumber != currentItem.batchNumber ||
           oldItem.rack != currentItem.rack ||
           oldItem.selectedUnit != currentItem.selectedUnit ||
@@ -1876,6 +1877,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('   - Purchase Price: $purchasePrice');
         debugPrint('   - Quantity: $initialQuantity');
 
+        // Calculate tax values after modal auto-fill so add/edit keeps pending tax data accurate.
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (!mounted || index >= stockItems.length) return;
+          _calculateTaxForStockItem(index, isRetail: true);
+          _calculateTaxForStockItem(index, isRetail: false);
+          _calculateTaxForStockItem(index, isPurchase: true);
+        });
+
         // Note: Draft saving disabled - only successfully added items are persisted via StockProvider
       }
     }
@@ -1947,6 +1956,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     } else {
       debugPrint('❌ FAILED TO UPDATE PENDING STOCK ITEM: $localId');
     }
+  }
+
+  /// Sync recalculated tax fields to pending item storage after async tax API response.
+  void _syncPendingItemAfterTaxRecalculation(int index, StockItem item) {
+    if (!mounted) return;
+
+    int resolvedIndex = index;
+    if (resolvedIndex < 0 ||
+        resolvedIndex >= stockItems.length ||
+        !identical(stockItems[resolvedIndex], item)) {
+      resolvedIndex = stockItems.indexOf(item);
+    }
+
+    if (resolvedIndex == -1) return;
+    _updatePendingStockItem(resolvedIndex);
   }
 
   void _deleteStockItem(int index) {
@@ -2062,6 +2086,25 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         totalStockValue = total;
       });
     }
+  }
+
+  double _getAdditionalPurchaseTaxTotal() {
+    double total = 0.0;
+
+    for (final item in stockItems) {
+      if (!item.isSuccessfullyAdded || item.isHidden) continue;
+
+      if (!item.taxInclude) {
+        final quantity = double.tryParse(item.quantity) ?? 0.0;
+        final taxPerUnit =
+            (item.calculatedTaxData?['purchaseTaxAmount'] as num?)
+                    ?.toDouble() ??
+                0.0;
+        total += quantity * taxPerUnit;
+      }
+    }
+
+    return total;
   }
 
   void _markForRecalculation() {
@@ -2989,20 +3032,52 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       ),
                       Expanded(
                         flex: 2,
-                        child: _InlineEditableField(
-                          value: item.purchaseRate,
-                          hintText: 'Rate',
-                          onChanged: (val) => _updateStockItemFieldInline(
-                              originalIndex, 'purchaseRate', val),
+                        child: Builder(
+                          builder: (context) {
+                            // Show effective (tax-inclusive) purchase rate when tax is excluded
+                            if (!item.taxInclude && item.calculatedTaxData != null) {
+                              final effective = (item.calculatedTaxData!['price_including_tax_purchase'] as num?)?.toDouble();
+                              if (effective != null && effective > 0) {
+                                return Text(
+                                  effective.toStringAsFixed(2),
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular, 11, 0.21, Colors.green.shade700,
+                                  ),
+                                );
+                              }
+                            }
+                            return _InlineEditableField(
+                              value: item.purchaseRate,
+                              hintText: 'Rate',
+                              onChanged: (val) => _updateStockItemFieldInline(
+                                  originalIndex, 'purchaseRate', val),
+                            );
+                          },
                         ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: _InlineEditableField(
-                          value: item.salePrice,
-                          hintText: 'Price',
-                          onChanged: (val) => _updateStockItemFieldInline(
-                              originalIndex, 'salePrice', val),
+                        child: Builder(
+                          builder: (context) {
+                            // Show effective (tax-inclusive) retail price when tax is excluded
+                            if (!item.taxInclude && item.calculatedTaxData != null) {
+                              final effective = (item.calculatedTaxData!['price_including_tax_retail'] as num?)?.toDouble();
+                              if (effective != null && effective > 0) {
+                                return Text(
+                                  effective.toStringAsFixed(2),
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular, 11, 0.21, Colors.blue.shade700,
+                                  ),
+                                );
+                              }
+                            }
+                            return _InlineEditableField(
+                              value: item.salePrice,
+                              hintText: 'Price',
+                              onChanged: (val) => _updateStockItemFieldInline(
+                                  originalIndex, 'salePrice', val),
+                            );
+                          },
                         ),
                       ),
                       Expanded(
@@ -3205,11 +3280,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       }
     }
 
+    final double additionalPurchaseTax = _getAdditionalPurchaseTaxTotal();
+
     // Get supplier information
     String supplierName = selectedSupplier?.name ?? 'No Supplier';
     double supplierBalance =
         _getSupplierBalance(); // Helper method to get balance
-    double totalPayable = totalPurchaseAmount + supplierBalance;
+    double totalPayable =
+        totalPurchaseAmount + additionalPurchaseTax + supplierBalance;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -3309,6 +3387,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ),
             ],
           ),
+          if (additionalPurchaseTax > 0) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Additional purchase tax: ${additionalPurchaseTax.toStringAsFixed(2)}',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s11,
+                  0.27,
+                  Colors.orange.shade700,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -3510,6 +3603,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildStockRow(int index, int visibleIndex, {Key? key}) {
     debugPrint("visible index: $visibleIndex index is $index");
     final item = stockItems[index];
+    final bool isEditingInputRow =
+        _editingItemIndex != null && !item.isSuccessfullyAdded;
 
     return BuildBoxShadowContainer(
       key: key,
@@ -3788,7 +3883,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     if (item.productData != null ||
                         item.isSuccessfullyAdded) ...[
                       Tooltip(
-                        message: item.isSuccessfullyAdded
+                        message: isEditingInputRow
+                            ? "Cancel edit"
+                            : item.isSuccessfullyAdded
                             ? "Delete stock item"
                             : "Clear product selection",
                         child: Container(
@@ -3809,7 +3906,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                           child: IconButton(
                             icon: Icon(
-                              item.isSuccessfullyAdded
+                              isEditingInputRow
+                                ? Icons.close
+                                : item.isSuccessfullyAdded
                                   ? Icons.delete
                                   : Icons.clear,
                               size: 18,
@@ -3837,7 +3936,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     // Add Stock Button (Only show if not already added)
                     if (!item.isSuccessfullyAdded) ...[
                       Tooltip(
-                        message: _isLoading ? "Adding..." : "Add stock item",
+                        message: _isLoading
+                            ? (isEditingInputRow ? "Saving..." : "Adding...")
+                            : (isEditingInputRow
+                                ? "Save changes"
+                                : "Add stock item"),
                         child: Container(
                           height: 40,
                           width: 40,
@@ -3856,7 +3959,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                           child: IconButton(
                             icon: Icon(
-                              _isLoading ? Icons.hourglass_empty : Icons.add,
+                              _isLoading
+                                  ? Icons.hourglass_empty
+                                  : (isEditingInputRow
+                                      ? Icons.save
+                                      : Icons.add),
                               size: 18,
                               color: Colors.white,
                             ),
@@ -3963,10 +4070,18 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       runSpacing: 4,
                       children: [
                         if (item.salePrice.isNotEmpty)
-                          _buildDetailChip("Retail", "${item.salePrice}",
+                          _buildDetailChip(
+                              "Retail",
+                              !item.taxInclude && item.calculatedTaxData != null
+                                  ? ((item.calculatedTaxData!['price_including_tax_retail'] as num?)?.toDouble()?.toStringAsFixed(2) ?? item.salePrice)
+                                  : item.salePrice,
                               Icons.sell, Colors.blue.shade600),
                         if (item.purchaseRate.isNotEmpty)
-                          _buildDetailChip("Purchase", "${item.purchaseRate}",
+                          _buildDetailChip(
+                              "Purchase",
+                              !item.taxInclude && item.calculatedTaxData != null
+                                  ? ((item.calculatedTaxData!['price_including_tax_purchase'] as num?)?.toDouble()?.toStringAsFixed(2) ?? item.purchaseRate)
+                                  : item.purchaseRate,
                               Icons.shopping_cart, Colors.green.shade600),
                         if (item.mrp.isNotEmpty)
                           _buildDetailChip("MRP", "${item.mrp}",
@@ -3990,8 +4105,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   Builder(
                     builder: (context) {
                       final qty = double.tryParse(item.quantity) ?? 0;
-                      final purchasePrice =
+                      double purchasePrice =
                           double.tryParse(item.purchaseRate) ?? 0;
+                      // Use effective (tax-inclusive) purchase rate when tax is excluded
+                      if (!item.taxInclude && item.calculatedTaxData != null) {
+                        final effective = (item.calculatedTaxData!['price_including_tax_purchase'] as num?)?.toDouble();
+                        if (effective != null && effective > 0) {
+                          purchasePrice = effective;
+                        }
+                      }
                       final purchaseTotal = qty * purchasePrice;
                       return Container(
                         padding: const EdgeInsets.symmetric(
@@ -4241,6 +4363,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       Future.delayed(const Duration(milliseconds: 100), () {
         _calculateTaxForStockItem(index, isRetail: true);
         _calculateTaxForStockItem(index, isRetail: false);
+        _calculateTaxForStockItem(index, isPurchase: true);
       });
 
       // Auto-focus on quantity field with text selection after auto-fill
@@ -5450,6 +5573,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         });
       }
     }
+
+    // Keep pending storage in sync after async tax updates, including inline edit flows.
+    _syncPendingItemAfterTaxRecalculation(index, item);
   }
 
   Widget _buildActionButtons(Size size) {
@@ -5501,11 +5627,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       // Calculate total stock value for confirmation dialog
                       final int itemCount =
                           stockProvider.pendingStockItemsCount;
-                      // Match purchase summary: Total Due Amount = total purchase
-                      // amount for this stock batch + current supplier balance.
+                        final double additionalPurchaseTax =
+                          _getAdditionalPurchaseTaxTotal();
+                        // Match purchase summary: Total Due Amount = total purchase
+                        // amount for this stock batch + additional excluded tax + current supplier balance.
                       final double supplierBalance = _getSupplierBalance();
                       final double totalDueAmount =
-                          totalStockValue + supplierBalance;
+                          totalStockValue +
+                          additionalPurchaseTax +
+                          supplierBalance;
 
                       // Check if payment data is provided
                       final bool hasPayment =
@@ -5604,6 +5734,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             .processPendingStockItems(accessToken);
 
                         debugPrint('📡 BATCH PROCESSING RESULT: $batchResult');
+                        debugPrint('📡 BATCH PROCESSING RESULT (PRETTY):');
+                        debugPrint(const JsonEncoder.withIndent('  ')
+                          .convert(batchResult));
 
                         if (batchResult['success'] == true) {
                           final summary =
@@ -5636,6 +5769,39 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           if (successful > 0) {
                             final successfulItems = summary['successfulItems']
                                 as List<Map<String, dynamic>>;
+
+                            debugPrint(
+                                '🧾 DEBUG SUCCESSFUL ITEMS API RESPONSE DUMP START');
+                            for (int i = 0; i < successfulItems.length; i++) {
+                              final item = successfulItems[i];
+                              final apiResponse = item['apiResponse'];
+                              debugPrint(
+                                  '   • Successful item #${i + 1} | localId=${item['localId']}');
+                              if (apiResponse == null) {
+                                debugPrint('     - apiResponse: null');
+                                continue;
+                              }
+
+                              try {
+                                debugPrint('     - apiResponse (pretty):');
+                                debugPrint(const JsonEncoder.withIndent('  ')
+                                    .convert(apiResponse));
+                              } catch (_) {
+                                debugPrint('     - apiResponse: $apiResponse');
+                              }
+
+                              if (apiResponse is Map<String, dynamic>) {
+                                final dataNode = apiResponse['data'];
+                                debugPrint(
+                                    '     - apiResponse data runtimeType: ${dataNode.runtimeType}');
+                                if (dataNode is Map<String, dynamic>) {
+                                  debugPrint(
+                                      '     - apiResponse data keys: ${dataNode.keys.toList()}');
+                                }
+                              }
+                            }
+                            debugPrint(
+                                '🧾 DEBUG SUCCESSFUL ITEMS API RESPONSE DUMP END');
 
                             // Look for purchase_voucher_id in the successful API responses
                             String? purchaseId;

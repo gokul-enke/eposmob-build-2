@@ -68,6 +68,7 @@ class DailyCloseStandardPrinter {
   Future<void> generateAndPrintDailyClosePDF({
     required DailySalesCloseData data,
     required String selectedPaperSize,
+    required bool includeTransactions,
   }) async {
     try {
       debugPrint("===== DAILY CLOSE STANDARD PDF GENERATION =====");
@@ -263,7 +264,9 @@ class DailyCloseStandardPrinter {
                 pw.SizedBox(height: 20),
 
                 // Transactions Section
-                if (data.transactions != null && data.transactions!.isNotEmpty) ...[
+                if (includeTransactions &&
+                  data.transactions != null &&
+                  data.transactions!.isNotEmpty) ...[
                   pw.Text('TRANSACTIONS', style: sectionTitleStyle),
                   pw.SizedBox(height: 10),
                   pw.Table(
@@ -309,7 +312,7 @@ class DailyCloseStandardPrinter {
                       }).toList(),
                     ],
                   ),
-                ] else if ((data.totalOrders ?? 0) > 0) ...[
+                ] else if (includeTransactions && (data.totalOrders ?? 0) > 0) ...[
                   pw.Text('TRANSACTIONS', style: sectionTitleStyle),
                   pw.SizedBox(height: 10),
                   pw.Text('(No transaction details available)', style: bodyStyle),

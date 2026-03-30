@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.536
-git push build v0.1.0-dev.536
+git tag v0.1.0-dev.543
+git push build v0.1.0-dev.543
 
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
@@ -52,3 +52,8 @@ restaurantsales@chillis.in
 
 EAZY_THAMVEENATH_AMANA_XAAl7emT6t2un7MqQsCUW4lXyM7oU3ui
 salesexecutiveamana@thamveenath.com
+
+live - souq
+ENKE_SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
+salesexecutive1@souqpoint.in
+123456

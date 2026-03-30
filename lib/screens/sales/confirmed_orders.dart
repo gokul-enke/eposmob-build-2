@@ -672,108 +672,169 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       bool orderProcessed = false;
 
       try {
-        // Handle payment method - ALWAYS use clear format (either single OR multi, not both)
-        String? paymentMethod = order.paymentMethod;
-        String? paidAmount = order.paidAmount;
+        // Build sync payment payload in multi-payment format for consistency.
+        String? paymentMethod;
+        String? paidAmount;
         List<String>? paymentMethods;
         List<Map<String, dynamic>>? paidMethods;
 
-        if (paymentMethod != null && paymentMethod.startsWith('{')) {
+        final billingProvider =
+            Provider.of<BillingProvider>(context, listen: false);
+
+        String _normalizePaymentMethodId(String? rawMethod) {
+          if (rawMethod == null) return '';
+          final method = rawMethod.trim();
+          if (method.isEmpty) return '';
+          if (RegExp(r'^\d+$').hasMatch(method)) return method;
+
+          switch (method.toUpperCase()) {
+            case 'CASH':
+              return billingProvider.cashPaymentMethodId ?? 'CASH';
+            case 'CARD':
+              return billingProvider.cardPaymentMethodId ?? 'CARD';
+            case 'UPI':
+              return billingProvider.upiPaymentMethodId ?? 'UPI';
+            case 'COD':
+              return billingProvider.codPaymentMethodId ?? 'COD';
+            default:
+              return method;
+          }
+        }
+
+        List<Map<String, dynamic>> _adjustForBalance(
+          List<Map<String, dynamic>> source,
+          double balance,
+        ) {
+          if (balance <= 0 || source.isEmpty) return source;
+
+          final adjusted = List<Map<String, dynamic>>.from(source);
+          final cashMethodId = billingProvider.cashPaymentMethodId;
+          final codMethodId = billingProvider.codPaymentMethodId;
+
+          final adjustmentIndex = adjusted.indexWhere((payment) {
+            final methodId = payment['method']?.toString();
+            return methodId == cashMethodId ||
+                methodId == codMethodId ||
+                methodId == 'CASH' ||
+                methodId == 'COD';
+          });
+
+          if (adjustmentIndex != -1) {
+            final adjustedAmount =
+                (adjusted[adjustmentIndex]['amount'] as num).toDouble() -
+                    balance;
+            adjusted[adjustmentIndex] = {
+              'method': adjusted[adjustmentIndex]['method'],
+              'amount': adjustedAmount > 0 ? adjustedAmount : 0.0,
+            };
+          }
+
+          return adjusted
+              .where((payment) =>
+                  ((payment['amount'] as num?)?.toDouble() ?? 0.0) > 0)
+              .toList();
+        }
+
+        final balanceAmountValue =
+            double.tryParse(order.balanceAmount ?? '0') ?? 0.0;
+
+        final rawStoredPaymentMethod = order.paymentMethod;
+        if (rawStoredPaymentMethod != null &&
+            rawStoredPaymentMethod.trim().startsWith('{')) {
           try {
-            Map<String, dynamic> multiPaymentData = json.decode(paymentMethod);
+            final Map<String, dynamic> multiPaymentData =
+                json.decode(rawStoredPaymentMethod);
+
             if (multiPaymentData['isMultiPayment'] == true) {
-              // Extract multi-payment data
               final selectedMethods =
                   List<String>.from(multiPaymentData['methods'] ?? []);
-              Map<String, dynamic> amounts =
+              final amounts =
                   Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
 
-              // API expects numeric payment-method IDs only.
-              // Filter out non-numeric entries (e.g., DEBIT/customer-credit marker).
-              paymentMethods = selectedMethods
-                  .where((methodId) => RegExp(r'^\d+$').hasMatch(methodId))
+              final normalizedMethods = <String>[];
+              for (final method in selectedMethods) {
+                final normalized = _normalizePaymentMethodId(method);
+                if (normalized.isNotEmpty &&
+                    !normalizedMethods.contains(normalized)) {
+                  normalizedMethods.add(normalized);
+                }
+              }
+
+              final normalizedAmounts = <String, double>{};
+              for (final entry in amounts.entries) {
+                final normalizedKey = _normalizePaymentMethodId(entry.key);
+                final amount = double.tryParse(entry.value.toString()) ?? 0.0;
+                if (normalizedKey.isNotEmpty && amount > 0) {
+                  normalizedAmounts[normalizedKey] = amount;
+                  if (!normalizedMethods.contains(normalizedKey)) {
+                    normalizedMethods.add(normalizedKey);
+                  }
+                }
+              }
+
+              paymentMethods = normalizedMethods
+                  .where((methodId) =>
+                      (normalizedAmounts[methodId] ?? 0.0) > 0)
                   .toList();
 
-              // Also include numeric amount-keys that may be missing from methods list.
-              for (final entry in amounts.entries) {
-                final methodId = entry.key.toString();
-                if (RegExp(r'^\d+$').hasMatch(methodId) &&
-                    !paymentMethods.contains(methodId)) {
-                  final amount = double.tryParse(entry.value.toString()) ?? 0;
-                  if (amount > 0) {
-                    paymentMethods.add(methodId);
-                  }
-                }
-              }
-
-              paidMethods = [];
-
-              // Build paid_methods only for numeric method IDs with positive amounts.
-              for (String methodId in paymentMethods) {
-                final amountStr = amounts[methodId]?.toString();
-                if (amountStr != null && amountStr != "0" && amountStr.isNotEmpty) {
-                  final amount = double.tryParse(amountStr) ?? 0;
-                  if (amount > 0) {
-                    paidMethods.add({
-                      "method": methodId,
-                      "amount": amount,
-                    });
-                  }
-                }
-              }
-
-              final billingProvider =
-                  Provider.of<BillingProvider>(context, listen: false);
-              final cashMethodId = billingProvider.cashPaymentMethodId;
-              final codMethodId = billingProvider.codPaymentMethodId;
-              final balanceAmountValue =
-                  double.tryParse(order.balanceAmount ?? '0') ?? 0.0;
-
-              if (balanceAmountValue > 0 && paidMethods.isNotEmpty) {
-                final adjustmentIndex = paidMethods.indexWhere((payment) {
-                  final methodId = payment['method']?.toString();
-                  return methodId == cashMethodId || methodId == codMethodId;
-                });
-
-                if (adjustmentIndex != -1) {
-                  final adjustedAmount =
-                      (paidMethods[adjustmentIndex]['amount'] as num).toDouble() -
-                          balanceAmountValue;
-                  paidMethods[adjustmentIndex] = {
-                    'method': paidMethods[adjustmentIndex]['method'],
-                    'amount': adjustedAmount > 0 ? adjustedAmount : 0.0,
-                  };
-                }
-              }
-
-              // ✅ For multi-payment, EXPLICITLY set single payment fields to null
-              paymentMethod = null;
-              paidAmount = null;
-
-              debugPrint("✅ Using multi-payment format for sync");
-              debugPrint("  - Payment Methods: $paymentMethods");
-              debugPrint("  - Paid Methods: $paidMethods");
+              paidMethods = paymentMethods
+                  .map((methodId) => {
+                        'method': methodId,
+                        'amount': normalizedAmounts[methodId] ?? 0.0,
+                      })
+                  .where((payment) =>
+                      ((payment['amount'] as num?)?.toDouble() ?? 0.0) > 0)
+                  .toList();
             }
           } catch (e) {
             debugPrint("Error parsing multi-payment data during sync: $e");
-            // Fallback to single payment - EXPLICITLY set multi-payment to null
-            paymentMethod = order.paymentMethod ?? "CASH";
-            paidAmount = order.paidAmount ?? order.total.toString();
-            paymentMethods = null;
-            paidMethods = null;
-
-            debugPrint("⚠️ Fallback to single-payment format");
-            debugPrint("  - Payment Method: $paymentMethod");
-            debugPrint("  - Paid Amount: $paidAmount");
           }
+        }
+
+        // Legacy/invalid storage fallback: convert single method to multi format.
+        if (paymentMethods == null ||
+            paidMethods == null ||
+            paymentMethods.isEmpty ||
+            paidMethods.isEmpty) {
+          final normalizedMethod =
+              _normalizePaymentMethodId(order.paymentMethod ?? '');
+          final legacyAmount =
+              double.tryParse(order.paidAmount ?? '') ?? order.total;
+
+          if (normalizedMethod.isNotEmpty && legacyAmount > 0) {
+            paymentMethods = [normalizedMethod];
+            paidMethods = [
+              {
+                'method': normalizedMethod,
+                'amount': legacyAmount,
+              }
+            ];
+          }
+        }
+
+        if (paidMethods != null && paidMethods.isNotEmpty) {
+          paidMethods = _adjustForBalance(paidMethods, balanceAmountValue);
+          paymentMethods = paidMethods
+              .map((payment) => payment['method'].toString())
+              .toSet()
+              .toList();
+        }
+
+        if (paymentMethods != null &&
+            paidMethods != null &&
+            paymentMethods.isNotEmpty &&
+            paidMethods.isNotEmpty) {
+          paymentMethod = null;
+          paidAmount = null;
+          debugPrint("✅ Using multi-payment format for sync");
+          debugPrint("  - Payment Methods: $paymentMethods");
+          debugPrint("  - Paid Methods: $paidMethods");
         } else {
-          // Single payment method - EXPLICITLY set multi-payment to null
-          paymentMethod = order.paymentMethod ?? "CASH";
+          paymentMethod = order.paymentMethod ?? 'CASH';
           paidAmount = order.paidAmount ?? order.total.toString();
           paymentMethods = null;
           paidMethods = null;
-
-          debugPrint("⚠️ Single-payment format (no JSON detected)");
+          debugPrint("⚠️ Falling back to single-payment format for sync");
           debugPrint("  - Payment Method: $paymentMethod");
           debugPrint("  - Paid Amount: $paidAmount");
         }

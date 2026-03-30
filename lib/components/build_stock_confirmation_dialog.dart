@@ -190,16 +190,23 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     };
   }
 
+  double _getEffectivePurchaseTotal() {
+    final purchaseTax = _getPurchaseTaxBreakdown();
+    return widget.totalAmount + (purchaseTax['additionalTax'] ?? 0.0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool hasPayment =
         widget.paymentData != null && widget.paymentData!.hasPaymentMethods;
     final double paidAmount = widget.paymentData?.totalAmount ?? 0;
     final double supplierOldBalance = widget.supplierOldBalance ?? 0;
+    final double effectivePurchaseTotal = _getEffectivePurchaseTotal();
 
     // Calculate current supplier balance correctly
     // Current Balance = (Old Balanceance + New Purchase) - Payment Made
-    final double totalDue = supplierOldBalance + widget.totalAmount;
+    final double totalDue =
+        widget.totalDueOverride ?? (supplierOldBalance + effectivePurchaseTotal);
     final double currentSupplierBalance = totalDue - paidAmount;
 
     final Size screenSize = MediaQuery.of(context).size;
@@ -517,7 +524,10 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 double.tryParse(item['purchaseRate']?.toString() ?? '0') ?? 0;
             final taxPerUnit = _toDouble(item['taxAmountPurchase']);
             final taxAmount = taxPerUnit * quantity;
-            final total = quantity * purchaseRate;
+            final bool taxInclude = item['taxInclude'] == true;
+            final total = taxInclude
+              ? quantity * purchaseRate
+              : quantity * (purchaseRate + taxPerUnit);
 
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -718,7 +728,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             const SizedBox(height: 4),
             _buildSummaryRow(
               "Total Purchase + Tax",
-              "${(widget.totalAmount + additionalTax).toStringAsFixed(2)}",
+              "${_getEffectivePurchaseTotal().toStringAsFixed(2)}",
               isBold: true,
               valueColor: Colors.black87,
             ),

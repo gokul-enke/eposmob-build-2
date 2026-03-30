@@ -7,6 +7,7 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_model.dart';
+import '../../providers/delivery_methods_provider.dart';
 import '../../models/cart_item_status.dart';
 import '../../helpers/date_helper.dart';
 import '../../screens/print/print_kot.dart'; // Add KOT Print Page import
@@ -78,6 +79,7 @@ class KitchenOrder {
   final String id;
   final int internalId; // Added for API calls
   final String tableId;
+  final bool showTableLabel;
   final DateTime timestamp;
   final List<KitchenOrderItem> items;
   final OrderStatus status;
@@ -88,6 +90,7 @@ class KitchenOrder {
     required this.id,
     required this.internalId,
     required this.tableId,
+    this.showTableLabel = true,
     required this.timestamp,
     required this.items,
     required this.status,
@@ -99,6 +102,7 @@ class KitchenOrder {
     String? id,
     int? internalId,
     String? tableId,
+    bool? showTableLabel,
     DateTime? timestamp,
     List<KitchenOrderItem>? items,
     OrderStatus? status,
@@ -109,6 +113,7 @@ class KitchenOrder {
       id: id ?? this.id,
       internalId: internalId ?? this.internalId,
       tableId: tableId ?? this.tableId,
+      showTableLabel: showTableLabel ?? this.showTableLabel,
       timestamp: timestamp ?? this.timestamp,
       items: items ?? this.items,
       status: status ?? this.status,
@@ -355,7 +360,9 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
   KitchenOrder _mapSavedOrderToKitchenOrder(dynamic order) {
     final String id = (order['order_number'] ?? order['id'] ?? '').toString();
-    final String tableDisplay = _extractTableName(order);
+    final displayInfo = _extractOrderDisplayInfo(order);
+    final String tableDisplay = displayInfo['name'] as String? ?? '';
+    final bool showTableLabel = displayInfo['showTableLabel'] as bool? ?? true;
     final DateTime timestamp =
         _parseDateTime(order['created_at']) ?? DateTime.now();
 
@@ -364,7 +371,34 @@ class _KitchenMasterState extends State<KitchenMaster> {
         cartItems.map<KitchenOrderItem>((item) {
       final String name = _extractItemName(item);
       final int quantity = _parseInt(item['quantity']) ?? 0;
-      final String? notes = item['notes']?.toString();
+      String? notes = item['notes']?.toString();
+      if (notes == null || notes.isEmpty) {
+        notes = item['comment']?.toString();
+      }
+      if (notes == null || notes.isEmpty) {
+        final props = item['order_item_props'];
+        if (props is List) {
+          try {
+            final match = props.firstWhere(
+              (p) =>
+                  p is Map &&
+                  p['code'] != null &&
+                  (p['code'].toString().toUpperCase() == 'NOTES' ||
+                      p['code'].toString().toUpperCase() == 'COMMENT'),
+              orElse: () => null,
+            );
+            if (match is Map && match['value'] != null) {
+              notes = match['value']?.toString();
+            }
+          } catch (_) {}
+        }
+      }
+      if (notes != null) {
+        notes = notes.trim();
+        if (notes.startsWith('"') && notes.endsWith('"')) {
+          notes = notes.substring(1, notes.length - 1);
+        }
+      }
       final int? cartItemId = _parseInt(item['id']);
 
       final String? rawStatus = item['status']?.toString();
@@ -441,12 +475,85 @@ class _KitchenMasterState extends State<KitchenMaster> {
       id: id.isNotEmpty ? id : 'ORD-${DateTime.now().millisecondsSinceEpoch}',
       internalId: _parseInt(order['id']) ?? 0,
       tableId: tableDisplay.isNotEmpty ? tableDisplay : 'Table',
+      showTableLabel: showTableLabel,
       timestamp: timestamp,
       items: items,
       status: status,
       notes: notes,
       tokenNumber: tokenNumber,
     );
+  }
+
+  String? _resolveDeliveryMethodName(dynamic order) {
+    if (order == null || order is! Map) return null;
+
+    final directName = order['delivery_method_name']?.toString().trim();
+    if (directName != null &&
+        directName.isNotEmpty &&
+        directName.toLowerCase() != 'unknown') {
+      return directName;
+    }
+
+    final fallbackName = order['delivery_method']?.toString().trim();
+    if (fallbackName != null &&
+        fallbackName.isNotEmpty &&
+        fallbackName.toLowerCase() != 'unknown') {
+      return fallbackName;
+    }
+
+    final deliveryMethodId = order['delivery_method_id']?.toString().trim();
+    if (deliveryMethodId == null ||
+        deliveryMethodId.isEmpty ||
+        deliveryMethodId.toLowerCase() == 'null') {
+      return null;
+    }
+
+    try {
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      for (final method in deliveryMethodsProvider.deliveryMethods) {
+        if (method.id == deliveryMethodId) {
+          return method.name;
+        }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  Map<String, dynamic> _extractOrderDisplayInfo(dynamic order) {
+    try {
+      final props = order['orderProps'];
+      if (props != null && props['TABLE'] != null) {
+        final name = props['TABLE'].toString().replaceAll('"', '').trim();
+        if (name.isNotEmpty && name.toLowerCase() != 'unknown') {
+          return {'name': name, 'showTableLabel': true};
+        }
+      }
+
+      if (order['table'] != null) {
+        final t = order['table'];
+        if (t is Map && t['name'] != null) {
+          final name = t['name'].toString().trim();
+          if (name.isNotEmpty && name.toLowerCase() != 'unknown') {
+            return {'name': name, 'showTableLabel': true};
+          }
+        }
+        if (t is String) {
+          final name = t.trim();
+          if (name.isNotEmpty && name.toLowerCase() != 'unknown') {
+            return {'name': name, 'showTableLabel': true};
+          }
+        }
+      }
+    } catch (_) {}
+
+    final deliveryMethodName = _resolveDeliveryMethodName(order);
+    if (deliveryMethodName != null && deliveryMethodName.isNotEmpty) {
+      return {'name': deliveryMethodName, 'showTableLabel': false};
+    }
+
+    return {'name': '', 'showTableLabel': false};
   }
 
   List<dynamic> _extractCartItems(dynamic order) {
@@ -1421,6 +1528,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
         'unitPrice': '0.00',
         'totalPrice': '0.00',
         'mrp': '0.00',
+        if (item.notes != null && item.notes!.isNotEmpty)
+          'notes': item.notes,
       });
     }
 
@@ -1431,6 +1540,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
         orderNumber: order.id,
         tokenNumber: order.tokenNumber,
         tableName: order.tableId,
+        showTableLabel: order.showTableLabel,
         orderTime: orderTime,
         items: printItems,
         comment: order.notes,
@@ -1444,6 +1554,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
                 orderNumber: order.id,
                 tokenNumber: order.tokenNumber,
                 tableName: order.tableId,
+                showTableLabel: order.showTableLabel,
                 orderTime: orderTime,
                 items: printItems,
                 comment: order.notes,
@@ -2026,15 +2137,35 @@ class _ExpandableOrderCardState extends State<_ExpandableOrderCard> {
                         ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Text(
-                            item.name,
-                            style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                compact ? FontSize.s11 : FontSize.s12,
-                                0.21,
-                                const Color(0xFF1E293B)),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                item.name,
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    compact ? FontSize.s11 : FontSize.s12,
+                                    0.21,
+                                    const Color(0xFF1E293B)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (item.notes != null && item.notes!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    item.notes!,
+                                    style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        compact ? FontSize.s9 : FontSize.s10,
+                                        0.21,
+                                        const Color(0xFFD97706)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         Container(

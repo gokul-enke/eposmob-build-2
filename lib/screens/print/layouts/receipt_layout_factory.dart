@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:pos_machine/screens/print/layouts/arabic_and_english_3_receipt_layout.dart';
 import 'package:pos_machine/screens/print/layouts/arabic_and_english_recipt_layput.dart';
 import 'package:pos_machine/screens/print/layouts/arabic_english_table_headers_receipt_layout.dart';
 import 'receipt_layout.dart';
@@ -31,6 +32,7 @@ class ReceiptLayoutFactory {
     'arabic_and_english': () => ArabicAndEnglishReceiptLayout(),
     'arabic_english_table_headers': () =>
         ArabicEnglishTableHeadersReceiptLayout(),
+    'arabic_and_english_3': () => ArabicAndEnglish3ReceiptLayout(),
     'supermarket': () => SupermarketReceiptLayout(),
     'bilingual': () => BilingualReceiptLayout(),
   };

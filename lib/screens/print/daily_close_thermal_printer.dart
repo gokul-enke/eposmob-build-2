@@ -95,6 +95,7 @@ class DailyCloseThermalPrinter {
     required BluetoothPrinter selectedPrinter,
     required DailySalesCloseData data,
     required String selectedPaperSize,
+    required bool includeTransactions,
   }) async {
     debugPrint("===== DAILY CLOSE THERMAL PRINTING ====");
     debugPrint("Printer: ${selectedPrinter.deviceName}, Paper: $selectedPaperSize");
@@ -242,8 +243,10 @@ class DailyCloseThermalPrinter {
         scale: getNormalScale(is58mm),
       ));
 
-      // ========== TRANSACTIONS ==========
-      if (data.transactions != null && data.transactions!.isNotEmpty) {
+        // ========== TRANSACTIONS ==========
+        if (includeTransactions &&
+          data.transactions != null &&
+          data.transactions!.isNotEmpty) {
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
         rows.add(_ReportDividerRow(char: '─'));
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
@@ -295,7 +298,7 @@ class DailyCloseThermalPrinter {
             rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.2));
           }
         }
-      } else if ((data.totalOrders ?? 0) > 0) {
+      } else if (includeTransactions && (data.totalOrders ?? 0) > 0) {
         // Show message if orders exist but no details
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
         rows.add(_ReportDividerRow(char: '─'));
