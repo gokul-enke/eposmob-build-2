@@ -195,6 +195,9 @@ class CartItemsTable extends StatelessWidget {
                             // Qty
                             _buildFixedContentCell(
                               CompactQuantityControlLocal(
+                                key: ValueKey(
+                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                ),
                                 productId: item.product.productId!,
                                 quantity: item.quantity.toDouble(),
                                 unitPrice: item.price.toString(),
@@ -211,6 +214,9 @@ class CartItemsTable extends StatelessWidget {
                               SizedBox(
                                 width: 70,
                                 child: MrpTextField(
+                                  key: ValueKey(
+                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                  ),
                                   item: item,
                                   localProductProvider: localProductProvider,
                                 ),
@@ -224,6 +230,9 @@ class CartItemsTable extends StatelessWidget {
                               SizedBox(
                                 width: 70,
                                 child: PriceTextField(
+                                  key: ValueKey(
+                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                  ),
                                   item: item,
                                   localProductProvider: localProductProvider,
                                 ),

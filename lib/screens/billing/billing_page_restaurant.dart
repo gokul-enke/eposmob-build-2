@@ -2676,6 +2676,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         padding: const EdgeInsets.symmetric(
                                             vertical: 2),
                                         child: CompactQuantityControlLocal(
+                                          key: ValueKey(
+                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                          ),
                                           productId: item.product.productId!,
                                           quantity: item.quantity.toDouble(),
                                           unitPrice: item.price.toString(),
@@ -2717,6 +2720,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         child: SizedBox(
                                           width: 70,
                                           child: MrpTextField(
+                                            key: ValueKey(
+                                              'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                            ),
                                             item: item,
                                             localProductProvider:
                                                 localProductProvider,
@@ -2735,6 +2741,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       child: SizedBox(
                                         width: 70,
                                         child: PriceTextField(
+                                          key: ValueKey(
+                                            'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                          ),
                                           item: item,
                                           localProductProvider:
                                               localProductProvider,

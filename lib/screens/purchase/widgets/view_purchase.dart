@@ -325,9 +325,12 @@ class ViewPurchaseWidget extends StatelessWidget {
                               ...filteredItems!.asMap().entries.map((entry) {
                                 final products = entry.value;
                                 final index = entry.key;
-                                String productName = gridSelectionProvider
-                                        .productName(products.productId ?? 0) ??
-                                    "";
+                                final String productName =
+                                  (products.name ?? '').trim().isNotEmpty
+                                    ? products.name!.trim()
+                                    : (gridSelectionProvider.productName(
+                                        products.productId ?? 0) ??
+                                      "");
 
                                 String storeName = purchaseProvider
                                         .storeName(products.storeId ?? 1) ??
