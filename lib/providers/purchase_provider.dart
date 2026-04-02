@@ -1120,6 +1120,10 @@ class PurchaseProvider extends ChangeNotifier {
           'X-Tenant': apiKey,
         },
       );
+      debugPrint(
+          '📥 [Purchase API] createPurchaseOrder Status: ${response.statusCode}');
+      debugPrint(
+          '📥 [Purchase API] createPurchaseOrder Response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -1176,6 +1180,10 @@ class PurchaseProvider extends ChangeNotifier {
           'X-Tenant': apiKey,
         },
       );
+      debugPrint(
+          '📥 [Purchase API] receivePurchaseOrder Status: ${response.statusCode}');
+      debugPrint(
+          '📥 [Purchase API] receivePurchaseOrder Response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);

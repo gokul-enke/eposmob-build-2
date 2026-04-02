@@ -153,10 +153,16 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         'items': item.items
             ?.map((i) => {
                   'id': i.id,
+                  'category_id': i.categoryId,
                   'product_id': i.productId,
                   'product_name': i.productName,
+                  'store_id': i.storeId,
+                  'supplier_id': i.supplierId,
                   'quantity': i.quantity,
                   'unit_price': i.unitPrice,
+                  'total_price': i.totalPrice,
+                  'expiry_date': i.expiryDate,
+                  'batch_number': i.batchNumber,
                   'unit': i.unit,
                   'status': i.status,
                 })
@@ -278,6 +284,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                         CustomRoundButton(
                           title: "Create Purchase Order",
                           fct: () {
+                            provider.activePurchaseOrderDetails = null;
+                            provider.voucherDetails = null;
+                            provider.listPurchaseItemView = [];
                             final SideBarController sideBarController =
                                 Get.find();
                             sideBarController.index.value = 82;
