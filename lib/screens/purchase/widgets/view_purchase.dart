@@ -6,6 +6,7 @@ import '../../../components/build_back_button.dart';
 import '../../../controllers/sidebar_controller.dart';
 import '../../../models/get_product.dart';
 import '../../../models/list_purchase.dart';
+import '../../../providers/app_settings_provider.dart';
 import '../../../providers/grid_provider.dart';
 import '../../../providers/purchase_provider.dart';
 import '../../../resources/color_manager.dart';
@@ -38,6 +39,10 @@ class ViewPurchaseWidget extends StatelessWidget {
     final sideBarController = Get.put(SideBarController());
     final purchaseProvider = Provider.of<PurchaseProvider>(context);
     final gridProvider = Provider.of<GridSelectionProvider>(context);
+    final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
+    final currency = (appSettings?.currency.trim().isNotEmpty ?? false)
+        ? appSettings!.currency.trim()
+        : 'SAR';
     final viewData = _PurchaseViewData.fromProvider(
       purchaseProvider,
       gridProvider,
@@ -149,6 +154,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                                           label: 'Total Amount',
                                           value: _DisplayFormatter.currency(
                                             viewData.amountTotal,
+                                            currency: currency,
                                           ),
                                         ),
                                       ),
@@ -263,14 +269,18 @@ class ViewPurchaseWidget extends StatelessWidget {
                                                   _TableValueCell(
                                                     text: _DisplayFormatter
                                                         .currency(
-                                                            item.unitPrice),
+                                                      item.unitPrice,
+                                                      currency: currency,
+                                                    ),
                                                     width: columns.unitPrice,
                                                     align: TextAlign.center,
                                                   ),
                                                   _TableValueCell(
                                                     text: _DisplayFormatter
                                                         .currency(
-                                                            item.totalPrice),
+                                                      item.totalPrice,
+                                                      currency: currency,
+                                                    ),
                                                     width: columns.total,
                                                     isBold: true,
                                                     align: TextAlign.center,
@@ -320,7 +330,9 @@ class ViewPurchaseWidget extends StatelessWidget {
                                                 _TableValueCell(
                                                   text: _DisplayFormatter
                                                       .currency(
-                                                          viewData.amountTotal),
+                                                    viewData.amountTotal,
+                                                    currency: currency,
+                                                  ),
                                                   width: columns.total,
                                                   align: TextAlign.center,
                                                   isBold: true,
@@ -970,13 +982,13 @@ class _DisplayFormatter {
     return parsed.toStringAsFixed(2);
   }
 
-  static String currency(dynamic value) {
+  static String currency(dynamic value, {String currency = 'SAR'}) {
     final text = asText(value);
     final parsed = double.tryParse(text);
     if (parsed == null) {
-      return text.isEmpty ? 'SAR 0.00' : 'SAR $text';
+      return text.isEmpty ? '$currency 0.00' : '$currency $text';
     }
-    return 'SAR ${parsed.toStringAsFixed(2)}';
+    return '$currency ${parsed.toStringAsFixed(2)}';
   }
 
   static String? calculatedTotal(dynamic quantity, dynamic unitPrice) {

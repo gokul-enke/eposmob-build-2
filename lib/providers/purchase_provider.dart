@@ -1078,23 +1078,16 @@ class PurchaseProvider extends ChangeNotifier {
     required String storeId,
     String? voucherNumber,
     String? invoiceRef,
-    bool receiveNow = false,
     List<String>? paymentMethods,
     Map<String, dynamic>? paidAmounts,
     required List<Map<String, dynamic>> items,
-    int? purchaseId, // NEW!
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'purchase_date': purchaseDate,
       'supplier_id': supplierId,
       'store_id': storeId,
-      'receive_now': receiveNow,
       'items': items,
     };
-
-    if (purchaseId != null) {
-      apiBodyData['purchase_id'] = purchaseId;
-    }
 
     if (voucherNumber != null && voucherNumber.isNotEmpty) {
       apiBodyData['voucher_number'] = voucherNumber;
@@ -1115,6 +1108,9 @@ class PurchaseProvider extends ChangeNotifier {
     }
 
     try {
+      debugPrint('📤 [Purchase API] createPurchaseOrder URL: $url');
+      debugPrint(
+          '📤 [Purchase API] createPurchaseOrder Body: ${json.encode(apiBodyData)}');
       final response = await http.post(
         url,
         body: json.encode(apiBodyData),
@@ -1168,6 +1164,9 @@ class PurchaseProvider extends ChangeNotifier {
     }
 
     try {
+      debugPrint('📤 [Purchase API] receivePurchaseOrder URL: $url');
+      debugPrint(
+          '📤 [Purchase API] receivePurchaseOrder Body: ${json.encode(apiBodyData)}');
       final response = await http.post(
         url,
         body: json.encode(apiBodyData),

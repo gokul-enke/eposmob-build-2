@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/purchase_order_model.dart';
@@ -225,6 +226,10 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<PurchaseProvider>(context);
+    final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
+    final currency = (appSettings?.currency.trim().isNotEmpty ?? false)
+      ? appSettings!.currency.trim()
+      : 'SAR';
     final purchases = provider.purchaseOrdersList;
     final currentPage = provider.listPurchaseOrderCurrentPage <= 0
         ? 1
@@ -489,7 +494,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                                             "",
                                                       ),
                                                       _buildTableCell(
-                                                        "SAR ${item.amountTotal}",
+                                                        "$currency ${item.amountTotal}",
                                                       ),
                                                       _buildReceivedBadge(
                                                         (item.itemsReceived ==
@@ -551,7 +556,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                   ),
                                 ),
                                 Text(
-                                  "SAR ${totalAmount.toStringAsFixed(2)}",
+                                  "$currency ${totalAmount.toStringAsFixed(2)}",
                                   style: buildCustomStyle(
                                     FontWeightManager.semiBold,
                                     FontSize.s14,
