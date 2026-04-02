@@ -1230,7 +1230,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
-            selectedCustomer: checkoutSelectedCustomer,
+          selectedCustomer: checkoutSelectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
 
           // Delivery State
@@ -1870,6 +1870,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                 // Get the local provider
                 final localProductProvider =
                     Provider.of<LocalProductProvider>(context, listen: false);
+                final customerPhoneForPayload =
+                    _resolveCustomerPhoneForPayload();
+                final paymentData = _getPaymentMethodData();
 
                 // If we're editing an order and there are items in the cart, update that order
                 if (localProductProvider.currentOrder != null &&
@@ -1879,12 +1882,26 @@ class BillingPageState extends State<BillingPageRestaurant>
                     localProductProvider.updateSavedOrder(
                       localProductProvider.currentOrder!.id,
                       customerName: selectedCustomer?.name,
-                      customerPhone: selectedCustomerPhone ?? mobileNumberText,
+                      customerPhone: customerPhoneForPayload,
                       comment: _commentController.text,
                       deliveryMethod: deliveryMethod,
+                      customerId: selectedCustomerID,
+                      paymentMethod: paymentData['paymentMethod'],
+                      paidAmount: paymentData['paidAmount'],
+                      balanceAmount: _balanceAmount.toString(),
+                      transactionId: _transactionNumberController.text,
+                      couponId: isCouponApplied
+                          ? coupenCodeTextController.text
+                          : null,
+                      deliveryMethodId: deliveryMethodId,
+                      carNumber: _carNumberController.text,
+                      status: 'saved',
                       context: context,
                       deliveryDate: deliveryDate, // Pass deliveryDate
                       deliveryTime: deliveryTime, // Pass deliveryTime
+                      toCustomerCredit: _toCustomerCreditEnabled,
+                      address: deliveryAddress,
+                      deliveryCharge: _getDeliveryChargeForOrder(),
                     );
 
                     // Show quick feedback
@@ -1899,8 +1916,27 @@ class BillingPageState extends State<BillingPageRestaurant>
                 else if (localProductProvider.cartItems.isNotEmpty) {
                   try {
                     localProductProvider.saveCurrentCartAsOrder(
+                      customerName: selectedCustomer?.name,
+                      customerPhone: customerPhoneForPayload,
+                      comment: _commentController.text,
+                      deliveryMethod: deliveryMethod,
+                      customerId: selectedCustomerID,
+                      paymentMethod: paymentData['paymentMethod'],
+                      paidAmount: paymentData['paidAmount'],
+                      balanceAmount: _balanceAmount.toString(),
+                      transactionId: _transactionNumberController.text,
+                      couponId: isCouponApplied
+                          ? coupenCodeTextController.text
+                          : null,
+                      deliveryMethodId: deliveryMethodId,
+                      carNumber: _carNumberController.text,
+                      status: 'saved',
                       deliveryDate: deliveryDate, // Pass deliveryDate
                       deliveryTime: deliveryTime, // Pass deliveryTime
+                      context: context,
+                      toCustomerCredit: _toCustomerCreditEnabled,
+                      address: deliveryAddress,
+                      deliveryCharge: _getDeliveryChargeForOrder(),
                     );
                     showScaffold(
                       context: context,
@@ -4105,6 +4141,41 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
+  String? _extractPhoneFromCustomerInput(String? rawValue) {
+    if (rawValue == null) return null;
+    final trimmed = rawValue.trim();
+    if (trimmed.isEmpty) return null;
+
+    if (RegExp(r'^\+?\d{6,}$').hasMatch(trimmed)) {
+      return trimmed;
+    }
+
+    final matches = RegExp(r'\+?\d{6,}').allMatches(trimmed).toList();
+    if (matches.isNotEmpty) {
+      return matches.last.group(0);
+    }
+
+    return null;
+  }
+
+  String? _resolveCustomerPhoneForPayload() {
+    final candidates = <String?>[
+      selectedCustomerPhone,
+      selectedCustomer?.phone,
+      mobileNumberText,
+      mobileNumberTextController.text,
+    ];
+
+    for (final candidate in candidates) {
+      final extracted = _extractPhoneFromCustomerInput(candidate);
+      if (extracted != null && extracted.isNotEmpty) {
+        return extracted;
+      }
+    }
+
+    return null;
+  }
+
   Future<void> _saveOrder() async {
     setState(() {
       isLoadingSaveOrder = true; // Indicate that loading has started
@@ -4169,7 +4240,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
+        String? customerPhoneToSave = _resolveCustomerPhoneForPayload();
 
         localProductProvider.updateSavedOrder(
           currentOrder.id,
@@ -4186,6 +4257,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
+          status: 'saved',
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
           toCustomerCredit: _toCustomerCreditEnabled,
@@ -4216,7 +4288,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
+        String? customerPhoneToSave = _resolveCustomerPhoneForPayload();
 
         // Determine payment method and data
         Map<String, String> paymentData = _getPaymentMethodData();
@@ -4237,6 +4309,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
+          status: 'saved',
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           context: context, // Pass context
@@ -4282,8 +4355,10 @@ class BillingPageState extends State<BillingPageRestaurant>
         return;
       }
 
-// Check if customer is selected
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      final customerPhoneForPayload = _resolveCustomerPhoneForPayload();
+
+      // Check if customer is selected
+      if (selectedCustomerID == null && customerPhoneForPayload == null) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4339,7 +4414,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             "💾 Promoting saved order to confirmed: ${currentOrder.orderNumber}");
 
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
+        String? customerPhoneToSave = _resolveCustomerPhoneForPayload();
 
         final paymentData = _getPaymentMethodData();
         final currentOrderId = currentOrder.id;
@@ -4398,7 +4473,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
+        String? customerPhoneToSave = _resolveCustomerPhoneForPayload();
 
         final paymentData = _getPaymentMethodData();
 
@@ -4510,7 +4585,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       isLoadingCreateOrder = true;
     });
     try {
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      final customerPhoneForPayload = _resolveCustomerPhoneForPayload();
+      if (selectedCustomerID == null && customerPhoneForPayload == null) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4614,8 +4690,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       debugPrint(
           "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
       debugPrint("👤 Customer ID: $selectedCustomerID");
-      debugPrint(
-          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+      debugPrint("📱 Customer Phone: ${customerPhoneForPayload ?? ''}");
       debugPrint(
           "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
       debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
@@ -4632,7 +4707,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         transactionId: _transactionNumberController.text,
         totalPrice: priceSummary.netTotal.toString(),
         customerId: selectedCustomerID,
-        customerPhone: selectedCustomerPhone ?? mobileNumberText,
+        customerPhone: customerPhoneForPayload,
         // Always use multi-payment format
         paymentMethod: null,
         paidAmount: null,
@@ -4902,7 +4977,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       isLoadingConfirmOrder = true;
     });
     try {
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      final customerPhoneForPayload = _resolveCustomerPhoneForPayload();
+      if (selectedCustomerID == null && customerPhoneForPayload == null) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -5005,8 +5081,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       debugPrint(
           "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
       debugPrint("👤 Customer ID: $selectedCustomerID");
-      debugPrint(
-          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+      debugPrint("📱 Customer Phone: ${customerPhoneForPayload ?? ''}");
       debugPrint(
           "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
       debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
@@ -5019,7 +5094,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         transactionId: _transactionNumberController.text,
         totalPrice: localProductProvider.priceSummary!.netTotal.toString(),
         customerId: selectedCustomerID,
-        customerPhone: selectedCustomerPhone ?? mobileNumberText,
+        customerPhone: customerPhoneForPayload,
         // Always use multi-payment format
         paymentMethod: null,
         paidAmount: null,
