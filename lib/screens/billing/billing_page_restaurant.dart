@@ -1149,31 +1149,6 @@ class BillingPageState extends State<BillingPageRestaurant>
     _hydrateCustomerListFromProviderCache();
     _applyDefaultCustomerFromCacheIfNeeded();
 
-    // Reset payment state to start fresh each time modal opens
-    setState(() {
-      _hasOpenedPaymentModalOnce = false;
-
-      // Reset payment method selections
-      _isCashSelected = false;
-      _isCardSelected = false;
-      _isUpiSelected = false;
-      _isCodSelected = false;
-      _isDebitSelected = false;
-
-      // Clear payment amount controllers
-      _cashAmountController.clear();
-      _cardAmountController.clear();
-      _upiAmountController.clear();
-      _codAmountController.clear();
-      _debitAmountController.clear();
-
-      // Reset transaction number
-      _transactionNumberController.clear();
-
-      // Reset credit flag
-      _toCustomerCreditEnabled = false;
-    });
-
     // Reload payment methods
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
@@ -1204,8 +1179,22 @@ class BillingPageState extends State<BillingPageRestaurant>
       );
     }
 
-    // Apply default payment method
-    _applyDefaultPaymentMethod();
+    final hasExistingPaymentState = _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected ||
+        _toCustomerCreditEnabled ||
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_debitAmountController.text) ?? 0) > 0;
+
+    // Apply default payment method only when no existing/rehydrated payment state exists
+    if (!hasExistingPaymentState) {
+      _applyDefaultPaymentMethod();
+    }
 
     if (!mounted) return;
 
@@ -1215,6 +1204,20 @@ class BillingPageState extends State<BillingPageRestaurant>
         Provider.of<DeliveryMethodsProvider>(context, listen: false);
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+
+    CustomerListModelData? checkoutSelectedCustomer =
+        selectedCustomer ?? customerSelectionProvider.selectedCustomer;
+
+    // Prefer richer customer data from loaded list when IDs match
+    if (checkoutSelectedCustomer?.id != null && customerList != null) {
+      try {
+        checkoutSelectedCustomer = customerList!.firstWhere(
+          (customer) => customer.id == checkoutSelectedCustomer!.id,
+        );
+      } catch (_) {}
+    }
 
     // Check if delivery should be enabled (if methods exist)
     bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
@@ -1227,7 +1230,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
-          selectedCustomer: selectedCustomer,
+            selectedCustomer: checkoutSelectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
 
           // Delivery State
