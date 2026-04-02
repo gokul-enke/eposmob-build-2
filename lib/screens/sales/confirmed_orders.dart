@@ -696,9 +696,18 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               return billingProvider.upiPaymentMethodId ?? 'UPI';
             case 'COD':
               return billingProvider.codPaymentMethodId ?? 'COD';
+            case 'DEBIT':
+            case 'BALANCE':
+              // Credit allocation is sent via `to_customer_credit`, not as a paid method.
+              return '';
             default:
               return method;
           }
+        }
+
+        bool _isCreditOnlyMethod(String? methodId) {
+          final method = methodId?.trim().toUpperCase() ?? '';
+          return method == 'DEBIT' || method == 'BALANCE';
         }
 
         List<Map<String, dynamic>> _adjustForBalance(
@@ -739,6 +748,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             double.tryParse(order.balanceAmount ?? '0') ?? 0.0;
 
         final rawStoredPaymentMethod = order.paymentMethod;
+        final bool hasStructuredPaymentData =
+            rawStoredPaymentMethod != null &&
+                rawStoredPaymentMethod.trim().startsWith('{');
         if (rawStoredPaymentMethod != null &&
             rawStoredPaymentMethod.trim().startsWith('{')) {
           try {
@@ -755,6 +767,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               for (final method in selectedMethods) {
                 final normalized = _normalizePaymentMethodId(method);
                 if (normalized.isNotEmpty &&
+                    !_isCreditOnlyMethod(normalized) &&
                     !normalizedMethods.contains(normalized)) {
                   normalizedMethods.add(normalized);
                 }
@@ -764,7 +777,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               for (final entry in amounts.entries) {
                 final normalizedKey = _normalizePaymentMethodId(entry.key);
                 final amount = double.tryParse(entry.value.toString()) ?? 0.0;
-                if (normalizedKey.isNotEmpty && amount > 0) {
+                if (normalizedKey.isNotEmpty &&
+                    !_isCreditOnlyMethod(normalizedKey) &&
+                    amount > 0) {
                   normalizedAmounts[normalizedKey] = amount;
                   if (!normalizedMethods.contains(normalizedKey)) {
                     normalizedMethods.add(normalizedKey);
@@ -830,8 +845,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           debugPrint("  - Payment Methods: $paymentMethods");
           debugPrint("  - Paid Methods: $paidMethods");
         } else {
-          paymentMethod = order.paymentMethod ?? 'CASH';
-          paidAmount = order.paidAmount ?? order.total.toString();
+          if (hasStructuredPaymentData) {
+            // Credit-only or filtered structured payment: keep payment empty, like online.
+            paymentMethod = null;
+            paidAmount = null;
+          } else {
+            paymentMethod = order.paymentMethod ?? 'CASH';
+            paidAmount = order.paidAmount ?? order.total.toString();
+          }
           paymentMethods = null;
           paidMethods = null;
           debugPrint("⚠️ Falling back to single-payment format for sync");
