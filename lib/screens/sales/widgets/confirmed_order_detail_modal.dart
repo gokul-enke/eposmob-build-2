@@ -480,16 +480,19 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
       double netTotal = 0.0;
+      double totalTax = 0.0;
 
       for (var item in order.items) {
         // Calculate individual item values
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
         double itemTotalPrice = itemPrice * item.quantity;
+        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
 
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;
         netTotal += itemTotalPrice;
+        totalTax += itemTax;
 
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
@@ -497,16 +500,20 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           'quantity': item.quantity.toString(),
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
+          'tax_amount': itemTax.toString(),
         });
       }
 
       // 🔧 FIX: Calculate "You Saved" using Option 3 approach
       double youSaved = totalMRP - netTotal;
       youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
+      double netExcTax = netTotal - totalTax;
 
       debugPrint("🖨️ OFFLINE ORDER MODAL PRINT CALCULATION:");
       debugPrint("  - Total MRP: $totalMRP");
       debugPrint("  - Net Total: $netTotal");
+      debugPrint("  - Total Tax: $totalTax");
+      debugPrint("  - Net Exc Tax: $netExcTax");
       debugPrint("  - You Saved: $youSaved");
 
       // Get active store name
@@ -554,6 +561,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         paidAmount: paidAmount,
         isDefaultCustomer:
             _isDefaultCustomerPhone(context, order.customerPhone),
+        netExcTax: netExcTax.toString(),
       );
 
       // Only show print page if auto-print failed
@@ -581,6 +589,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               paidAmount: paidAmount,
               isDefaultCustomer:
                   _isDefaultCustomerPhone(context, order.customerPhone),
+              netExcTax: netExcTax.toString(),
             ),
           ),
         );
