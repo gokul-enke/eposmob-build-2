@@ -22,6 +22,7 @@ import 'package:pos_machine/screens/loyality_card/loyality.dart';
 import 'package:pos_machine/screens/notifications/notifications.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/screens/product/add_product.dart';
+import 'package:pos_machine/screens/product/product_barcode.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
@@ -181,5 +182,6 @@ class SideBarController extends GetxController {
     ConsumedStocksReportScreen(), // 80 Consumed Stocks Report
     AddPurchaseOrderScreen(), // 81 Purchase Order Screen
     CreatePurchaseOrderScreen(), // 82 Create Purchase Order Screen
+    ProductBarcodeScreen(), // 83 Product Barcode Screen
   ];
 }
