@@ -36,11 +36,12 @@ class GridSelectionProvider extends ChangeNotifier {
   int currentPage = 1;
   int totalPages = 1;
   String productNameFromProductId(int value) {
-    var product = productList!.firstWhere(
-      (product) => product.productId == value,
+    final product = productList?.cast<GetProduct?>().firstWhere(
+      (product) => product?.productId == value,
+      orElse: () => null,
     );
 
-    return product.productName ?? "";
+    return product?.productName ?? "";
   }
 
   GridSelectionProvider() {
@@ -94,10 +95,11 @@ class GridSelectionProvider extends ChangeNotifier {
   }
 
   String? productName(int value) {
-    var product = productList!.firstWhere(
-      (e) => e.productId == value,
+    final product = productList?.cast<GetProduct?>().firstWhere(
+      (e) => e?.productId == value,
+      orElse: () => null,
     );
-    return product.productName;
+    return product?.productName;
   }
 
   void toggleSelectionProduct(int index, GetProduct product) {

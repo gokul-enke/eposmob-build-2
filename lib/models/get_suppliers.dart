@@ -1,5 +1,11 @@
 import 'dart:convert';
 
+double _toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString()) ?? 0.0;
+}
+
 GetSuppliersModel getSuppliersModelFromJson(String str) => 
     GetSuppliersModel.fromJson(json.decode(str));
 
@@ -32,6 +38,7 @@ class GetSuppliersModelData {
   final String? email;
   final String? productCategory;
   final String? address;
+  final double currentBalance;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final User? user; // Nested user object
@@ -47,6 +54,7 @@ class GetSuppliersModelData {
     this.email,
     this.productCategory,
     this.address,
+    this.currentBalance = 0.0,
     this.createdAt,
     this.updatedAt,
     this.user,
@@ -60,6 +68,9 @@ class GetSuppliersModelData {
     email: json["email"],
     productCategory: json["product_category"],
     address: json["address"],
+    currentBalance: _toDouble(
+      json["current_balance"] ?? json["currentBalance"] ?? json["balance"],
+    ),
     createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
     user: json["user"] != null ? User.fromJson(json["user"]) : null, // Parse nested user
@@ -73,6 +84,7 @@ class GetSuppliersModelData {
     "email": email,
     "product_category": productCategory,
     "address": address,
+    "current_balance": currentBalance,
     "created_at": createdAt?.toIso8601String(),
     "updated_at": updatedAt?.toIso8601String(),
     "user": user?.toJson(),

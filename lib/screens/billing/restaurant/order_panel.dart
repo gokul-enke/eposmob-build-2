@@ -527,6 +527,47 @@ class OrderPanelState extends State<OrderPanel> {
     return defaultPhone.isNotEmpty && phone == defaultPhone;
   }
 
+  String? _firstNonEmptyString(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty && text.toLowerCase() != 'null') {
+        return text;
+      }
+    }
+    return null;
+  }
+
+  String? _resolveCustomerPhone({
+    dynamic order,
+    OrderDetailsModelData? orderDetails,
+  }) {
+    return _firstNonEmptyString([
+      orderDetails?.customerDetails?.phone,
+      _selectedCustomer?.phone,
+      _selectedCustomerPhone,
+      order is Map ? order['customer_phone'] : null,
+      order is Map ? order['phone'] : null,
+    ]);
+  }
+
+  String? _resolveCustomerName({
+    dynamic order,
+    OrderDetailsModelData? orderDetails,
+  }) {
+    return _firstNonEmptyString([
+      orderDetails?.customerDetails?.name,
+      _selectedCustomer?.name,
+      order is Map ? order['customer_name'] : null,
+      order is Map ? order['name'] : null,
+    ]);
+  }
+
+  String? _resolveCustomerAlternatePhone({OrderDetailsModelData? orderDetails}) {
+    return _firstNonEmptyString([
+      orderDetails?.customerDetails?.alternatePhone,
+    ]);
+  }
+
   /// Fetch cart item statuses for Mark Served functionality
   Future<void> _fetchCartItemStatuses() async {
     debugPrint('🚀 === FETCHING CART ITEM STATUSES (Restaurant) ===');
@@ -1794,6 +1835,8 @@ class OrderPanelState extends State<OrderPanel> {
   // Clear customer and payment state when switching orders
   void _clearOrderEditingState() {
     debugPrint('🧹 Clearing previous order editing state...');
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
     setState(() {
       // Clear customer selection
       _selectedCustomer = null;
@@ -1842,6 +1885,8 @@ class OrderPanelState extends State<OrderPanel> {
   // Sync variant without setState to avoid triggering extra rebuilds in lifecycle hooks
   void _clearOrderEditingStateSync() {
     debugPrint('🧹 Clearing previous order editing state...');
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
     // Clear customer selection
     _selectedCustomer = null;
     _selectedCustomerID = null;
@@ -1910,6 +1955,8 @@ class OrderPanelState extends State<OrderPanel> {
       // Load customer information if available
       final customerId = order['customer_id'];
       final customerPhone = order['customer_phone'] ?? order['phone'];
+      final customerSelectionProvider =
+          Provider.of<CustomerSelectionProvider>(context, listen: false);
 
       if (customerId != null) {
         // Find customer in the list
@@ -1928,11 +1975,17 @@ class OrderPanelState extends State<OrderPanel> {
           _selectedCustomerPhone = customerPhone;
         });
 
+        customerSelectionProvider.setSelectedCustomer(
+          customer,
+          isDefault: _isDefaultCustomerPhone(customerPhone?.toString()),
+        );
+
         debugPrint(
             '✅ Loaded customer from order: ${customer.name} (${customer.phone})');
       } else {
         debugPrint(
             'ℹ️ No customer associated with this order. Applying default if applicable...');
+        customerSelectionProvider.clearSelectedCustomer();
         _applyDefaultCustomer();
       }
 
@@ -4805,11 +4858,6 @@ class OrderPanelState extends State<OrderPanel> {
         final productId =
             cartItem['product_id']; // Assuming product_id is available
         final unitPrice = cartItem['unit_price']?.toString();
-        final currentComment = cartItem['comment']?.toString();
-        final normalizedComment =
-          (currentComment != null && currentComment.trim().isNotEmpty)
-            ? currentComment.trim()
-            : null;
 
         if (productId == null) {
           showScaffoldError(
@@ -4819,7 +4867,7 @@ class OrderPanelState extends State<OrderPanel> {
 
         debugPrint('➡️ Calling CartProvider.addToCartAPI for increment');
         debugPrint(
-          '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId, comment: $normalizedComment}');
+          '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
         debugPrint('🔍 Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.addToCartAPI(
@@ -4827,7 +4875,6 @@ class OrderPanelState extends State<OrderPanel> {
           productId: int.parse(productId.toString()),
           quantity: deltaQuantity,
           unitPrice: unitPrice,
-          comment: normalizedComment,
           accessToken: authModel.token ?? '',
           cartId: orderCartId,
         );
@@ -5305,14 +5352,21 @@ class OrderPanelState extends State<OrderPanel> {
           String orderDate = orderDetails.data!.orderDate ?? "";
 
           // Extract customer details
-          String? customerName = orderDetails.data?.customerDetails?.name;
-          String? customerPhone = orderDetails.data?.customerDetails?.phone;
+          String? customerName = _resolveCustomerName(
+            order: capturedOrder,
+            orderDetails: orderDetails.data,
+          );
+          String? customerPhone = _resolveCustomerPhone(
+            order: capturedOrder,
+            orderDetails: orderDetails.data,
+          );
           String? customerEmail = orderDetails.data?.customerDetails?.email;
           String? customerAddress =
               orderDetails.data?.getCustomerAddressForDisplay();
 
-          String? customerAlternatePhone =
-              orderDetails.data?.customerDetails?.alternatePhone;
+          String? customerAlternatePhone = _resolveCustomerAlternatePhone(
+            orderDetails: orderDetails.data,
+          );
           String? paymentMethod =
               orderDetails.data?.paymentDetails?.paymentMethod;
 
@@ -5372,10 +5426,7 @@ class OrderPanelState extends State<OrderPanel> {
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
                 deliveryMethod: orderDetails.data?.deliveryMethodName,
-                isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                        context,
-                        listen: false)
-                    .isDefaultCustomer,
+                isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                     ?.toString(),
               );
@@ -5516,8 +5567,7 @@ class OrderPanelState extends State<OrderPanel> {
           _selectedOrder['customer_id'] ??
           authModel.userId ??
           1;
-      final customerPhone =
-          _selectedCustomer?.phone ?? _selectedOrder['customer_phone'] ?? '';
+        final customerPhone = _resolveCustomerPhone(order: _selectedOrder) ?? '';
       // Get order items to calculate subtotal
       final List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
 

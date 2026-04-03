@@ -234,8 +234,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     final provider = Provider.of<PurchaseProvider>(context);
     final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
     final currency = (appSettings?.currency.trim().isNotEmpty ?? false)
-        ? appSettings!.currency.trim()
-        : 'SAR';
+      ? appSettings!.currency.trim()
+      : 'SAR';
     final purchases = provider.purchaseOrdersList;
     final currentPage = provider.listPurchaseOrderCurrentPage <= 0
         ? 1

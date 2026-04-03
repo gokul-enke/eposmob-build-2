@@ -42,7 +42,7 @@ import '../thermal/debug_image_saver.dart';
 /// - Bilingual support (English/Arabic) like the reference
 /// - Streamlined totals section with clear hierarchy
 /// - Minimal, elegant footer
-class Premium1ReceiptLayout implements ReceiptLayout {
+class Premium2ReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Premium theme spacing constants
@@ -51,14 +51,14 @@ class Premium1ReceiptLayout implements ReceiptLayout {
   static const double _headerGap = 8.0;
 
   @override
-  String get layoutId => 'premium1';
+  String get layoutId => 'premium2';
 
   @override
-  String get displayName => 'Premium 1';
+  String get displayName => 'Premium 2';
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
-    debugPrint("===== PREMIUM 1 LAYOUT: THERMAL PRINTING ====");
+    debugPrint("===== PREMIUM 2 LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
     final selectedPrinter = params.selectedPrinter;
@@ -359,6 +359,11 @@ class Premium1ReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_sectionGap));
 
+    // Thin divider line
+    rows.add(ThinDividerRow());
+
+    rows.add(SpacingRow(_itemGap));
+
     // Invoice/Token Number - hide header invoice when footer invoice number is enabled
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
@@ -395,15 +400,27 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
 
     if (invoiceNumberText != null && tokenText != null) {
-      final boxText = '$invoiceNumberText - $tokenText';
-      rows.add(BoxedInvoiceTokenRow(text: boxText, textScale: 1.1));
+      final invoiceAlign = isEnglish ? TextAlign.left : TextAlign.right;
+      final tokenAlign = isEnglish ? TextAlign.right : TextAlign.left;
+      final invoiceCol = ReceiptTableColumn(invoiceNumberText,
+          weight: 0.58, align: invoiceAlign, isBold: true, scale: 1.1);
+      final tokenCol = ReceiptTableColumn(tokenText,
+          weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
+      final spacerCol =
+          ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
+
+      rows.add(ReceiptTableRow(isEnglish
+          ? [invoiceCol, spacerCol, tokenCol]
+          : [tokenCol, spacerCol, invoiceCol]));
     } else if (invoiceNumberText != null) {
-      rows.add(BoxedInvoiceTokenRow(text: invoiceNumberText, textScale: 1.3));
+      rows.add(TextRow(invoiceNumberText, scale: 1.3, isBold: true));
     } else if (tokenText != null) {
-      rows.add(BoxedInvoiceTokenRow(text: 'Token $tokenText', textScale: 1.1));
+      rows.add(TextRow(tokenText, scale: 1.4, isBold: true));
     }
 
-    rows.add(SpacingRow(_sectionGap));
+    rows.add(SpacingRow(_itemGap));
+    rows.add(ThinDividerRow());
+    rows.add(SpacingRow(_itemGap));
   }
 
   // ==================== CUSTOMER SECTION ====================
@@ -1821,76 +1838,4 @@ class BoxedLineItem {
     this.isSeparator = false,
     this.icon,
   });
-}
-
-/// Row class for displaying invoice and token numbers in a centered box
-class BoxedInvoiceTokenRow extends ReceiptRow {
-  final String text;
-  final double cornerRadius;
-  final double padding;
-  final double textScale;
-
-  BoxedInvoiceTokenRow({
-    required this.text,
-    this.cornerRadius = 8.0,
-    this.padding = 12.0,
-    this.textScale = 1.1,
-  });
-
-  @override
-  double calculateHeight(
-      double width, double fontSize, TextDirection textDirection) {
-    final textHeight = fontSize * textScale;
-    return (padding * 2) + textHeight + 4;
-  }
-
-  @override
-  void render(Canvas canvas, double y, double width, double fontSize,
-      TextDirection textDirection) {
-    // Draw rounded border box
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-
-    final boxHeight = calculateHeight(width, fontSize, textDirection);
-    
-    // First, calculate text width to adjust box size
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: fontSize * textScale,
-          fontWeight: FontWeight.bold,
-          fontFamily: ArabicPrinterHelper.fontFamily,
-        ),
-      ),
-      textDirection: textDirection,
-      textAlign: TextAlign.center,
-    )..layout();
-
-    // Calculate box width based on content with padding
-    double boxWidth = textPainter.width + (padding * 2) + 4;
-    
-    // Set minimum and maximum box widths for consistency
-    final double minBoxWidth = 60;
-    final double maxBoxWidth = width - 16;
-    
-    boxWidth = boxWidth.clamp(minBoxWidth, maxBoxWidth);
-    
-    // Center the box horizontally
-    final double boxX = (width - boxWidth) / 2;
-
-    final rect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(boxX, y, boxWidth, boxHeight),
-      Radius.circular(cornerRadius),
-    );
-    canvas.drawRRect(rect, paint);
-
-    // Draw centered text inside the box
-    final textX = boxX + (boxWidth - textPainter.width) / 2;
-    final textY = y + (boxHeight - textPainter.height) / 2;
-    textPainter.paint(canvas, Offset(textX, textY));
-  }
 }
