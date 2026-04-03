@@ -62,7 +62,6 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           storeId: "all", // Align with UI default "All"
         );
 
-
         if (mounted) {
           setState(() {
             stores = ["All", ...provider.storeList.map((e) => e.name ?? "")];
@@ -105,7 +104,6 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           selectedStoreId = "all";
         }
 
-
         await provider.listPurchaseOrders(
           accessToken: token,
           storeId: selectedStoreId,
@@ -119,7 +117,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     }
   }
 
-  Future<void> _handleOrderAction(PurchaseOrderData item, int targetIndex) async {
+  Future<void> _handleOrderAction(
+      PurchaseOrderData item, int targetIndex) async {
     final token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null) return;
 
@@ -130,22 +129,28 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
       // 1. Prepare data for CreatePurchaseOrderScreen (index 82)
       // We map the item back to a Map format so the Screen's pre-population logic works even if detail API fails
       provider.activePurchaseOrderDetails = {
-          'id': item.id,
-          'voucher_number': item.voucherNumber,
-          'purchase_date': item.purchaseDate,
-          'amount_total': item.amountTotal,
-          'status': item.status,
-          'items': item.items?.map((i) => {
-            'id': i.id,
-            'product_id': i.productId,
-            'product_name': i.productName,
-            'quantity': i.quantity,
-            'unit_price': i.unitPrice,
-            'unit': i.unit,
-            'status': i.status,
-          }).toList(),
-          'store': item.store != null ? { 'id': item.store?.id, 'name': item.store?.name } : null,
-          'supplier': item.supplier != null ? { 'id': item.supplier?.id, 'name': item.supplier?.name } : null,
+        'id': item.id,
+        'voucher_number': item.voucherNumber,
+        'purchase_date': item.purchaseDate,
+        'amount_total': item.amountTotal,
+        'status': item.status,
+        'items': item.items
+            ?.map((i) => {
+                  'id': i.id,
+                  'product_id': i.productId,
+                  'product_name': i.productName,
+                  'quantity': i.quantity,
+                  'unit_price': i.unitPrice,
+                  'unit': i.unit,
+                  'status': i.status,
+                })
+            .toList(),
+        'store': item.store != null
+            ? {'id': item.store?.id, 'name': item.store?.name}
+            : null,
+        'supplier': item.supplier != null
+            ? {'id': item.supplier?.id, 'name': item.supplier?.name}
+            : null,
       };
 
       // 2. Prepare data for ViewPurchaseWidget (index 36)
@@ -188,10 +193,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     Get.find<SideBarController>().index.value = targetIndex;
   }
 
-
-
   void resetSearch() {
-
     setState(() {
       supplierController.text = "All";
       storeController.text = "All";
@@ -386,8 +388,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                         _buildTableCell(
                                             "SAR ${item.amountTotal}"),
                                         _buildReceivedBadge(
-                                            (item.itemsReceived == null || item.itemsReceived!.isEmpty) 
-                                                ? "0 / 0" 
+                                            (item.itemsReceived == null ||
+                                                    item.itemsReceived!.isEmpty)
+                                                ? "0 / 0"
                                                 : item.itemsReceived!),
                                         Center(
                                           child: Row(
@@ -398,7 +401,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                                     Icons.visibility_outlined,
                                                     color: Colors.blueAccent,
                                                     size: 18),
-                                                onPressed: () => _handleOrderAction(item, 36), // ViewPurchaseWidget
+                                                onPressed: () =>
+                                                    _handleOrderAction(item,
+                                                        36), // ViewPurchaseWidget
 
                                                 padding: EdgeInsets.zero,
                                                 constraints:
@@ -407,7 +412,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                                               if (canReceive) ...[
                                                 const SizedBox(width: 8),
                                                 GestureDetector(
-                                                   onTap: () => _handleOrderAction(item, 82), // Create/Receive screen
+                                                  onTap: () => _handleOrderAction(
+                                                      item,
+                                                      82), // Create/Receive screen
 
                                                   child: Container(
                                                     padding:
@@ -624,7 +631,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         decoration: BoxDecoration(
           color: isFull ? Colors.green.shade100 : Colors.blue.shade100,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isFull ? Colors.green.shade400 : Colors.blue.shade400, width: 1.5),
+          border: Border.all(
+              color: isFull ? Colors.green.shade400 : Colors.blue.shade400,
+              width: 1.5),
         ),
         child: Text(itemsReceived,
             style: const TextStyle(
