@@ -523,35 +523,35 @@ class _SideMenuState extends State<SideMenu> {
             },
           ),
 
-          // Consumer<RoleProvider>(
-          //   builder: (context, roleProvider, child) {
-          //     // Check permissions for each sub-item
-          //     final hasPurchasePermission = roleProvider
-          //         .currentUserHasPermissionSync('page_StockManagement');
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              // Check permissions for each sub-item
+              final hasPurchasePermission = roleProvider
+                  .currentUserHasPermissionSync('page_StockManagement');
 
-          //     // Only show the expandable menu if user has at least one permission
-          //     if (!hasPurchasePermission) {
-          //       return const SizedBox.shrink();
-          //     }
+              // Only show the expandable menu if user has at least one permission
+              if (!hasPurchasePermission) {
+                return const SizedBox.shrink();
+              }
 
-          //     return Obx(
-          //       () => DrawerListTileExpandableColumn(
-          //           onTapTitle1: () {
-          //             sideBarController.index.value = 81;
-          //           },
-          //           listTitle1: "Purchase Orders",
-          //           // Permission-based visibility
-          //           showTitle1: hasPurchasePermission,
-          //           icon: fa.FontAwesomeIcons.clipboardList,
-          //           title: 'Purchase',
-          //           onTap: () async {
-          //             sideBarController.index.value = 81;
-          //           },
-          //           selected: [81, 82, 36]
-          //               .contains(sideBarController.index.value)),
-          //     );
-          //   },
-          // ),
+              return Obx(
+                () => DrawerListTileExpandableColumn(
+                    onTapTitle1: () {
+                      sideBarController.index.value = 81;
+                    },
+                    listTitle1: "Purchase Orders",
+                    // Permission-based visibility
+                    showTitle1: hasPurchasePermission,
+                    icon: fa.FontAwesomeIcons.clipboardList,
+                    title: 'Purchase',
+                    onTap: () async {
+                      sideBarController.index.value = 81;
+                    },
+                    selected: [81, 82, 36]
+                        .contains(sideBarController.index.value)),
+              );
+            },
+          ),
           // 8. REPORTS (Index: 58) [EXPANDABLE]
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
