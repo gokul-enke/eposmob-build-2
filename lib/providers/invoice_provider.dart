@@ -22,6 +22,8 @@ import '../models/list_transaction.dart';
 import '../resources/app_url.dart';
 
 class InvoiceProvider extends ChangeNotifier {
+  static const String _paymentMethodsCacheKeyPrefix =
+      'invoice_payment_methods_cache';
   bool _isLoading = false;
   ListTransaction? listTransaction;
   Invoice? listInvoice;
@@ -46,6 +48,7 @@ class InvoiceProvider extends ChangeNotifier {
   receipt_list.ReceiptData? get receiptData => _receiptData;
 
   Map<String, String>? paymentList;
+  int? _paymentListStoreId;
   Map<String, String>? getVoucherAccountTypesModelData = {};
   Map<String, String>? getInvoiceAccountTypesModelData = {};
   List<GetUsersModelData>? getUsersList = [];
@@ -942,6 +945,8 @@ class InvoiceProvider extends ChangeNotifier {
 
   Future<void> listAllPaymentList(
     String accessToken,
+    {bool forceRefresh = false,
+    }
   ) async {
     debugPrint("[InvoiceProvider] listAllPaymentList called");
 
@@ -950,9 +955,31 @@ class InvoiceProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
+    if (!forceRefresh &&
+        paymentList != null &&
+        paymentList!.isNotEmpty &&
+        _paymentListStoreId == activeStoreId) {
+      debugPrint(
+          "[InvoiceProvider] Returning payment methods from memory for storeId=$activeStoreId");
+      return;
+    }
+
+    if (!forceRefresh) {
+      final cachedPaymentList =
+          _loadPaymentListFromLocalCache(prefs, activeStoreId);
+      if (cachedPaymentList != null && cachedPaymentList.isNotEmpty) {
+        _setPaymentList(cachedPaymentList, activeStoreId);
+        debugPrint(
+            "[InvoiceProvider] Loaded payment methods from cache for storeId=$activeStoreId");
+        notifyListeners();
+        return;
+      }
+    }
+
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint("[InvoiceProvider] API key not found");
-      throw const HttpException("API key not found. Please restart the app.");
+      _fallbackToCachedPaymentList(prefs, activeStoreId, 'missing API key');
+      return;
     }
 
     // Build URL with store_id parameter
@@ -979,16 +1006,99 @@ class InvoiceProvider extends ChangeNotifier {
             GetPaymentMethodsModel.fromJson(jsonData);
 
         // Use paymentListAsMap for backwards compatibility with Map<String, String>
-        paymentList = getPaymentMethodsModel.paymentListAsMap;
+        _setPaymentList(getPaymentMethodsModel.paymentListAsMap, activeStoreId);
+        await _savePaymentListToLocalCache(
+          prefs,
+          activeStoreId,
+          paymentList!,
+        );
         debugPrint("[InvoiceProvider] Payment list parsed: $paymentList");
 
         notifyListeners();
       } else {
         debugPrint("[InvoiceProvider] Payment methods error: ${response.body}");
+        _fallbackToCachedPaymentList(
+          prefs,
+          activeStoreId,
+          'HTTP ${response.statusCode}',
+        );
       }
     } catch (e) {
       debugPrint("[InvoiceProvider] Payment methods exception: $e");
+      _fallbackToCachedPaymentList(prefs, activeStoreId, e.toString());
     }
+  }
+
+  Map<String, String>? _loadPaymentListFromLocalCache(
+    SharedPreferences prefs,
+    int? activeStoreId,
+  ) {
+    final raw = prefs.getString(_paymentListCacheKey(activeStoreId));
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = json.decode(raw) as Map<String, dynamic>;
+      return decoded.map(
+        (key, value) => MapEntry(key, value?.toString() ?? ''),
+      );
+    } catch (e) {
+      debugPrint('[InvoiceProvider] Failed to read cached payment methods: $e');
+      return null;
+    }
+  }
+
+  Future<void> _savePaymentListToLocalCache(
+    SharedPreferences prefs,
+    int? activeStoreId,
+    Map<String, String> paymentMethods,
+  ) async {
+    try {
+      await prefs.setString(
+        _paymentListCacheKey(activeStoreId),
+        json.encode(paymentMethods),
+      );
+    } catch (e) {
+      debugPrint('[InvoiceProvider] Failed to cache payment methods: $e');
+    }
+  }
+
+  void _fallbackToCachedPaymentList(
+    SharedPreferences prefs,
+    int? activeStoreId,
+    String reason,
+  ) {
+    final cachedPaymentList = _loadPaymentListFromLocalCache(prefs, activeStoreId);
+    if (cachedPaymentList != null && cachedPaymentList.isNotEmpty) {
+      _setPaymentList(cachedPaymentList, activeStoreId);
+      debugPrint(
+          '[InvoiceProvider] Using cached payment methods for storeId=$activeStoreId (reason: $reason)');
+      notifyListeners();
+      return;
+    }
+
+    if (paymentList != null &&
+        paymentList!.isNotEmpty &&
+        _paymentListStoreId == activeStoreId) {
+      debugPrint(
+          '[InvoiceProvider] Keeping in-memory payment methods for storeId=$activeStoreId (reason: $reason)');
+      return;
+    }
+
+    _setPaymentList(null, activeStoreId);
+    notifyListeners();
+  }
+
+  String _paymentListCacheKey(int? activeStoreId) {
+    return activeStoreId == null
+        ? _paymentMethodsCacheKeyPrefix
+        : '${_paymentMethodsCacheKeyPrefix}_$activeStoreId';
+  }
+
+  void _setPaymentList(Map<String, String>? methods, int? storeId) {
+    paymentList = methods;
+    _paymentListStoreId = storeId;
   }
 
   //          *********************** ZATCA PHASE 1 INVOICE PRINT ***************************************************

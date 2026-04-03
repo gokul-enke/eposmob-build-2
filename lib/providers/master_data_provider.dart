@@ -16,6 +16,7 @@ class MasterDataProvider with ChangeNotifier {
 
   // Payment methods cache - now stores list of MasterDataValue
   List<MasterDataValue>? _paymentMethods;
+  int? _paymentMethodsStoreId;
   bool _isLoadingPaymentMethods = false;
 
   MasterData? get masterData => _masterData;
@@ -63,20 +64,23 @@ class MasterDataProvider with ChangeNotifier {
   Future<List<MasterDataValue>?> fetchPaymentMethods({
     bool forceRefresh = false,
   }) async {
-    // Return cached data if available
-    if (!forceRefresh && _paymentMethods != null && _paymentMethods!.isNotEmpty) {
-      return _paymentMethods;
-    }
-
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
+    // Return cached in-memory data only if it belongs to the active store.
+    if (!forceRefresh &&
+        _paymentMethods != null &&
+        _paymentMethods!.isNotEmpty &&
+        _paymentMethodsStoreId == activeStoreId) {
+      return _paymentMethods;
+    }
+
     if (!forceRefresh) {
       final cachedMethods = _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
       if (cachedMethods != null && cachedMethods.isNotEmpty) {
-        _paymentMethods = cachedMethods;
+        _setPaymentMethods(cachedMethods, activeStoreId);
         return _paymentMethods;
       }
     }
@@ -114,8 +118,10 @@ class MasterDataProvider with ChangeNotifier {
 
         if (data['status'] == 'success') {
           final dataList = data['data'] as List<dynamic>? ?? [];
-          _paymentMethods =
-              dataList.map((item) => MasterDataValue.fromJson(item)).toList();
+          _setPaymentMethods(
+            dataList.map((item) => MasterDataValue.fromJson(item)).toList(),
+            activeStoreId,
+          );
           await _savePaymentMethodsToLocalCache(
             prefs,
             activeStoreId,
@@ -127,21 +133,41 @@ class MasterDataProvider with ChangeNotifier {
         } else {
           _error = data['message'] ?? 'Failed to fetch payment methods';
           debugPrint('❌ API returned error: $_error');
-          return _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
+          return _fallbackToCachedPaymentMethods(prefs, activeStoreId);
         }
       } else {
         _error = 'HTTP ${response.statusCode}: Failed to fetch payment methods';
         debugPrint('❌ HTTP Error: $_error');
-        return _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
+        return _fallbackToCachedPaymentMethods(prefs, activeStoreId);
       }
     } catch (error) {
       _error = 'Error fetching payment methods: $error';
       debugPrint('💥 Exception: $_error');
-      return _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
+      return _fallbackToCachedPaymentMethods(prefs, activeStoreId);
     } finally {
       _isLoadingPaymentMethods = false;
       notifyListeners();
     }
+  }
+
+  List<MasterDataValue>? _fallbackToCachedPaymentMethods(
+    SharedPreferences prefs,
+    int? activeStoreId,
+  ) {
+    final cachedMethods = _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
+    if (cachedMethods != null && cachedMethods.isNotEmpty) {
+      _setPaymentMethods(cachedMethods, activeStoreId);
+      return _paymentMethods;
+    }
+
+    if (_paymentMethods != null &&
+        _paymentMethods!.isNotEmpty &&
+        _paymentMethodsStoreId == activeStoreId) {
+      return _paymentMethods;
+    }
+
+    _setPaymentMethods(null, activeStoreId);
+    return _paymentMethods;
   }
 
   List<MasterDataValue>? _loadPaymentMethodsFromLocalCache(
@@ -192,8 +218,13 @@ class MasterDataProvider with ChangeNotifier {
 
   /// Clears payment methods cache to force re-fetch
   void clearPaymentMethodsCache() {
-    _paymentMethods = null;
+    _setPaymentMethods(null, null);
     notifyListeners();
+  }
+
+  void _setPaymentMethods(List<MasterDataValue>? methods, int? storeId) {
+    _paymentMethods = methods;
+    _paymentMethodsStoreId = storeId;
   }
 
   Future<MasterData?> fetchMasterData(String code) async {
