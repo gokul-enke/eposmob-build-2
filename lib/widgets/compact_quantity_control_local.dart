@@ -61,10 +61,10 @@ class _CompactQuantityControlLocalState
     _currentQuantity = widget.quantity;
     _controller = TextEditingController(text: _currentQuantity.toString());
     _focusNode = FocusNode();
-    
+
     // Listen to controller changes so virtual-keyboard input is captured
     _controller.addListener(_onControllerChanged);
-    
+
     // Add listener to focus node to handle quantity changes when focus is lost
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
@@ -79,6 +79,29 @@ class _CompactQuantityControlLocalState
   @override
   void didUpdateWidget(CompactQuantityControlLocal oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final bool itemChanged = widget.productId != oldWidget.productId ||
+        widget.selectedStock?.id != oldWidget.selectedStock?.id;
+
+    if (itemChanged) {
+      _debounceTimer?.cancel();
+      _pendingQuantity = null;
+      _isUpdating = false;
+      _currentQuantity = widget.quantity;
+      _controller.text = _currentQuantity.toString();
+
+      final keyboardProvider =
+          Provider.of<KeyboardProvider>(context, listen: false);
+      if (keyboardProvider.showKeyboard &&
+          identical(keyboardProvider.controller, _controller)) {
+        keyboardProvider.hide();
+      }
+
+      if (_focusNode.hasFocus) {
+        _focusNode.unfocus();
+      }
+      return;
+    }
+
     // Check if the quantity prop has changed
     if (widget.quantity != oldWidget.quantity &&
         widget.quantity != _currentQuantity) {
@@ -155,18 +178,19 @@ class _CompactQuantityControlLocalState
       if (newQuantity > widget.quantity) {
         // Calculate difference and add to cart
         final num difference = newQuantity - widget.quantity;
-        
+
         // 🔧 FIX: Get current custom price and MRP from the existing cart item
         double? customPrice;
         double? customMrp;
         final existingItem = localProductProvider.cartItems.firstWhere(
-          (item) => item.product.productId == widget.productId && 
-                   item.selectedStock?.id == widget.selectedStock?.id,
+          (item) =>
+              item.product.productId == widget.productId &&
+              item.selectedStock?.id == widget.selectedStock?.id,
           orElse: () => throw StateError('Item not found'),
         );
         customPrice = existingItem.price;
         customMrp = existingItem.mrp;
-        
+
         localProductProvider.addToCart(
           product: widget.product!,
           quantity: difference,
@@ -214,9 +238,13 @@ class _CompactQuantityControlLocalState
             focusNode: _focusNode,
             style: const TextStyle(fontSize: 11),
             inputFormatters: [
-              if (widget.productUnit == 'KG' || widget.productUnit == 'KGS' || widget.productUnit == 'LT')
+              if (widget.productUnit == 'KG' ||
+                  widget.productUnit == 'KGS' ||
+                  widget.productUnit == 'LT')
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              if (widget.productUnit != 'LT' && widget.productUnit != 'KG' && widget.productUnit != 'KGS')
+              if (widget.productUnit != 'LT' &&
+                  widget.productUnit != 'KG' &&
+                  widget.productUnit != 'KGS')
                 FilteringTextInputFormatter.digitsOnly,
             ],
             textAlign: TextAlign.center,

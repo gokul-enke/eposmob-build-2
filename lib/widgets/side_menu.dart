@@ -521,7 +521,7 @@ class _SideMenuState extends State<SideMenu> {
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
               final hasPurchasePermission = roleProvider
-                  .currentUserHasPermissionSync('view_purchase_permission');
+                  .currentUserHasPermissionSync('page_StockManagement');
 
               // Only show the expandable menu if user has at least one permission
               if (!hasPurchasePermission) {
@@ -536,12 +536,13 @@ class _SideMenuState extends State<SideMenu> {
                     listTitle1: "Purchase Orders",
                     // Permission-based visibility
                     showTitle1: hasPurchasePermission,
-                    icon: fa.FontAwesomeIcons.cube,
+                    icon: fa.FontAwesomeIcons.clipboardList,
                     title: 'Purchase',
                     onTap: () async {
                       sideBarController.index.value = 81;
                     },
-                    selected: sideBarController.index.value == 81),
+                    selected: [81, 82, 36]
+                        .contains(sideBarController.index.value)),
               );
             },
           ),

@@ -12,6 +12,7 @@ import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/newcomponents/custom_round_button.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -869,6 +870,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // --- STEP 1: CUSTOMER ---
   Widget _buildCustomerStep() {
+    final hasInternet = context.watch<BillingProvider>().hasInternet;
+
     return Column(
       children: [
         Expanded(
@@ -919,34 +922,37 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       const SizedBox(height: 16),
                       // List
                       Expanded(child: _buildCustomerList()),
-                      const SizedBox(height: 16),
-                      // Add Customer Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: _isAddingCustomer
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation(Colors.grey),
-                                  ),
-                                )
-                              : const Icon(Icons.person_add),
-                          label: Text(
-                              _isAddingCustomer ? 'Adding...' : 'Add New Customer'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: const Color(0xFFECFDF3),
-                            foregroundColor: const Color(0xFF047857),
-                            side: const BorderSide(color: Color(0xFF34D399)),
+                      if (hasInternet) ...[
+                        const SizedBox(height: 16),
+                        // Add Customer Button (online only)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: _isAddingCustomer
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor:
+                                          AlwaysStoppedAnimation(Colors.grey),
+                                    ),
+                                  )
+                                : const Icon(Icons.person_add),
+                            label: Text(_isAddingCustomer
+                                ? 'Adding...'
+                                : 'Add New Customer'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: const Color(0xFFECFDF3),
+                              foregroundColor: const Color(0xFF047857),
+                              side: const BorderSide(color: Color(0xFF34D399)),
+                            ),
+                            onPressed:
+                                _isAddingCustomer ? null : _handleAddNewCustomer,
                           ),
-                          onPressed:
-                              _isAddingCustomer ? null : _handleAddNewCustomer,
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

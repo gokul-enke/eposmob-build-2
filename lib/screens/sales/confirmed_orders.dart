@@ -319,16 +319,19 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
       double netTotal = 0.0;
+      double totalTax = 0.0;
 
       for (var item in order.items) {
         // Calculate individual item values
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
         double itemTotalPrice = itemPrice * item.quantity;
+        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
 
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;
         netTotal += itemTotalPrice;
+        totalTax += itemTax;
 
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
@@ -336,16 +339,20 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           'quantity': item.quantity.toString(),
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
+          'tax_amount': itemTax.toString(),
         });
       }
 
       // 🔧 FIX: Calculate "You Saved" using Option 3 approach
       double youSaved = totalMRP - netTotal;
       youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
+      double netExcTax = netTotal - totalTax;
 
       debugPrint("🖨️ OFFLINE ORDER PRINT CALCULATION:");
       debugPrint("  - Total MRP: $totalMRP");
       debugPrint("  - Net Total: $netTotal");
+      debugPrint("  - Total Tax: $totalTax");
+      debugPrint("  - Net Exc Tax: $netExcTax");
       debugPrint("  - You Saved: $youSaved");
 
       // Use the stored total from order (already rounded when saved)
@@ -393,6 +400,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         deliveryMethod: order.deliveryMethod,
         paidAmount: paidAmount,
         isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
+        netExcTax: netExcTax.toString(),
       );
 
       // Only show print page if auto-print failed
@@ -418,6 +426,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               deliveryMethod: order.deliveryMethod,
               paidAmount: paidAmount,
               isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
+              netExcTax: netExcTax.toString(),
             ),
           ),
         );
@@ -696,9 +705,18 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               return billingProvider.upiPaymentMethodId ?? 'UPI';
             case 'COD':
               return billingProvider.codPaymentMethodId ?? 'COD';
+            case 'DEBIT':
+            case 'BALANCE':
+              // Credit allocation is sent via `to_customer_credit`, not as a paid method.
+              return '';
             default:
               return method;
           }
+        }
+
+        bool _isCreditOnlyMethod(String? methodId) {
+          final method = methodId?.trim().toUpperCase() ?? '';
+          return method == 'DEBIT' || method == 'BALANCE';
         }
 
         List<Map<String, dynamic>> _adjustForBalance(
@@ -739,6 +757,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             double.tryParse(order.balanceAmount ?? '0') ?? 0.0;
 
         final rawStoredPaymentMethod = order.paymentMethod;
+        final bool hasStructuredPaymentData =
+            rawStoredPaymentMethod != null &&
+                rawStoredPaymentMethod.trim().startsWith('{');
         if (rawStoredPaymentMethod != null &&
             rawStoredPaymentMethod.trim().startsWith('{')) {
           try {
@@ -755,6 +776,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               for (final method in selectedMethods) {
                 final normalized = _normalizePaymentMethodId(method);
                 if (normalized.isNotEmpty &&
+                    !_isCreditOnlyMethod(normalized) &&
                     !normalizedMethods.contains(normalized)) {
                   normalizedMethods.add(normalized);
                 }
@@ -764,7 +786,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               for (final entry in amounts.entries) {
                 final normalizedKey = _normalizePaymentMethodId(entry.key);
                 final amount = double.tryParse(entry.value.toString()) ?? 0.0;
-                if (normalizedKey.isNotEmpty && amount > 0) {
+                if (normalizedKey.isNotEmpty &&
+                    !_isCreditOnlyMethod(normalizedKey) &&
+                    amount > 0) {
                   normalizedAmounts[normalizedKey] = amount;
                   if (!normalizedMethods.contains(normalizedKey)) {
                     normalizedMethods.add(normalizedKey);
@@ -830,8 +854,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           debugPrint("  - Payment Methods: $paymentMethods");
           debugPrint("  - Paid Methods: $paidMethods");
         } else {
-          paymentMethod = order.paymentMethod ?? 'CASH';
-          paidAmount = order.paidAmount ?? order.total.toString();
+          if (hasStructuredPaymentData) {
+            // Credit-only or filtered structured payment: keep payment empty, like online.
+            paymentMethod = null;
+            paidAmount = null;
+          } else {
+            paymentMethod = order.paymentMethod ?? 'CASH';
+            paidAmount = order.paidAmount ?? order.total.toString();
+          }
           paymentMethods = null;
           paidMethods = null;
           debugPrint("⚠️ Falling back to single-payment format for sync");

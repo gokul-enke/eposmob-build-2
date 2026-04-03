@@ -2389,6 +2389,9 @@ class BillingPageState extends State<BillingPage>
                                         padding: const EdgeInsets.symmetric(
                                             vertical: 2),
                                         child: CompactQuantityControlLocal(
+                                          key: ValueKey(
+                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                          ),
                                           productId: item.product.productId!,
                                           quantity: item.quantity.toDouble(),
                                           unitPrice: item.price.toString(),
@@ -2430,6 +2433,9 @@ class BillingPageState extends State<BillingPage>
                                         child: SizedBox(
                                           width: 70,
                                           child: MrpTextField(
+                                            key: ValueKey(
+                                              'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                            ),
                                             item: item,
                                             localProductProvider:
                                                 localProductProvider,
@@ -2448,6 +2454,9 @@ class BillingPageState extends State<BillingPage>
                                       child: SizedBox(
                                         width: 70,
                                         child: PriceTextField(
+                                          key: ValueKey(
+                                            'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                          ),
                                           item: item,
                                           localProductProvider:
                                               localProductProvider,
@@ -6502,6 +6511,7 @@ class BillingPageState extends State<BillingPage>
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
       double netTotal = 0.0;
+      double totalTax = 0.0;
 
       // Convert SavedOrder items to the format expected by PrintPage
       for (var item in savedOrder.items) {
@@ -6509,10 +6519,12 @@ class BillingPageState extends State<BillingPage>
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
         double itemTotalPrice = itemPrice * item.quantity;
+        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
 
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;
         netTotal += itemTotalPrice;
+        totalTax += itemTax;
 
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
@@ -6520,17 +6532,21 @@ class BillingPageState extends State<BillingPage>
           'quantity': item.quantity.toString(),
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
+          'tax_amount': itemTax.toString(),
         });
       }
 
       // 🔧 FIX: Calculate "You Saved" using Option 3 approach
       double youSaved = totalMRP - netTotal;
       youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
+      double netExcTax = netTotal - totalTax;
 
       // Debug - check what's being sent
       debugPrint("🖨️ BILLING SAVE AND PRINT CALCULATION:");
       debugPrint("  - Total MRP: $totalMRP");
       debugPrint("  - Net Total: $netTotal");
+        debugPrint("  - Total Tax: $totalTax");
+        debugPrint("  - Net Exc Tax: $netExcTax");
       debugPrint("  - You Saved: $youSaved");
       debugPrint("Sending ${cartItems.length} items to PrintPage");
       debugPrint(
@@ -6579,6 +6595,7 @@ class BillingPageState extends State<BillingPage>
               ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
               : null,
           isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
+          netExcTax: netExcTax.toString(),
         );
       }
 

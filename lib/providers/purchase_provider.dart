@@ -945,11 +945,12 @@ class PurchaseProvider extends ChangeNotifier {
     required String accessToken,
     String? storeId,
     String? supplierId,
-    String? filterDate,
+    String? dateFrom,
+    String? dateTo,
     int? page,
   }) async {
     debugPrint("listPurchaseOrders method called with page: $page");
-    
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
@@ -966,9 +967,16 @@ class PurchaseProvider extends ChangeNotifier {
     }
     // If storeId is "all", we skip adding 'store_id' to queryParameters to fetch everything.
 
-    if (supplierId != null) queryParameters['supplier_id'] = supplierId;
-    if (filterDate != null && filterDate.isNotEmpty) {
-      queryParameters['filter_date'] = filterDate;
+    if (supplierId != null && supplierId.isNotEmpty) {
+      queryParameters['supplier_id'] = supplierId;
+    }
+    if (dateFrom != null && dateFrom.isNotEmpty) {
+      queryParameters['date_from'] = dateFrom;
+      // Backward compatibility for APIs still expecting a single-date filter.
+      queryParameters['filter_date'] = dateFrom;
+    }
+    if (dateTo != null && dateTo.isNotEmpty) {
+      queryParameters['date_to'] = dateTo;
     }
 
     final url = Uri.parse(APPUrl.listPurchaseOrder)
@@ -987,8 +995,10 @@ class PurchaseProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         if (jsonData["status"] == "success") {
           listPurchaseOrderModel = ListPurchaseOrderModel.fromJson(jsonData);
-          listPurchaseOrderCurrentPage = listPurchaseOrderModel?.data?.currentPage ?? 1;
-          listPurchaseOrderTotalPages = listPurchaseOrderModel?.data?.lastPage ?? 1;
+          listPurchaseOrderCurrentPage =
+              listPurchaseOrderModel?.data?.currentPage ?? 1;
+          listPurchaseOrderTotalPages =
+              listPurchaseOrderModel?.data?.lastPage ?? 1;
           purchaseOrdersList = listPurchaseOrderModel?.data?.data ?? [];
         } else {
           purchaseOrdersList = [];
@@ -1032,20 +1042,20 @@ class PurchaseProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         if (jsonData['status'] == 'success' && jsonData['data'] != null) {
           activePurchaseOrderDetails = jsonData['data'];
-          
+
           // Map to PurchaseItem for ViewPurchaseWidget compatibility
           if (jsonData['data']['purchase_items'] != null) {
             listPurchaseItemView = List<PurchaseItem>.from(
                 (jsonData['data']['purchase_items'] as List)
                     .map((x) => PurchaseItem.fromJson(x)));
-            
+
             // Map header data to voucherDetails
             voucherDetails = VoucherDetail.fromJson(jsonData['data']);
-            
-            // Map to ListPurchaseModelDataDetails for ViewPurchaseWidget compatibility
-            ListPurchaseModelDataDetails = ListPurchaseModelData.fromJson(jsonData['data']);
-          } else {
 
+            // Map to ListPurchaseModelDataDetails for ViewPurchaseWidget compatibility
+            ListPurchaseModelDataDetails =
+                ListPurchaseModelData.fromJson(jsonData['data']);
+          } else {
             listPurchaseItemView = [];
             voucherDetails = null;
           }
@@ -1061,7 +1071,6 @@ class PurchaseProvider extends ChangeNotifier {
     }
   }
 
-
   Future<dynamic> createPurchaseOrder({
     required String accessToken,
     required String purchaseDate,
@@ -1069,32 +1078,24 @@ class PurchaseProvider extends ChangeNotifier {
     required String storeId,
     String? voucherNumber,
     String? invoiceRef,
-    bool receiveNow = false,
     List<String>? paymentMethods,
     Map<String, dynamic>? paidAmounts,
     required List<Map<String, dynamic>> items,
-    int? purchaseId, // NEW!
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'purchase_date': purchaseDate,
       'supplier_id': supplierId,
       'store_id': storeId,
-      'receive_now': receiveNow,
       'items': items,
     };
 
-    if (purchaseId != null) {
-      apiBodyData['purchase_id'] = purchaseId;
-    }
-
-    
     if (voucherNumber != null && voucherNumber.isNotEmpty) {
       apiBodyData['voucher_number'] = voucherNumber;
     }
     if (invoiceRef != null && invoiceRef.isNotEmpty) {
       apiBodyData['invoice_ref'] = invoiceRef;
     }
-    
+
     if (paymentMethods != null) apiBodyData['payment_methods'] = paymentMethods;
     if (paidAmounts != null) apiBodyData['paid_amounts'] = paidAmounts;
 
@@ -1107,6 +1108,9 @@ class PurchaseProvider extends ChangeNotifier {
     }
 
     try {
+      debugPrint('📤 [Purchase API] createPurchaseOrder URL: $url');
+      debugPrint(
+          '📤 [Purchase API] createPurchaseOrder Body: ${json.encode(apiBodyData)}');
       final response = await http.post(
         url,
         body: json.encode(apiBodyData),
@@ -1116,6 +1120,10 @@ class PurchaseProvider extends ChangeNotifier {
           'X-Tenant': apiKey,
         },
       );
+      debugPrint(
+          '📥 [Purchase API] createPurchaseOrder Status: ${response.statusCode}');
+      debugPrint(
+          '📥 [Purchase API] createPurchaseOrder Response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -1160,6 +1168,9 @@ class PurchaseProvider extends ChangeNotifier {
     }
 
     try {
+      debugPrint('📤 [Purchase API] receivePurchaseOrder URL: $url');
+      debugPrint(
+          '📤 [Purchase API] receivePurchaseOrder Body: ${json.encode(apiBodyData)}');
       final response = await http.post(
         url,
         body: json.encode(apiBodyData),
@@ -1169,6 +1180,10 @@ class PurchaseProvider extends ChangeNotifier {
           'X-Tenant': apiKey,
         },
       );
+      debugPrint(
+          '📥 [Purchase API] receivePurchaseOrder Status: ${response.statusCode}');
+      debugPrint(
+          '📥 [Purchase API] receivePurchaseOrder Response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -1186,5 +1201,3 @@ class PurchaseProvider extends ChangeNotifier {
     }
   }
 }
-
-
