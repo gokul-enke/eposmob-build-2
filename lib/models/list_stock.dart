@@ -62,6 +62,7 @@ class ListStockModelData {
   final String? rack;
   final String? reorderLevel;
   final String? stockStatus;
+  final String? expiryDate;
 
   ListStockModelData({
     this.stockId,
@@ -80,6 +81,7 @@ class ListStockModelData {
     this.rack,
     this.reorderLevel,
     this.stockStatus,
+    this.expiryDate,
   });
 
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
@@ -102,6 +104,7 @@ class ListStockModelData {
         rack: json["rack"],
         reorderLevel: json["reorder_level"]?.toString(),
         stockStatus: json["stock_status"]?.toString(),
+        expiryDate: json["expiry_date"]?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -121,6 +124,7 @@ class ListStockModelData {
         "rack": rack,
         "reorder_level": reorderLevel,
         "stock_status": stockStatus,
+        "expiry_date": expiryDate,
       };
 }
 

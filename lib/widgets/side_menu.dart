@@ -496,11 +496,16 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle2: () {
                       sideBarController.index.value = 15;
                     },
+                    onTapTitle3: () {
+                      sideBarController.index.value = 83;
+                    },
                     listTitle1: "Product",
                     listTitle2: "Stock",
+                    listTitle3: "Product Barcode",
                     // Permission-based visibility
                     showTitle1: hasProductPermission,
                     showTitle2: hasStockPermission,
+                    showTitle3: hasProductPermission,
                     icon: fa.FontAwesomeIcons.cube,
                     title: 'Product',
                     onTap: () async {
@@ -512,6 +517,7 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 18 ||
                         sideBarController.index.value == 28 ||
                         sideBarController.index.value == 33 ||
+                        sideBarController.index.value == 83 ||
                         sideBarController.index.value == 35),
               );
             },
