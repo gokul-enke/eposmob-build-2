@@ -25,7 +25,7 @@ import '../../resources/style_manager.dart';
 import 'widgets/adjust_stock_modal.dart';
 import 'widgets/move_stock_modal.dart';
 import 'widgets/withdraw_stock_modal.dart';
-import 'package:pos_machine/screens/print/thermal/barcode_printer_service.dart';
+import 'package:pos_machine/screens/print/barcode_printer_service.dart';
 import 'widgets/confirm_barcode_print_modal.dart';
 
 class ProductBarcodeScreen extends StatefulWidget {
@@ -36,37 +36,25 @@ class ProductBarcodeScreen extends StatefulWidget {
 }
 
 class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
-  final TextEditingController stockNameController = TextEditingController();
+  final TextEditingController productNameController = TextEditingController();
   final TextEditingController categoryController = TextEditingController();
   final TextEditingController categorySearchController =
       TextEditingController();
   final TextEditingController barcodeController = TextEditingController();
-  final TextEditingController rackController = TextEditingController();
-  final TextEditingController storeController = TextEditingController();
-  final TextEditingController storeSearchController = TextEditingController();
-  final TextEditingController stockStatusController = TextEditingController();
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;
   List<String> categories = ["All Categories"];
-  List<String> stores = ["All Stores"];
 
-  // ── NEW: multi-select state ──
-  final Set<int> _selectedIndexes = {};
-  bool get _allSelected =>
-      _selectedIndexes.length ==
-      (Provider.of<StockProvider>(context, listen: false)
-              .listStockModelDataList
-              ?.length ??
-          0);
+  // Track selected stocks by stable key so selection survives pagination.
+  final Set<String> _selectedStockKeys = {};
+  final Map<String, ListStockModelData> _selectedStocksByKey = {};
 
   @override
   void initState() {
     super.initState();
     loadInitData();
     categoryController.text = "All Categories";
-    storeController.text = "All Stores";
-    stockStatusController.text = "All Statuses";
   }
 
   // ── ALL ORIGINAL LOGIC BELOW — UNTOUCHED ──
@@ -102,10 +90,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       await Provider.of<StockProvider>(context, listen: false)
           .loadAllStocks(accessToken);
 
-      await Provider.of<PurchaseProvider>(context, listen: false)
-          .listAllStores(accessToken, null);
-
-      _extractCategoriesAndStores();
+      _extractCategories();
 
       setState(() {
         isInitialized = true;
@@ -122,11 +107,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     }
   }
 
-  void _extractCategoriesAndStores() {
-    final stockProvider = Provider.of<StockProvider>(context, listen: false);
+  void _extractCategories() {
     final categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
-    final allStocks = stockProvider.allStocks;
 
     final categoryList = categoryProvider.category ?? [];
     final uniqueCategories = categoryList
@@ -135,19 +118,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         .toList();
     uniqueCategories.sort();
 
-    List<String> uniqueStores = [];
-    if (allStocks != null && allStocks.isNotEmpty) {
-      uniqueStores = allStocks
-          .map((stock) => stock.storeName ?? "")
-          .where((store) => store.isNotEmpty)
-          .toSet()
-          .toList();
-      uniqueStores.sort();
-    }
-
     setState(() {
       categories = ["All Categories", ...uniqueCategories];
-      stores = ["All Stores", ...uniqueStores];
     });
 
     debugPrint("📋 CATEGORIES LOADED: ${categories.length} categories found");
@@ -157,33 +129,49 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   void searchStocks() {
     StockProvider provider = Provider.of<StockProvider>(context, listen: false);
     provider.applyStockFiltersLocally(
-      filterName: stockNameController.text,
+      filterName: productNameController.text.isEmpty
+          ? null
+          : productNameController.text,
       filterCategory: categoryController.text == "All Categories"
           ? null
           : categoryController.text,
       filterBarcode:
           barcodeController.text.isEmpty ? null : barcodeController.text,
-      filterRack: rackController.text.isEmpty ? null : rackController.text,
-      filterStore:
-          storeController.text == "All Stores" ? null : storeController.text,
-      filterStatus: stockStatusController.text == "All Statuses"
-          ? null
-          : stockStatusController.text,
       page: 1,
     );
   }
 
   void resetSearch() {
     setState(() {
-      stockNameController.clear();
+      productNameController.clear();
       categoryController.text = "All Categories";
       barcodeController.clear();
-      rackController.clear();
-      storeController.text = "All Stores";
-      stockStatusController.text = "All Statuses";
-      _selectedIndexes.clear(); // clear selection on reset
+      _selectedStockKeys.clear();
+      _selectedStocksByKey.clear();
     });
     Provider.of<StockProvider>(context, listen: false).resetStockFilters();
+  }
+
+  String _stockSelectionKey(ListStockModelData stock) {
+    if (stock.stockId != null) {
+      return 'id:${stock.stockId}';
+    }
+    return 'fallback:${stock.barCode ?? ''}|${stock.productName ?? ''}|${stock.rack ?? ''}|${stock.storeName ?? ''}';
+  }
+
+  bool _isStockSelected(ListStockModelData stock) {
+    return _selectedStockKeys.contains(_stockSelectionKey(stock));
+  }
+
+  void _setStockSelected(ListStockModelData stock, bool selected) {
+    final key = _stockSelectionKey(stock);
+    if (selected) {
+      _selectedStockKeys.add(key);
+      _selectedStocksByKey[key] = stock;
+    } else {
+      _selectedStockKeys.remove(key);
+      _selectedStocksByKey.remove(key);
+    }
   }
 
   void _showStockDetails(ListStockModelData stock) {
@@ -375,11 +363,11 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     if (result != null &&
         result['items'] != null &&
         (result['items'] as List).isNotEmpty) {
-      final barcodePrinterService = BarcodePrinterService();
-      barcodePrinterService.printBarcodes(
-        context: context,
+      final barcodePrinterService = BarcodePrinterService(context);
+      await barcodePrinterService.printBarcodes(
         printItems: result['items'],
-        stickerSize: result['size'] ?? '50x25',
+        stickerSize: result['size'] ?? '50x25mm',
+        stickersPerRow: result['stickersPerRow'] ?? 1,
       );
     }
   }
@@ -413,11 +401,11 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     if (result != null &&
         result['items'] != null &&
         (result['items'] as List).isNotEmpty) {
-      final barcodePrinterService = BarcodePrinterService();
-      barcodePrinterService.printBarcodes(
-        context: context,
+      final barcodePrinterService = BarcodePrinterService(context);
+      await barcodePrinterService.printBarcodes(
         printItems: result['items'],
-        stickerSize: result['size'] ?? '50x25',
+        stickerSize: result['size'] ?? '50x25mm',
+        stickersPerRow: result['stickersPerRow'] ?? 1,
       );
     }
   }
@@ -532,22 +520,16 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   Row(
                     children: [
                       // ── NEW: Print Selected button, shown when items are selected ──
-                      if (_selectedIndexes.isNotEmpty)
+                      if (_selectedStockKeys.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(right: 10),
                           child: CustomRoundButton(
                             title:
-                                "Print Selected (${_selectedIndexes.length})",
+                                "Print Selected (${_selectedStockKeys.length})",
                             fct: () {
-                              final stocks = Provider.of<StockProvider>(context,
-                                      listen: false)
-                                  .listStockModelDataList;
-                              if (stocks != null) {
-                                final selected = _selectedIndexes
-                                    .map((i) => stocks[i])
-                                    .toList();
-                                _handlePrintSelected(selected);
-                              }
+                              final selected =
+                                  _selectedStocksByKey.values.toList();
+                              _handlePrintSelected(selected);
                             },
                             fontSize: 12,
                             height: 45,
@@ -577,47 +559,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            BuildBoxShadowContainer(
-                              circleRadius: 7,
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(left: 15),
-                              height: 45,
-                              child: TextField(
-                                controller: stockNameController,
-                                onChanged: (value) {
-                                  searchStocks();
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'Stock Name',
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.27,
-                                  ColorManager.textColor.withOpacity(.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
                             BuildDropDownWithSearch<String>(
                               title: null,
                               showName: false,
-                              hintText: 'Select Category',
+                              hintText: 'Category',
                               value: categoryController.text == "All Categories"
                                   ? null
                                   : categoryController.text,
@@ -637,6 +582,43 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               height: 45,
                               margin: const EdgeInsets.symmetric(
                                   horizontal: 0, vertical: 0),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 15),
+                              height: 45,
+                              child: TextField(
+                                controller: productNameController,
+                                onChanged: (value) {
+                                  searchStocks();
+                                },
+                                decoration: InputDecoration(
+                                  hintText: 'Product Name',
+                                  hintStyle: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -678,54 +660,6 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            BuildBoxShadowContainer(
-                              circleRadius: 7,
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(left: 15),
-                              height: 45,
-                              child: TextField(
-                                controller: rackController,
-                                onChanged: (value) {
-                                  searchStocks();
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'Rack Number',
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.27,
-                                  ColorManager.textColor.withOpacity(.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(child: Container()),
-                      const SizedBox(width: 15),
-                      Expanded(child: Container()),
-                      const SizedBox(width: 15),
-                      Expanded(child: Container()),
                       const SizedBox(width: 15),
                       Expanded(
                         child: CustomRoundButton(
@@ -778,8 +712,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                   8: FlexColumnWidth(0.8), // Action
                                 };
 
-                                final allSelected = _selectedIndexes.length ==
-                                    listStockModelDataList.length;
+                                final allSelected =
+                                    listStockModelDataList.isNotEmpty &&
+                                        listStockModelDataList.every(
+                                            (stock) => _isStockSelected(stock));
 
                                 return BuildBoxShadowContainer(
                                   margin: const EdgeInsets.only(top: 5),
@@ -816,16 +752,17 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                                     onChanged: (val) {
                                                       setState(() {
                                                         if (val == true) {
-                                                          _selectedIndexes
-                                                              .addAll(
-                                                            List.generate(
-                                                                listStockModelDataList
-                                                                    .length,
-                                                                (i) => i),
-                                                          );
+                                                          for (final stock
+                                                              in listStockModelDataList) {
+                                                            _setStockSelected(
+                                                                stock, true);
+                                                          }
                                                         } else {
-                                                          _selectedIndexes
-                                                              .clear();
+                                                          for (final stock
+                                                              in listStockModelDataList) {
+                                                            _setStockSelected(
+                                                                stock, false);
+                                                          }
                                                         }
                                                       });
                                                     },
@@ -880,8 +817,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                                     final int index = entry.key;
                                                     final stock = entry.value;
                                                     final isSelected =
-                                                        _selectedIndexes
-                                                            .contains(index);
+                                                        _isStockSelected(stock);
 
                                                     return TableRow(
                                                       decoration: BoxDecoration(
@@ -903,16 +839,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                                             value: isSelected,
                                                             onChanged: (val) {
                                                               setState(() {
-                                                                if (val ==
-                                                                    true) {
-                                                                  _selectedIndexes
-                                                                      .add(
-                                                                          index);
-                                                                } else {
-                                                                  _selectedIndexes
-                                                                      .remove(
-                                                                          index);
-                                                                }
+                                                                _setStockSelected(
+                                                                  stock,
+                                                                  val == true,
+                                                                );
                                                               });
                                                             },
                                                             activeColor:
@@ -1000,13 +930,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
   @override
   void dispose() {
-    stockNameController.dispose();
+    productNameController.dispose();
     categoryController.dispose();
     categorySearchController.dispose();
     barcodeController.dispose();
-    rackController.dispose();
-    storeController.dispose();
-    storeSearchController.dispose();
     super.dispose();
   }
 }

@@ -23,8 +23,7 @@ class BarcodePrintItem {
 class ConfirmBarcodePrintModal extends StatefulWidget {
   final List<ListStockModelData> selectedStocks;
 
-  const ConfirmBarcodePrintModal({Key? key, required this.selectedStocks})
-      : super(key: key);
+  const ConfirmBarcodePrintModal({super.key, required this.selectedStocks});
 
   @override
   _ConfirmBarcodePrintModalState createState() =>
@@ -33,36 +32,34 @@ class ConfirmBarcodePrintModal extends StatefulWidget {
 
 class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   late List<BarcodePrintItem> printItems;
-  String stickerSize = '50x25';
+  String stickerSize = '50x25mm';
   int stickersPerRow = 1;
 
-  final List<String> stickerSizes = ['50x25', '40x20', '91x24mm'];
+  final List<String> stickerSizes = ['50x25mm', '40x20mm', '91x24mm'];
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     final nextMonth = DateTime(now.year, now.month + 1, now.day);
-    
-    printItems = widget.selectedStocks
-        .map((stock) {
-          DateTime? expDateToUse = nextMonth;
-          if (stock.expiryDate != null && stock.expiryDate!.trim().isNotEmpty) {
-            try {
-              expDateToUse = DateTime.parse(stock.expiryDate!);
-            } catch (e) {
-              // Ignore failure, falls back to next month
-            }
-          }
 
-          return BarcodePrintItem(
-            stock: stock,
-            quantity: 1,
-            mfgDate: now,
-            expDate: expDateToUse,
-          );
-        })
-        .toList();
+    printItems = widget.selectedStocks.map((stock) {
+      DateTime? expDateToUse = nextMonth;
+      if (stock.expiryDate != null && stock.expiryDate!.trim().isNotEmpty) {
+        try {
+          expDateToUse = DateTime.parse(stock.expiryDate!);
+        } catch (e) {
+          // Ignore failure, falls back to next month
+        }
+      }
+
+      return BarcodePrintItem(
+        stock: stock,
+        quantity: 1,
+        mfgDate: now,
+        expDate: expDateToUse,
+      );
+    }).toList();
   }
 
   Future<void> _selectDate(BuildContext context, int index, bool isMfg) async {
@@ -102,14 +99,15 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 0,
       backgroundColor: Colors.white,
       child: Container(
         width: size.width * 0.8,
-        constraints: BoxConstraints(maxWidth: 900, maxHeight: size.height * 0.85),
+        constraints:
+            BoxConstraints(maxWidth: 900, maxHeight: size.height * 0.85),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: Colors.white,
@@ -130,7 +128,8 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 28),
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Colors.orangeAccent, size: 28),
                   const SizedBox(width: 12),
                   Text(
                     "Confirm Barcode Print",
@@ -144,7 +143,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                 ],
               ),
             ),
-            
+
             // Body
             Expanded(
               child: Padding(
@@ -170,9 +169,11 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                               const SizedBox(height: 8),
                               Container(
                                 height: 45,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.blue.shade300),
+                                  border:
+                                      Border.all(color: Colors.blue.shade300),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: DropdownButtonHideUnderline(
@@ -188,7 +189,8 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                     }).toList(),
                                     onChanged: (newValue) {
                                       setState(() {
-                                        if (newValue != null) stickerSize = newValue;
+                                        if (newValue != null)
+                                          stickerSize = newValue;
                                       });
                                     },
                                   ),
@@ -218,14 +220,17 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                   initialValue: stickersPerRow.toString(),
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                      borderSide: BorderSide(
+                                          color: Colors.grey.shade300),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                      borderSide: BorderSide(
+                                          color: Colors.grey.shade300),
                                     ),
                                   ),
                                   onChanged: (val) {
@@ -238,9 +243,9 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Table
                     Expanded(
                       child: Container(
@@ -258,14 +263,24 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                   topLeft: Radius.circular(8),
                                   topRight: Radius.circular(8),
                                 ),
-                                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                                border: Border(
+                                    bottom: BorderSide(
+                                        color: Colors.grey.shade200)),
                               ),
                               child: Row(
                                 children: [
-                                  Expanded(flex: 3, child: _buildTableHeader("PRODUCT")),
-                                  Expanded(flex: 1, child: _buildTableHeader("QUANTITY")),
-                                  Expanded(flex: 1, child: _buildTableHeader("MFG DATE")),
-                                  Expanded(flex: 1, child: _buildTableHeader("EXP DATE")),
+                                  Expanded(
+                                      flex: 3,
+                                      child: _buildTableHeader("PRODUCT")),
+                                  Expanded(
+                                      flex: 1,
+                                      child: _buildTableHeader("QUANTITY")),
+                                  Expanded(
+                                      flex: 1,
+                                      child: _buildTableHeader("MFG DATE")),
+                                  Expanded(
+                                      flex: 1,
+                                      child: _buildTableHeader("EXP DATE")),
                                 ],
                               ),
                             ),
@@ -273,21 +288,33 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                             Expanded(
                               child: ListView.separated(
                                 itemCount: printItems.length,
-                                separatorBuilder: (context, index) => const Divider(height: 1),
+                                separatorBuilder: (context, index) =>
+                                    const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final item = printItems[index];
-                                  final mfgStr = item.mfgDate != null ? DateFormat('yyyy-MM-dd').format(item.mfgDate!) : "Select Date";
-                                  final expStr = item.expDate != null ? DateFormat('yyyy-MM-dd').format(item.expDate!) : "Select Date";
-                                  
+                                  final mfgStr = item.mfgDate != null
+                                      ? DateFormat('yyyy-MM-dd')
+                                          .format(item.mfgDate!)
+                                      : "Select Date";
+                                  final expStr = item.expDate != null
+                                      ? DateFormat('yyyy-MM-dd')
+                                          .format(item.expDate!)
+                                      : "Select Date";
+
                                   return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 8.0, horizontal: 8.0),
                                     child: Row(
                                       children: [
                                         Expanded(
                                           flex: 3,
                                           child: Text(
                                             item.stock.productName ?? 'N/A',
-                                            style: buildCustomStyle(FontWeightManager.medium, FontSize.s13, 0.2, ColorManager.textColor),
+                                            style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s13,
+                                                0.2,
+                                                ColorManager.textColor),
                                           ),
                                         ),
                                         Expanded(
@@ -295,17 +322,23 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                           child: SizedBox(
                                             height: 35,
                                             child: Padding(
-                                              padding: const EdgeInsets.only(right: 16.0),
+                                              padding: const EdgeInsets.only(
+                                                  right: 16.0),
                                               child: TextFormField(
-                                                initialValue: item.quantity.toString(),
-                                                keyboardType: TextInputType.number,
+                                                initialValue:
+                                                    item.quantity.toString(),
+                                                keyboardType:
+                                                    TextInputType.number,
                                                 textAlign: TextAlign.center,
-                                                decoration: const InputDecoration(
-                                                  contentPadding: EdgeInsets.zero,
+                                                decoration:
+                                                    const InputDecoration(
+                                                  contentPadding:
+                                                      EdgeInsets.zero,
                                                   border: OutlineInputBorder(),
                                                 ),
                                                 onChanged: (val) {
-                                                  item.quantity = int.tryParse(val) ?? 1;
+                                                  item.quantity =
+                                                      int.tryParse(val) ?? 1;
                                                 },
                                               ),
                                             ),
@@ -314,20 +347,38 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                         Expanded(
                                           flex: 1,
                                           child: InkWell(
-                                            onTap: () => _selectDate(context, index, true),
+                                            onTap: () => _selectDate(
+                                                context, index, true),
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                              child: Text(mfgStr, style: TextStyle(color: item.mfgDate == null ? Colors.grey : Colors.black)),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 8,
+                                                      horizontal: 4),
+                                              child: Text(mfgStr,
+                                                  style: TextStyle(
+                                                      color:
+                                                          item.mfgDate == null
+                                                              ? Colors.grey
+                                                              : Colors.black)),
                                             ),
                                           ),
                                         ),
                                         Expanded(
                                           flex: 1,
                                           child: InkWell(
-                                            onTap: () => _selectDate(context, index, false),
+                                            onTap: () => _selectDate(
+                                                context, index, false),
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                              child: Text(expStr, style: TextStyle(color: item.expDate == null ? Colors.grey : Colors.black)),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 8,
+                                                      horizontal: 4),
+                                              child: Text(expStr,
+                                                  style: TextStyle(
+                                                      color:
+                                                          item.expDate == null
+                                                              ? Colors.grey
+                                                              : Colors.black)),
                                             ),
                                           ),
                                         ),
@@ -345,7 +396,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                 ),
               ),
             ),
-            
+
             // Footer
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -377,9 +428,11 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                     textColor: Colors.white,
                     borderColor: const Color(0xFF2962FF),
                     fct: () {
+                      final safeStickersPerRow = stickersPerRow < 1 ? 1 : stickersPerRow;
                       Navigator.pop(context, {
                         'items': printItems,
                         'size': stickerSize,
+                        'stickersPerRow': safeStickersPerRow,
                       });
                     },
                     height: 40,
