@@ -7,6 +7,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:provider/provider.dart';
 
 class MobileProductAutocomplete extends StatefulWidget {
@@ -15,6 +16,7 @@ class MobileProductAutocomplete extends StatefulWidget {
   final List<GetProduct> productList;
   final GlobalKey? autocompleteProductKey;
   final bool autofocus;
+  final bool suppressSystemKeyboardOnAndroid;
 
   const MobileProductAutocomplete({
     Key? key,
@@ -23,6 +25,7 @@ class MobileProductAutocomplete extends StatefulWidget {
     required this.productList,
     this.autocompleteProductKey,
     this.autofocus = false,
+    this.suppressSystemKeyboardOnAndroid = false,
   }) : super(key: key);
 
   @override
@@ -141,6 +144,12 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
         },
         fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
           final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+          final bool suppressSystemKeyboard =
+              SystemKeyboardPolicy.shouldSuppressForContext(
+            context: context,
+            fieldWantsVirtualKeyboardOnly:
+              widget.suppressSystemKeyboardOnAndroid,
+            );
           
           void _ensureFocus() {
             if (!focusNode.hasFocus) {
@@ -202,6 +211,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
               size: widget.size,
               width: double.infinity,
               hintText: 'Search Product',
+              useSystemKeyboard: !suppressSystemKeyboard,
               onSubmitted: (_) => onFieldSubmitted(),
               onTap: () {
                 // Show alphanumeric virtual keyboard connected to this controller

@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:provider/provider.dart';
 
 class ProductAutocomplete extends StatefulWidget {
@@ -17,6 +18,7 @@ class ProductAutocomplete extends StatefulWidget {
   final List<GetProduct> productList;
   final GlobalKey? autocompleteProductKey;
   final bool autofocus;
+  final bool suppressSystemKeyboardOnAndroid;
 
   const ProductAutocomplete({
     super.key,
@@ -25,6 +27,7 @@ class ProductAutocomplete extends StatefulWidget {
     required this.productList,
     this.autocompleteProductKey,
     this.autofocus = false,
+    this.suppressSystemKeyboardOnAndroid = false,
   });
 
   @override
@@ -157,6 +160,12 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
             (context, textEditingController, focusNode, onFieldSubmitted) {
           final keyboardProvider =
               Provider.of<KeyboardProvider>(context, listen: false);
+          final bool suppressSystemKeyboard =
+              SystemKeyboardPolicy.shouldSuppressForContext(
+            context: context,
+            fieldWantsVirtualKeyboardOnly:
+              widget.suppressSystemKeyboardOnAndroid,
+            );
           // Make sure the autocomplete keeps focus while typing via virtual keyboard
           void _ensureFocus() {
             if (!focusNode.hasFocus) {
@@ -232,6 +241,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               size: widget.size,
               width: double.infinity,
               hintText: 'common.search_product'.tr,
+              useSystemKeyboard: !suppressSystemKeyboard,
               onSubmitted: (_) => onFieldSubmitted(),
               onTap: () {
                 // Show alphanumeric virtual keyboard connected to this controller

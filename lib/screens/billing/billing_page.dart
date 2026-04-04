@@ -17,6 +17,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
@@ -204,6 +205,13 @@ class BillingPageState extends State<BillingPage>
 
   bool get _hasInternet =>
       Provider.of<BillingProvider>(context, listen: false).hasInternet;
+
+  bool _shouldSuppressSystemKeyboard() {
+    return SystemKeyboardPolicy.shouldSuppressForContext(
+      context: context,
+      fieldWantsVirtualKeyboardOnly: true,
+    );
+  }
 
   VoidCallback? _appSettingsDebugListener;
   VoidCallback? _deliveryMethodListener;
@@ -1874,6 +1882,7 @@ class BillingPageState extends State<BillingPage>
                                 autocompleteProductKey: _autocompleteProductKey,
                                 autofocus: !appSettingsProvider
                                     .appSettings!.barcodeSales,
+                                suppressSystemKeyboardOnAndroid: true,
                                 size: size,
                                 onSelected: (GetProduct selectedProduct,
                                     Stock? selectedStock) async {
@@ -1905,6 +1914,7 @@ class BillingPageState extends State<BillingPage>
                         size: size,
                         hintText: 'billing.quantity_hint'.tr,
                         focusNode: _quantityFocusNode,
+                        useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                         keyboardType: TextInputType.number,
                         onTap: () {
                           Provider.of<KeyboardProvider>(context, listen: false)
@@ -1927,6 +1937,7 @@ class BillingPageState extends State<BillingPage>
                         size: size,
                         focusNode: _unitPriceFocusNode,
                         hintText: 'billing.unit_price_hint'.tr,
+                        useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                         keyboardType: TextInputType.number,
                         onTap: () {
                           Provider.of<KeyboardProvider>(context, listen: false)
@@ -3418,6 +3429,8 @@ class BillingPageState extends State<BillingPage>
                               }
                             },
                             child: TextField(
+                              readOnly: _shouldSuppressSystemKeyboard(),
+                              showCursor: true,
                               onTap: () {
                                 // Select all text for quick replacement
                                 WidgetsBinding.instance
