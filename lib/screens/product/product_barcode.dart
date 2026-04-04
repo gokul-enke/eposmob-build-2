@@ -307,15 +307,6 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
-  void _showWithdrawStockModal(ListStockModelData stock) {
-    debugPrint(
-        '💸 SHOW WITHDRAW STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
-    showDialog(
-      context: context,
-      builder: (context) => WithdrawStockModal(stock: stock),
-    );
-  }
-
   void _handlePrintSelected(List<ListStockModelData> selectedStocks) async {
     debugPrint('🖨️ PRINT triggered for ${selectedStocks.length} items');
 
