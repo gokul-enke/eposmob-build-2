@@ -107,7 +107,7 @@ msix_config:
   identity_name: enkeconsulting.CLOUDPOS-BillingApp
   msix_version: 1.0.0.3
   logo_path: windows/runner/resources/app_icon.ico
-  capabilities: internetClient, location, bluetooth
+  capabilities: internetClient, bluetooth
   output_name: cloudpos
   sign_msix: false
   install_certificate: false

@@ -138,8 +138,6 @@ Future<void> _requestPermissions() async {
     Permission.bluetooth,
     Permission.bluetoothConnect,
     Permission.bluetoothScan,
-    Permission.locationWhenInUse,
-    Permission.location,
   ].request();
 
   statuses.forEach((permission, status) {
