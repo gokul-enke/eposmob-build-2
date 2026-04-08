@@ -113,30 +113,55 @@ class ProductCartHelper {
       debugPrint("🏪 Active store filter applied:");
       debugPrint("  - Active Store ID: ${activeStore?.storeId}");
       debugPrint("  - Active Store Name: ${activeStore?.storeName}");
-      debugPrint("  - Matching stock entries: ${availableStocks.length}");
+      debugPrint("  - Matching stock entries (qty>0): ${availableStocks.length}");
 
       if (availableStocks.isEmpty) {
+        // All stock entries have qty=0 OR no store-matching entries → base price
         debugPrint(
-            "⚠️ No current-store stock entries found - fallback to product base pricing");
+            "⚠️ No available stock (qty>0) found - fallback to product base pricing");
         finalPrice =
             finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
         finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
-      } else if (availableStocks.length > 1) {
-        debugPrint(
-            "📦 Multiple stock entries detected, filtering available stocks...");
-        debugPrint("  - Total stock entries: ${product.stock!.length}");
+      } else {
+        // Group stocks by pricing BEFORE deciding whether to show modal
+        final List<CombinedStock> groups = groupStocksByPricing(availableStocks);
+        debugPrint("📦 Grouped ${availableStocks.length} stocks into ${groups.length} pricing group(s)");
 
-        debugPrint("📦 Available stocks: ${availableStocks.length}");
-        for (int i = 0; i < availableStocks.length; i++) {
-          Stock stock = availableStocks[i];
-          debugPrint(
-              "  Stock $i: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-        }
+        if (groups.length == 1) {
+          // Only 1 pricing group → auto-select, no modal needed
+          final group = groups.first;
+          selectedStock = Stock(
+            id: group.firstStock.id,
+            productId: group.firstStock.productId,
+            storeId: group.firstStock.storeId,
+            storeName: group.firstStock.storeName,
+            supplier: group.firstStock.supplier,
+            quantity: group.totalQuantity,
+            price: group.price,
+            sku: group.firstStock.sku,
+            mrp: group.mrp,
+            unit: group.unit,
+            purchasePrice: group.purchasePrice,
+            date: group.firstStock.date,
+            expiryDate: group.firstStock.expiryDate,
+            rack: group.firstStock.rack,
+            hsnCode: group.hsnCode,
+          );
 
-        if (availableStocks.length > 1) {
-          debugPrint("📱 Showing stock selection modal for user choice...");
+          debugPrint("📦 Single pricing group - auto-selected:");
+          debugPrint("  - Stock ID: ${selectedStock!.id}");
+          debugPrint("  - Price: ${selectedStock!.price}");
+          debugPrint("  - MRP: ${selectedStock!.mrp}");
+          debugPrint("  - Combined Qty: ${selectedStock!.quantity}");
 
-          // Show stock selection modal
+          finalPrice =
+              finalPrice ?? double.tryParse(selectedStock!.price ?? "0") ?? 0;
+          finalMrp =
+              finalMrp ?? double.tryParse(selectedStock!.mrp ?? "0") ?? 0;
+        } else {
+          // Multiple pricing groups → show stock selection modal
+          debugPrint("📱 ${groups.length} pricing groups - showing stock selection modal...");
+
           final result = await showDialog(
             context: context,
             builder: (context) => StockSelectionModal(
@@ -147,9 +172,6 @@ class ProductCartHelper {
 
           if (result != null) {
             debugPrint("✅ User selected stock from modal");
-
-            // Process the selected product and stock
-            GetProduct selectedProduct = result['product'];
             selectedStock = result['stock'];
 
             debugPrint("📦 Selected stock details:");
@@ -157,94 +179,23 @@ class ProductCartHelper {
             debugPrint("  - Stock Price: ${selectedStock!.price}");
             debugPrint("  - Stock MRP: ${selectedStock!.mrp}");
 
-            // Use stock prices as the current prices for customer history modal
             finalPrice =
                 finalPrice ?? double.tryParse(selectedStock!.price ?? "0") ?? 0;
             finalMrp =
                 finalMrp ?? double.tryParse(selectedStock!.mrp ?? "0") ?? 0;
-
-            debugPrint("💰 Stock-based pricing set:");
-            debugPrint("  - Final Price: $finalPrice");
-            debugPrint("  - Final MRP: $finalMrp");
           } else {
             debugPrint("❌ User cancelled stock selection - aborting");
             debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
             return;
           }
-        } else if (availableStocks.isNotEmpty) {
-          debugPrint("📦 Single stock entry found, auto-selecting...");
-
-          // Single stock option available, use it (regardless of quantity)
-          selectedStock = availableStocks.first;
-
-          debugPrint("📦 Auto-selected stock details:");
-          debugPrint("  - Stock ID: ${selectedStock!.id}");
-          debugPrint("  - Stock Price: ${selectedStock!.price}");
-          debugPrint("  - Stock MRP: ${selectedStock!.mrp}");
-          debugPrint("  - Stock Quantity: ${selectedStock!.quantity}");
-
-          // Use stock prices as the current prices
-          finalPrice =
-              finalPrice ?? double.tryParse(selectedStock!.price ?? "0") ?? 0;
-          finalMrp =
-              finalMrp ?? double.tryParse(selectedStock!.mrp ?? "0") ?? 0;
-
-          debugPrint("💰 Auto-selected stock pricing:");
-          debugPrint("  - Final Price: $finalPrice");
-          debugPrint("  - Final MRP: $finalMrp");
-        } else {
-          debugPrint(
-              "📦 Product has no stock entries, using basic product info...");
-          finalPrice =
-              finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
-          finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
-
-          debugPrint("💰 Product base pricing (No Stock):");
-          debugPrint("  - Final Price: $finalPrice");
-          debugPrint("  - Final MRP: $finalMrp");
         }
-      } else {
-        debugPrint(
-            "📦 Product has single stock entry, extracting stock information...");
-
-        // Single stock entry - extract the stock information
-        selectedStock = availableStocks.first;
-
-        debugPrint("📦 Single stock details:");
-        debugPrint("  - Stock ID: ${selectedStock!.id}");
-        debugPrint("  - Stock Price: ${selectedStock!.price}");
-        debugPrint("  - Stock MRP: ${selectedStock!.mrp}");
-        debugPrint("  - Stock Quantity: ${selectedStock!.quantity}");
-
-        // Use stock prices as the current prices
-        finalPrice =
-            finalPrice ?? double.tryParse(selectedStock!.price ?? "0") ?? 0;
-        finalMrp = finalMrp ?? double.tryParse(selectedStock!.mrp ?? "0") ?? 0;
-
-        debugPrint("💰 Single stock pricing:");
-        debugPrint("  - Final Price: $finalPrice");
-        debugPrint("  - Final MRP: $finalMrp");
       }
     } else if (!stockEnabled) {
       debugPrint("📦 Stock management disabled - using product base pricing");
 
-      // Use product's base price and MRP when stock is disabled
       finalPrice =
           finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
       finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
-
-      // Only pass stock if the addToCart method absolutely requires it (to prevent null errors)
-      if (product.stock != null && product.stock!.isNotEmpty) {
-        selectedStock = product.stock!
-            .first; // Just to prevent null errors, not for stock management
-        debugPrint(
-            "📦 Using first stock entry only to prevent null errors, not for stock logic");
-        debugPrint("  - Stock ID: ${selectedStock!.id}");
-      }
-
-      debugPrint("💰 Product base pricing (Stock Disabled):");
-      debugPrint("  - Final Price: $finalPrice");
-      debugPrint("  - Final MRP: $finalMrp");
     } else {
       debugPrint(
           "📦 Product has no stock entries, using basic product info...");

@@ -49,6 +49,7 @@ Future<void> handleAddProductToCart({
       );
 
       if (availableStocks.isEmpty) {
+        // No stock with qty>0 → fall back to base product pricing
         localProductProvider.addToCart(
           product: product,
           quantity: quantity,
@@ -62,7 +63,47 @@ Future<void> handleAddProductToCart({
           onSuccess();
         }
         return;
-      } else if (availableStocks.length > 1) {
+      }
+
+      // Group stocks by pricing before deciding whether to show modal
+      final groups = groupStocksByPricing(availableStocks);
+
+      if (groups.length == 1) {
+        // Single pricing group → auto-select, no modal needed
+        final group = groups.first;
+        final autoStock = Stock(
+          id: group.firstStock.id,
+          productId: group.firstStock.productId,
+          storeId: group.firstStock.storeId,
+          storeName: group.firstStock.storeName,
+          supplier: group.firstStock.supplier,
+          quantity: group.totalQuantity,
+          price: group.price,
+          sku: group.firstStock.sku,
+          mrp: group.mrp,
+          unit: group.unit,
+          purchasePrice: group.purchasePrice,
+          date: group.firstStock.date,
+          expiryDate: group.firstStock.expiryDate,
+          rack: group.firstStock.rack,
+          hsnCode: group.hsnCode,
+        );
+
+        localProductProvider.addToCart(
+          product: product,
+          quantity: quantity,
+          price: price ?? (double.tryParse(autoStock.price ?? "0") ?? 0.0),
+          mrp: mrp ?? (double.tryParse(autoStock.mrp ?? "0") ?? 0.0),
+          selectedStock: autoStock,
+          isIncreamentUsingCompactQuantityControl:
+              isIncreamentUsingCompactQuantityControl,
+        );
+
+        if (onSuccess != null) {
+          onSuccess();
+        }
+      } else {
+        // Multiple pricing groups → show stock selection modal
         final result = await showDialog(
           context: context,
           builder: (context) => StockSelectionModal(
@@ -72,13 +113,10 @@ Future<void> handleAddProductToCart({
         );
 
         if (result != null) {
-          // Process the selected product and stock
-          GetProduct selectedProduct = result['product'];
           Stock selectedStock = result['stock'];
 
-          // Add to cart with selected stock
           localProductProvider.addToCart(
-            product: selectedProduct,
+            product: product,
             quantity: quantity,
             price:
                 price ?? (double.tryParse(selectedStock.price ?? "0") ?? 0.0),
@@ -93,23 +131,6 @@ Future<void> handleAddProductToCart({
           }
         }
         // User cancelled selection - do nothing
-        return;
-      } else {
-        // Single stock option available, use it directly
-        Stock stock = availableStocks.first;
-        localProductProvider.addToCart(
-          product: product,
-          quantity: quantity,
-          price: price ?? (double.tryParse(stock.price ?? "0") ?? 0.0),
-          mrp: mrp ?? (double.tryParse(stock.mrp ?? "0") ?? 0.0),
-          selectedStock: stock,
-          isIncreamentUsingCompactQuantityControl:
-              isIncreamentUsingCompactQuantityControl,
-        );
-
-        if (onSuccess != null) {
-          onSuccess();
-        }
       }
     } else {
       // No stock options, add product directly

@@ -5,6 +5,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
@@ -614,25 +615,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
         // New order: strictly local cart only (no API here)
         debugPrint(
             '🛒 Adding product to local cart via LocalProductProvider (new order)');
-        // Try to pass a specific stock reference when it's safe to infer
-        // 1) If provider's selectedProduct matches this product, use its selectedStock
-        // 2) Else if the product has exactly one stock entry, use that
-        final selectedStockToUse =
-            (localProductProvider.selectedProduct?.productId ==
-                    product.productId)
-                ? localProductProvider.selectedStock
-                : ((product.stock != null && product.stock!.length == 1)
-                    ? product.stock!.first
-                    : null);
 
-        localProductProvider.addToCart(
+        await ProductCartHelper.handleProductSelection(
+          context: context,
           product: product,
           quantity: quantity,
-          price: product.price?.price != null
-              ? double.tryParse(product.price!.price!)
-              : null,
-          mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
-          selectedStock: selectedStockToUse,
         );
 
         if (mounted) {

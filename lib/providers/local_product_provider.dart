@@ -2644,16 +2644,16 @@ class LocalProductProvider extends ChangeNotifier {
     return product.stock!.fold(0, (sum, stock) => sum + (stock.quantity ?? 0));
   }
 
-  /// Gets a list of all stock options for a product
-  /// Returns all stocks regardless of quantity (zero/negative allowed)
-  /// because a sale should never be blocked — if the product is on screen,
-  /// the physical stock exists and the data may simply be stale.
+  /// Gets a list of stock options for a product with qty > 0.
+  /// When stock management is enabled only positive-quantity entries are
+  /// relevant for selection.  If every entry has qty <= 0 the caller
+  /// should fall back to the product's base price (no stock selected).
   List<Stock> getStockOptions(GetProduct product) {
     if (product.stock == null) {
       return [];
     }
     return product.stock!
-        .where((stock) => stock.quantity != null)
+        .where((stock) => stock.quantity != null && stock.quantity! > 0)
         .toList();
   }
 
