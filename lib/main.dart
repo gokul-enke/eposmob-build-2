@@ -364,6 +364,22 @@ class MyApp extends StatelessWidget {
           locale: LocalizationService.locale,
           fallbackLocale: LocalizationService.fallbackLocale,
           builder: (context, child) {
+            final platform = Theme.of(context).platform;
+            final isMobile = platform == TargetPlatform.android ||
+                platform == TargetPlatform.iOS;
+
+            // Mobile: Column layout so keyboard pushes content up like
+            // the native system keyboard.
+            // Desktop: Stack overlay for floating draggable keyboard.
+            if (isMobile) {
+              return Column(
+                children: [
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                  const GlobalVirtualKeyboard(),
+                ],
+              );
+            }
+
             return Stack(
               children: [
                 child ?? const SizedBox.shrink(),
