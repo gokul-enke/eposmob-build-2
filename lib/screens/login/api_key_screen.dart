@@ -11,6 +11,7 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 
 class ApiKeyScreen extends StatefulWidget {
   const ApiKeyScreen({super.key});
@@ -25,6 +26,13 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _obscureText = true;
+
+  bool _shouldSuppressSystemKeyboard() {
+    return SystemKeyboardPolicy.shouldSuppressForContext(
+      context: context,
+      fieldWantsVirtualKeyboardOnly: true,
+    );
+  }
 
   @override
   void initState() {
@@ -207,6 +215,8 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                 cursorColor: ColorManager.kPrimaryColor,
                                 controller: _apiKeyController,
                                 obscureText: _obscureText,
+                                readOnly: _shouldSuppressSystemKeyboard(),
+                                showCursor: true,
                                 onTap: () {
                                   Provider.of<KeyboardProvider>(context, listen: false)
                                       .show('api_key', _apiKeyController);
