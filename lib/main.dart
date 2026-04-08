@@ -364,14 +364,16 @@ class MyApp extends StatelessWidget {
           locale: LocalizationService.locale,
           fallbackLocale: LocalizationService.fallbackLocale,
           builder: (context, child) {
+            final screenSize = MediaQuery.of(context).size;
             final platform = Theme.of(context).platform;
-            final isMobile = platform == TargetPlatform.android ||
-                platform == TargetPlatform.iOS;
 
-            // Mobile: Column layout so keyboard pushes content up like
-            // the native system keyboard.
-            // Desktop: Stack overlay for floating draggable keyboard.
-            if (isMobile) {
+            // Phone only: Column layout so keyboard pushes content up.
+            // Tablets + Desktop: Stack overlay for floating draggable keyboard.
+            final isPhone = (platform == TargetPlatform.android ||
+                    platform == TargetPlatform.iOS) &&
+                screenSize.width < 600; // Phone threshold
+
+            if (isPhone) {
               return Column(
                 children: [
                   Expanded(child: child ?? const SizedBox.shrink()),
