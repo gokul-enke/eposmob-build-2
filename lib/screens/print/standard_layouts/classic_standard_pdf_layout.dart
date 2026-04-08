@@ -53,6 +53,8 @@ class ClassicStandardPdfLayout implements StandardPdfLayout {
       zatcaCompanyName: params.zatcaCompanyName,
       isDefaultCustomer: params.isDefaultCustomer,
       hideDefaultCustomerPhone: params.hideDefaultCustomerPhone,
+      customerVatNumber: params.customerVatNumber,
+      customerCrNumber: params.customerCrNumber,
     );
   }
 

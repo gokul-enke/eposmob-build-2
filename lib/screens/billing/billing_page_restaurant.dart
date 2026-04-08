@@ -6244,6 +6244,8 @@ class BillingPageState extends State<BillingPageRestaurant>
               parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
           paymentBreakdown: parsedPayment?.paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
+          customerVatNumber: savedOrder.customerVatNumber,
+          customerCrNumber: savedOrder.customerCrNumber,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0

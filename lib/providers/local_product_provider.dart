@@ -78,6 +78,8 @@ class SavedOrder {
   final String? alternatePhone;
   final String? address;
   final double? deliveryCharge;
+  final String? customerVatNumber;
+  final String? customerCrNumber;
 
   SavedOrder({
     required this.id,
@@ -108,6 +110,8 @@ class SavedOrder {
     this.alternatePhone,
     this.address,
     this.deliveryCharge,
+    this.customerVatNumber,
+    this.customerCrNumber,
   });
 }
 
@@ -399,6 +403,8 @@ class LocalProductProvider extends ChangeNotifier {
           tableId: hiveSavedOrder.tableId,
           address: hiveSavedOrder.address,
           deliveryCharge: hiveSavedOrder.deliveryCharge,
+          customerVatNumber: hiveSavedOrder.customerVatNumber,
+          customerCrNumber: hiveSavedOrder.customerCrNumber,
         ));
       }
       notifyListeners();
@@ -472,6 +478,8 @@ class LocalProductProvider extends ChangeNotifier {
           alternatePhone: order.alternatePhone,
           address: order.address,
           deliveryCharge: order.deliveryCharge,
+          customerVatNumber: order.customerVatNumber,
+          customerCrNumber: order.customerCrNumber,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -594,6 +602,8 @@ class LocalProductProvider extends ChangeNotifier {
         alternatePhone: hiveSavedOrder.alternatePhone,
         address: hiveSavedOrder.address,
         deliveryCharge: hiveSavedOrder.deliveryCharge,
+        customerVatNumber: hiveSavedOrder.customerVatNumber,
+        customerCrNumber: hiveSavedOrder.customerCrNumber,
       );
       _savedOrders.add(savedOrder);
       debugPrint(
@@ -727,6 +737,8 @@ class LocalProductProvider extends ChangeNotifier {
         alternatePhone: order.alternatePhone,
         address: order.address,
         deliveryCharge: order.deliveryCharge,
+        customerVatNumber: order.customerVatNumber,
+        customerCrNumber: order.customerCrNumber,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -2127,6 +2139,8 @@ class LocalProductProvider extends ChangeNotifier {
     String? alternatePhone,
     String? address,
     double? deliveryCharge,
+    String? customerVatNumber,
+    String? customerCrNumber,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -2187,6 +2201,8 @@ class LocalProductProvider extends ChangeNotifier {
       alternatePhone: alternatePhone,
       address: address,
       deliveryCharge: deliveryCharge,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
     );
 
     // Add to confirmed orders list
@@ -2237,6 +2253,8 @@ class LocalProductProvider extends ChangeNotifier {
           alternatePhone: order.alternatePhone,
           address: order.address,
           deliveryCharge: order.deliveryCharge,
+          customerVatNumber: order.customerVatNumber,
+          customerCrNumber: order.customerCrNumber,
         );
 
         // Add to confirmed orders
@@ -2318,6 +2336,8 @@ class LocalProductProvider extends ChangeNotifier {
     String? tableId,
     String? address,
     double? deliveryCharge,
+    String? customerVatNumber,
+    String? customerCrNumber,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -2387,6 +2407,8 @@ class LocalProductProvider extends ChangeNotifier {
       address:
           address, // Pass address if available, or update if passed as param
       deliveryCharge: deliveryCharge,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
     );
 
     // Add to saved orders list

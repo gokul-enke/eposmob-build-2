@@ -668,6 +668,10 @@ class StandardReceiptLayout implements ReceiptLayout {
     final bool showComment = displayConfig?[commentConfigKey]?.visible != false;
     final bool showDeliveryMethod =
         displayConfig?['showDeliveryMethod']?.visible != false;
+    final bool showCustomerVatNumber =
+        displayConfig?['showCustomerVatNumber']?.visible == true;
+    final bool showCustomerCrNumber =
+        displayConfig?['showCustomerCrNumber']?.visible == true;
 
     final bool hasVisibleCustomerData = (showCustomerName &&
             params.customerName != null &&
@@ -687,7 +691,13 @@ class StandardReceiptLayout implements ReceiptLayout {
             params.orderComment!.isNotEmpty) ||
         (showDeliveryMethod &&
             params.deliveryMethod != null &&
-            params.deliveryMethod!.isNotEmpty);
+            params.deliveryMethod!.isNotEmpty) ||
+        (showCustomerVatNumber &&
+            params.customerVatNumber != null &&
+            params.customerVatNumber!.isNotEmpty) ||
+        (showCustomerCrNumber &&
+            params.customerCrNumber != null &&
+            params.customerCrNumber!.isNotEmpty);
 
     if (!hasVisibleCustomerData) {
       return;
@@ -705,6 +715,16 @@ class StandardReceiptLayout implements ReceiptLayout {
       isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
       isEnglish ? "Delivery:" : "التوصيل:");
+    final customerVatLabel = _getLabel(
+      displayConfig,
+      'showCustomerVatNumber',
+      null,
+      isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
+    final customerCrLabel = _getLabel(
+      displayConfig,
+      'showCustomerCrNumber',
+      null,
+      isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -788,6 +808,26 @@ class StandardReceiptLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left, scale: scale),
         ]));
       }
+      if (showCustomerVatNumber &&
+          params.customerVatNumber != null &&
+          params.customerVatNumber!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(customerVatLabel,
+              weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerVatNumber!,
+              weight: 0.65, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (showCustomerCrNumber &&
+          params.customerCrNumber != null &&
+          params.customerCrNumber!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(customerCrLabel,
+              weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerCrNumber!,
+              weight: 0.65, align: TextAlign.left, scale: scale),
+        ]));
+      }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
       if (showCustomerName &&
@@ -850,6 +890,27 @@ class StandardReceiptLayout implements ReceiptLayout {
           ReceiptTableColumn(params.deliveryMethod!,
               weight: 0.65, align: TextAlign.left, scale: scale),
           ReceiptTableColumn(deliveryLabel,
+              weight: 0.35, align: TextAlign.right, isBold: true, scale: scale),
+        ]));
+      }
+
+      if (showCustomerVatNumber &&
+          params.customerVatNumber != null &&
+          params.customerVatNumber!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(params.customerVatNumber!,
+              weight: 0.65, align: TextAlign.left, scale: scale),
+          ReceiptTableColumn(customerVatLabel,
+              weight: 0.35, align: TextAlign.right, isBold: true, scale: scale),
+        ]));
+      }
+      if (showCustomerCrNumber &&
+          params.customerCrNumber != null &&
+          params.customerCrNumber!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(params.customerCrNumber!,
+              weight: 0.65, align: TextAlign.left, scale: scale),
+          ReceiptTableColumn(customerCrLabel,
               weight: 0.35, align: TextAlign.right, isBold: true, scale: scale),
         ]));
       }

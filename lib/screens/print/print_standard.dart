@@ -142,6 +142,8 @@ class StandardPrinter {
     String? zatcaCompanyName,
     bool isDefaultCustomer = false,
     bool hideDefaultCustomerPhone = true,
+    String? customerVatNumber,
+    String? customerCrNumber,
   }) async {
     debugPrint(
         "[LOGO_DEBUG] generateAndPrintPDF started for order: $orderNumber");
@@ -616,6 +618,8 @@ class StandardPrinter {
                 isRtl: isRtl,
                 arabicFontBold: arabicFontBold,
                 displayConfig: updatedSettings,
+                customerVatNumber: customerVatNumber,
+                customerCrNumber: customerCrNumber,
               ),
 
             // Items table - minimal design without borders
@@ -1766,6 +1770,8 @@ class StandardPrinter {
     bool isRtl = false,
     pw.Font? arabicFontBold,
     Map<String, DisplayOption>? displayConfig,
+    String? customerVatNumber,
+    String? customerCrNumber,
   }) {
     // Create a larger style for customer details with Arabic font support
     final customerDetailStyle = pw.TextStyle(
@@ -1825,6 +1831,24 @@ class StandardPrinter {
         isRtl
             ? 'طريقة الدفع: $paymentMethod'
             : 'Payment Method: $paymentMethod',
+        style: customerDetailStyle,
+      ));
+    }
+
+    if (customerVatNumber != null && customerVatNumber.isNotEmpty) {
+      customerDetails.add(pw.Text(
+        isRtl
+            ? 'الرقم الضريبي للعميل: $customerVatNumber'
+            : 'Customer VAT: $customerVatNumber',
+        style: customerDetailStyle,
+      ));
+    }
+
+    if (customerCrNumber != null && customerCrNumber.isNotEmpty) {
+      customerDetails.add(pw.Text(
+        isRtl
+            ? 'السجل التجاري للعميل: $customerCrNumber'
+            : 'Customer CR: $customerCrNumber',
         style: customerDetailStyle,
       ));
     }
@@ -2488,6 +2512,8 @@ class StandardPrinter {
     String? paymentMethod,
     bool isDefaultCustomer = false,
     bool hideDefaultCustomerPhone = true,
+    String? customerVatNumber,
+    String? customerCrNumber,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -2855,6 +2881,8 @@ class StandardPrinter {
                     hideDefaultCustomerPhone: hideDefaultCustomerPhone,
                     isRtl: isRtl,
                     arabicFontBold: arabicFontBold,
+                    customerVatNumber: customerVatNumber,
+                    customerCrNumber: customerCrNumber,
                   ),
 
                 // Items table - minimal design without borders

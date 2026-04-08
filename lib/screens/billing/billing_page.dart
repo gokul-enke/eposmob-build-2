@@ -6459,6 +6459,8 @@ class BillingPageState extends State<BillingPage>
           paymentMethod: displayPaymentMethod,
           paymentBreakdown: paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
+          customerVatNumber: savedOrder.customerVatNumber,
+          customerCrNumber: savedOrder.customerCrNumber,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
