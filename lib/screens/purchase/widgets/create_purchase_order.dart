@@ -1759,6 +1759,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           textAlignVertical: TextAlignVertical.center,
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor.withOpacity(.5),
+            ),
             prefixText: prefixText,
             prefixStyle: buildCustomStyle(
                 FontWeightManager.medium, FontSize.s12, 0.2, Colors.grey),
@@ -2004,6 +2010,38 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   Widget _buildTaxDetails() {
     final item = currentItem;
+    final retailInclusive =
+      (item.calculatedTaxData?['price_including_tax_retail'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final retailExclusive =
+      (item.calculatedTaxData?['price_excluding_tax_retail'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final retailTax =
+      (item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble() ?? 0.0;
+    final wholesaleInclusive =
+      (item.calculatedTaxData?['price_including_tax_wholesale'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final wholesaleExclusive =
+      (item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final wholesaleTax =
+      (item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble() ??
+        0.0;
+    final purchaseInclusive =
+      (item.calculatedTaxData?['price_including_tax_purchase'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final purchaseExclusive =
+      (item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final purchaseTax =
+      (item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble() ??
+        0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2018,8 +2056,15 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300, width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -2030,16 +2075,16 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s11,
+                          FontWeightManager.semiBold,
+                          FontSize.s12,
                           0.27,
-                          Colors.grey.shade600,
+                          Colors.grey.shade700,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 8),
                     Transform.scale(
-                      scale: 0.75,
+                      scale: 0.9,
                       child: Switch(
                         value: includeTax,
                         onChanged: (bool value) {
@@ -2065,9 +2110,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 "Retail Price",
                 "1",
                 includeTax
-                    ? '${(item.calculatedTaxData?['price_including_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
-                    : '${(item.calculatedTaxData?['price_excluding_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
+                    ? retailInclusive.toStringAsFixed(2)
+                    : retailExclusive.toStringAsFixed(2),
                 'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'Base: ${retailExclusive.toStringAsFixed(2)} + Tax: ${retailTax.toStringAsFixed(2)}',
+                retailTax,
                 Colors.blue,
                 includeTax,
               ),
@@ -2079,9 +2126,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 "Wholesale Price",
                 "2",
                 includeTax
-                    ? '${(item.calculatedTaxData?['price_including_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
-                    : '${(item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
+                    ? wholesaleInclusive.toStringAsFixed(2)
+                    : wholesaleExclusive.toStringAsFixed(2),
                 'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'Base: ${wholesaleExclusive.toStringAsFixed(2)} + Tax: ${wholesaleTax.toStringAsFixed(2)}',
+                wholesaleTax,
                 Colors.orange,
                 includeTax,
               ),
@@ -2093,9 +2142,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 "Purchase Rate",
                 "3",
                 includeTax
-                    ? '${(item.calculatedTaxData?['price_including_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
-                    : '${(item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
+                    ? purchaseInclusive.toStringAsFixed(2)
+                    : purchaseExclusive.toStringAsFixed(2),
                 'Tax: ${(item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'Base: ${purchaseExclusive.toStringAsFixed(2)} + Tax: ${purchaseTax.toStringAsFixed(2)}',
+                purchaseTax,
                 Colors.green,
                 includeTax,
               ),
@@ -2106,25 +2157,45 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     );
   }
 
-  Widget _buildTaxCard(String title, String badgeText, String priceText,
-      String taxText, Color color, bool isIncluding) {
+  Widget _buildTaxCard(
+    String title,
+    String badgeText,
+    String priceText,
+    String taxText,
+    String breakdownText,
+    double taxAmount,
+    Color color,
+    bool isIncluding,
+  ) {
+    // When tax is NOT included, show price + tax amount in big font
+    final displayPrice = !isIncluding
+        ? '${priceText} + ${taxAmount.toStringAsFixed(2)}'
+        : priceText;
+
     return Container(
       height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.25), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Header: Badge + Title + Tax%
           Row(
             children: [
               Container(
-                width: 18,
-                height: 18,
+                width: 20,
+                height: 20,
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
@@ -2133,15 +2204,15 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   child: Text(
                     badgeText,
                     style: buildCustomStyle(
-                      FontWeightManager.semiBold,
-                      FontSize.s11,
+                      FontWeightManager.bold,
+                      FontSize.s10,
                       0.27,
                       Colors.white,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Expanded(
                 child: Text(
                   title,
@@ -2155,40 +2226,53 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   ),
                 ),
               ),
+              const SizedBox(width: 4),
+              Text(
+                taxText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.2,
+                  color.withOpacity(0.8),
+                ),
+              ),
             ],
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  priceText,
+          const SizedBox(height: 6),
+          // Main Price + Breakdown in same line
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  displayPrice,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
-                    FontSize.s13,
+                    FontSize.s16,
                     0.27,
-                    Colors.black87,
+                    Colors.black,
                   ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                fit: FlexFit.loose,
-                child: Text(
-                  taxText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s10,
-                    0.27,
-                    Colors.grey.shade600,
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    isIncluding ? '($breakdownText)' : '(${taxText})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s10,
+                      0.2,
+                      Colors.grey.shade700,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
