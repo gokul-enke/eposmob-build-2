@@ -113,7 +113,8 @@ class ProductCartHelper {
       debugPrint("🏪 Active store filter applied:");
       debugPrint("  - Active Store ID: ${activeStore?.storeId}");
       debugPrint("  - Active Store Name: ${activeStore?.storeName}");
-      debugPrint("  - Matching stock entries (qty>0): ${availableStocks.length}");
+      debugPrint(
+          "  - Matching stock entries (qty>0): ${availableStocks.length}");
 
       if (availableStocks.isEmpty) {
         // All stock entries have qty=0 OR no store-matching entries → base price
@@ -124,27 +125,20 @@ class ProductCartHelper {
         finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
       } else {
         // Group stocks by pricing BEFORE deciding whether to show modal
-        final List<CombinedStock> groups = groupStocksByPricing(availableStocks);
-        debugPrint("📦 Grouped ${availableStocks.length} stocks into ${groups.length} pricing group(s)");
+        final List<CombinedStock> groups =
+            groupStocksByPricing(availableStocks);
+        debugPrint(
+            "📦 Grouped ${availableStocks.length} stocks into ${groups.length} pricing group(s)");
 
         if (groups.length == 1) {
           // Only 1 pricing group → auto-select, no modal needed
           final group = groups.first;
-          selectedStock = Stock(
-            id: group.firstStock.id,
-            productId: group.firstStock.productId,
-            storeId: group.firstStock.storeId,
-            storeName: group.firstStock.storeName,
-            supplier: group.firstStock.supplier,
+          selectedStock = group.firstStock.copyWith(
             quantity: group.totalQuantity,
             price: group.price,
-            sku: group.firstStock.sku,
             mrp: group.mrp,
             unit: group.unit,
             purchasePrice: group.purchasePrice,
-            date: group.firstStock.date,
-            expiryDate: group.firstStock.expiryDate,
-            rack: group.firstStock.rack,
             hsnCode: group.hsnCode,
           );
 
@@ -160,7 +154,8 @@ class ProductCartHelper {
               finalMrp ?? double.tryParse(selectedStock!.mrp ?? "0") ?? 0;
         } else {
           // Multiple pricing groups → show stock selection modal
-          debugPrint("📱 ${groups.length} pricing groups - showing stock selection modal...");
+          debugPrint(
+              "📱 ${groups.length} pricing groups - showing stock selection modal...");
 
           final result = await showDialog(
             context: context,

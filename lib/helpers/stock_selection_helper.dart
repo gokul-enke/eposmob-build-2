@@ -71,21 +71,12 @@ Future<void> handleAddProductToCart({
       if (groups.length == 1) {
         // Single pricing group → auto-select, no modal needed
         final group = groups.first;
-        final autoStock = Stock(
-          id: group.firstStock.id,
-          productId: group.firstStock.productId,
-          storeId: group.firstStock.storeId,
-          storeName: group.firstStock.storeName,
-          supplier: group.firstStock.supplier,
+        final autoStock = group.firstStock.copyWith(
           quantity: group.totalQuantity,
           price: group.price,
-          sku: group.firstStock.sku,
           mrp: group.mrp,
           unit: group.unit,
           purchasePrice: group.purchasePrice,
-          date: group.firstStock.date,
-          expiryDate: group.firstStock.expiryDate,
-          rack: group.firstStock.rack,
           hsnCode: group.hsnCode,
         );
 

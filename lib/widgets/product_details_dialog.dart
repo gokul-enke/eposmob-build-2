@@ -635,8 +635,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         );
       }
 
-      final GetProduct updatedProduct = GetProduct(
-        productId: product.productId,
+      final GetProduct updatedProduct = product.copyWith(
         categoryId: resolvedCategoryId,
         productName: updatedName,
         productSlug: updatedSlug,
@@ -647,32 +646,21 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 slug: selectedCategory.categorySlug,
               )
             : product.category,
-        numberOfProductsAvailable: product.numberOfProductsAvailable,
-        rating: product.rating,
         unit: resolvedUnitLabel.isEmpty ? product.unit : resolvedUnitLabel,
-        currency: product.currency,
-        description: product.description,
         price: updatedProductPrice,
         mrp: updatedMrpString.isEmpty ? product.mrp : updatedMrpString,
         taxes: [
           ProductTax(
-              rate: (double.tryParse(_taxController.text) ?? 0.0).toString(),
-              name: "Tax",
-              code: "TAX",
-              source: "manual")
+            rate: (double.tryParse(_taxController.text) ?? 0.0).toString(),
+            name: "Tax",
+            code: "TAX",
+            source: "manual",
+          )
         ],
         purchasePrice: updatedPurchasePrice.isEmpty
             ? product.purchasePrice
             : updatedPurchasePrice,
-        attachment: product.attachment,
         names: productNames.isNotEmpty ? productNames : product.names,
-        productProps: product.productProps,
-        weightInfo: product.weightInfo,
-        stock: product.stock,
-        sku: product.sku,
-        offerPrice: product.offerPrice,
-        productLocation: product.productLocation,
-        hsnCode: product.hsnCode,
       );
 
       final GetProduct resolvedUpdatedProduct =
@@ -1804,21 +1792,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         final num? updatedQty = num.tryParse(result.quantity) ?? stock.quantity;
         if (!mounted) return;
         setState(() {
-          _editedStockRows[stock.id!] = Stock(
-            id: stock.id,
-            productId: stock.productId,
-            storeName: stock.storeName,
-            supplier: stock.supplier,
+          _editedStockRows[stock.id!] = stock.copyWith(
             quantity: updatedQty,
             price: result.retailPrice,
-            sku: stock.sku,
             mrp: result.mrp,
-            unit: stock.unit,
             purchasePrice: result.purchasePrice,
-            date: stock.date,
-            expiryDate: stock.expiryDate,
             rack: result.rack,
-            hsnCode: stock.hsnCode,
           );
         });
       },
