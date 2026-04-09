@@ -16,6 +16,40 @@ import '../providers/shared_preferences.dart' as prefs_provider;
 
 /// A model representing a local cart item.
 /// It holds a product and its associated quantity in the offline cart.
+class StockReservation {
+  final int stockId;
+  num quantity;
+
+  StockReservation({
+    required this.stockId,
+    required this.quantity,
+  });
+
+  StockReservation copy() => StockReservation(
+        stockId: stockId,
+        quantity: quantity,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'stockId': stockId,
+        'quantity': quantity,
+      };
+
+  factory StockReservation.fromJson(Map<String, dynamic> json) {
+    final rawStockId = json['stockId'] ?? json['stock_id'];
+    final rawQuantity = json['quantity'];
+
+    return StockReservation(
+      stockId: rawStockId is int
+          ? rawStockId
+          : int.tryParse(rawStockId?.toString() ?? '') ?? 0,
+      quantity: rawQuantity is num
+          ? rawQuantity
+          : num.tryParse(rawQuantity?.toString() ?? '') ?? 0,
+    );
+  }
+}
+
 class LocalCartItem {
   final GetProduct product;
   double? price;
@@ -30,6 +64,14 @@ class LocalCartItem {
   /// Used for accurate stock restoration on cart removal / clear.
   num stockDeducted;
 
+  /// Canonical raw stock ids behind a grouped pricing selection.
+  /// Empty for base-price fallback or a direct single-stock selection.
+  List<int> stockGroupIds;
+
+  /// Tracks how much quantity is reserved from each raw stock row.
+  /// This is the source of truth for stock restoration and payload expansion.
+  List<StockReservation> stockReservations;
+
   /// Optional per-item comment/note (e.g. "no ice", "extra spicy")
   String? comment;
 
@@ -42,8 +84,13 @@ class LocalCartItem {
     this.quantity = 1,
     this.selectedStock,
     this.stockDeducted = 0,
+    List<int>? stockGroupIds,
+    List<StockReservation>? stockReservations,
     this.comment,
-  });
+  })  : stockGroupIds = stockGroupIds ?? <int>[],
+        stockReservations = stockReservations ?? <StockReservation>[];
+
+  bool get hasGroupedStockSelection => stockGroupIds.length > 1;
 }
 
 /// Represents a saved order stored locally
@@ -143,6 +190,12 @@ class PriceSummary {
 /// a filtered list and a selected product for details, similar to GridSelectionProvider.
 /// Additionally, it manages a separate offline cart state.
 class LocalProductProvider extends ChangeNotifier {
+  static bool _cachedStockEnabled = false;
+
+  static void cacheStockEnabled(bool enabled) {
+    _cachedStockEnabled = enabled;
+  }
+
   // Hive boxes
   final Box<HiveProduct> _productsBox = Hive.box<HiveProduct>('products');
   final Box<HiveLocalCartItem> _cartItemsBox =
@@ -287,14 +340,32 @@ class LocalProductProvider extends ChangeNotifier {
   /// Sets the stock enabled status from the GeneralSettingsProvider
   void setStockEnabled(bool enabled) {
     _stockEnabled = enabled;
+    _cachedStockEnabled = enabled;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('general_stock_enabled', enabled);
+    });
     debugPrint("📦 Stock management setting updated: $_stockEnabled");
   }
 
   /// Gets the current stock enabled status
-  bool get isStockEnabled => _stockEnabled ?? false;
+  bool get isStockEnabled => _stockEnabled ?? _cachedStockEnabled;
+
+  Future<void> _loadStockEnabledFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getBool('general_stock_enabled');
+      if (cached != null) {
+        _stockEnabled = cached;
+        _cachedStockEnabled = cached;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to hydrate stock setting from prefs: $e');
+    }
+  }
 
   // Constructor - Load data from Hive on initialization
   LocalProductProvider() {
+    _loadStockEnabledFromPrefs();
     _loadProductsFromHive();
     _loadCartFromHive();
     _loadSavedOrdersFromHive();
@@ -322,6 +393,508 @@ class LocalProductProvider extends ChangeNotifier {
       return 0.0;
     }
     return (price * taxRate) / (100 + taxRate);
+  }
+
+  List<int> _normalizeStockGroupIds(List<int>? stockGroupIds) {
+    if (stockGroupIds == null || stockGroupIds.isEmpty) {
+      return <int>[];
+    }
+
+    final normalized = stockGroupIds.toSet().toList()..sort();
+    return normalized;
+  }
+
+  bool _stockGroupIdsEqual(List<int> first, List<int> second) {
+    if (first.length != second.length) {
+      return false;
+    }
+
+    for (int index = 0; index < first.length; index++) {
+      if (first[index] != second[index]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  List<StockReservation> _cloneStockReservations(
+      List<StockReservation> reservations) {
+    return reservations.map((reservation) => reservation.copy()).toList();
+  }
+
+  num _sumStockReservations(List<StockReservation> reservations) {
+    return reservations.fold<num>(
+      0,
+      (sum, reservation) => sum + reservation.quantity,
+    );
+  }
+
+  List<StockReservation> _legacyStockReservations(
+      Stock? selectedStock, num stockDeducted) {
+    if (selectedStock?.id == null || stockDeducted <= 0) {
+      return <StockReservation>[];
+    }
+
+    return <StockReservation>[
+      StockReservation(
+        stockId: selectedStock!.id!,
+        quantity: stockDeducted,
+      ),
+    ];
+  }
+
+  String? _serializeStockGroupIds(List<int> stockGroupIds) {
+    if (stockGroupIds.isEmpty) {
+      return null;
+    }
+
+    return json.encode(stockGroupIds);
+  }
+
+  List<int> _deserializeStockGroupIds(String? rawValue) {
+    if (rawValue == null || rawValue.isEmpty) {
+      return <int>[];
+    }
+
+    try {
+      final decoded = json.decode(rawValue);
+      if (decoded is List) {
+        return _normalizeStockGroupIds(
+          decoded
+              .map((value) => value is int
+                  ? value
+                  : int.tryParse(value?.toString() ?? ''))
+              .whereType<int>()
+              .toList(),
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to deserialize stock group ids: $e');
+    }
+
+    return <int>[];
+  }
+
+  String? _serializeStockReservations(List<StockReservation> reservations) {
+    if (reservations.isEmpty) {
+      return null;
+    }
+
+    return json.encode(
+      reservations.map((reservation) => reservation.toJson()).toList(),
+    );
+  }
+
+  List<StockReservation> _deserializeStockReservations(String? rawValue) {
+    if (rawValue == null || rawValue.isEmpty) {
+      return <StockReservation>[];
+    }
+
+    try {
+      final decoded = json.decode(rawValue);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((entry) => StockReservation.fromJson(
+                Map<String, dynamic>.from(entry.cast<dynamic, dynamic>())))
+            .where((reservation) => reservation.stockId > 0)
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to deserialize stock reservations: $e');
+    }
+
+    return <StockReservation>[];
+  }
+
+  LocalCartItem _buildLocalCartItemFromHive(HiveLocalCartItem hiveCartItem) {
+    final productJson = json.decode(hiveCartItem.serializedProduct.value);
+    final product = GetProduct.fromJson(productJson);
+
+    Stock? selectedStock;
+    if (hiveCartItem.serializedSelectedStock != null) {
+      final stockJson = json.decode(hiveCartItem.serializedSelectedStock!.value);
+      selectedStock = Stock.fromJson(stockJson);
+    }
+
+    final stockGroupIds = _deserializeStockGroupIds(
+      hiveCartItem.serializedStockGroupIds?.value,
+    );
+
+    var stockReservations = _deserializeStockReservations(
+      hiveCartItem.serializedStockReservations?.value,
+    );
+
+    if (stockReservations.isEmpty &&
+        selectedStock != null &&
+        hiveCartItem.stockDeducted > 0) {
+      stockReservations =
+          _legacyStockReservations(selectedStock, hiveCartItem.stockDeducted);
+    }
+
+    final resolvedStockDeducted = stockReservations.isNotEmpty
+        ? _sumStockReservations(stockReservations)
+        : hiveCartItem.stockDeducted;
+
+    return LocalCartItem(
+      product: product,
+      quantity: hiveCartItem.quantity,
+      price: hiveCartItem.price,
+      mrp: hiveCartItem.mrp,
+      taxAmount: hiveCartItem.taxAmount,
+      taxRate: hiveCartItem.taxRate,
+      selectedStock: selectedStock,
+      stockDeducted: resolvedStockDeducted,
+      stockGroupIds: stockGroupIds,
+      stockReservations: stockReservations,
+      comment: hiveCartItem.comment,
+    );
+  }
+
+  HiveLocalCartItem _buildHiveCartItem(LocalCartItem item) {
+    HiveStringValue? serializedStock;
+    if (item.selectedStock != null) {
+      serializedStock = HiveStringValue(json.encode(item.selectedStock!.toJson()));
+    }
+
+    final serializedStockGroupIds = _serializeStockGroupIds(item.stockGroupIds);
+    final serializedStockReservations =
+        _serializeStockReservations(item.stockReservations);
+
+    return HiveLocalCartItem(
+      productId: item.product.productId!,
+      quantity: item.quantity,
+      price: item.price,
+      mrp: item.mrp,
+      taxAmount: item.taxAmount,
+      taxRate: item.taxRate,
+      serializedProduct: HiveStringValue(json.encode(item.product.toJson())),
+      serializedSelectedStock: serializedStock,
+      stockDeducted: item.stockDeducted,
+      comment: item.comment,
+      serializedStockGroupIds: serializedStockGroupIds == null
+          ? null
+          : HiveStringValue(serializedStockGroupIds),
+      serializedStockReservations: serializedStockReservations == null
+          ? null
+          : HiveStringValue(serializedStockReservations),
+    );
+  }
+
+  LocalCartItem _cloneLocalCartItem(LocalCartItem item) {
+    return LocalCartItem(
+      product: item.product,
+      quantity: item.quantity,
+      price: item.price,
+      mrp: item.mrp,
+      taxRate: item.taxRate,
+      taxAmount: item.taxAmount,
+      selectedStock: item.selectedStock,
+      stockDeducted: item.stockDeducted,
+      stockGroupIds: List<int>.from(item.stockGroupIds),
+      stockReservations: _cloneStockReservations(item.stockReservations),
+      comment: item.comment,
+    );
+  }
+
+  List<Stock> _sortStocksForReservation(List<Stock> stocks) {
+    final sortedStocks = List<Stock>.from(stocks);
+    sortedStocks.sort((first, second) {
+      if (first.expiryDate != null && second.expiryDate != null) {
+        try {
+          final firstDate = DateTime.parse(first.expiryDate!);
+          final secondDate = DateTime.parse(second.expiryDate!);
+          final expiryComparison = firstDate.compareTo(secondDate);
+          if (expiryComparison != 0) {
+            return expiryComparison;
+          }
+        } catch (_) {}
+      }
+
+      if (first.date != null && second.date != null) {
+        try {
+          final firstDate = DateTime.parse(first.date!);
+          final secondDate = DateTime.parse(second.date!);
+          final dateComparison = firstDate.compareTo(secondDate);
+          if (dateComparison != 0) {
+            return dateComparison;
+          }
+        } catch (_) {}
+      }
+
+      return (first.id ?? 0).compareTo(second.id ?? 0);
+    });
+    return sortedStocks;
+  }
+
+  List<Stock> _resolveReservationCandidates({
+    required GetProduct product,
+    Stock? selectedStock,
+    List<int>? stockGroupIds,
+  }) {
+    final currentProduct =
+        getProductById(product.productId ?? -1) ?? product;
+    final currentStocks = currentProduct.stock ?? const <Stock>[];
+    final normalizedGroupIds = _normalizeStockGroupIds(stockGroupIds);
+
+    if (normalizedGroupIds.length > 1) {
+      final resolved = currentStocks
+          .where((stock) =>
+              stock.id != null && normalizedGroupIds.contains(stock.id))
+          .toList();
+      return _sortStocksForReservation(resolved);
+    }
+
+    if (selectedStock?.id == null) {
+      return const <Stock>[];
+    }
+
+    final matchingStock = currentStocks.where((stock) => stock.id == selectedStock!.id);
+    if (matchingStock.isNotEmpty) {
+      return matchingStock.toList();
+    }
+
+    return <Stock>[selectedStock!];
+  }
+
+  void _mergeReservationDeltas(
+    LocalCartItem item,
+    List<StockReservation> deltas,
+  ) {
+    if (deltas.isEmpty) {
+      item.stockDeducted = _sumStockReservations(item.stockReservations);
+      return;
+    }
+
+    final merged = _cloneStockReservations(item.stockReservations);
+
+    for (final delta in deltas) {
+      final existingIndex =
+          merged.indexWhere((reservation) => reservation.stockId == delta.stockId);
+      if (existingIndex == -1) {
+        merged.add(delta.copy());
+      } else {
+        merged[existingIndex].quantity += delta.quantity;
+      }
+    }
+
+    merged.removeWhere((reservation) => reservation.quantity <= 0);
+    item.stockReservations = merged;
+    item.stockDeducted = _sumStockReservations(item.stockReservations);
+  }
+
+  List<StockReservation> _reserveStockForSelection({
+    required GetProduct product,
+    required num quantity,
+    required String operation,
+    Stock? selectedStock,
+    List<int>? stockGroupIds,
+  }) {
+    if (!isStockEnabled || selectedStock == null || quantity <= 0) {
+      return <StockReservation>[];
+    }
+
+    final reservations = <StockReservation>[];
+    num remaining = quantity;
+
+    final candidates = _resolveReservationCandidates(
+      product: product,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
+
+    for (final candidate in candidates) {
+      if (remaining <= 0) {
+        break;
+      }
+
+      final availableQuantity = candidate.quantity ?? 0;
+      if (availableQuantity <= 0) {
+        continue;
+      }
+
+      final requestedQuantity = remaining > availableQuantity
+          ? availableQuantity
+          : remaining;
+      final actualChange = _updateStockQuantityInternal(
+        candidate,
+        -requestedQuantity,
+        operation,
+      );
+      final reservedQuantity = actualChange.abs();
+
+      if (reservedQuantity > 0 && candidate.id != null) {
+        reservations.add(
+          StockReservation(
+            stockId: candidate.id!,
+            quantity: reservedQuantity,
+          ),
+        );
+        remaining -= reservedQuantity;
+      }
+    }
+
+    if (remaining > 0) {
+      debugPrint(
+          '📦 Remaining quantity $remaining could not be reserved. Sale continues without further stock deduction.');
+    }
+
+    return reservations;
+  }
+
+  num _restoreStockReservations(
+    LocalCartItem item,
+    num quantity,
+    String operation,
+  ) {
+    if (!isStockEnabled || quantity <= 0) {
+      return 0;
+    }
+
+    final workingReservations = item.stockReservations.isNotEmpty
+        ? _cloneStockReservations(item.stockReservations)
+        : _legacyStockReservations(item.selectedStock, item.stockDeducted);
+
+    num remaining = quantity;
+
+    for (int index = workingReservations.length - 1;
+        index >= 0 && remaining > 0;
+        index--) {
+      final reservation = workingReservations[index];
+      if (reservation.quantity <= 0) {
+        continue;
+      }
+
+      final requestedRestore =
+          reservation.quantity > remaining ? remaining : reservation.quantity;
+      final actualRestore = _updateStockQuantityInternal(
+        Stock(id: reservation.stockId),
+        requestedRestore,
+        operation,
+      );
+
+      if (actualRestore > 0) {
+        reservation.quantity -= actualRestore;
+        remaining -= actualRestore;
+      }
+    }
+
+    workingReservations.removeWhere((reservation) => reservation.quantity <= 0);
+    item.stockReservations = workingReservations;
+    item.stockDeducted = _sumStockReservations(item.stockReservations);
+
+    return quantity - remaining;
+  }
+
+  List<StockReservation> _reapplySavedReservations(
+    LocalCartItem item,
+    String operation,
+  ) {
+    if (!isStockEnabled || item.selectedStock == null) {
+      return _cloneStockReservations(item.stockReservations);
+    }
+
+    final sourceReservations = item.stockReservations.isNotEmpty
+        ? item.stockReservations
+        : _legacyStockReservations(item.selectedStock, item.stockDeducted);
+
+    if (sourceReservations.isNotEmpty) {
+      final reappliedReservations = <StockReservation>[];
+      for (final reservation in sourceReservations) {
+        final actualChange = _updateStockQuantityInternal(
+          Stock(id: reservation.stockId),
+          -reservation.quantity,
+          operation,
+        );
+        final reservedQuantity = actualChange.abs();
+        if (reservedQuantity > 0) {
+          reappliedReservations.add(
+            StockReservation(
+              stockId: reservation.stockId,
+              quantity: reservedQuantity,
+            ),
+          );
+        }
+      }
+      return reappliedReservations;
+    }
+
+    return _reserveStockForSelection(
+      product: item.product,
+      quantity: item.quantity,
+      selectedStock: item.selectedStock,
+      stockGroupIds: item.stockGroupIds,
+      operation: operation,
+    );
+  }
+
+  int _findCartItemIndex(
+    int productId, {
+    Stock? selectedStock,
+    List<int>? stockGroupIds,
+  }) {
+    final normalizedIncomingGroupIds = _normalizeStockGroupIds(stockGroupIds);
+
+    return _cartItems.indexWhere((item) {
+      if (item.product.productId != productId) {
+        return false;
+      }
+
+      if (normalizedIncomingGroupIds.isNotEmpty) {
+        if (item.stockGroupIds.isNotEmpty) {
+          return _stockGroupIdsEqual(item.stockGroupIds, normalizedIncomingGroupIds);
+        }
+
+        return item.selectedStock?.id == selectedStock?.id;
+      }
+
+      if (item.stockGroupIds.isNotEmpty) {
+        return item.selectedStock?.id == selectedStock?.id;
+      }
+
+      return item.selectedStock?.id == selectedStock?.id ||
+          (item.selectedStock == null && selectedStock == null);
+    });
+  }
+
+  List<Map<String, dynamic>> buildOrderItemsPayload() {
+    final items = <Map<String, dynamic>>[];
+
+    for (final item in _cartItems) {
+      num reservedQuantity = 0;
+
+      for (final reservation in item.stockReservations) {
+        if (reservation.quantity <= 0) {
+          continue;
+        }
+
+        items.add({
+          'product_id': item.product.productId,
+          'quantity': reservation.quantity,
+          'price': item.price,
+          'mrp': item.mrp,
+          'stock_id': reservation.stockId,
+        });
+        reservedQuantity += reservation.quantity;
+      }
+
+      final unreservedQuantity = item.quantity - reservedQuantity;
+      if (unreservedQuantity > 0 || item.stockReservations.isEmpty) {
+        items.add({
+          'product_id': item.product.productId,
+          'quantity': item.stockReservations.isEmpty ? item.quantity : unreservedQuantity,
+          'price': item.price,
+          'mrp': item.mrp,
+          'stock_id': item.stockReservations.isEmpty ? item.selectedStock?.id : null,
+        });
+      }
+    }
+
+    return items.where((item) {
+      final quantity = item['quantity'];
+      return quantity is num ? quantity > 0 : false;
+    }).toList();
   }
 
   void _rebuildBarcodeIndex() {
@@ -366,31 +939,9 @@ class LocalProductProvider extends ChangeNotifier {
     _confirmedOrders.clear();
     try {
       for (var hiveSavedOrder in _confirmedOrdersBox.values) {
-        List<LocalCartItem> orderItems =
-            hiveSavedOrder.items.map((hiveCartItem) {
-          final productJson = json.decode(hiveCartItem.serializedProduct.value);
-          final product = GetProduct.fromJson(productJson);
-
-          // Deserialize selected stock if it exists
-          Stock? selectedStock;
-          if (hiveCartItem.serializedSelectedStock != null) {
-            final stockJson =
-                json.decode(hiveCartItem.serializedSelectedStock!.value);
-            selectedStock = Stock.fromJson(stockJson);
-          }
-
-          return LocalCartItem(
-            product: product,
-            quantity: hiveCartItem.quantity,
-            price: hiveCartItem.price,
-            mrp: hiveCartItem.mrp,
-            taxAmount: hiveCartItem.taxAmount,
-            taxRate: hiveCartItem.taxRate,
-            selectedStock: selectedStock,
-            stockDeducted: hiveCartItem.stockDeducted,
-            comment: hiveCartItem.comment,
-          );
-        }).toList();
+        final orderItems = hiveSavedOrder.items
+            .map(_buildLocalCartItemFromHive)
+            .toList();
 
         _confirmedOrders.add(SavedOrder(
           id: hiveSavedOrder.id,
@@ -444,28 +995,7 @@ class LocalProductProvider extends ChangeNotifier {
     try {
       _confirmedOrdersBox.clear();
       for (var order in _confirmedOrders) {
-        List<HiveLocalCartItem> hiveItems = order.items.map((item) {
-          // Serialize selected stock if it exists
-          HiveStringValue? serializedStock;
-          if (item.selectedStock != null) {
-            serializedStock =
-                HiveStringValue(json.encode(item.selectedStock!.toJson()));
-          }
-
-          return HiveLocalCartItem(
-            productId: item.product.productId!,
-            quantity: item.quantity,
-            price: item.price,
-            mrp: item.mrp,
-            taxAmount: item.taxAmount,
-            taxRate: item.taxRate,
-            serializedProduct:
-                HiveStringValue(json.encode(item.product.toJson())),
-            serializedSelectedStock: serializedStock,
-            stockDeducted: item.stockDeducted,
-            comment: item.comment,
-          );
-        }).toList();
+        final hiveItems = order.items.map(_buildHiveCartItem).toList();
 
         final hiveSavedOrder = HiveSavedOrder(
           id: order.id,
@@ -532,28 +1062,7 @@ class LocalProductProvider extends ChangeNotifier {
   void _loadCartFromHive() {
     _cartItems.clear();
     for (var hiveCartItem in _cartItemsBox.values) {
-      final productJson = json.decode(hiveCartItem.serializedProduct.value);
-      final product = GetProduct.fromJson(productJson);
-
-      // Deserialize selected stock if it exists
-      Stock? selectedStock;
-      if (hiveCartItem.serializedSelectedStock != null) {
-        final stockJson =
-            json.decode(hiveCartItem.serializedSelectedStock!.value);
-        selectedStock = Stock.fromJson(stockJson);
-      }
-
-      _cartItems.add(LocalCartItem(
-        product: product,
-        quantity: hiveCartItem.quantity,
-        price: hiveCartItem.price,
-        mrp: hiveCartItem.mrp,
-        taxAmount: hiveCartItem.taxAmount,
-        taxRate: hiveCartItem.taxRate,
-        selectedStock: selectedStock,
-        stockDeducted: hiveCartItem.stockDeducted,
-        comment: hiveCartItem.comment,
-      ));
+      _cartItems.add(_buildLocalCartItemFromHive(hiveCartItem));
     }
     notifyListeners();
   }
@@ -566,30 +1075,9 @@ class LocalProductProvider extends ChangeNotifier {
     int idx = 0;
     for (var hiveSavedOrder in _savedOrdersBox.values) {
       idx++;
-      List<LocalCartItem> orderItems = hiveSavedOrder.items.map((hiveCartItem) {
-        final productJson = json.decode(hiveCartItem.serializedProduct.value);
-        final product = GetProduct.fromJson(productJson);
-
-        // Deserialize selected stock if it exists
-        Stock? selectedStock;
-        if (hiveCartItem.serializedSelectedStock != null) {
-          final stockJson =
-              json.decode(hiveCartItem.serializedSelectedStock!.value);
-          selectedStock = Stock.fromJson(stockJson);
-        }
-
-        return LocalCartItem(
-          product: product,
-          quantity: hiveCartItem.quantity,
-          price: hiveCartItem.price,
-          mrp: hiveCartItem.mrp,
-          taxAmount: hiveCartItem.taxAmount,
-          taxRate: hiveCartItem.taxRate,
-          selectedStock: selectedStock,
-          stockDeducted: hiveCartItem.stockDeducted,
-          comment: hiveCartItem.comment,
-        );
-      }).toList();
+      final orderItems = hiveSavedOrder.items
+          .map(_buildLocalCartItemFromHive)
+          .toList();
 
       final savedOrder = SavedOrder(
         id: hiveSavedOrder.id,
@@ -668,26 +1156,7 @@ class LocalProductProvider extends ChangeNotifier {
     int idx = 0;
     for (var cartItem in _cartItems) {
       idx++;
-      // Serialize selected stock if it exists
-      HiveStringValue? serializedStock;
-      if (cartItem.selectedStock != null) {
-        serializedStock =
-            HiveStringValue(json.encode(cartItem.selectedStock!.toJson()));
-      }
-
-      final hiveCartItem = HiveLocalCartItem(
-        productId: cartItem.product.productId!,
-        quantity: cartItem.quantity,
-        price: cartItem.price,
-        mrp: cartItem.mrp,
-        taxAmount: cartItem.taxAmount,
-        taxRate: cartItem.taxRate,
-        serializedProduct:
-            HiveStringValue(json.encode(cartItem.product.toJson())),
-        serializedSelectedStock: serializedStock,
-        stockDeducted: cartItem.stockDeducted,
-        comment: cartItem.comment,
-      );
+      final hiveCartItem = _buildHiveCartItem(cartItem);
       _cartItemsBox.add(hiveCartItem);
       debugPrint(
           "  #$idx ✅ Cart item productId=${cartItem.product.productId}, qty=${cartItem.quantity}, price=${cartItem.price}, mrp=${cartItem.mrp}, taxRate=${cartItem.taxRate}, stockId=${cartItem.selectedStock?.id}");
@@ -704,28 +1173,7 @@ class LocalProductProvider extends ChangeNotifier {
     int idx = 0;
     for (var order in _savedOrders) {
       idx++;
-      List<HiveLocalCartItem> hiveItems = order.items.map((item) {
-        // Serialize selected stock if it exists
-        HiveStringValue? serializedStock;
-        if (item.selectedStock != null) {
-          serializedStock =
-              HiveStringValue(json.encode(item.selectedStock!.toJson()));
-        }
-
-        return HiveLocalCartItem(
-          productId: item.product.productId!,
-          quantity: item.quantity,
-          price: item.price,
-          mrp: item.mrp,
-          taxAmount: item.taxAmount,
-          taxRate: item.taxRate,
-          serializedProduct:
-              HiveStringValue(json.encode(item.product.toJson())),
-          serializedSelectedStock: serializedStock,
-          stockDeducted: item.stockDeducted,
-          comment: item.comment,
-        );
-      }).toList();
+      final hiveItems = order.items.map(_buildHiveCartItem).toList();
 
       final hiveSavedOrder = HiveSavedOrder(
         id: order.id,
@@ -903,8 +1351,6 @@ class LocalProductProvider extends ChangeNotifier {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
       String? accessToken = prefs.getString('access_token');
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
@@ -1262,7 +1708,13 @@ class LocalProductProvider extends ChangeNotifier {
   /// Stock is clamped at 0 — it never goes negative.
   /// Returns the **actual** quantity change applied (may differ from
   /// [quantityChange] when clamping kicks in).
-  num _updateStockQuantity(Stock stock, num quantityChange, String operation) {
+  num _updateStockQuantityInternal(
+    Stock stock,
+    num quantityChange,
+    String operation, {
+    bool persistProducts = false,
+    bool notify = false,
+  }) {
     if (!isStockEnabled) {
       debugPrint("📦 Stock management disabled - skipping stock update");
       return 0;
@@ -1301,11 +1753,12 @@ class LocalProductProvider extends ChangeNotifier {
             debugPrint(
                 "📦 Updated stock in product list: ${product.productName}");
 
-            // Save updated products to Hive
-            _saveProductsToHive();
-
-            // Notify listeners to update UI
-            notifyListeners();
+            if (persistProducts) {
+              _saveProductsToHive();
+            }
+            if (notify) {
+              notifyListeners();
+            }
             return actualChange;
           }
         }
@@ -1344,6 +1797,7 @@ class LocalProductProvider extends ChangeNotifier {
     int? productId,
     bool? isIncreamentUsingCompactQuantityControl = false,
     Stock? selectedStock,
+    List<int>? stockGroupIds,
   }) {
     debugPrint("🛒 ADD TO CART STARTED");
     debugPrint("Product: ${product?.productName}");
@@ -1364,82 +1818,96 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     final cartQuantity = quantity ?? 1;
+    final normalizedStockGroupIds = _normalizeStockGroupIds(stockGroupIds);
 
-    int index = _cartItems.indexWhere((item) =>
-        item.product.productId == product!.productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+    int index = _findCartItemIndex(
+      product.productId!,
+      selectedStock: selectedStock,
+      stockGroupIds: normalizedStockGroupIds,
+    );
+
+    bool didMutateStock = false;
 
     if (index != -1) {
       debugPrint("📝 Product already in cart - updating quantity");
 
+      final existingItem = _cartItems[index];
+      if (normalizedStockGroupIds.isNotEmpty &&
+          existingItem.stockGroupIds.isEmpty) {
+        existingItem.stockGroupIds = List<int>.from(normalizedStockGroupIds);
+      }
+
       // STOCK DEDUCTION: Deduct the additional quantity being added
       if (isStockEnabled && selectedStock != null) {
-        final actualChange = _updateStockQuantity(
-            selectedStock, -cartQuantity, "ADD_TO_CART_INCREMENT");
-        // Track only what was actually deducted (actualChange is negative)
-        _cartItems[index].stockDeducted += actualChange.abs();
+        final reservationDeltas = _reserveStockForSelection(
+          product: product,
+          quantity: cartQuantity,
+          selectedStock: selectedStock,
+          stockGroupIds: existingItem.stockGroupIds,
+          operation: "ADD_TO_CART_INCREMENT",
+        );
+        _mergeReservationDeltas(existingItem, reservationDeltas);
+        didMutateStock = reservationDeltas.isNotEmpty;
       }
 
       // If the product already exists in cart with the same stock, just update the quantity and price
-      _cartItems[index].quantity +=
-          cartQuantity; // Increment by the specified quantity
+      existingItem.quantity += cartQuantity; // Increment by the specified quantity
 
       // 🔧 FIX: Handle price updates based on explicit price provision and source
       if (price != null) {
         // When ANY source provides an explicit price, use it (custom pricing from Add Item, quantity control, etc.)
-        _cartItems[index].price = price;
+        existingItem.price = price;
         debugPrint("💰 Using explicit price: $price");
       } else if (!isIncreamentUsingCompactQuantityControl!) {
         // When adding from external sources WITHOUT explicit price, preserve existing custom price
         // Only update if it's a completely new addition (no existing price set)
-        if (_cartItems[index].price == null || _cartItems[index].price == 0.0) {
+        if (existingItem.price == null || existingItem.price == 0.0) {
           // No existing price set, use defaults
           if (selectedStock != null && selectedStock.price != null) {
-            _cartItems[index].price = double.tryParse(selectedStock.price!);
-            debugPrint("💰 Using stock price: ${_cartItems[index].price}");
+            existingItem.price = double.tryParse(selectedStock.price!);
+            debugPrint("💰 Using stock price: ${existingItem.price}");
           } else {
-            _cartItems[index].price = product.price?.price != null
+            existingItem.price = product.price?.price != null
                 ? double.tryParse(product.price!.price!)
                 : 0.0;
-            debugPrint("💰 Using product price: ${_cartItems[index].price}");
+            debugPrint("💰 Using product price: ${existingItem.price}");
           }
         } else {
           debugPrint(
-              "💰 Preserving existing price: ${_cartItems[index].price}");
+              "💰 Preserving existing price: ${existingItem.price}");
         }
         // If existing price exists (could be custom), preserve it when adding from external sources without explicit price
       } else {
         debugPrint(
-            "💰 Preserving existing price from quantity control: ${_cartItems[index].price}");
+          "💰 Preserving existing price from quantity control: ${existingItem.price}");
       }
       // Always use explicit price when provided, otherwise preserve existing custom price
 
       // 🔧 FIX: Apply same logic for MRP to preserve custom values
       if (mrp != null) {
         // When ANY source provides an explicit MRP, use it
-        _cartItems[index].mrp = mrp;
+        existingItem.mrp = mrp;
         debugPrint("💰 Using explicit MRP: $mrp");
       } else if (!isIncreamentUsingCompactQuantityControl!) {
         // When adding from external sources WITHOUT explicit MRP, preserve existing custom MRP
         // Only update if it's a completely new addition (no existing MRP set)
-        if (_cartItems[index].mrp == null || _cartItems[index].mrp == 0.0) {
+        if (existingItem.mrp == null || existingItem.mrp == 0.0) {
           // No existing MRP set, use defaults
           if (selectedStock != null && selectedStock.mrp != null) {
-            _cartItems[index].mrp = double.tryParse(selectedStock.mrp!);
-            debugPrint("💰 Using stock MRP: ${_cartItems[index].mrp}");
+            existingItem.mrp = double.tryParse(selectedStock.mrp!);
+            debugPrint("💰 Using stock MRP: ${existingItem.mrp}");
           } else {
-            _cartItems[index].mrp =
+            existingItem.mrp =
                 product.mrp != null ? double.tryParse(product.mrp!) : 0.0;
-            debugPrint("💰 Using product MRP: ${_cartItems[index].mrp}");
+            debugPrint("💰 Using product MRP: ${existingItem.mrp}");
           }
         } else {
-          debugPrint("💰 Preserving existing MRP: ${_cartItems[index].mrp}");
+          debugPrint("💰 Preserving existing MRP: ${existingItem.mrp}");
         }
         // If existing MRP exists (could be custom), preserve it when adding from external sources without explicit MRP
       } else {
         debugPrint(
-            "💰 Preserving existing MRP from quantity control: ${_cartItems[index].mrp}");
+          "💰 Preserving existing MRP from quantity control: ${existingItem.mrp}");
       }
       // Always use explicit MRP when provided, otherwise preserve existing custom MRP
 
@@ -1463,11 +1931,16 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("🆕 Adding new product to cart");
 
       // STOCK DEDUCTION: Deduct quantity for new cart item
-      num initialStockDeducted = 0;
+      List<StockReservation> initialStockReservations = <StockReservation>[];
       if (isStockEnabled && selectedStock != null) {
-        final actualChange = _updateStockQuantity(
-            selectedStock, -cartQuantity, "ADD_TO_CART_NEW");
-        initialStockDeducted = actualChange.abs();
+        initialStockReservations = _reserveStockForSelection(
+          product: product,
+          quantity: cartQuantity,
+          selectedStock: selectedStock,
+          stockGroupIds: normalizedStockGroupIds,
+          operation: "ADD_TO_CART_NEW",
+        );
+        didMutateStock = initialStockReservations.isNotEmpty;
       }
 
       // Safely handle null product price when adding new cart item
@@ -1506,11 +1979,16 @@ class LocalProductProvider extends ChangeNotifier {
             taxRate: taxRate,
             taxAmount: calculatedTax,
             selectedStock: selectedStock,
-            stockDeducted: initialStockDeducted,
+            stockDeducted: _sumStockReservations(initialStockReservations),
+            stockGroupIds: List<int>.from(normalizedStockGroupIds),
+            stockReservations: _cloneStockReservations(initialStockReservations),
           ));
     }
 
     resetSelectedProduct();
+    if (didMutateStock) {
+      _saveProductsToHive();
+    }
     _saveCartToHive();
     notifyListeners();
 
@@ -1556,9 +2034,9 @@ class LocalProductProvider extends ChangeNotifier {
           "📝 Found cart item - cart qty: ${cartItem.quantity}, stockDeducted: $quantityToRestore");
 
       // STOCK RESTORATION: Add back only what was actually deducted
-      if (isStockEnabled && selectedStock != null && quantityToRestore > 0) {
-        _updateStockQuantity(
-            selectedStock, quantityToRestore, "REMOVE_FROM_CART");
+      if (isStockEnabled && quantityToRestore > 0) {
+        _restoreStockReservations(cartItem, quantityToRestore, "REMOVE_FROM_CART");
+        _saveProductsToHive();
       }
 
       _cartItems.removeAt(index);
@@ -1649,6 +2127,8 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: item.quantity,
             selectedStock: item.selectedStock,
             stockDeducted: item.stockDeducted,
+            stockGroupIds: List<int>.from(item.stockGroupIds),
+            stockReservations: _cloneStockReservations(item.stockReservations),
             comment: item.comment,
           );
         } else {
@@ -1683,6 +2163,9 @@ class LocalProductProvider extends ChangeNotifier {
               quantity: orderItem.quantity,
               selectedStock: orderItem.selectedStock,
               stockDeducted: orderItem.stockDeducted,
+              stockGroupIds: List<int>.from(orderItem.stockGroupIds),
+              stockReservations:
+                  _cloneStockReservations(orderItem.stockReservations),
               comment: orderItem.comment,
             );
           } else {
@@ -1750,6 +2233,8 @@ class LocalProductProvider extends ChangeNotifier {
           quantity: item.quantity,
           selectedStock: resolvedStock,
           stockDeducted: item.stockDeducted,
+          stockGroupIds: List<int>.from(item.stockGroupIds),
+          stockReservations: _cloneStockReservations(item.stockReservations),
           comment: item.comment,
         );
         cartUpdated = true;
@@ -1778,6 +2263,9 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: orderItem.quantity,
             selectedStock: resolvedStock,
             stockDeducted: orderItem.stockDeducted,
+            stockGroupIds: List<int>.from(orderItem.stockGroupIds),
+            stockReservations:
+                _cloneStockReservations(orderItem.stockReservations),
             comment: orderItem.comment,
           );
           savedOrdersUpdated = true;
@@ -1829,21 +2317,26 @@ class LocalProductProvider extends ChangeNotifier {
 
       if (_cartItems[index].quantity > 1) {
         // STOCK RESTORATION: Only restore 1 unit if we actually have stock to restore
-        if (isStockEnabled &&
-            selectedStock != null &&
-            _cartItems[index].stockDeducted > 0) {
-          _updateStockQuantity(selectedStock, 1, "DECREMENT_CART_ITEM");
-          _cartItems[index].stockDeducted -= 1;
+        if (isStockEnabled && _cartItems[index].stockDeducted > 0) {
+          _restoreStockReservations(
+            _cartItems[index],
+            1,
+            "DECREMENT_CART_ITEM",
+          );
+          _saveProductsToHive();
         }
 
         _cartItems[index].quantity--;
         debugPrint("📝 Decremented quantity to: ${_cartItems[index].quantity}");
       } else {
         // STOCK RESTORATION: Add back the last unit if we have stock to restore
-        if (isStockEnabled &&
-            selectedStock != null &&
-            _cartItems[index].stockDeducted > 0) {
-          _updateStockQuantity(selectedStock, 1, "DECREMENT_CART_ITEM_REMOVE");
+        if (isStockEnabled && _cartItems[index].stockDeducted > 0) {
+          _restoreStockReservations(
+            _cartItems[index],
+            _cartItems[index].stockDeducted,
+            "DECREMENT_CART_ITEM_REMOVE",
+          );
+          _saveProductsToHive();
         }
 
         _cartItems.removeAt(index);
@@ -1869,11 +2362,11 @@ class LocalProductProvider extends ChangeNotifier {
     // STOCK RESTORATION: Restore only the actually-deducted amounts
     if (isStockEnabled) {
       for (var cartItem in _cartItems) {
-        if (cartItem.selectedStock != null && cartItem.stockDeducted > 0) {
-          _updateStockQuantity(
-              cartItem.selectedStock!, cartItem.stockDeducted, "CLEAR_CART");
+        if (cartItem.stockDeducted > 0) {
+          _restoreStockReservations(cartItem, cartItem.stockDeducted, "CLEAR_CART");
         }
       }
+      _saveProductsToHive();
     }
 
     _cartItems.clear();
@@ -2131,19 +2624,7 @@ class LocalProductProvider extends ChangeNotifier {
     double total = baseTotal + (deliveryCharge ?? 0.0);
 
     // Create a deep copy of cart items to prevent modification
-    List<LocalCartItem> orderItems = _cartItems
-        .map((item) => LocalCartItem(
-              product: item.product,
-              quantity: item.quantity,
-              price: item.price,
-              mrp: item.mrp,
-              taxRate: item.taxRate,
-              taxAmount: item.taxAmount,
-              selectedStock: item.selectedStock,
-              stockDeducted: item.stockDeducted,
-              comment: item.comment,
-            ))
-        .toList();
+    final orderItems = _cartItems.map(_cloneLocalCartItem).toList();
 
     // Generate sequential order number - use "CONF-" prefix for confirmed orders
     String orderNumber = generateConfirmedOrderNumber();
@@ -2336,19 +2817,7 @@ class LocalProductProvider extends ChangeNotifier {
     double total = baseTotal + (deliveryCharge ?? 0.0);
 
     // Create a deep copy of cart items to prevent modification
-    List<LocalCartItem> orderItems = _cartItems
-        .map((item) => LocalCartItem(
-              product: item.product,
-              quantity: item.quantity,
-              price: item.price,
-              mrp: item.mrp,
-              taxRate: item.taxRate,
-              taxAmount: item.taxAmount,
-              selectedStock: item.selectedStock,
-              stockDeducted: item.stockDeducted,
-              comment: item.comment,
-            ))
-        .toList();
+    final orderItems = _cartItems.map(_cloneLocalCartItem).toList();
 
     // Generate sequential order number
     String orderNumber = generateOrderNumber();
@@ -2445,11 +2914,15 @@ class LocalProductProvider extends ChangeNotifier {
       // Release any stock reserved by the current cart before switching drafts.
       if (isStockEnabled) {
         for (final cartItem in _cartItems) {
-          if (cartItem.selectedStock != null && cartItem.stockDeducted > 0) {
-            _updateStockQuantity(cartItem.selectedStock!,
-                cartItem.stockDeducted, "LOAD_ORDER_RELEASE");
+          if (cartItem.stockDeducted > 0) {
+            _restoreStockReservations(
+              cartItem,
+              cartItem.stockDeducted,
+              "LOAD_ORDER_RELEASE",
+            );
           }
         }
+        _saveProductsToHive();
       }
 
       // Clear current cart
@@ -2457,24 +2930,19 @@ class LocalProductProvider extends ChangeNotifier {
 
       // Add items from the saved order to the cart
       for (var item in order.items) {
-        num stockDeducted = 0;
+        final reloadedItem = _cloneLocalCartItem(item);
         if (isStockEnabled && item.selectedStock != null) {
-          final actualChange = _updateStockQuantity(
-              item.selectedStock!, -item.quantity, "LOAD_ORDER_RESERVE");
-          stockDeducted = actualChange.abs();
+          reloadedItem.stockReservations =
+              _reapplySavedReservations(item, "LOAD_ORDER_RESERVE");
+          reloadedItem.stockDeducted =
+              _sumStockReservations(reloadedItem.stockReservations);
         }
 
-        _cartItems.add(LocalCartItem(
-          product: item.product,
-          quantity: item.quantity,
-          price: item.price,
-          mrp: item.mrp,
-          taxAmount: item.taxAmount,
-          taxRate: item.taxRate,
-          selectedStock: item.selectedStock,
-          stockDeducted: stockDeducted,
-          comment: item.comment,
-        ));
+        _cartItems.add(reloadedItem);
+      }
+
+      if (isStockEnabled) {
+        _saveProductsToHive();
       }
 
       // Set current order
@@ -2532,19 +3000,7 @@ class LocalProductProvider extends ChangeNotifier {
           (deliveryCharge ?? _savedOrders[index].deliveryCharge ?? 0.0);
 
       // Create a copy of current cart items
-      List<LocalCartItem> orderItems = _cartItems
-          .map((item) => LocalCartItem(
-                product: item.product,
-                quantity: item.quantity,
-                price: item.price,
-                mrp: item.mrp,
-                taxRate: item.taxRate,
-                taxAmount: item.taxAmount,
-                selectedStock: item.selectedStock,
-                stockDeducted: item.stockDeducted,
-                comment: item.comment,
-              ))
-          .toList();
+      final orderItems = _cartItems.map(_cloneLocalCartItem).toList();
 
       // Create updated order
       SavedOrder updatedOrder = SavedOrder(
@@ -2787,31 +3243,39 @@ class LocalProductProvider extends ChangeNotifier {
       // If difference is negative we are reducing sale → restore stock (+abs(difference))
       if (difference > 0) {
         // Increasing quantity → deduct from stock
-        final actualChange = _updateStockQuantity(
-            selectedStock, -difference, "SET_CART_ITEM_QUANTITY_INCREASE");
-        _cartItems[index].stockDeducted += actualChange.abs();
+        final reservationDeltas = _reserveStockForSelection(
+          product: _cartItems[index].product,
+          quantity: difference,
+          selectedStock: selectedStock,
+          stockGroupIds: _cartItems[index].stockGroupIds,
+          operation: "SET_CART_ITEM_QUANTITY_INCREASE",
+        );
+        _mergeReservationDeltas(_cartItems[index], reservationDeltas);
       } else {
         // Decreasing quantity → restore to stock (only up to what was deducted)
         final restoreAmount = difference.abs();
-        final maxRestore = _cartItems[index].stockDeducted;
-        final actualRestore =
-            restoreAmount > maxRestore ? maxRestore : restoreAmount;
-        if (actualRestore > 0) {
-          _updateStockQuantity(
-              selectedStock, actualRestore, "SET_CART_ITEM_QUANTITY_DECREASE");
-          _cartItems[index].stockDeducted -= actualRestore;
+        if (restoreAmount > 0) {
+          _restoreStockReservations(
+            _cartItems[index],
+            restoreAmount,
+            "SET_CART_ITEM_QUANTITY_DECREASE",
+          );
         }
       }
+
+      _saveProductsToHive();
     }
 
     if (newQuantity <= 0) {
       // Remove item — restore any remaining stock that was deducted
       debugPrint("🗑️ New quantity <= 0 – removing item from cart");
-      if (isStockEnabled &&
-          selectedStock != null &&
-          _cartItems[index].stockDeducted > 0) {
-        _updateStockQuantity(selectedStock, _cartItems[index].stockDeducted,
-            "SET_CART_ITEM_QUANTITY_REMOVE");
+      if (isStockEnabled && _cartItems[index].stockDeducted > 0) {
+        _restoreStockReservations(
+          _cartItems[index],
+          _cartItems[index].stockDeducted,
+          "SET_CART_ITEM_QUANTITY_REMOVE",
+        );
+        _saveProductsToHive();
       }
       _cartItems.removeAt(index);
     } else {

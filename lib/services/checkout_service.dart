@@ -121,22 +121,9 @@ class CheckoutService {
         return;
       }
 
-      List<Map<String, dynamic>> items = [];
-      for (var item in localProductProvider.cartItems) {
-        debugPrint("📦 Order Item: ${item.product.productName}");
-        debugPrint("  - Product ID: ${item.product.productId}");
-        debugPrint("  - Quantity: ${item.quantity}");
-        debugPrint("  - Custom Price: ${item.price}");
-        debugPrint("  - Custom MRP: ${item.mrp}");
-        debugPrint("  - Stock ID: ${item.selectedStock?.id}");
-
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': item.quantity,
-          'price': item.price,
-          'mrp': item.mrp,
-          'stock_id': item.selectedStock?.id,
-        });
+      final items = localProductProvider.buildOrderItemsPayload();
+      for (final item in items) {
+        debugPrint("📦 Order Item Payload: $item");
       }
 
       debugPrint("📋 Order Items: ${items.length} products");
@@ -335,16 +322,7 @@ class CheckoutService {
       }
 
       // Build items
-      final items = <Map<String, dynamic>>[];
-      for (var item in localProductProvider.cartItems) {
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': item.quantity,
-          'price': item.price,
-          'mrp': item.mrp,
-          'stock_id': item.selectedStock?.id,
-        });
-      }
+      final items = localProductProvider.buildOrderItemsPayload();
 
       final priceSummary = localProductProvider.priceSummary!;
 

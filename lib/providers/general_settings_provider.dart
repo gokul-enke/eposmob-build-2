@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/get_general_settings.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'dart:convert';
 
 import 'package:pos_machine/resources/app_url.dart';
@@ -57,6 +58,13 @@ class GeneralSettingsProvider with ChangeNotifier {
           debugPrint(' GeneralSettings payload missing stock_enabled key');
         }
         _generalSettings = GeneralSettings.fromJson(payload);
+        LocalProductProvider.cacheStockEnabled(
+          _generalSettings?.stockEnabled ?? false,
+        );
+        await prefs.setBool(
+          'general_stock_enabled',
+          _generalSettings?.stockEnabled ?? false,
+        );
         debugPrint(
             ' Parsed GeneralSettings: stock_enabled=${_generalSettings?.stockEnabled}');
       } else {

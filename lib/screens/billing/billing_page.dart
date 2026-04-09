@@ -30,6 +30,7 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -213,8 +214,19 @@ class BillingPageState extends State<BillingPage>
   }
 
   VoidCallback? _appSettingsDebugListener;
+  VoidCallback? _generalSettingsListener;
   VoidCallback? _deliveryMethodListener;
   VoidCallback? _paymentMethodListener;
+
+  void _syncStockEnabledSetting() {
+    final generalSettingsProvider =
+        Provider.of<GeneralSettingsProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final stockEnabled =
+        generalSettingsProvider.generalSettings?.stockEnabled ?? false;
+    localProductProvider.setStockEnabled(stockEnabled);
+  }
 
   @override
   void initState() {
@@ -259,6 +271,7 @@ class BillingPageState extends State<BillingPage>
     // After first frame, rehydrate UI from any saved order/discounts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _syncStockEnabledSetting();
       _rehydrateFromProvider();
     });
 
@@ -327,6 +340,12 @@ class BillingPageState extends State<BillingPage>
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
 
+        final generalSettingsProvider =
+          Provider.of<GeneralSettingsProvider>(context, listen: false);
+        _generalSettingsListener = _syncStockEnabledSetting;
+        generalSettingsProvider.addListener(_generalSettingsListener!);
+        _syncStockEnabledSetting();
+
       // Listen for cart changes to reset payment modal flag
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -391,8 +410,13 @@ class BillingPageState extends State<BillingPage>
 
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
+      final generalSettingsProvider =
+          Provider.of<GeneralSettingsProvider>(context, listen: false);
       if (_appSettingsDebugListener != null) {
         appSettingsProvider.removeListener(_appSettingsDebugListener!);
+      }
+      if (_generalSettingsListener != null) {
+        generalSettingsProvider.removeListener(_generalSettingsListener!);
       }
       if (_paymentMethodListener != null) {
         appSettingsProvider.removeListener(_paymentMethodListener!);
@@ -4383,8 +4407,6 @@ class BillingPageState extends State<BillingPage>
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      final cartItems = localProductProvider.cartItems;
-
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
@@ -4409,24 +4431,10 @@ class BillingPageState extends State<BillingPage>
       //   return;
       // }
 
-      List<Map<String, dynamic>> items = [];
+      final items = localProductProvider.buildOrderItemsPayload();
 
-      for (var item in cartItems) {
-        debugPrint("📦 Order Item: ${item.product.productName}");
-        debugPrint("  - Product ID: ${item.product.productId}");
-        debugPrint("  - Quantity: ${item.quantity}");
-        debugPrint("  - Custom Price: ${item.price}");
-        debugPrint("  - Custom MRP: ${item.mrp}");
-        debugPrint("  - Stock ID: ${item.selectedStock?.id}");
-
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': item.quantity,
-          'price': item.price,
-          'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
-          'stock_id': item
-              .selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
-        });
+      for (final item in items) {
+        debugPrint("📦 Order Item Payload: $item");
       }
 
       debugPrint("📋 Order Items: ${items.length} products");
@@ -4736,8 +4744,6 @@ class BillingPageState extends State<BillingPage>
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      final cartItems = localProductProvider.cartItems;
-
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
@@ -4762,23 +4768,10 @@ class BillingPageState extends State<BillingPage>
       //   return;
       // }
 
-      List<Map<String, dynamic>> items = [];
+      final items = localProductProvider.buildOrderItemsPayload();
 
-      for (var item in cartItems) {
-        debugPrint("📦 Order Item: ${item.product.productName}");
-        debugPrint("  - Product ID: ${item.product.productId}");
-        debugPrint("  - Quantity: ${item.quantity}");
-        debugPrint("  - Custom Price: ${item.price}");
-        debugPrint("  - Custom MRP: ${item.mrp}");
-        debugPrint("  - Stock ID: ${item.selectedStock?.id}");
-
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': item.quantity,
-          'price': item.price,
-          'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
-          'stock_id': item.selectedStock?.id,
-        });
+      for (final item in items) {
+        debugPrint("📦 Order Item Payload: $item");
       }
 
       debugPrint("📋 Order Items: ${items.length} products");

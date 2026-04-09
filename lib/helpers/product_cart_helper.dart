@@ -95,6 +95,7 @@ class ProductCartHelper {
 
     // Variables to track selected stock and final values
     Stock? selectedStock;
+    List<int> selectedStockGroupIds = <int>[];
     double? finalPrice = customPrice;
     double? finalMrp = customMrp;
     num? finalQuantity = quantity;
@@ -133,6 +134,12 @@ class ProductCartHelper {
         if (groups.length == 1) {
           // Only 1 pricing group → auto-select, no modal needed
           final group = groups.first;
+          selectedStockGroupIds = group.originalStocks
+              .map((stock) => stock.id)
+              .whereType<int>()
+              .toSet()
+              .toList()
+            ..sort();
           selectedStock = group.firstStock.copyWith(
             quantity: group.totalQuantity,
             price: group.price,
@@ -168,6 +175,16 @@ class ProductCartHelper {
           if (result != null) {
             debugPrint("✅ User selected stock from modal");
             selectedStock = result['stock'];
+            final originalStocks = (result['originalStocks'] as List?)
+                    ?.whereType<Stock>()
+                    .toList() ??
+                const <Stock>[];
+            selectedStockGroupIds = originalStocks
+                .map((stock) => stock.id)
+                .whereType<int>()
+                .toSet()
+                .toList()
+              ..sort();
 
             debugPrint("📦 Selected stock details:");
             debugPrint("  - Stock ID: ${selectedStock!.id}");
@@ -371,16 +388,36 @@ class ProductCartHelper {
         final bool itemExistsInCart = localProductProvider.cartItems.any(
             (item) =>
                 item.product.productId == product.productId &&
-                (item.selectedStock?.id == selectedStock?.id ||
-                    (item.selectedStock == null && selectedStock == null)));
+            ((selectedStockGroupIds.isNotEmpty &&
+                item.stockGroupIds.isNotEmpty &&
+                item.stockGroupIds.length ==
+                  selectedStockGroupIds.length &&
+                item.stockGroupIds
+                  .asMap()
+                  .entries
+                  .every((entry) =>
+                    entry.value ==
+                    selectedStockGroupIds[entry.key])) ||
+              (item.selectedStock?.id == selectedStock?.id ||
+                (item.selectedStock == null && selectedStock == null))));
 
         if (itemExistsInCart) {
           // Item exists in cart, find it and preserve its custom price
           final existingItem = localProductProvider.cartItems.firstWhere(
             (item) =>
                 item.product.productId == product.productId &&
-                (item.selectedStock?.id == selectedStock?.id ||
-                    (item.selectedStock == null && selectedStock == null)),
+            ((selectedStockGroupIds.isNotEmpty &&
+                item.stockGroupIds.isNotEmpty &&
+                item.stockGroupIds.length ==
+                  selectedStockGroupIds.length &&
+                item.stockGroupIds
+                  .asMap()
+                  .entries
+                  .every((entry) =>
+                    entry.value ==
+                    selectedStockGroupIds[entry.key])) ||
+              (item.selectedStock?.id == selectedStock?.id ||
+                (item.selectedStock == null && selectedStock == null))),
           );
 
           debugPrint(
@@ -416,6 +453,7 @@ class ProductCartHelper {
         mrp:
             mrpToUse, // � FIX: Pass null to preserve existing custom MRP, or explicit MRP
         selectedStock: selectedStock,
+        stockGroupIds: selectedStockGroupIds,
       );
 
       showScaffold(
