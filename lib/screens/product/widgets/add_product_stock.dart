@@ -3274,20 +3274,26 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         double quantity = double.tryParse(item.quantity) ?? 0.0;
         double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
 
-        totalPurchaseAmount += (purchaseRate * quantity);
+        // Calculate item total including tax if tax is not included in the price
+        double itemTotal = purchaseRate * quantity;
+        if (!item.taxInclude) {
+          final taxPerUnit = (item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble() ?? 0.0;
+          itemTotal += quantity * taxPerUnit;
+        }
+
+        totalPurchaseAmount += itemTotal;
         totalItems++;
         totalQuantity += quantity.toInt();
       }
     }
 
-    final double additionalPurchaseTax = _getAdditionalPurchaseTaxTotal();
-
     // Get supplier information
+    final double additionalPurchaseTax = _getAdditionalPurchaseTaxTotal();
     String supplierName = selectedSupplier?.name ?? 'No Supplier';
     double supplierBalance =
         _getSupplierBalance(); // Helper method to get balance
     double totalPayable =
-        totalPurchaseAmount + additionalPurchaseTax + supplierBalance;
+        totalPurchaseAmount + supplierBalance;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
