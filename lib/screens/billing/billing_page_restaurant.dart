@@ -2584,13 +2584,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             vertical: 2),
                                         child: CompactQuantityControlLocal(
                                           key: ValueKey(
-                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}',
                                           ),
                                           productId: item.product.productId!,
                                           quantity: item.quantity.toDouble(),
                                           unitPrice: item.price.toString(),
                                           productUnit: item.product.unit,
                                           product: item.product,
+                                          cartItem: item,
                                           selectedStock: item.selectedStock,
                                         ),
                                       ),
@@ -2737,8 +2738,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         visualDensity: VisualDensity.compact,
                                         onPressed: () {
                                           localProductProvider.removeFromCart(
-                                              item.product.productId!,
-                                              item.selectedStock);
+                                            item.product.productId!,
+                                            item.selectedStock,
+                                            stockGroupIds: item.stockGroupIds,
+                                          );
                                         },
                                       ),
                                     ),
@@ -6977,6 +6980,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                     product: item.product,
                     quantity: diff,
                     selectedStock: item.selectedStock,
+                      stockGroupIds: item.stockGroupIds,
                     isIncreamentUsingCompactQuantityControl: true,
                   );
                 } else if (diff < 0) {
@@ -6984,6 +6988,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                     localProductProvider.decrementCartItem(
                       item.product.productId!,
                       item.selectedStock,
+                      stockGroupIds: item.stockGroupIds,
                     );
                   }
                 }
@@ -7275,6 +7280,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                             item.product
                                                                 .productId!,
                                                             item.selectedStock,
+                                                            stockGroupIds:
+                                                                item.stockGroupIds,
                                                           );
                                                         },
                                                         child: const Icon(

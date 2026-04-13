@@ -196,13 +196,14 @@ class CartItemsTable extends StatelessWidget {
                             _buildFixedContentCell(
                               CompactQuantityControlLocal(
                                 key: ValueKey(
-                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}',
                                 ),
                                 productId: item.product.productId!,
                                 quantity: item.quantity.toDouble(),
                                 unitPrice: item.price.toString(),
                                 productUnit: item.product.unit,
                                 product: item.product,
+                                cartItem: item,
                                 selectedStock: item.selectedStock,
                               ),
                               width: qtyWidth,
@@ -284,6 +285,7 @@ class CartItemsTable extends StatelessWidget {
                                     localProductProvider.removeFromCart(
                                       item.product.productId!,
                                       item.selectedStock,
+                                      stockGroupIds: item.stockGroupIds,
                                     );
                                   } finally {
                                     billingProvider.setLoadingAddItem(false);

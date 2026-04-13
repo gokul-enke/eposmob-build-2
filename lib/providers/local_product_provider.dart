@@ -2003,11 +2003,13 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Updates the comment on a specific cart item by product ID and stock.
   void updateCartItemComment(
-      int productId, Stock? selectedStock, String? comment) {
-    final index = _cartItems.indexWhere((item) =>
-        item.product.productId == productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+      int productId, Stock? selectedStock, String? comment,
+      {List<int>? stockGroupIds}) {
+    final index = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
     if (index != -1) {
       _cartItems[index].comment = comment;
       _saveCartToHive();
@@ -2015,16 +2017,18 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  void removeFromCart(int productId, Stock? selectedStock) {
+  void removeFromCart(int productId, Stock? selectedStock,
+      {List<int>? stockGroupIds}) {
     debugPrint("🗑️ REMOVE FROM CART STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
     debugPrint("Stock Management Enabled: $isStockEnabled");
 
-    int index = _cartItems.indexWhere((item) =>
-        item.product.productId == productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+    final index = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
 
     if (index != -1) {
       final cartItem = _cartItems[index];
@@ -2049,12 +2053,13 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  void updateItemPrice(int productId, Stock? selectedStock, double newPrice) {
-    // Add selectedStock
-    int index = _cartItems.indexWhere((item) =>
-        item.product.productId == productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+  void updateItemPrice(int productId, Stock? selectedStock, double newPrice,
+      {List<int>? stockGroupIds}) {
+    final index = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
 
     if (index != -1) {
       _cartItems[index].price = newPrice;
@@ -2068,12 +2073,13 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  void updateItemMrp(int productId, Stock? selectedStock, double newMrp) {
-    // Update MRP for cart item
-    int index = _cartItems.indexWhere((item) =>
-        item.product.productId == productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+  void updateItemMrp(int productId, Stock? selectedStock, double newMrp,
+      {List<int>? stockGroupIds}) {
+    final index = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
 
     if (index != -1) {
       _cartItems[index].mrp = newMrp;
@@ -2082,12 +2088,13 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  void updateItemTax(int productId, Stock? selectedStock, double newTaxRate) {
-    // Update tax rate and recalculate amount
-    int index = _cartItems.indexWhere((item) =>
-        item.product.productId == productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+  void updateItemTax(int productId, Stock? selectedStock, double newTaxRate,
+      {List<int>? stockGroupIds}) {
+    final index = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
 
     if (index != -1) {
       _cartItems[index].taxRate = newTaxRate;
@@ -2300,16 +2307,18 @@ class LocalProductProvider extends ChangeNotifier {
   /// Decrements the quantity of the product in the cart.
   /// If the quantity becomes less than 1, the product is removed from the cart.
   /// Also handles stock restoration when stock management is enabled.
-  void decrementCartItem(int productId, Stock? selectedStock) {
+  void decrementCartItem(int productId, Stock? selectedStock,
+      {List<int>? stockGroupIds}) {
     debugPrint("➖ DECREMENT CART ITEM STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
     debugPrint("Stock Management Enabled: $isStockEnabled");
 
-    int index = _cartItems.indexWhere((item) =>
-        item.product.productId == productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+    final index = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
 
     if (index != -1) {
       debugPrint(
@@ -3149,6 +3158,77 @@ class LocalProductProvider extends ChangeNotifier {
     }).toList();
   }
 
+  List<int> getSelectionStockIds({
+    Stock? selectedStock,
+    List<int>? stockGroupIds,
+  }) {
+    final normalizedGroupIds = _normalizeStockGroupIds(stockGroupIds);
+    if (normalizedGroupIds.isNotEmpty) {
+      return normalizedGroupIds;
+    }
+
+    if (selectedStock?.id == null) {
+      return const <int>[];
+    }
+
+    return <int>[selectedStock!.id!];
+  }
+
+  num getAvailableQuantityForSelection({
+    required GetProduct product,
+    Stock? selectedStock,
+    List<int>? stockGroupIds,
+  }) {
+    final currentProduct = getProductById(product.productId ?? -1) ?? product;
+    final currentStocks = currentProduct.stock ?? const <Stock>[];
+    final selectionStockIds = getSelectionStockIds(
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    ).toSet();
+
+    if (selectionStockIds.isEmpty) {
+      return 0;
+    }
+
+    return currentStocks
+        .where((stock) =>
+            stock.id != null &&
+            selectionStockIds.contains(stock.id) &&
+            stock.quantity != null &&
+            stock.quantity! > 0)
+        .fold<num>(0, (sum, stock) => sum + (stock.quantity ?? 0));
+  }
+
+  List<Stock> getAlternativeStockOptions({
+    required GetProduct product,
+    Stock? selectedStock,
+    List<int>? stockGroupIds,
+    int? activeStoreId,
+    String? activeStoreName,
+  }) {
+    final currentProduct = getProductById(product.productId ?? -1) ?? product;
+    final excludedStockIds = getSelectionStockIds(
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    ).toSet();
+
+    final availableStocks = getStockOptionsForStore(
+      currentProduct,
+      activeStoreId: activeStoreId,
+      activeStoreName: activeStoreName,
+    );
+
+    final filteredStocks = availableStocks.where((stock) {
+      final stockId = stock.id;
+      if (stockId == null) {
+        return true;
+      }
+      return !excludedStockIds.contains(stockId);
+    }).toList();
+
+    return _sortStocksForReservation(filteredStocks);
+  }
+
   /// Selects the optimal stock entry based on quantity needed
   Stock? selectStockForQuantity(GetProduct product, num quantity) {
     if (product.stock == null || product.stock!.isEmpty) {
@@ -3216,17 +3296,19 @@ class LocalProductProvider extends ChangeNotifier {
   /// If [newQuantity] is 0 or less, the item is removed from the cart.
   /// Stock levels are adjusted based on the difference between old and new quantities.
   void setCartItemQuantity(
-      int productId, Stock? selectedStock, num newQuantity) {
+      int productId, Stock? selectedStock, num newQuantity,
+      {List<int>? stockGroupIds}) {
     debugPrint("🔄 SET CART ITEM QUANTITY STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
     debugPrint("Requested Quantity: $newQuantity");
     debugPrint("Stock Management Enabled: $isStockEnabled");
 
-    int index = _cartItems.indexWhere((item) =>
-        item.product.productId == productId &&
-        (item.selectedStock?.id == selectedStock?.id ||
-            (item.selectedStock == null && selectedStock == null)));
+    final index = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+    );
 
     if (index == -1) {
       debugPrint("⚠️ Cart item not found – cannot set quantity");
