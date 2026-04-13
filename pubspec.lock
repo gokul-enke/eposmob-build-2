@@ -779,10 +779,9 @@ packages:
   msix:
     dependency: "direct dev"
     description:
-      name: msix
-      sha256: e3de4d9f52543ad6e4b0f534991e1303cbd379d24be28dd241ac60bd9439a201
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/msix"
+      relative: true
+    source: path
     version: "3.7.0"
   multi_select_flutter:
     dependency: "direct main"

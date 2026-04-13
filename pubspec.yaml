@@ -129,6 +129,10 @@ dev_dependencies:
   flutter_launcher_icons: ^0.11.0
   msix: ^3.7.0
 
+dependency_overrides:
+  msix:
+    path: third_party/msix
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
