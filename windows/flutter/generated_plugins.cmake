@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   flutter_pos_printer_platform_image_3
+  msix
   permission_handler_windows
   share_plus
   url_launcher_windows

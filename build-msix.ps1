@@ -23,7 +23,7 @@ if ($LASTEXITCODE -ne 0) { throw "flutter build windows failed" }
 $releaseX64 = "build/windows/x64/runner/Release"
 $msixPath = "build/windows/runner/Release"
 
-# Step 4: Copy runtime DLLs
+# Step 4: Copy runtime DLLs to x64 build output
 Write-Host "==> [4/6] Copying runtime DLLs..." -ForegroundColor Cyan
 Copy-Item -Path "dependencies/*.dll" -Destination $releaseX64 -Force
 
@@ -34,10 +34,35 @@ Get-ChildItem -Path $releaseX64 | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $msixPath -Recurse -Force
 }
 
+# Also ensure VC++ DLLs are explicitly in the msix source directory
+Copy-Item -Path "dependencies/*.dll" -Destination $msixPath -Force
+
 # Step 6: Create MSIX package (using dart run instead of deprecated flutter pub run)
-Write-Host "==> [6/6] Creating MSIX package (verbose)..." -ForegroundColor Cyan
+Write-Host "==> [6/7] Creating MSIX package (verbose)..." -ForegroundColor Cyan
 dart run msix:create --build-windows false -v
 if ($LASTEXITCODE -ne 0) { throw "msix:create failed" }
+
+# Step 7: Sign the MSIX with certificate
+Write-Host "==> [7/7] Signing MSIX package..." -ForegroundColor Cyan
+$certPath = "certificate.pfx"
+$certPassword = "1234"
+if (Test-Path $certPath) {
+  $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" |
+    Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -Last 1
+  if ($signtool) {
+    $msixToSign = Get-ChildItem -Path $msixPath -Filter "*.msix" | Select-Object -First 1
+    if (-not $msixToSign) {
+      $msixToSign = Get-ChildItem -Path $releaseX64 -Filter "*.msix" | Select-Object -First 1
+    }
+    & $signtool.FullName sign /fd SHA256 /a /f $certPath /p $certPassword $msixToSign.FullName
+    if ($LASTEXITCODE -ne 0) { throw "MSIX signing failed" }
+    Write-Host "MSIX signed successfully." -ForegroundColor Green
+  } else {
+    Write-Host "WARNING: signtool.exe not found. MSIX is unsigned." -ForegroundColor Yellow
+  }
+} else {
+  Write-Host "WARNING: certificate.pfx not found. MSIX is unsigned." -ForegroundColor Yellow
+}
 
 # Rename output
 Write-Host "==> Renaming MSIX output..." -ForegroundColor Cyan
