@@ -193,8 +193,9 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
   }
 
   void _showViewDetailModal(BuildContext context, DailySalesCloseData data) {
-    Provider.of<SalesProvider>(context, listen: false)
-        .setSelectedDailySalesCloseData(data);
+    final salesProvider = Provider.of<SalesProvider>(context, listen: false);
+    salesProvider.setSelectedDailySalesCloseData(data);
+    salesProvider.setReturnIndex(78); // User list index
     Get.find<SideBarController>().index.value = 79;
   }
 
