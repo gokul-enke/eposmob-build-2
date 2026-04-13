@@ -185,20 +185,19 @@ class _HomeWidgetState extends State<HomeWidget> {
       if (selectedProduct != null) {
         debugPrint("Adding product: ${selectedProduct.productName}");
 
-        localProductProvider.addToCart(
+        final customPrice = double.tryParse(billingProvider.unitPriceController.text);
+        final customQuantity = num.tryParse(billingProvider.quantityController.text);
+
+        await ProductCartHelper.handleProductSelection(
+          context: context,
           product: selectedProduct,
-          quantity: num.tryParse(billingProvider.quantityController.text),
-          price: double.tryParse(billingProvider.unitPriceController.text),
+          quantity: customQuantity,
+          customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
         );
 
         // Clear fields using billing provider
         billingProvider.clearProductFieldsAndReset();
         _focusTextField();
-
-        showScaffold(
-          context: context,
-          message: "Item added to cart",
-        );
       } else {
         showScaffoldError(
           context: context,

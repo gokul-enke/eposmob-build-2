@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -53,6 +54,7 @@ class PurchaseOrderItem {
   String? selectedRack;
   bool taxInclude;
   bool alreadyReceived;
+  Map<String, dynamic>? calculatedTaxData;
 
   bool receive;
   TextEditingController qtyCtrl;
@@ -76,7 +78,8 @@ class PurchaseOrderItem {
     this.rack = '',
     this.selectedUnit,
     this.selectedRack,
-    this.taxInclude = false,
+    this.taxInclude = true,
+    this.calculatedTaxData,
     this.receive = false,
     this.alreadyReceived = false,
     this.id,
@@ -142,7 +145,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   List<PurchaseOrderItem> orderItems = [];
   PurchaseOrderItem currentItem = PurchaseOrderItem();
-  bool includeTax = false;
+  bool includeTax = true;
   bool _showItemDetails = false;
   int? _editingItemIndex;
 
@@ -222,6 +225,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       'selectedUnit': item.selectedUnit,
       'selectedRack': item.selectedRack,
       'taxInclude': item.taxInclude,
+      'calculatedTaxData': item.calculatedTaxData,
       'receive': item.receive,
       'alreadyReceived': item.alreadyReceived,
     };
@@ -288,7 +292,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       taxInclude: map['taxInclude'] == true,
       receive: map['receive'] == true,
       alreadyReceived: map['alreadyReceived'] == true,
-    )..syncControllers();
+    )
+      ..calculatedTaxData = map['calculatedTaxData'] != null
+          ? Map<String, dynamic>.from(map['calculatedTaxData'] as Map)
+          : null
+      ..syncControllers();
   }
 
   Widget _disableInteraction(Widget child, {required bool disabled}) {
@@ -720,7 +728,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     rackController.clear();
     categorySearchController.clear();
     productSearchController.clear();
-    includeTax = false;
+    includeTax = true;
   }
 
   void _editItem(int index) {
@@ -751,6 +759,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         rack: item.rack,
         selectedRack: item.selectedRack,
         taxInclude: item.taxInclude,
+        calculatedTaxData: item.calculatedTaxData != null
+            ? Map<String, dynamic>.from(item.calculatedTaxData!)
+            : null,
         receive: item.receive,
         alreadyReceived: item.alreadyReceived,
       )..syncControllers();
@@ -969,6 +980,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
     _saveDraftToHive();
     _focusQuantityAndSelectAll();
+    _triggerTaxRecalculation();
   }
 
   Future<void> _showAddProductModal({String? barcode}) async {
@@ -1108,6 +1120,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           "mrp": double.tryParse(i.mrp) ?? 0,
           "tax_include": i.taxInclude,
           "wholesale_min_unit": double.tryParse(i.wholesaleMinUnit) ?? 1,
+          "tax_amount_retail": i.calculatedTaxData?['retailTaxAmount'],
+          "tax_amount_wholesale": i.calculatedTaxData?['wholesaleTaxAmount'],
+          "tax_amount_purchase": i.calculatedTaxData?['purchaseTaxAmount'],
+          "retail_price_tax": i.calculatedTaxData?['price_including_tax_retail'],
+          "wholesale_price_tax": i.calculatedTaxData?['price_including_tax_wholesale'],
+          "purchase_price_tax": i.calculatedTaxData?['price_including_tax_purchase'],
         };
 
         final selectedRack =
@@ -1152,6 +1170,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           "rack": (i.selectedRack != null && i.selectedRack!.isNotEmpty)
               ? i.selectedRack
               : i.rack,
+          "tax_amount_retail": i.calculatedTaxData?['retailTaxAmount'],
+          "tax_amount_wholesale": i.calculatedTaxData?['wholesaleTaxAmount'],
+          "tax_amount_purchase": i.calculatedTaxData?['purchaseTaxAmount'],
+          "retail_price_tax": i.calculatedTaxData?['price_including_tax_retail'],
+          "wholesale_price_tax": i.calculatedTaxData?['price_including_tax_wholesale'],
+          "purchase_price_tax": i.calculatedTaxData?['price_including_tax_purchase'],
         });
       }
 
@@ -1611,7 +1635,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   child: _buildFieldColumn(
                     "Purchase Rate",
                     _buildInlineField(rateController, "0",
-                        (v) => setState(() => item.purchaseRate = v),
+                        (v) {
+                          setState(() => item.purchaseRate = v);
+                          _triggerTaxRecalculation();
+                        },
                         isNumber: true, prefixText: '$_currency '),
                     isRequired: true,
                   ),
@@ -1631,6 +1658,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                       setState(() {
                         item.retailPrice = v;
                       });
+                      _triggerTaxRecalculation();
                     }, isNumber: true, prefixText: '$_currency '),
                     isRequired: true,
                   ),
@@ -1671,6 +1699,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                       setState(() {
                         item.wholesalePrice = v;
                       });
+                      _triggerTaxRecalculation();
                     }, isNumber: true, prefixText: '$_currency '),
                   ),
                 ),
@@ -1730,6 +1759,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           textAlignVertical: TextAlignVertical.center,
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor.withOpacity(.5),
+            ),
             prefixText: prefixText,
             prefixStyle: buildCustomStyle(
                 FontWeightManager.medium, FontSize.s12, 0.2, Colors.grey),
@@ -1804,115 +1839,441 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     );
   }
 
-  Widget _buildTaxDetails() {
-    double purchaseOrig = double.tryParse(currentItem.purchaseRate) ?? 0;
-    double retailOrig = double.tryParse(currentItem.retailPrice) ?? 0;
-    double wholeOrig = double.tryParse(currentItem.wholesalePrice) ?? 0;
+  /// Debounce timer for tax calculation
+  Timer? _taxCalcDebounceTimer;
 
-    double pTax = 0;
-    double rBase = retailOrig;
-    double rTax = 0;
-    double wBase = wholeOrig;
-    double wTax = 0;
+  /// Calculate tax for the current item using the server API (same as stock page)
+  Future<void> _calculateTaxForCurrentItem(
+      {bool isRetail = true, bool isPurchase = false}) async {
+    final item = currentItem;
+    final String calculationType =
+        isPurchase ? 'Purchase' : (isRetail ? 'Retail' : 'Wholesale');
 
-    if (includeTax) {
-      final pBase = purchaseOrig / 1.15;
-      pTax = purchaseOrig - pBase;
-      rBase = retailOrig / 1.15;
-      rTax = retailOrig - rBase;
-      wBase = wholeOrig / 1.15;
-      wTax = wholeOrig - wBase;
+    if (item.productData == null ||
+        item.categoryData == null ||
+        item.productData!.productId == null ||
+        item.categoryData!.categoryId == null) {
+      debugPrint(
+          '⚠️ [PurchaseTax] Cannot calculate: product/category missing | type=$calculationType');
+      if (mounted) {
+        setState(() {
+          item.calculatedTaxData ??= {};
+          if (isPurchase) {
+            item.calculatedTaxData!['purchaseTaxAmount'] = 0.0;
+            item.calculatedTaxData!['tax_rate_purchase'] = 0.0;
+            item.calculatedTaxData!['price_including_tax_purchase'] = 0.0;
+            item.calculatedTaxData!['price_excluding_tax_purchase'] = 0.0;
+          } else if (isRetail) {
+            item.calculatedTaxData!['retailTaxAmount'] = 0.0;
+            item.calculatedTaxData!['tax_rate_retail'] = 0.0;
+            item.calculatedTaxData!['price_including_tax_retail'] = 0.0;
+            item.calculatedTaxData!['price_excluding_tax_retail'] = 0.0;
+          } else {
+            item.calculatedTaxData!['wholesaleTaxAmount'] = 0.0;
+            item.calculatedTaxData!['tax_rate_wholesale'] = 0.0;
+            item.calculatedTaxData!['price_including_tax_wholesale'] = 0.0;
+            item.calculatedTaxData!['price_excluding_tax_wholesale'] = 0.0;
+          }
+        });
+      }
+      return;
     }
 
+    final double priceToCalculate = isPurchase
+        ? (double.tryParse(item.purchaseRate) ?? 0.0)
+        : (isRetail
+            ? (double.tryParse(item.retailPrice) ?? 0.0)
+            : (double.tryParse(item.wholesalePrice) ?? 0.0));
+
+    debugPrint(
+        '🧮 [PurchaseTax] Payload | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=$includeTax');
+
+    final String? accessToken =
+        Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null) {
+      debugPrint('❌ [PurchaseTax] No access token');
+      return;
+    }
+
+    try {
+      final taxData =
+          await Provider.of<StockProvider>(context, listen: false)
+              .calculateTaxAPI(
+        accessToken: accessToken,
+        price: priceToCalculate,
+        productId: item.productData!.productId!,
+        categoryId: item.categoryData!.categoryId!,
+        taxInclude: includeTax,
+      );
+
+      if (taxData != null && mounted) {
+        debugPrint(
+            '✅ [PurchaseTax] API success | type=$calculationType | response=$taxData');
+        setState(() {
+          if (isPurchase) {
+            item.calculatedTaxData = {
+              ...?item.calculatedTaxData,
+              'purchaseTaxAmount':
+                  (taxData['tax_amount'] as num?)?.toDouble() ?? 0.0,
+              'tax_rate_purchase':
+                  (taxData['tax_rate'] as num?)?.toDouble() ?? 0.0,
+              'price_including_tax_purchase':
+                  (taxData['price_including_tax'] as num?)?.toDouble() ?? 0.0,
+              'price_excluding_tax_purchase':
+                  (taxData['price_excluding_tax'] as num?)?.toDouble() ?? 0.0,
+            };
+          } else if (isRetail) {
+            item.calculatedTaxData = {
+              ...?item.calculatedTaxData,
+              'retailTaxAmount':
+                  (taxData['tax_amount'] as num?)?.toDouble() ?? 0.0,
+              'tax_rate_retail':
+                  (taxData['tax_rate'] as num?)?.toDouble() ?? 0.0,
+              'price_including_tax_retail':
+                  (taxData['price_including_tax'] as num?)?.toDouble() ?? 0.0,
+              'price_excluding_tax_retail':
+                  (taxData['price_excluding_tax'] as num?)?.toDouble() ?? 0.0,
+            };
+          } else {
+            item.calculatedTaxData = {
+              ...?item.calculatedTaxData,
+              'wholesaleTaxAmount':
+                  (taxData['tax_amount'] as num?)?.toDouble() ?? 0.0,
+              'tax_rate_wholesale':
+                  (taxData['tax_rate'] as num?)?.toDouble() ?? 0.0,
+              'price_including_tax_wholesale':
+                  (taxData['price_including_tax'] as num?)?.toDouble() ?? 0.0,
+              'price_excluding_tax_wholesale':
+                  (taxData['price_excluding_tax'] as num?)?.toDouble() ?? 0.0,
+            };
+          }
+        });
+      } else {
+        debugPrint('❌ [PurchaseTax] API returned null | type=$calculationType');
+        if (mounted) {
+          setState(() {
+            item.calculatedTaxData ??= {};
+            if (isPurchase) {
+              item.calculatedTaxData!['purchaseTaxAmount'] = 0.0;
+              item.calculatedTaxData!['tax_rate_purchase'] = 0.0;
+              item.calculatedTaxData!['price_including_tax_purchase'] = 0.0;
+              item.calculatedTaxData!['price_excluding_tax_purchase'] = 0.0;
+            } else if (isRetail) {
+              item.calculatedTaxData!['retailTaxAmount'] = 0.0;
+              item.calculatedTaxData!['tax_rate_retail'] = 0.0;
+              item.calculatedTaxData!['price_including_tax_retail'] = 0.0;
+              item.calculatedTaxData!['price_excluding_tax_retail'] = 0.0;
+            } else {
+              item.calculatedTaxData!['wholesaleTaxAmount'] = 0.0;
+              item.calculatedTaxData!['tax_rate_wholesale'] = 0.0;
+              item.calculatedTaxData!['price_including_tax_wholesale'] = 0.0;
+              item.calculatedTaxData!['price_excluding_tax_wholesale'] = 0.0;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('💥 [PurchaseTax] Exception | type=$calculationType | error=$e');
+      if (mounted) {
+        setState(() {
+          item.calculatedTaxData ??= {};
+          if (isPurchase) {
+            item.calculatedTaxData!['purchaseTaxAmount'] = 0.0;
+            item.calculatedTaxData!['tax_rate_purchase'] = 0.0;
+            item.calculatedTaxData!['price_including_tax_purchase'] = 0.0;
+            item.calculatedTaxData!['price_excluding_tax_purchase'] = 0.0;
+          } else if (isRetail) {
+            item.calculatedTaxData!['retailTaxAmount'] = 0.0;
+            item.calculatedTaxData!['tax_rate_retail'] = 0.0;
+            item.calculatedTaxData!['price_including_tax_retail'] = 0.0;
+            item.calculatedTaxData!['price_excluding_tax_retail'] = 0.0;
+          } else {
+            item.calculatedTaxData!['wholesaleTaxAmount'] = 0.0;
+            item.calculatedTaxData!['tax_rate_wholesale'] = 0.0;
+            item.calculatedTaxData!['price_including_tax_wholesale'] = 0.0;
+            item.calculatedTaxData!['price_excluding_tax_wholesale'] = 0.0;
+          }
+        });
+      }
+    }
+  }
+
+  /// Trigger all three tax calculations for the current item (debounced)
+  void _triggerTaxRecalculation() {
+    _taxCalcDebounceTimer?.cancel();
+    _taxCalcDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _calculateTaxForCurrentItem(isRetail: true);
+      _calculateTaxForCurrentItem(isRetail: false);
+      _calculateTaxForCurrentItem(isPurchase: true);
+    });
+  }
+
+  Widget _buildTaxDetails() {
+    final item = currentItem;
+    final retailInclusive =
+      (item.calculatedTaxData?['price_including_tax_retail'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final retailExclusive =
+      (item.calculatedTaxData?['price_excluding_tax_retail'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final retailTax =
+      (item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble() ?? 0.0;
+    final wholesaleInclusive =
+      (item.calculatedTaxData?['price_including_tax_wholesale'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final wholesaleExclusive =
+      (item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final wholesaleTax =
+      (item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble() ??
+        0.0;
+    final purchaseInclusive =
+      (item.calculatedTaxData?['price_including_tax_purchase'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final purchaseExclusive =
+      (item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)
+          ?.toDouble() ??
+        0.0;
+    final purchaseTax =
+      (item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble() ??
+        0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            // Tax toggle
+            Expanded(
+              flex: 1,
+              child: Container(
+                height: 80,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300, width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Including Tax",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s12,
+                          0.27,
+                          Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Transform.scale(
+                      scale: 0.9,
+                      child: Switch(
+                        value: includeTax,
+                        onChanged: (bool value) {
+                          setState(() {
+                            includeTax = value;
+                          });
+                          _triggerTaxRecalculation();
+                          _saveDraftToHive();
+                        },
+                        activeThumbColor: ColorManager.kPrimaryColor,
+                        inactiveThumbColor: Colors.white,
+                        inactiveTrackColor: Colors.grey.shade300,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: _buildTaxCard(
+                "Retail Price",
+                "1",
+                includeTax
+                    ? retailInclusive.toStringAsFixed(2)
+                    : retailExclusive.toStringAsFixed(2),
+                'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'Base: ${retailExclusive.toStringAsFixed(2)} + Tax: ${retailTax.toStringAsFixed(2)}',
+                retailTax,
+                Colors.blue,
+                includeTax,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: _buildTaxCard(
+                "Wholesale Price",
+                "2",
+                includeTax
+                    ? wholesaleInclusive.toStringAsFixed(2)
+                    : wholesaleExclusive.toStringAsFixed(2),
+                'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'Base: ${wholesaleExclusive.toStringAsFixed(2)} + Tax: ${wholesaleTax.toStringAsFixed(2)}',
+                wholesaleTax,
+                Colors.orange,
+                includeTax,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: _buildTaxCard(
+                "Purchase Rate",
+                "3",
+                includeTax
+                    ? purchaseInclusive.toStringAsFixed(2)
+                    : purchaseExclusive.toStringAsFixed(2),
+                'Tax: ${(item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'Base: ${purchaseExclusive.toStringAsFixed(2)} + Tax: ${purchaseTax.toStringAsFixed(2)}',
+                purchaseTax,
+                Colors.green,
+                includeTax,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaxCard(
+    String title,
+    String badgeText,
+    String priceText,
+    String taxText,
+    String breakdownText,
+    double taxAmount,
+    Color color,
+    bool isIncluding,
+  ) {
+    // When tax is NOT included, show price + tax amount in big font
+    final displayPrice = !isIncluding
+        ? '${priceText} + ${taxAmount.toStringAsFixed(2)}'
+        : priceText;
+
     return Container(
-      width: double.infinity,
+      height: 80,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade200),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.25), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Text("Tax Details",
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s14,
-                    0.2, ColorManager.textColor)),
+          // Header: Badge + Title + Tax%
+          Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    badgeText,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s10,
+                      0.27,
+                      Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
+                    0.27,
+                    color,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                taxText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.2,
+                  color.withOpacity(0.8),
+                ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(15),
+          const SizedBox(height: 6),
+          // Main Price + Breakdown in same line
+          Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Switch(
-                        value: includeTax,
-                        onChanged: (v) {
-                          setState(() => includeTax = v);
-                          _saveDraftToHive();
-                        },
-                        activeColor: Colors.blueAccent,
-                      ),
-                      Text("Including Tax",
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s13, 0.2, ColorManager.textColor)),
-                    ],
+                Text(
+                  displayPrice,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s16,
+                    0.27,
+                    Colors.black,
                   ),
                 ),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Purchase Price + Tax",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s13, 0.2, ColorManager.textColor)),
-                      const SizedBox(height: 5),
-                      Text(
-                          "${purchaseOrig.toStringAsFixed(2)} (Tax: ${pTax.toStringAsFixed(2)})",
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.2, Colors.grey.shade700)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Retail Price + Tax",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s13, 0.2, ColorManager.textColor)),
-                      const SizedBox(height: 5),
-                      Text(
-                          "${retailOrig.toStringAsFixed(2)} (Tax: ${rTax.toStringAsFixed(2)})",
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.2, Colors.grey.shade700)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Wholesale Price + Tax",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s13, 0.2, ColorManager.textColor)),
-                      const SizedBox(height: 5),
-                      Text(
-                          "${wholeOrig.toStringAsFixed(2)} (Tax: ${wTax.toStringAsFixed(2)})",
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.2, Colors.grey.shade700)),
-                    ],
+                  child: Text(
+                    isIncluding ? '($breakdownText)' : '(${taxText})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s10,
+                      0.2,
+                      Colors.grey.shade700,
+                    ),
                   ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -2755,6 +3116,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   @override
   void dispose() {
     _draftSaveDebouncer?.cancel();
+    _taxCalcDebounceTimer?.cancel();
     voucherNumberController.dispose();
     invoiceRefController.dispose();
     categorySearchController.dispose();

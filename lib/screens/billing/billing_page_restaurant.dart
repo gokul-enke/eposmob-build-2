@@ -15,6 +15,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
@@ -32,7 +33,6 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -195,6 +195,13 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   bool get _hasInternet =>
       Provider.of<BillingProvider>(context, listen: false).hasInternet;
+
+  bool _shouldSuppressSystemKeyboard() {
+    return SystemKeyboardPolicy.shouldSuppressForContext(
+      context: context,
+      fieldWantsVirtualKeyboardOnly: true,
+    );
+  }
 
   VoidCallback? _appSettingsDebugListener;
   VoidCallback? _deliveryMethodListener;
@@ -2200,6 +2207,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                 autocompleteProductKey: _autocompleteProductKey,
                                 autofocus: !appSettingsProvider
                                     .appSettings!.barcodeSales,
+                                suppressSystemKeyboardOnAndroid: true,
                                 size: size,
                                 onSelected: (GetProduct selectedProduct,
                                     Stock? selectedStock) async {
@@ -2231,6 +2239,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                         size: size,
                         hintText: 'billing.quantity_hint'.tr,
                         focusNode: _quantityFocusNode,
+                        useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                         keyboardType: TextInputType.number,
                         onTap: () {
                           Provider.of<KeyboardProvider>(context, listen: false)
@@ -2253,6 +2262,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                         size: size,
                         focusNode: _unitPriceFocusNode,
                         hintText: 'billing.unit_price_hint'.tr,
+                        useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                         keyboardType: TextInputType.number,
                         onTap: () {
                           Provider.of<KeyboardProvider>(context, listen: false)
@@ -2283,166 +2293,25 @@ class BillingPageState extends State<BillingPageRestaurant>
                                   isLoadingAddItem = true; // Start loading
                                 });
                                 try {
-                                  // Get the selected product from LocalProductProvider
                                   final localProductProvider =
                                       Provider.of<LocalProductProvider>(context,
-                                          listen: false);
-                                  final generalSettingsProvider =
-                                      Provider.of<GeneralSettingsProvider>(
-                                          context,
                                           listen: false);
 
                                   final selectedProduct =
                                       localProductProvider.selectedProduct;
 
                                   if (selectedProduct != null) {
-                                    debugPrint("=== ADD ITEM DEBUG ===");
-                                    debugPrint(
-                                        "Product selected: ${selectedProduct.productName}");
-                                    debugPrint(
-                                        "Product ID: ${selectedProduct.productId}");
-                                    debugPrint(
-                                        "Product base price: ${selectedProduct.price?.price ?? 'null'}");
-                                    debugPrint(
-                                        "Product MRP: ${selectedProduct.mrp ?? 'null'}");
-                                    debugPrint(
-                                        "Product has ${selectedProduct.stock?.length ?? 0} stock entries");
+                                    final customPrice = double.tryParse(unitPriceController.text);
+                                    final customQuantity = num.tryParse(quantityController.text);
 
-                                    // Check if stock management is enabled
-                                    bool stockEnabled = generalSettingsProvider
-                                            .generalSettings?.stockEnabled ??
-                                        false;
-                                    debugPrint(
-                                        "Stock management enabled: $stockEnabled");
+                                    await ProductCartHelper.handleProductSelection(
+                                      context: context,
+                                      product: selectedProduct,
+                                      quantity: customQuantity,
+                                      customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+                                    );
 
-                                    // Set the stock enabled status in LocalProductProvider
-                                    localProductProvider
-                                        .setStockEnabled(stockEnabled);
-
-                                    if (!stockEnabled) {
-                                      debugPrint(
-                                          "Stock management disabled, adding product directly to cart...");
-
-                                      // Add the selected product to the local cart without stock checking
-                                      localProductProvider.addToCart(
-                                          product: selectedProduct,
-                                          quantity: num.tryParse(
-                                            quantityController.text,
-                                          ),
-                                          price: double.tryParse(
-                                            unitPriceController.text,
-                                          ));
-
-                                      showScaffold(
-                                        context: context,
-                                        message: 'billing.added_to_cart'.tr,
-                                      );
-
-                                      // Clear input fields if necessary
-                                      setState(() {
-                                        _autocompleteProductKey = GlobalKey();
-                                        quantityController.clear();
-                                        barcodeController.clear();
-                                        selectedProductIdController.clear();
-                                        unitPriceController.clear();
-                                      });
-                                      _focusTextField();
-                                      debugPrint("=== END ADD ITEM DEBUG ===");
-                                      return;
-                                    }
-
-                                    // Check if we have a selected stock from the autocomplete
-                                    Stock? selectedStock =
-                                        localProductProvider.selectedStock;
-                                    debugPrint(
-                                        "Selected stock from autocomplete: ${selectedStock?.id ?? 'null'}");
-
-                                    if (selectedStock != null) {
-                                      debugPrint(
-                                          "Using pre-selected stock from autocomplete...");
-
-                                      // 🔧 FIX: Prioritize user's custom typed price over stock price
-                                      double customPrice = double.tryParse(
-                                              unitPriceController.text) ??
-                                          0;
-                                      double stockPrice = double.tryParse(
-                                              selectedStock.price ?? "0") ??
-                                          0;
-                                      double stockMrp = double.tryParse(
-                                              selectedStock.mrp ?? "0") ??
-                                          0;
-
-                                      // Use custom price if user typed one, otherwise use stock price
-                                      double finalPrice = customPrice > 0
-                                          ? customPrice
-                                          : stockPrice;
-
-                                      // 🔧 FIX: Check if product already exists in cart with custom MRP
-                                      double? finalMrp;
-                                      final bool itemExistsInCart =
-                                          localProductProvider.cartItems.any(
-                                              (item) =>
-                                                  item.product.productId ==
-                                                      selectedProduct
-                                                          .productId &&
-                                                  (item.selectedStock?.id ==
-                                                          selectedStock.id ||
-                                                      (item.selectedStock ==
-                                                              null &&
-                                                          selectedStock ==
-                                                              null)));
-
-                                      if (itemExistsInCart) {
-                                        // Item exists, don't pass MRP to preserve existing custom MRP
-                                        finalMrp = null;
-                                        debugPrint(
-                                            "Product already in cart - preserving existing custom MRP");
-                                      } else {
-                                        // New item, use stock MRP
-                                        finalMrp = stockMrp;
-                                        debugPrint(
-                                            "New product to cart - using stock MRP: $finalMrp");
-                                      }
-
-                                      debugPrint(
-                                          "Adding to cart with pre-selected stock: CustomPrice=${customPrice}, StockPrice=${stockPrice}, FinalPrice=${finalPrice}, MRP=${finalMrp ?? 'preserved'}");
-
-                                      // Add the selected product to the local cart with the pre-selected stock
-                                      localProductProvider.addToCart(
-                                        product: selectedProduct,
-                                        quantity: num.tryParse(
-                                            quantityController.text),
-                                        price:
-                                            finalPrice, // 🔧 FIX: Use custom price if available
-                                        mrp:
-                                            finalMrp, // 🔧 FIX: Use null to preserve existing custom MRP
-                                        selectedStock: selectedStock,
-                                      );
-
-                                      showScaffold(
-                                        context: context,
-                                        message: 'billing.added_to_cart'.tr,
-                                      );
-                                    } else {
-                                      debugPrint(
-                                          "No pre-selected stock, using auto-selection logic...");
-
-                                      // Let the addToCart method handle auto-selection for single stock
-                                      localProductProvider.addToCart(
-                                        product: selectedProduct,
-                                        quantity: num.tryParse(
-                                            quantityController.text),
-                                        price: double.tryParse(
-                                            unitPriceController.text),
-                                      );
-
-                                      showScaffold(
-                                        context: context,
-                                        message: 'billing.added_to_cart'.tr,
-                                      );
-                                    }
-
-                                    // Clear input fields if necessary
+                                    // Clear input fields
                                     setState(() {
                                       _autocompleteProductKey = GlobalKey();
                                       quantityController.clear();
@@ -2451,7 +2320,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       unitPriceController.clear();
                                     });
                                     _focusTextField();
-                                    debugPrint("=== END ADD ITEM DEBUG ===");
                                   } else {
                                     showScaffoldError(
                                       context: context,
@@ -2716,13 +2584,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             vertical: 2),
                                         child: CompactQuantityControlLocal(
                                           key: ValueKey(
-                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}',
                                           ),
                                           productId: item.product.productId!,
                                           quantity: item.quantity.toDouble(),
                                           unitPrice: item.price.toString(),
                                           productUnit: item.product.unit,
                                           product: item.product,
+                                          cartItem: item,
                                           selectedStock: item.selectedStock,
                                         ),
                                       ),
@@ -2869,8 +2738,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         visualDensity: VisualDensity.compact,
                                         onPressed: () {
                                           localProductProvider.removeFromCart(
-                                              item.product.productId!,
-                                              item.selectedStock);
+                                            item.product.productId!,
+                                            item.selectedStock,
+                                            stockGroupIds: item.stockGroupIds,
+                                          );
                                         },
                                       ),
                                     ),
@@ -3416,6 +3287,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                               }
                             },
                             child: TextField(
+                              readOnly: _shouldSuppressSystemKeyboard(),
+                              showCursor: true,
                               onTap: () {
                                 // Select all text for quick replacement
                                 WidgetsBinding.instance
@@ -6374,6 +6247,8 @@ class BillingPageState extends State<BillingPageRestaurant>
               parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
           paymentBreakdown: parsedPayment?.paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
+          customerVatNumber: savedOrder.customerVatNumber,
+          customerCrNumber: savedOrder.customerCrNumber,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
@@ -7105,6 +6980,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                     product: item.product,
                     quantity: diff,
                     selectedStock: item.selectedStock,
+                      stockGroupIds: item.stockGroupIds,
                     isIncreamentUsingCompactQuantityControl: true,
                   );
                 } else if (diff < 0) {
@@ -7112,6 +6988,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                     localProductProvider.decrementCartItem(
                       item.product.productId!,
                       item.selectedStock,
+                      stockGroupIds: item.stockGroupIds,
                     );
                   }
                 }
@@ -7403,6 +7280,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                             item.product
                                                                 .productId!,
                                                             item.selectedStock,
+                                                            stockGroupIds:
+                                                                item.stockGroupIds,
                                                           );
                                                         },
                                                         child: const Icon(

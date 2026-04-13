@@ -58,7 +58,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     final subtotal = order.items.fold<double>(
       0.0,
       (sum, item) =>
-          sum + ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+          sum +
+          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
     );
 
     final flatDiscount = order.flatDiscount ?? 0.0;
@@ -274,7 +275,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   const SizedBox(height: 8),
                                   ConfirmedOrderDetailModal
                                       ._buildPaymentMethodInfo(
-                                          order.paymentMethod!, currency, context),
+                                          order.paymentMethod!,
+                                          currency,
+                                          context),
                                 ],
                                 if (order.deliveryDate != null &&
                                     order.deliveryDate!.isNotEmpty) ...[
@@ -521,20 +524,20 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           Provider.of<StoreSessionProvider>(context, listen: false);
       final storeName = storeSession.activeStore?.storeName ?? "Store";
 
-        final double discountAmount = _calculateDiscountAmount();
+      final double discountAmount = _calculateDiscountAmount();
 
       // Get paid amount
       double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
           ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
           : null;
 
-        final double finalTotal = order.total;
+      final double finalTotal = order.total;
 
       // Parse multi-payment JSON into human-readable names and breakdown
-      final parsedPayment = PaymentHelper.parseLocalMultiPayment(
-          context, order.paymentMethod);
-      final String? displayPaymentMethod = parsedPayment?.paymentMethodDisplay
-          ?? order.paymentMethod;
+      final parsedPayment =
+          PaymentHelper.parseLocalMultiPayment(context, order.paymentMethod);
+      final String? displayPaymentMethod =
+          parsedPayment?.paymentMethodDisplay ?? order.paymentMethod;
       final Map<String, dynamic>? paymentBreakdown =
           parsedPayment?.paymentBreakdown;
 
@@ -556,6 +559,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         paymentMethod: displayPaymentMethod,
         paymentBreakdown: paymentBreakdown,
         customerAlternatePhone: order.alternatePhone,
+        customerVatNumber: order.customerVatNumber,
+        customerCrNumber: order.customerCrNumber,
         orderComment: order.comment,
         deliveryMethod: order.deliveryMethod,
         paidAmount: paidAmount,
@@ -584,8 +589,10 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               paymentMethod: displayPaymentMethod,
               paymentBreakdown: paymentBreakdown,
               customerAlternatePhone: order.alternatePhone,
+              customerVatNumber: order.customerVatNumber,
+              customerCrNumber: order.customerCrNumber,
               orderComment: order.comment,
-                deliveryMethod: order.deliveryMethod,
+              deliveryMethod: order.deliveryMethod,
               paidAmount: paidAmount,
               isDefaultCustomer:
                   _isDefaultCustomerPhone(context, order.customerPhone),
@@ -640,8 +647,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     // If it's a numeric ID, try to convert using BillingProvider
     if (RegExp(r'^\d+$').hasMatch(methodIdOrName) && context != null) {
       try {
-        final billing =
-            Provider.of<BillingProvider>(context, listen: false);
+        final billing = Provider.of<BillingProvider>(context, listen: false);
         if (methodIdOrName == billing.cashPaymentMethodId) return 'CASH';
         if (methodIdOrName == billing.cardPaymentMethodId) return 'CARD';
         if (methodIdOrName == billing.upiPaymentMethodId) return 'UPI';
@@ -672,7 +678,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             double amountValue = double.tryParse(amount.toString()) ?? 0.0;
             if (amountValue > 0) {
               // Convert method ID/name to display name
-              String displayName = _getPaymentMethodDisplayName(method, context);
+              String displayName =
+                  _getPaymentMethodDisplayName(method, context);
               // DEBIT is a customer-credit allocation, not money collected.
               // Show it in the list, but don't include it in Total Paid.
               final isDebitCredit = displayName.toUpperCase() == 'DEBIT';

@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
@@ -80,6 +81,7 @@ class StoreSessionProvider extends ChangeNotifier {
     final docConfigProvider = context.read<DocumentConfigProvider>();
     final categoryProvider = context.read<CategoryProvider>();
     final localProductProvider = context.read<LocalProductProvider>();
+    final masterDataProvider = context.read<MasterDataProvider>();
     final roleProvider = context.read<RoleProvider>();
     final deliveryMethodsProvider = context.read<DeliveryMethodsProvider>();
     final customerProvider = context.read<CustomerProvider>();
@@ -120,7 +122,7 @@ class StoreSessionProvider extends ChangeNotifier {
       await _updateStatus('Syncing delivery methods...');
       try {
         debugPrint('🚚 [StoreBootstrap] Fetching delivery methods during store selection...');
-        await deliveryMethodsProvider.fetchDeliveryMethods();
+        await deliveryMethodsProvider.fetchDeliveryMethods(forceRefresh: true);
         debugPrint('🚚 [StoreBootstrap] ✅ Delivery methods loaded: ${deliveryMethodsProvider.deliveryMethods.length} methods in provider memory');
       } catch (e) {
         debugPrint('🚚 [StoreBootstrap] ⚠️ Failed to load delivery methods: $e');
@@ -159,7 +161,17 @@ class StoreSessionProvider extends ChangeNotifier {
       await invoiceProvider.listAllInvoiceAccountTypes(accessToken);
 
       await _updateStatus('Syncing payment methods...');
-      await invoiceProvider.listAllPaymentList(accessToken);
+      await invoiceProvider.listAllPaymentList(
+        accessToken,
+        forceRefresh: true,
+      );
+
+      await _updateStatus('Refreshing checkout payment methods...');
+      try {
+        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
+      } catch (e) {
+        debugPrint('Warning: Failed to refresh checkout payment methods: $e');
+      }
 
       await _updateStatus('Fetching voucher types...');
       await invoiceProvider.listVoucherAccountType(accessToken);

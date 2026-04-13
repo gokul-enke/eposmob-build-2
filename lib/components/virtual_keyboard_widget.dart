@@ -322,6 +322,31 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
 
         // Get screen dimensions
         final screenSize = MediaQuery.of(context).size;
+
+        // On PHONES only, render a bottom-docked full-width keyboard
+        // Tablets (even Android/iOS) get the floating draggable keyboard
+        final platform = Theme.of(context).platform;
+        final isPhone = (platform == TargetPlatform.android ||
+                platform == TargetPlatform.iOS) &&
+            screenSize.width < 600; // Phone threshold
+
+        if (isPhone) {
+          final keyboardHeight =
+              keyboardType == VirtualKeyboardType.Numeric ? 260.0 : 300.0;
+          return VirtualKeyboardWidget(
+            controller: keyboardProvider.controller!,
+            keyboardType: keyboardType,
+            height: keyboardHeight,
+            width: screenSize.width,
+            textColor: Colors.black87,
+            shouldReplaceOnFirstInput:
+                keyboardProvider.shouldReplaceOnFirstInput,
+            onClose: () => keyboardProvider.hide(),
+            onConfirm: () => keyboardProvider.hide(),
+          );
+        }
+
+        // Tablets, desktop: floating, draggable keyboard
         final maxWidth = screenSize.width - 20; // Small margin from edges
         final maxHeight = screenSize.height - 100; // Account for status bar/nav
 

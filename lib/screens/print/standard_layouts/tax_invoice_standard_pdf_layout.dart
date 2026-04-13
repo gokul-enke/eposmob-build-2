@@ -580,6 +580,12 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                   custAltPhone.isNotEmpty)
                                 _fromToRow('Alt Phone :', custAltPhone,
                                     'هاتف بديل :', fromToLabel, fromToValue),
+                              if (params.customerVatNumber?.isNotEmpty == true)
+                                _fromToRow('VAT No :', params.customerVatNumber!,
+                                    'رقم الضريبة :', fromToLabel, fromToValue),
+                              if (params.customerCrNumber?.isNotEmpty == true)
+                                _fromToRow('C.R No :', params.customerCrNumber!,
+                                    'السجل التجاري :', fromToLabel, fromToValue),
                             ],
                           ),
                         ),

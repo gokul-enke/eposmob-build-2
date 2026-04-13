@@ -82,44 +82,37 @@ class StockSelectionModal extends StatefulWidget {
   State<StockSelectionModal> createState() => _StockSelectionModalState();
 }
 
+/// Groups stocks by identical pricing (price, mrp, purchasePrice, unit,
+/// hsnCode, taxRate)
+/// and sums their quantities. Useful for deciding whether a stock-selection
+/// modal is needed (>1 group) or the single group can be auto-selected.
+List<CombinedStock> groupStocksByPricing(List<Stock> stocks) {
+  final Map<String, List<Stock>> grouped = {};
+
+  for (final stock in stocks) {
+    final key =
+        '${stock.price}_${stock.mrp}_${stock.purchasePrice}_${stock.unit}_${stock.hsnCode}_${stock.taxRate}';
+    grouped.putIfAbsent(key, () => []).add(stock);
+  }
+
+  return grouped.entries.map((entry) {
+    final stockList = entry.value;
+    final totalQuantity =
+        stockList.fold<num>(0, (sum, s) => sum + (s.quantity ?? 0));
+    return CombinedStock(
+      price: stockList.first.price,
+      mrp: stockList.first.mrp,
+      purchasePrice: stockList.first.purchasePrice,
+      unit: stockList.first.unit,
+      hsnCode: stockList.first.hsnCode,
+      totalQuantity: totalQuantity,
+      originalStocks: stockList,
+    );
+  }).toList();
+}
+
 class _StockSelectionModalState extends State<StockSelectionModal> {
   Set<int> expandedItems = {};
-
-  // Method to group stocks with identical pricing information
-  List<CombinedStock> _groupStocksByPricing(List<Stock> stocks) {
-    Map<String, List<Stock>> groupedStocks = {};
-
-    for (Stock stock in stocks) {
-      // Create a unique key based on pricing information
-      String key =
-          '${stock.price}_${stock.mrp}_${stock.purchasePrice}_${stock.unit}_${stock.hsnCode}';
-
-      if (groupedStocks.containsKey(key)) {
-        groupedStocks[key]!.add(stock);
-      } else {
-        groupedStocks[key] = [stock];
-      }
-    }
-
-    // Convert grouped stocks to CombinedStock objects
-    List<CombinedStock> combinedStocks = [];
-    groupedStocks.forEach((key, stockList) {
-      num totalQuantity =
-          stockList.fold(0, (sum, stock) => sum + (stock.quantity ?? 0));
-
-      combinedStocks.add(CombinedStock(
-        price: stockList.first.price,
-        mrp: stockList.first.mrp,
-        purchasePrice: stockList.first.purchasePrice,
-        unit: stockList.first.unit,
-        hsnCode: stockList.first.hsnCode,
-        totalQuantity: totalQuantity,
-        originalStocks: stockList,
-      ));
-    });
-
-    return combinedStocks;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +124,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
 
     // Group stocks by pricing information
     List<CombinedStock> combinedStocks =
-        _groupStocksByPricing(widget.stockOptions);
+        groupStocksByPricing(widget.stockOptions);
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -314,23 +307,14 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                   onPressed: () {
                                     // Return both product and selected combined stock
                                     // For combined stocks, return the first stock but with updated quantity
-                                    Stock selectedStock = Stock(
-                                      id: combinedStock.firstStock.id,
-                                      productId:
-                                          combinedStock.firstStock.productId,
-                                      supplier:
-                                          combinedStock.firstStock.supplier,
+                                    Stock selectedStock =
+                                        combinedStock.firstStock.copyWith(
                                       quantity: combinedStock.totalQuantity,
                                       price: combinedStock.price,
-                                      sku: combinedStock.firstStock.sku,
                                       mrp: combinedStock.mrp,
                                       unit: combinedStock.unit,
                                       purchasePrice:
                                           combinedStock.purchasePrice,
-                                      date: combinedStock.firstStock.date,
-                                      expiryDate:
-                                          combinedStock.firstStock.expiryDate,
-                                      rack: combinedStock.firstStock.rack,
                                       hsnCode: combinedStock.hsnCode,
                                     );
 

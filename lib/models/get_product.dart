@@ -93,6 +93,8 @@ class GetProduct {
   final List<ProductProp>? productProps;
   final WeightInfo? weightInfo;
   final List<Stock>? stock;
+  final List<SaleUnit>? saleUnits;
+  final List<dynamic>? variants;
   final String? sku;
   final dynamic offerPrice;
   final dynamic productLocation;
@@ -122,6 +124,8 @@ class GetProduct {
     this.productProps,
     this.weightInfo,
     this.stock,
+    this.saleUnits,
+    this.variants,
     this.sku,
     this.offerPrice,
     this.productLocation,
@@ -130,6 +134,71 @@ class GetProduct {
     this.sellable,
     this.purchasable,
   });
+
+  GetProduct copyWith({
+    int? productId,
+    int? categoryId,
+    String? productName,
+    String? productSlug,
+    String? barcode,
+    ProductCategory? category,
+    String? numberOfProductsAvailable,
+    String? rating,
+    String? unit,
+    String? currency,
+    dynamic description,
+    ProductPrice? price,
+    dynamic mrp,
+    List<ProductTax>? taxes,
+    String? purchasePrice,
+    List<Attachment>? attachment,
+    dynamic names,
+    List<ProductProp>? productProps,
+    WeightInfo? weightInfo,
+    List<Stock>? stock,
+    List<SaleUnit>? saleUnits,
+    List<dynamic>? variants,
+    String? sku,
+    dynamic offerPrice,
+    dynamic productLocation,
+    String? hsnCode,
+    int? reorderLevel,
+    bool? sellable,
+    bool? purchasable,
+  }) {
+    return GetProduct(
+      productId: productId ?? this.productId,
+      categoryId: categoryId ?? this.categoryId,
+      productName: productName ?? this.productName,
+      productSlug: productSlug ?? this.productSlug,
+      barcode: barcode ?? this.barcode,
+      category: category ?? this.category,
+      numberOfProductsAvailable:
+          numberOfProductsAvailable ?? this.numberOfProductsAvailable,
+      rating: rating ?? this.rating,
+      price: price ?? this.price,
+      mrp: mrp ?? this.mrp,
+      taxes: taxes ?? this.taxes,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      unit: unit ?? this.unit,
+      currency: currency ?? this.currency,
+      description: description ?? this.description,
+      attachment: attachment ?? this.attachment,
+      names: names ?? this.names,
+      productProps: productProps ?? this.productProps,
+      weightInfo: weightInfo ?? this.weightInfo,
+      stock: stock ?? this.stock,
+      saleUnits: saleUnits ?? this.saleUnits,
+      variants: variants ?? this.variants,
+      sku: sku ?? this.sku,
+      offerPrice: offerPrice ?? this.offerPrice,
+      productLocation: productLocation ?? this.productLocation,
+      hsnCode: hsnCode ?? this.hsnCode,
+      reorderLevel: reorderLevel ?? this.reorderLevel,
+      sellable: sellable ?? this.sellable,
+      purchasable: purchasable ?? this.purchasable,
+    )..isSelected = isSelected;
+  }
 
   factory GetProduct.fromJson(Map<String, dynamic> json) {
     try {
@@ -197,6 +266,18 @@ class GetProduct {
             ? []
             : List<Stock>.from((json["stock"] as List)
                 .map((x) => Stock.fromJson(x as Map<String, dynamic>))),
+        saleUnits: json["sale_units"] == null
+            ? []
+            : List<SaleUnit>.from((json["sale_units"] as List).map(
+                (x) => SaleUnit.fromJson(x as Map<String, dynamic>),
+              )),
+        variants: json["variants"] == null
+            ? []
+            : List<dynamic>.from((json["variants"] as List).map(
+                (x) => x is Map<String, dynamic>
+                    ? Map<String, dynamic>.from(x)
+                    : x,
+              )),
         sku: json["sku"],
         offerPrice: json["offer_price"]?.toString(),
         productLocation: json["product_location"],
@@ -254,6 +335,10 @@ class GetProduct {
         "stock": stock == null
             ? []
             : List<dynamic>.from(stock!.map((x) => x.toJson())),
+        "sale_units": saleUnits == null
+            ? []
+            : List<dynamic>.from(saleUnits!.map((x) => x.toJson())),
+        "variants": variants == null ? [] : List<dynamic>.from(variants!),
         "sku": sku,
         "offer_price": offerPrice,
         "product_location": productLocation,
@@ -472,6 +557,40 @@ class ProductProp {
       };
 }
 
+class SaleUnit {
+  final int? id;
+  final int? unitId;
+  final String? unitName;
+  final String? conversionRate;
+  final String? barcode;
+
+  SaleUnit({
+    this.id,
+    this.unitId,
+    this.unitName,
+    this.conversionRate,
+    this.barcode,
+  });
+
+  factory SaleUnit.fromJson(Map<String, dynamic> json) => SaleUnit(
+        id: json["id"] is String ? int.tryParse(json["id"]) : json["id"],
+        unitId: json["unit_id"] is String
+            ? int.tryParse(json["unit_id"])
+            : json["unit_id"],
+        unitName: json["unit_name"]?.toString(),
+        conversionRate: json["conversion_rate"]?.toString(),
+        barcode: json["barcode"]?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "unit_id": unitId,
+        "unit_name": unitName,
+        "conversion_rate": conversionRate,
+        "barcode": barcode,
+      };
+}
+
 class Links {
   final String? first;
   final String? last;
@@ -530,9 +649,11 @@ class Stock {
   final String? sku;
   final String? mrp;
   final String? unit;
+  final String? taxRate;
   final String? purchasePrice;
   final String? date;
   final String? expiryDate;
+  final String? pkgMfg;
   final String? rack;
   final String? hsnCode; // Added HSN code field
 
@@ -547,12 +668,54 @@ class Stock {
     this.sku,
     this.mrp,
     this.unit,
+    this.taxRate,
     this.purchasePrice,
     this.date,
     this.expiryDate,
+    this.pkgMfg,
     this.rack,
     this.hsnCode, // Added HSN code field
   });
+
+  Stock copyWith({
+    int? id,
+    int? productId,
+    int? storeId,
+    String? storeName,
+    String? supplier,
+    num? quantity,
+    String? price,
+    String? sku,
+    String? mrp,
+    String? unit,
+    String? taxRate,
+    String? purchasePrice,
+    String? date,
+    String? expiryDate,
+    String? pkgMfg,
+    String? rack,
+    String? hsnCode,
+  }) {
+    return Stock(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      storeId: storeId ?? this.storeId,
+      storeName: storeName ?? this.storeName,
+      supplier: supplier ?? this.supplier,
+      quantity: quantity ?? this.quantity,
+      price: price ?? this.price,
+      sku: sku ?? this.sku,
+      mrp: mrp ?? this.mrp,
+      unit: unit ?? this.unit,
+      taxRate: taxRate ?? this.taxRate,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      date: date ?? this.date,
+      expiryDate: expiryDate ?? this.expiryDate,
+      pkgMfg: pkgMfg ?? this.pkgMfg,
+      rack: rack ?? this.rack,
+      hsnCode: hsnCode ?? this.hsnCode,
+    );
+  }
 
   factory Stock.fromJson(Map<String, dynamic> json) => Stock(
         id: json["id"] is String ? int.tryParse(json["id"]) : json["id"],
@@ -583,9 +746,11 @@ class Stock {
         sku: json["sku"]?.toString(),
         mrp: json["mrp"]?.toString(),
         unit: json["unit"]?.toString(),
+        taxRate: json["tax_rate"]?.toString(),
         purchasePrice: json["purchase_price"]?.toString(),
         date: json["date"]?.toString(),
         expiryDate: json["expiry_date"]?.toString(),
+        pkgMfg: json["pkg_mfg"]?.toString(),
         rack: json["rack"]?.toString(),
         hsnCode: json["hsn_code"]?.toString(), // Added HSN code field
       );
@@ -601,9 +766,11 @@ class Stock {
         "sku": sku,
         "mrp": mrp,
         "unit": unit,
+        "tax_rate": taxRate,
         "purchase_price": purchasePrice,
         "date": date,
         "expiry_date": expiryDate,
+        "pkg_mfg": pkgMfg,
         "rack": rack,
         "hsn_code": hsnCode, // Added HSN code field
       };

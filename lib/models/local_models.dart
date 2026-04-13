@@ -49,6 +49,12 @@ class HiveLocalCartItem {
   @HiveField(9)
   String? comment;
 
+  @HiveField(10)
+  final HiveStringValue? serializedStockGroupIds;
+
+  @HiveField(11)
+  final HiveStringValue? serializedStockReservations;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -60,6 +66,8 @@ class HiveLocalCartItem {
     this.serializedSelectedStock,
     this.stockDeducted = 0,
     this.comment,
+    this.serializedStockGroupIds,
+    this.serializedStockReservations,
   });
 }
 
@@ -148,6 +156,12 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(26)
   final double? deliveryCharge;
 
+  @HiveField(27)
+  final String? customerVatNumber;
+
+  @HiveField(28)
+  final String? customerCrNumber;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -177,6 +191,8 @@ class HiveSavedOrder extends HiveObject {
     this.alternatePhone,
     this.address,
     this.deliveryCharge,
+    this.customerVatNumber,
+    this.customerCrNumber,
   });
 }
 

@@ -617,6 +617,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         displayConfig?['showDeliveryMethod']?.visible != false;
     final bool showCustomerVatNumber =
         displayConfig?['showCustomerVatNumber']?.visible == true;
+    final bool showCustomerCrNumber =
+        displayConfig?['showCustomerCrNumber']?.visible == true;
 
     final bool hasVisibleCustomerData = (showCustomerName &&
             params.customerName != null &&
@@ -639,7 +641,10 @@ class SupermarketReceiptLayout implements ReceiptLayout {
             params.deliveryMethod!.isNotEmpty) ||
         (showCustomerVatNumber &&
             params.customerVatNumber != null &&
-            params.customerVatNumber!.isNotEmpty);
+            params.customerVatNumber!.isNotEmpty) ||
+        (showCustomerCrNumber &&
+            params.customerCrNumber != null &&
+            params.customerCrNumber!.isNotEmpty);
 
     if (!hasVisibleCustomerData) {
       return;
@@ -662,6 +667,11 @@ class SupermarketReceiptLayout implements ReceiptLayout {
       'showCustomerVatNumber',
       null,
       isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
+    final customerCrLabel = _getLabel(
+      displayConfig,
+      'showCustomerCrNumber',
+      null,
+      isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -757,6 +767,16 @@ class SupermarketReceiptLayout implements ReceiptLayout {
               weight: 0.65, align: TextAlign.left, scale: 0.75),
         ]));
       }
+      if (showCustomerCrNumber &&
+          params.customerCrNumber != null &&
+          params.customerCrNumber!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(customerCrLabel,
+              weight: 0.35, align: TextAlign.left, isBold: true, scale: 0.75),
+          ReceiptTableColumn(params.customerCrNumber!,
+              weight: 0.65, align: TextAlign.left, scale: 0.75),
+        ]));
+      }
     } else {
       // Arabic: Label on right, Value on left (RTL reading flow)
       if (showCustomerName &&
@@ -837,6 +857,16 @@ class SupermarketReceiptLayout implements ReceiptLayout {
           ReceiptTableColumn(params.customerVatNumber!,
               weight: 0.65, align: TextAlign.left, scale: 0.75),
           ReceiptTableColumn(customerVatLabel,
+              weight: 0.35, align: TextAlign.right, isBold: true, scale: 0.75),
+        ]));
+      }
+      if (showCustomerCrNumber &&
+          params.customerCrNumber != null &&
+          params.customerCrNumber!.isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(params.customerCrNumber!,
+              weight: 0.65, align: TextAlign.left, scale: 0.75),
+          ReceiptTableColumn(customerCrLabel,
               weight: 0.35, align: TextAlign.right, isBold: true, scale: 0.75),
         ]));
       }

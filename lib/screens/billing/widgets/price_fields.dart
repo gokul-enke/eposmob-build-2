@@ -31,6 +31,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
         widget.item.product.productId!,
         widget.item.selectedStock,
         parsedPrice,
+        stockGroupIds: widget.item.stockGroupIds,
       );
     }
   }
@@ -131,6 +132,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
                 widget.item.product.productId!,
                 widget.item.selectedStock,
                 parsedPrice,
+                stockGroupIds: widget.item.stockGroupIds,
               );
             } else if (newPrice.isEmpty) {
               // Allow empty field for editing
@@ -138,6 +140,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
                 widget.item.product.productId!,
                 widget.item.selectedStock,
                 0.0,
+                stockGroupIds: widget.item.stockGroupIds,
               );
             }
           },
@@ -149,6 +152,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
                 widget.item.product.productId!,
                 widget.item.selectedStock,
                 parsedPrice,
+                stockGroupIds: widget.item.stockGroupIds,
               );
             } else {
               // Revert to original price if invalid
@@ -188,6 +192,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
         widget.item.product.productId!,
         widget.item.selectedStock,
         parsedMrp,
+        stockGroupIds: widget.item.stockGroupIds,
       );
     }
   }
@@ -287,6 +292,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 widget.item.product.productId!,
                 widget.item.selectedStock,
                 parsedMrp,
+                stockGroupIds: widget.item.stockGroupIds,
               );
             } else if (newMrp.isEmpty) {
               // Allow empty field for editing
@@ -294,6 +300,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 widget.item.product.productId!,
                 widget.item.selectedStock,
                 0.0,
+                stockGroupIds: widget.item.stockGroupIds,
               );
             }
           },
@@ -305,6 +312,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 widget.item.product.productId!,
                 widget.item.selectedStock,
                 parsedMrp,
+                stockGroupIds: widget.item.stockGroupIds,
               );
             } else {
               // Revert to original MRP if invalid

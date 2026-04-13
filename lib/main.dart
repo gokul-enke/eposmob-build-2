@@ -138,8 +138,6 @@ Future<void> _requestPermissions() async {
     Permission.bluetooth,
     Permission.bluetoothConnect,
     Permission.bluetoothScan,
-    Permission.locationWhenInUse,
-    Permission.location,
   ].request();
 
   statuses.forEach((permission, status) {
@@ -366,6 +364,24 @@ class MyApp extends StatelessWidget {
           locale: LocalizationService.locale,
           fallbackLocale: LocalizationService.fallbackLocale,
           builder: (context, child) {
+            final screenSize = MediaQuery.of(context).size;
+            final platform = Theme.of(context).platform;
+
+            // Phone only: Column layout so keyboard pushes content up.
+            // Tablets + Desktop: Stack overlay for floating draggable keyboard.
+            final isPhone = (platform == TargetPlatform.android ||
+                    platform == TargetPlatform.iOS) &&
+                screenSize.width < 600; // Phone threshold
+
+            if (isPhone) {
+              return Column(
+                children: [
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                  const GlobalVirtualKeyboard(),
+                ],
+              );
+            }
+
             return Stack(
               children: [
                 child ?? const SizedBox.shrink(),

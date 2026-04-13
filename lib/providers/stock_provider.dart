@@ -53,6 +53,7 @@ class StockProvider extends ChangeNotifier {
 
   // Filter properties
   String? _stockFilterName;
+  String? _stockFilterNameSecondary;
   String? _stockFilterCategory;
   String? _stockFilterBarcode;
   String? _stockFilterRack;
@@ -81,6 +82,7 @@ class StockProvider extends ChangeNotifier {
   int get stockItemsPerPage => _stockItemsPerPage;
   String? get stockFilterCategory => _stockFilterCategory;
   String? get stockFilterName => _stockFilterName;
+  String? get stockFilterNameSecondary => _stockFilterNameSecondary;
   String? get stockFilterBarcode => _stockFilterBarcode;
   String? get stockFilterRack => _stockFilterRack;
   String? get stockFilterStore => _stockFilterStore;
@@ -485,8 +487,9 @@ class StockProvider extends ChangeNotifier {
               : 0,
           'tax_include': stockItem['taxInclude'] ?? false,
           'rack': stockItem['rack']?.toString() ?? '',
-            'tax_amount_retail': _parseNullableDouble(stockItem['taxAmountRetail']),
-            'tax_amount_wholesale':
+          'tax_amount_retail':
+              _parseNullableDouble(stockItem['taxAmountRetail']),
+          'tax_amount_wholesale':
               _parseNullableDouble(stockItem['taxAmountWholesale']),
           'initial_retail_price': stockItem['initialRetailPrice'] != null &&
                   stockItem['initialRetailPrice'].toString().isNotEmpty
@@ -799,18 +802,18 @@ class StockProvider extends ChangeNotifier {
     required bool taxInclude,
   }) async {
     debugPrint("CALCULATE TAX API CALLED");
-    
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final queryParameters = <String, String>{
       'price': price.toString(),
       'product_id': productId.toString(),
       'tax_include': taxInclude ? '1' : '0',
       'category_id': categoryId.toString(),
     };
-    
+
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
@@ -976,6 +979,7 @@ class StockProvider extends ChangeNotifier {
   /// Apply local pagination and filtering for stocks
   void applyStockFiltersLocally({
     String? filterName,
+    String? filterNameSecondary,
     String? filterCategory,
     String? filterBarcode,
     String? filterRack,
@@ -994,6 +998,7 @@ class StockProvider extends ChangeNotifier {
 
     // Save filter values
     _stockFilterName = filterName;
+    _stockFilterNameSecondary = filterNameSecondary;
     _stockFilterCategory = filterCategory;
     _stockFilterBarcode = filterBarcode;
     _stockFilterRack = filterRack;
@@ -1012,6 +1017,17 @@ class StockProvider extends ChangeNotifier {
               stock.productName!
                   .toLowerCase()
                   .contains(filterName.toLowerCase()))
+          .toList();
+    }
+
+    // Apply secondary product name filter
+    if (filterNameSecondary != null && filterNameSecondary.isNotEmpty) {
+      filteredList = filteredList
+          .where((stock) =>
+              stock.productName != null &&
+              stock.productName!
+                  .toLowerCase()
+                  .contains(filterNameSecondary.toLowerCase()))
           .toList();
     }
 
@@ -1105,6 +1121,7 @@ class StockProvider extends ChangeNotifier {
   /// Reset stock filters and pagination
   void resetStockFilters() {
     _stockFilterName = null;
+    _stockFilterNameSecondary = null;
     _stockFilterCategory = null;
     _stockFilterBarcode = null;
     _stockFilterRack = null;
@@ -1123,6 +1140,7 @@ class StockProvider extends ChangeNotifier {
 
     applyStockFiltersLocally(
       filterName: _stockFilterName,
+      filterNameSecondary: _stockFilterNameSecondary,
       filterCategory: _stockFilterCategory,
       filterBarcode: _stockFilterBarcode,
       filterRack: _stockFilterRack,
@@ -1140,12 +1158,13 @@ class StockProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final Map<String, String> queryParameters = {'id': stockId.toString()};
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.detailsOfStock).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.detailsOfStock)
+        .replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");

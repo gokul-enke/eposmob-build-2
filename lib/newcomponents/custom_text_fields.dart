@@ -571,6 +571,7 @@ Widget buildColumnWidgetForTextFields({
   FocusNode? focusNode,
   bool autofocus = false,
   VoidCallback? onTap,
+  bool useSystemKeyboard = true,
 }) =>
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,8 +602,10 @@ Widget buildColumnWidgetForTextFields({
             onFieldSubmitted: onSubmitted,
             autofocus: autofocus,
             focusNode: focusNode,
-            readOnly: readOnly,
-            keyboardType: keyboardType ?? TextInputType.text,
+            readOnly: readOnly || !useSystemKeyboard,
+            keyboardType: useSystemKeyboard
+                ? (keyboardType ?? TextInputType.text)
+                : TextInputType.none,
             inputFormatters: inputFormatters,
             cursorColor: ColorManager.kPrimaryColor,
             decoration: InputDecoration(

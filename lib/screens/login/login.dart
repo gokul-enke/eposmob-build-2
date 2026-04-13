@@ -7,6 +7,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
@@ -36,6 +37,14 @@ class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _obscureText = true;
   bool _rememberMe = false;
+
+  bool _shouldSuppressSystemKeyboard() {
+    return SystemKeyboardPolicy.shouldSuppressForContext(
+      context: context,
+      fieldWantsVirtualKeyboardOnly: true,
+    );
+  }
+
   final _emailController = TextEditingController();
   final _passwordTextController = TextEditingController();
   bool isLoading = false;
@@ -199,6 +208,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                     key: const Key("Phone_Number_Sign_in"),
                                     cursorColor: ColorManager.kPrimaryColor,
                                     controller: _emailController,
+                                    readOnly: _shouldSuppressSystemKeyboard(),
+                                    showCursor: true,
                                     onTap: () {
                                       Provider.of<KeyboardProvider>(context,
                                               listen: false)
@@ -246,6 +257,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                     obscureText: _obscureText,
                                     cursorColor: ColorManager.kPrimaryColor,
                                     controller: _passwordTextController,
+                                    readOnly: _shouldSuppressSystemKeyboard(),
+                                    showCursor: true,
                                     onTap: () {
                                       Provider.of<KeyboardProvider>(context,
                                               listen: false)

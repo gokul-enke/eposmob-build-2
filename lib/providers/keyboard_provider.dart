@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:virtual_keyboard_custom_layout/virtual_keyboard_custom_layout.dart';
 import 'package:hive/hive.dart';
 
 /// Manages the state and visibility of a virtual keyboard.
 /// This provider does not own the TextEditingController instances - they should be
 /// created, managed and disposed by the widgets that use the keyboard.
+///
+/// **Global keyboard control**: When the feature is enabled via [featureOn],
+/// the system keyboard is suppressed via [SystemChannels.textInput] and a
+/// [FocusManager] listener auto-shows the virtual keyboard whenever any text
+/// field gains focus. Individual fields do NOT need `readOnly`, `onTap`,
+/// or `useSystemKeyboard` overrides.
 class KeyboardProvider extends ChangeNotifier {
+  final bool _enablePersistence;
   bool _showKeyboard = false;
   bool _showKeyboardFeature = true;
   String _keyboardType = 'text';
@@ -20,15 +28,30 @@ class KeyboardProvider extends ChangeNotifier {
   // Hive box for persisting simple keyboard settings
   Box<dynamic>? _settingsBox;
 
+  // Focus listener state
+  bool _focusCheckScheduled = false;
+
+  // WidgetsBindingObserver to catch system keyboard opening
+  _KeyboardSuppressorObserver? _bindingObserver;
+
+  bool _isDisposed = false;
+
   // Constructor – load persisted preferences
-  KeyboardProvider() {
-    _initHive();
+  KeyboardProvider({bool enablePersistence = true})
+      : _enablePersistence = enablePersistence {
+    if (_enablePersistence) {
+      _initHive();
+    }
   }
 
   Future<void> _initHive() async {
     try {
       // Open or get existing box lazily – using a simple untyped box for primitives
       _settingsBox = await Hive.openBox('keyboard_settings');
+
+      if (_isDisposed) {
+        return;
+      }
 
       // Restore persisted values (with sensible defaults if absent)
       _showKeyboardFeature = _settingsBox!.get('showKeyboardFeature', defaultValue: true);
@@ -48,8 +71,16 @@ class KeyboardProvider extends ChangeNotifier {
         (_settingsBox!.get('posY') ?? 200).toDouble(),
       );
 
+      // Apply global keyboard control based on persisted preference
+      if (_showKeyboardFeature) {
+        _installKeyboardSuppressor();
+        _startListeningToFocus();
+      }
+
       // Notify listeners so UI rebuilds with restored settings
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     } catch (e) {
       // If Hive fails, fall back to defaults without crashing the app
       debugPrint('KeyboardProvider: Failed to initialise Hive – $e');
@@ -122,6 +153,8 @@ class KeyboardProvider extends ChangeNotifier {
   void featureOn() {
     _showKeyboardFeature = true;
     _settingsBox?.put('showKeyboardFeature', true);
+    _installKeyboardSuppressor();
+    _startListeningToFocus();
     notifyListeners();
   }
 
@@ -130,6 +163,8 @@ class KeyboardProvider extends ChangeNotifier {
     // Ensure keyboard is hidden when feature is turned off
     if (_showKeyboard) hide();
     _settingsBox?.put('showKeyboardFeature', false);
+    _removeKeyboardSuppressor();
+    _stopListeningToFocus();
     notifyListeners();
   }
 
@@ -171,8 +206,136 @@ class KeyboardProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _removeKeyboardSuppressor();
+    _stopListeningToFocus();
     // Clear references but don't dispose the controller as we don't own it
     _controller = null;
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // System keyboard suppression – uses a WidgetsBindingObserver to detect
+  // when the OS keyboard metrics change (i.e. keyboard appearing) and
+  // immediately hides it via the platform channel.
+  // ---------------------------------------------------------------------------
+
+  void _installKeyboardSuppressor() {
+    if (_bindingObserver != null) return;
+    _bindingObserver = _KeyboardSuppressorObserver(this);
+    WidgetsBinding.instance.addObserver(_bindingObserver!);
+  }
+
+  void _removeKeyboardSuppressor() {
+    if (_bindingObserver == null) return;
+    WidgetsBinding.instance.removeObserver(_bindingObserver!);
+    _bindingObserver = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Global focus listener – auto-shows virtual keyboard for any text field
+  // ---------------------------------------------------------------------------
+
+  void _startListeningToFocus() {
+    FocusManager.instance.addListener(_onGlobalFocusChange);
+  }
+
+  void _stopListeningToFocus() {
+    FocusManager.instance.removeListener(_onGlobalFocusChange);
+  }
+
+  void _onGlobalFocusChange() {
+    if (!_showKeyboardFeature) return;
+
+    // Eagerly dismiss system keyboard on every focus change so it never
+    // appears even briefly while we determine the new field.
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+
+    if (_focusCheckScheduled) return;
+    _focusCheckScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusCheckScheduled = false;
+      _autoShowForFocusedField();
+    });
+  }
+
+  void _autoShowForFocusedField() {
+    if (!_showKeyboardFeature) return;
+
+    final primaryFocus = FocusManager.instance.primaryFocus;
+    if (primaryFocus == null || primaryFocus.context == null) return;
+
+    final ctx = primaryFocus.context!;
+    EditableText? editableText;
+
+    // 1. Check if focused widget itself is an EditableText
+    if (ctx.widget is EditableText) {
+      editableText = ctx.widget as EditableText;
+    }
+
+    // 2. Check descendants (TextField wraps EditableText as a child)
+    if (editableText == null) {
+      void findEditableText(Element element) {
+        if (editableText != null) return;
+        if (element.widget is EditableText) {
+          editableText = element.widget as EditableText;
+          return;
+        }
+        element.visitChildren(findEditableText);
+      }
+      ctx.visitChildElements(findEditableText);
+    }
+
+    // 3. Check ancestors (edge case)
+    if (editableText == null) {
+      ctx.visitAncestorElements((element) {
+        if (element.widget is EditableText) {
+          editableText = element.widget as EditableText;
+          return false;
+        }
+        return true;
+      });
+    }
+
+    if (editableText != null) {
+      final controller = editableText!.controller;
+
+      // Skip if already showing for this exact controller
+      if (_showKeyboard && identical(_controller, controller)) return;
+
+      final type = _isNumericKeyboardType(editableText!.keyboardType)
+          ? 'number'
+          : 'text';
+      show(type, controller);
+    } else {
+      // Focus moved away from a text field – hide virtual keyboard
+      if (_showKeyboard) hide();
+    }
+  }
+
+  static bool _isNumericKeyboardType(TextInputType inputType) {
+    return inputType.index == TextInputType.number.index ||
+        inputType == TextInputType.phone;
+  }
+}
+
+/// Watches for system keyboard appearance via bottom inset changes and
+/// immediately hides it when the virtual keyboard feature is active.
+class _KeyboardSuppressorObserver extends WidgetsBindingObserver {
+  final KeyboardProvider _provider;
+
+  _KeyboardSuppressorObserver(this._provider);
+
+  @override
+  void didChangeMetrics() {
+    if (!_provider._showKeyboardFeature) return;
+
+    // When the system keyboard opens, the bottom viewInsets increase.
+    // Fire hide immediately to dismiss it.
+    final bottomInset = WidgetsBinding
+        .instance.platformDispatcher.views.first.viewInsets.bottom;
+    if (bottomInset > 0) {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    }
   }
 }

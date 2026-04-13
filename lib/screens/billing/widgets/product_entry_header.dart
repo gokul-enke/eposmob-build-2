@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
@@ -179,64 +179,22 @@ class ProductEntryHeader extends StatelessWidget {
                                           try {
                                             final localProductProvider =
                                                 Provider.of<LocalProductProvider>(context, listen: false);
-                                            final generalSettingsProvider =
-                                                Provider.of<GeneralSettingsProvider>(context, listen: false);
 
                                             final selectedProduct = localProductProvider.selectedProduct;
 
                                             if (selectedProduct != null) {
-                                              bool stockEnabled =
-                                                  generalSettingsProvider.generalSettings?.stockEnabled ?? false;
+                                              final customPrice = double.tryParse(unitPriceController.text);
+                                              final customQuantity = num.tryParse(quantityController.text);
 
-                                              localProductProvider.setStockEnabled(stockEnabled);
+                                              await ProductCartHelper.handleProductSelection(
+                                                context: context,
+                                                product: selectedProduct,
+                                                quantity: customQuantity,
+                                                customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+                                              );
 
-                                              if (!stockEnabled) {
-                                                localProductProvider.addToCart(
-                                                  product: selectedProduct,
-                                                  quantity: num.tryParse(quantityController.text),
-                                                  price: double.tryParse(unitPriceController.text),
-                                                );
-                                                showScaffold(context: context, message: 'Added To Cart');
-                                                onClearProductFields();
-                                                focusTextField();
-                                              } else {
-                                                Stock? selectedStock = localProductProvider.selectedStock;
-                                                if (selectedStock != null) {
-                                                  double customPrice = double.tryParse(unitPriceController.text) ?? 0;
-                                                  double stockPrice = double.tryParse(selectedStock.price ?? "0") ?? 0;
-                                                  double stockMrp = double.tryParse(selectedStock.mrp ?? "0") ?? 0;
-                                                  double finalPrice = customPrice > 0 ? customPrice : stockPrice;
-
-                                                  double? finalMrp;
-                                                  final bool itemExistsInCart = localProductProvider.cartItems.any((item) =>
-                                                      item.product.productId == selectedProduct.productId &&
-                                                      (item.selectedStock?.id == selectedStock.id));
-                                                  if (itemExistsInCart) {
-                                                    finalMrp = null;
-                                                  } else {
-                                                    finalMrp = stockMrp;
-                                                  }
-
-                                                  localProductProvider.addToCart(
-                                                    product: selectedProduct,
-                                                    quantity: num.tryParse(quantityController.text),
-                                                    price: finalPrice,
-                                                    mrp: finalMrp,
-                                                    selectedStock: selectedStock,
-                                                  );
-                                                  showScaffold(context: context, message: 'Added To Cart');
-                                                } else {
-                                                  localProductProvider.addToCart(
-                                                    product: selectedProduct,
-                                                    quantity: num.tryParse(quantityController.text),
-                                                    price: double.tryParse(unitPriceController.text),
-                                                  );
-                                                  showScaffold(context: context, message: 'Added To Cart');
-                                                }
-
-                                                onClearProductFields();
-                                                focusTextField();
-                                              }
+                                              onClearProductFields();
+                                              focusTextField();
                                             } else {
                                               showScaffoldError(
                                                 context: context,
@@ -476,63 +434,19 @@ class ProductEntryHeader extends StatelessWidget {
                                       try {
                                         final localProductProvider =
                                             Provider.of<LocalProductProvider>(context, listen: false);
-                                        final generalSettingsProvider =
-                                            Provider.of<GeneralSettingsProvider>(context, listen: false);
 
                                         final selectedProduct = localProductProvider.selectedProduct;
 
                                         if (selectedProduct != null) {
-                                          bool stockEnabled =
-                                              generalSettingsProvider.generalSettings?.stockEnabled ?? false;
+                                          final customPrice = double.tryParse(unitPriceController.text);
+                                          final customQuantity = num.tryParse(quantityController.text);
 
-                                          localProductProvider.setStockEnabled(stockEnabled);
-
-                                          if (!stockEnabled) {
-                                            localProductProvider.addToCart(
-                                              product: selectedProduct,
-                                              quantity: num.tryParse(quantityController.text),
-                                              price: double.tryParse(unitPriceController.text),
-                                            );
-                                            showScaffold(context: context, message: 'Added To Cart');
-                                            onClearProductFields();
-                                            focusTextField();
-                                            return;
-                                          }
-
-                                          Stock? selectedStock = localProductProvider.selectedStock;
-
-                                          if (selectedStock != null) {
-                                            double customPrice = double.tryParse(unitPriceController.text) ?? 0;
-                                            double stockPrice = double.tryParse(selectedStock.price ?? "0") ?? 0;
-                                            double stockMrp = double.tryParse(selectedStock.mrp ?? "0") ?? 0;
-                                            double finalPrice = customPrice > 0 ? customPrice : stockPrice;
-
-                                            double? finalMrp;
-                                            final bool itemExistsInCart = localProductProvider.cartItems.any((item) =>
-                                                item.product.productId == selectedProduct.productId &&
-                                                (item.selectedStock?.id == selectedStock.id));
-                                            if (itemExistsInCart) {
-                                              finalMrp = null;
-                                            } else {
-                                              finalMrp = stockMrp;
-                                            }
-
-                                            localProductProvider.addToCart(
-                                              product: selectedProduct,
-                                              quantity: num.tryParse(quantityController.text),
-                                              price: finalPrice,
-                                              mrp: finalMrp,
-                                              selectedStock: selectedStock,
-                                            );
-                                            showScaffold(context: context, message: 'Added To Cart');
-                                          } else {
-                                            localProductProvider.addToCart(
-                                              product: selectedProduct,
-                                              quantity: num.tryParse(quantityController.text),
-                                              price: double.tryParse(unitPriceController.text),
-                                            );
-                                            showScaffold(context: context, message: 'Added To Cart');
-                                          }
+                                          await ProductCartHelper.handleProductSelection(
+                                            context: context,
+                                            product: selectedProduct,
+                                            quantity: customQuantity,
+                                            customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+                                          );
 
                                           onClearProductFields();
                                           focusTextField();
