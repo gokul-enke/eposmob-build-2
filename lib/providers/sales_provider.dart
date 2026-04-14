@@ -158,6 +158,13 @@ class SalesProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  int _returnIndex = 78; // Default to user list
+  int get returnIndex => _returnIndex;
+  void setReturnIndex(int index) {
+    _returnIndex = index;
+    notifyListeners();
+  }
+
   Future<void> fetchOrders({
     required String accessToken,
     int? storeId,
@@ -743,16 +750,18 @@ class SalesProvider with ChangeNotifier {
     String? startDate,
     String? endDate,
     int page = 1,
-    required int userId,
+    int? userId,
     required int storeId,
   }) async {
     final queryParameters = <String, String>{
-      'user_id[]': userId.toString(),
       'store_id[]': storeId.toString(),
       'page': page.toString(),
     };
     if (startDate != null) queryParameters['start_date'] = startDate;
     if (endDate != null) queryParameters['end_date'] = endDate;
+    if (userId != null && userId != 0) {
+      queryParameters['user_id[]'] = userId.toString();
+    }
 
     final uri = Uri.parse(APPUrl.listDailySalesClose)
         .replace(queryParameters: queryParameters);

@@ -196,7 +196,8 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
       children: [
         CustomBackButton(
           onPressed: () {
-            sideBarController.index.value = 78; // Back to list
+            sideBarController.index.value =
+                Provider.of<SalesProvider>(context, listen: false).returnIndex;
           },
           text: 'Back to List',
         ),
@@ -208,7 +209,8 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           child: IconButton(
             padding: EdgeInsets.zero,
             onPressed: () {
-              sideBarController.index.value = 78;
+              sideBarController.index.value =
+                  Provider.of<SalesProvider>(context, listen: false).returnIndex;
             },
             icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
           ),

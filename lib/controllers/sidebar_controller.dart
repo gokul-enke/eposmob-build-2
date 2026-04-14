@@ -86,6 +86,7 @@ import 'package:pos_machine/screens/suppliers/supplier_details.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
+import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
 
 class SideBarController extends GetxController {
   RxInt index =
@@ -183,5 +184,6 @@ class SideBarController extends GetxController {
     AddPurchaseOrderScreen(), // 81 Purchase Order Screen
     CreatePurchaseOrderScreen(), // 82 Create Purchase Order Screen
     ProductBarcodeScreen(), // 83 Product Barcode Screen
+    AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
   ];
 }

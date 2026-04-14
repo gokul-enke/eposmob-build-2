@@ -12,6 +12,7 @@ import '../../resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ApiKeyScreen extends StatefulWidget {
   const ApiKeyScreen({super.key});
@@ -302,6 +303,38 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                 ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 30),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Don't have an API key? ",
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            FontSize.s14,
+                            0.27,
+                            Colors.black.withOpacity(0.6),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () async {
+                            final uri = Uri.parse('https://cloudposai.com');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          child: Text(
+                            'Register Here',
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.27,
+                              ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

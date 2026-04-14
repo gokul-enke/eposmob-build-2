@@ -13,6 +13,7 @@ import 'package:hive/hive.dart';
 /// field gains focus. Individual fields do NOT need `readOnly`, `onTap`,
 /// or `useSystemKeyboard` overrides.
 class KeyboardProvider extends ChangeNotifier {
+  final bool _enablePersistence;
   bool _showKeyboard = false;
   bool _showKeyboardFeature = true;
   String _keyboardType = 'text';
@@ -33,15 +34,24 @@ class KeyboardProvider extends ChangeNotifier {
   // WidgetsBindingObserver to catch system keyboard opening
   _KeyboardSuppressorObserver? _bindingObserver;
 
+  bool _isDisposed = false;
+
   // Constructor – load persisted preferences
-  KeyboardProvider() {
-    _initHive();
+  KeyboardProvider({bool enablePersistence = true})
+      : _enablePersistence = enablePersistence {
+    if (_enablePersistence) {
+      _initHive();
+    }
   }
 
   Future<void> _initHive() async {
     try {
       // Open or get existing box lazily – using a simple untyped box for primitives
       _settingsBox = await Hive.openBox('keyboard_settings');
+
+      if (_isDisposed) {
+        return;
+      }
 
       // Restore persisted values (with sensible defaults if absent)
       _showKeyboardFeature = _settingsBox!.get('showKeyboardFeature', defaultValue: true);
@@ -68,7 +78,9 @@ class KeyboardProvider extends ChangeNotifier {
       }
 
       // Notify listeners so UI rebuilds with restored settings
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     } catch (e) {
       // If Hive fails, fall back to defaults without crashing the app
       debugPrint('KeyboardProvider: Failed to initialise Hive – $e');
@@ -194,6 +206,7 @@ class KeyboardProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _removeKeyboardSuppressor();
     _stopListeningToFocus();
     // Clear references but don't dispose the controller as we don't own it

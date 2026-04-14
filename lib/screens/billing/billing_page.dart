@@ -2282,13 +2282,14 @@ class BillingPageState extends State<BillingPage>
                                             vertical: 2),
                                         child: CompactQuantityControlLocal(
                                           key: ValueKey(
-                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}',
                                           ),
                                           productId: item.product.productId!,
                                           quantity: item.quantity.toDouble(),
                                           unitPrice: item.price.toString(),
                                           productUnit: item.product.unit,
                                           product: item.product,
+                                          cartItem: item,
                                           selectedStock: item.selectedStock,
                                         ),
                                       ),
@@ -2435,8 +2436,10 @@ class BillingPageState extends State<BillingPage>
                                         visualDensity: VisualDensity.compact,
                                         onPressed: () {
                                           localProductProvider.removeFromCart(
-                                              item.product.productId!,
-                                              item.selectedStock);
+                                            item.product.productId!,
+                                            item.selectedStock,
+                                            stockGroupIds: item.stockGroupIds,
+                                          );
                                         },
                                       ),
                                     ),

@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -2339,6 +2340,7 @@ class OrderPanelState extends State<OrderPanel> {
           cartItem.product.productId!,
           cartItem.selectedStock,
           comment,
+          stockGroupIds: cartItem.stockGroupIds,
         );
       } else {
         // For saved order items, persist comment via addToCartAPI with same payload + comment
@@ -6338,23 +6340,21 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
       debugPrint(
           '🔄 _updateCurrentCartItemQuantity: Updating quantity for ${cartItem.product.productName} to ${newQuantity.toInt()}');
 
-      // Use LocalProductProvider to set the exact quantity
-      localProductProvider.setCartItemQuantity(
-        cartItem.product.productId!,
-        cartItem.selectedStock,
-        newQuantity,
+      final result = await CartQuantityStockHelper.syncCartItemQuantity(
+        context: context,
+        cartItem: cartItem,
+        newQuantity: newQuantity,
       );
 
-      showScaffold(
-        context: context,
-        message: 'Item quantity updated successfully',
-      );
+      if (result.changed) {
+        showScaffold(
+          context: context,
+          message: 'Item quantity updated successfully',
+        );
+      }
     } catch (e) {
       showScaffoldError(
         context: context,
@@ -6375,6 +6375,7 @@ class OrderPanelState extends State<OrderPanel> {
       localProductProvider.removeFromCart(
         cartItem.product.productId!,
         cartItem.selectedStock,
+        stockGroupIds: cartItem.stockGroupIds,
       );
 
       showScaffold(
@@ -6819,6 +6820,7 @@ class OrderPanelState extends State<OrderPanel> {
             localItem.product.productId!,
             localItem.selectedStock,
             newPrice,
+            stockGroupIds: localItem.stockGroupIds,
           );
         } else {
           // Update Saved Item
@@ -6971,8 +6973,7 @@ class OrderPanelState extends State<OrderPanel> {
 
     final status = cartItem['status']?.toString();
     final statusUpper = (status ?? '').toUpperCase();
-    final hasStarted = statusUpper == 'START' ||
-        statusUpper == 'PREPARING' ||
+    final hasStarted = statusUpper == 'PREPARING' ||
         statusUpper == 'COOKING' ||
         statusUpper == 'IN_PROGRESS' ||
         statusUpper == 'READY' ||

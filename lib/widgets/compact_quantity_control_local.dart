@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -17,11 +18,13 @@ class CompactQuantityControlLocal extends StatefulWidget {
   final String? productUnit;
   final Function()? onQuantityChanged;
   final Stock? selectedStock;
+  final LocalCartItem cartItem;
 
   const CompactQuantityControlLocal({
     Key? key,
     required this.quantity,
     required this.productId,
+    required this.cartItem,
     this.product,
     this.cartId,
     this.unitPrice,
@@ -80,7 +83,7 @@ class _CompactQuantityControlLocalState
   void didUpdateWidget(CompactQuantityControlLocal oldWidget) {
     super.didUpdateWidget(oldWidget);
     final bool itemChanged = widget.productId != oldWidget.productId ||
-        widget.selectedStock?.id != oldWidget.selectedStock?.id;
+        _cartIdentityKey(widget.cartItem) != _cartIdentityKey(oldWidget.cartItem);
 
     if (itemChanged) {
       _debounceTimer?.cancel();
@@ -172,45 +175,37 @@ class _CompactQuantityControlLocalState
 
     _isUpdating = true;
     try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
+      final result = await CartQuantityStockHelper.syncCartItemQuantity(
+        context: context,
+        cartItem: widget.cartItem,
+        newQuantity: newQuantity,
+      );
 
-      if (newQuantity > widget.quantity) {
-        // Calculate difference and add to cart
-        final num difference = newQuantity - widget.quantity;
-
-        // 🔧 FIX: Get current custom price and MRP from the existing cart item
-        double? customPrice;
-        double? customMrp;
-        final existingItem = localProductProvider.cartItems.firstWhere(
-          (item) =>
-              item.product.productId == widget.productId &&
-              item.selectedStock?.id == widget.selectedStock?.id,
-          orElse: () => throw StateError('Item not found'),
-        );
-        customPrice = existingItem.price;
-        customMrp = existingItem.mrp;
-
-        localProductProvider.addToCart(
-          product: widget.product!,
-          quantity: difference,
-          price: customPrice, // 🔧 FIX: Pass the current custom price
-          mrp: customMrp, // 🔧 FIX: Pass the current custom MRP
-          isIncreamentUsingCompactQuantityControl: true,
-          selectedStock: widget.selectedStock,
-        );
-      } else if (newQuantity < widget.quantity) {
-        // Directly set the desired quantity (supports fractional values)
-        localProductProvider.setCartItemQuantity(
-          widget.productId,
-          widget.selectedStock,
-          newQuantity,
-        );
+      if (mounted) {
+        _applyQuantityValue(result.appliedQuantity);
       }
     } finally {
       _isUpdating = false;
       _pendingQuantity = null;
     }
+  }
+
+  void _applyQuantityValue(num quantity) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _currentQuantity = quantity;
+      if (!_focusNode.hasFocus) {
+        _controller.text = _currentQuantity.toString();
+      }
+    });
+  }
+
+  String _cartIdentityKey(LocalCartItem item) {
+    final groupKey = item.stockGroupIds.join('_');
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey';
   }
 
   @override
