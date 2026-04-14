@@ -6973,8 +6973,7 @@ class OrderPanelState extends State<OrderPanel> {
 
     final status = cartItem['status']?.toString();
     final statusUpper = (status ?? '').toUpperCase();
-    final hasStarted = statusUpper == 'START' ||
-        statusUpper == 'PREPARING' ||
+    final hasStarted = statusUpper == 'PREPARING' ||
         statusUpper == 'COOKING' ||
         statusUpper == 'IN_PROGRESS' ||
         statusUpper == 'READY' ||
