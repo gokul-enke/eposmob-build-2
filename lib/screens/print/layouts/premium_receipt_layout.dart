@@ -385,11 +385,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Invoice/Token Number - hide header invoice when footer invoice number is enabled
+    // Invoice/Token Number
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
-    final bool showInvoiceNumber = !showFooterInvoice &&
-        displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showInvoiceNumber =
+      displayConfig?['showInvoiceNumber']?.visible == true;
     final bool showTokenNumber =
         displayConfig?['showTokenNumber']?.visible == true &&
             params.tokenNumber != null &&

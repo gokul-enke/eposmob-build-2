@@ -568,8 +568,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     // Invoice Number - display at top of customer section
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
-    final bool showInvoiceNumber = !showFooterInvoice &&
-        displayConfig?['showInvoiceNumber']?.visible == true;
+    final bool showInvoiceNumber =
+      displayConfig?['showInvoiceNumber']?.visible == true;
 
     if (showInvoiceNumber) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
