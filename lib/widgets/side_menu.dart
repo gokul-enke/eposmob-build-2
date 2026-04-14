@@ -391,8 +391,7 @@ class _SideMenuState extends State<SideMenu> {
                   roleProvider.currentUserHasPermissionSync('view_order');
               final hasSalesReturnPermission = roleProvider
                   .currentUserHasPermissionSync('page_CreateSalesReturn');
-              final isAdmin =
-                  roleProvider.currentUserHasPermissionSync('view_user');
+              final isCompanyAdmin = userRole == 'company_admin';
 
               // Only show the expandable menu if user has at least one permission
               if (!hasSalesPermission &&
@@ -427,8 +426,8 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle1: hasSalesPermission,
                   showTitle2: hasConfirmedOrdersPermission,
                   showTitle3: hasSalesReturnPermission,
-                  showTitle4: hasSalesPermission,
-                  showTitle5: isAdmin && hasSalesPermission,
+                  showTitle4: hasSalesPermission && !isCompanyAdmin,
+                  showTitle5: isCompanyAdmin && hasSalesPermission,
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'Sales',
                   onTap: () {
