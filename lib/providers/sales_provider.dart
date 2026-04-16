@@ -15,6 +15,7 @@ class SalesProvider with ChangeNotifier {
   List<ListOrderModelData> _orders = [];
   List<SalesReturnOrder> _salesReturnOrders = [];
   List<SalesReturnCart> _salesReturnItems = [];
+  SalesReturnOrderInfo? _currentReturnOrder;
   List<DailySalesCloseData> dailySalesCloseList = [];
   Pagination? dailySalesClosePagination;
   int currentPage = 1;
@@ -25,6 +26,7 @@ class SalesProvider with ChangeNotifier {
   List<ListOrderModelData> get orders => _orders;
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
+  SalesReturnOrderInfo? get currentReturnOrder => _currentReturnOrder;
 
   String _orderNumber = "";
   String _orderId = "";
@@ -570,6 +572,7 @@ class SalesProvider with ChangeNotifier {
         debugPrint('Data section: ${jsonData['data']}');
         final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
         _salesReturnItems = salesReturnResponse.data;
+        _currentReturnOrder = salesReturnResponse.order;
         notifyListeners();
       } catch (e, stackTrace) {
         debugPrint('=== SALES RETURN ITEMS JSON PARSING ERROR ===');
@@ -642,6 +645,7 @@ class SalesProvider with ChangeNotifier {
     String? paymentMethod,
     double? paidAmount,
     bool? hasPayment,
+    bool isDeliveryRefundable = true,
   }) async {
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
@@ -657,6 +661,7 @@ class SalesProvider with ChangeNotifier {
     // Debug print the request body
     final requestBody = jsonEncode({
       'return_order_id': returnOrderId,
+      'is_delivery_refundable': isDeliveryRefundable,
       if (hasPayment == true) ...{
         'payment_method': paymentMethod,
         'paid_amount': paidAmount,
@@ -674,6 +679,7 @@ class SalesProvider with ChangeNotifier {
     debugPrint("hasPayment $hasPayment");
     debugPrint("paymentMethod $paymentMethod");
     debugPrint("paidAmount $paidAmount");
+    debugPrint("isDeliveryRefundable $isDeliveryRefundable");
 
     final response = await http.post(
       url,
@@ -829,6 +835,52 @@ class SalesProvider with ChangeNotifier {
       debugPrint('Stack Trace: $stackTrace');
       dailySalesCloseList = [];
       notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<DailySalesCloseData?> fetchDailySalesCloseDetail({
+    required String accessToken,
+    required int id,
+  }) async {
+    final uri = Uri.parse(APPUrl.viewDailySalesClose(id.toString()));
+
+    debugPrint('=== DEBUG: fetchDailySalesCloseDetail START ===');
+    debugPrint('Full URL: $uri');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      };
+
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+
+      debugPrint(
+          '=== DEBUG: Detail Response Status Code: ${response.statusCode} ===');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['data'] != null) {
+          final detailData = DailySalesCloseData.fromJson(jsonData['data']);
+          return detailData;
+        }
+      }
+      return null;
+    } catch (error, stackTrace) {
+      debugPrint('=== DEBUG: fetchDailySalesCloseDetail ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
       rethrow;
     }
   }
