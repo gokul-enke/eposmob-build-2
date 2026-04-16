@@ -74,6 +74,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   TextEditingController paidAmountController = TextEditingController();
   FocusNode paidAmountFocusNode = FocusNode();
   bool hasPayment = false;
+  bool _deliveryChargeRefundable = false;
   final List<String> paymentMethods = ['CASH', 'CARD', 'UPI'];
   bool isCompletingReturn = false;
 
@@ -286,6 +287,24 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       await Provider.of<SalesProvider>(context, listen: false)
           .fetchSalesReturnItems(
               orderId: ordersId, accessToken: accessToken ?? "");
+
+      // ALSO fetch full order details to get shipping cost, price summary etc.
+      try {
+        final orderDetailsResponse = await Provider.of<SalesProvider>(context,
+                listen: false)
+            .listOrderDetails(context, ordersId, accessToken ?? "");
+
+        if (orderDetailsResponse["status"] == "success") {
+          setState(() {
+            final orderDetails = OrderDetailsModel.fromJson(orderDetailsResponse);
+            orderDetailsModelData = orderDetails.data;
+          });
+          debugPrint('✅ Full order details fetched for $ordersId');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Failed to fetch full order details: $e');
+        // Non-critical, continue with just return items
+      }
 
       // Update the local list with the fetched items
       _salesReturnItems =
@@ -1681,6 +1700,28 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               maxReturnAmount += itemReturned;
             }
 
+            // Calculate if it's a full return for discount deduction
+            bool isFullOrderReturn = true;
+            for (var item in _salesReturnItems) {
+              if (item.returnedQuantity < (int.tryParse(item.quantity) ?? 0)) {
+                isFullOrderReturn = false;
+                break;
+              }
+            }
+
+            // Include shipping cost in max check if toggle is ON
+            if (_deliveryChargeRefundable) {
+              maxReturnAmount +=
+                  (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
+            }
+
+            // Deduct discount if full return AND delivery refund is ON
+            if (isFullOrderReturn && _deliveryChargeRefundable) {
+              maxReturnAmount -=
+                  (orderDetailsModelData?.priceSummary?.discount ?? 0)
+                      .toDouble();
+            }
+
             if (paidAmount <= 0) {
               showScaffoldError(
                 context: context,
@@ -1716,6 +1757,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             paymentMethod: hasPayment ? selectedPaymentMethod : null,
             paidAmount: hasPayment ? paidAmount : null,
             hasPayment: hasPayment,
+            isDeliveryRefundable: _deliveryChargeRefundable,
           );
 
           showScaffold(
@@ -1809,8 +1851,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       for (var item in salesReturnItems) {
         final itemTotal = double.tryParse(item.totalPrice.toString()) ?? 0.0;
-        final itemQuantity = int.tryParse(item.quantity) ??
-            0; // item.quantity is already a String
+        final itemQuantity = int.tryParse(item.quantity) ?? 0;
 
         orderTotal += itemTotal;
         totalQuantity += itemQuantity;
@@ -1830,15 +1871,40 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         final sessionReturnedTotal =
             currentReturnedTotal - initialReturnedTotal;
 
-        debugPrint(
-            'Item: ${item.productName}, Session Returns - Qty: $sessionReturnedQty, Total: $sessionReturnedTotal');
-
         returnedTotal += sessionReturnedTotal;
         returnedQuantity += sessionReturnedQty;
 
         if (sessionReturnedQty > 0) {
           returnedItems += 1; // Count items returned in this session
         }
+      }
+
+      // Check if this is now a FULL order return (including previous returns)
+      bool isFullOrderReturn = true;
+      for (var item in salesReturnItems) {
+        if (item.returnedQuantity < (int.tryParse(item.quantity) ?? 0)) {
+          isFullOrderReturn = false;
+          break;
+        }
+      }
+
+      final discountAmount =
+          (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
+      double returnDiscount = 0.0;
+      if (isFullOrderReturn && _deliveryChargeRefundable) {
+        returnDiscount = discountAmount;
+      }
+      returnedTotal -= returnDiscount;
+
+      // Include shipping cost in Return Summary if toggle is ON
+      final shippingCost = (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
+      if (_deliveryChargeRefundable) {
+        returnedTotal += shippingCost;
+      }
+
+      // Order total should also ideally come from orderDetailsModelData to include tax/shipping
+      if (orderDetailsModelData?.priceSummary?.netPayable != null) {
+        orderTotal = (orderDetailsModelData!.priceSummary!.netPayable!).toDouble();
       }
 
       return Row(
@@ -1883,6 +1949,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   _buildSummaryRow('Total Items', '$totalItems'),
                   const SizedBox(height: 6),
                   _buildSummaryRow('Total Quantity', '$totalQuantity'),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Discount',
+                      '${(orderDetailsModelData?.priceSummary?.discount ?? 0).toStringAsFixed(2)}'),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Delivery Charge',
+                      '${(orderDetailsModelData?.deliveryCharge ?? 0).toStringAsFixed(2)}'),
                   const SizedBox(height: 6),
                   _buildSummaryRow(
                       'Order Total', '${orderTotal.toStringAsFixed(2)}'),
@@ -1930,6 +2002,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   _buildSummaryRow('Returned Items', '$returnedItems'),
                   const SizedBox(height: 6),
                   _buildSummaryRow('Returned Quantity', '$returnedQuantity'),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Discount', returnDiscount.toStringAsFixed(2)),
+                  const SizedBox(height: 6),
+                  _buildSummaryRow('Delivery Charge',
+                      '${(_deliveryChargeRefundable ? shippingCost : 0.0).toStringAsFixed(2)}'),
                   const SizedBox(height: 6),
                   _buildSummaryRow(
                       'Return Total', '${returnedTotal.toStringAsFixed(2)}'),
@@ -1988,6 +2065,28 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         returnedTotal += sessionReturnedTotal;
       }
 
+      // Calculate if it's a full return for discount deduction
+      bool isFullOrderReturn = true;
+      for (var item in salesReturnItems) {
+        if (item.returnedQuantity < (int.tryParse(item.quantity) ?? 0)) {
+          isFullOrderReturn = false;
+          break;
+        }
+      }
+
+      final discountAmount =
+          (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
+      if (isFullOrderReturn && _deliveryChargeRefundable) {
+        returnedTotal -= discountAmount;
+      }
+
+      // Add shipping cost if toggle is ON and we have order data
+      final shippingCost =
+          (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
+      if (_deliveryChargeRefundable) {
+        returnedTotal += shippingCost;
+      }
+
       // Autofill the return amount when payment is enabled and field is empty
       if (hasPayment && paidAmountController.text.isEmpty) {
         paidAmountController.text = returnedTotal.toStringAsFixed(2);
@@ -2006,6 +2105,55 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Switch.adaptive(
+                  value: _deliveryChargeRefundable,
+                  activeColor: ColorManager.kPrimaryColor,
+                  onChanged: (value) {
+                    setState(() {
+                      _deliveryChargeRefundable = value;
+                      // Refresh the refund amount automatically when toggle changes
+                      if (hasPayment) {
+                        paidAmountController.text =
+                            returnedTotal.toStringAsFixed(2);
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Delivery Charge Refundable",
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.27,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Turn off to exclude the delivery charge from the refund.",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s12,
+                          0.27,
+                          ColorManager.textColor.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Container(

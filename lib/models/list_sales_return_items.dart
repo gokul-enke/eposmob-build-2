@@ -2,22 +2,57 @@ class SalesReturnItemsResponse {
   final String status;
   final String message;
   final List<SalesReturnCart> data;
+  final SalesReturnOrderInfo? order;
 
   SalesReturnItemsResponse({
     required this.status,
     required this.message,
     required this.data,
+    this.order,
   });
 
   factory SalesReturnItemsResponse.fromJson(Map<String, dynamic> json) {
-    var dataList = json['data'] as List;
-    List<SalesReturnCart> salesReturnItems =
-        dataList.map((item) => SalesReturnCart.fromJson(item)).toList();
+    // Determine data based on structure (could be List or Map with 'items')
+    List<SalesReturnCart> salesReturnItems = [];
+    SalesReturnOrderInfo? orderInfo;
+
+    if (json['data'] is List) {
+      salesReturnItems = (json['data'] as List)
+          .map((item) => SalesReturnCart.fromJson(item))
+          .toList();
+    } else if (json['data'] is Map) {
+      if (json['data']['items'] is List) {
+        salesReturnItems = (json['data']['items'] as List)
+            .map((item) => SalesReturnCart.fromJson(item))
+            .toList();
+      }
+      if (json['data']['order'] is Map) {
+        orderInfo = SalesReturnOrderInfo.fromJson(json['data']['order']);
+      }
+    }
 
     return SalesReturnItemsResponse(
       status: json['status'],
       message: json['message'],
       data: salesReturnItems,
+      order: orderInfo,
+    );
+  }
+}
+
+class SalesReturnOrderInfo {
+  final int id;
+  final String shippingCost;
+
+  SalesReturnOrderInfo({
+    required this.id,
+    required this.shippingCost,
+  });
+
+  factory SalesReturnOrderInfo.fromJson(Map<String, dynamic> json) {
+    return SalesReturnOrderInfo(
+      id: json['id'],
+      shippingCost: json['shipping_cost']?.toString() ?? '0.00',
     );
   }
 }

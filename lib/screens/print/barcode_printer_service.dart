@@ -221,11 +221,11 @@ class BarcodePrinterService {
       for (final item in printItems) {
         if (item.quantity < 1) continue;
 
-        final stock = item.stock;
-        final barcodeValue = (stock.barCode ?? '').trim();
-        final productName = _sanitizeForThermal(stock.productName ?? '');
+        final product = item.product;
+        final barcodeValue = (product.barcode ?? '').trim();
+        final productName = _sanitizeForThermal(product.productName ?? '');
         final rawPriceText =
-            (stock.retailPrice ?? stock.mrp ?? 'N/A').toString().trim();
+            (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
         final parsedPrice = double.tryParse(rawPriceText);
         final priceToShow =
             parsedPrice != null ? parsedPrice.toStringAsFixed(2) : rawPriceText;
@@ -445,9 +445,30 @@ class BarcodePrinterService {
       // Sticker dimensions (in mm → points, 1mm ≈ 2.835pt)
       double stickerW;
       double stickerH;
-      if (stickerSize == '40x20mm') {
+      if (stickerSize == '30x20mm') {
+        stickerW = 30 * PdfPageFormat.mm;
+        stickerH = 20 * PdfPageFormat.mm;
+      } else if (stickerSize == '40x20mm') {
         stickerW = 40 * PdfPageFormat.mm;
         stickerH = 20 * PdfPageFormat.mm;
+      } else if (stickerSize == '40x25mm') {
+        stickerW = 40 * PdfPageFormat.mm;
+        stickerH = 25 * PdfPageFormat.mm;
+      } else if (stickerSize == '38x25mm') {
+        stickerW = 38 * PdfPageFormat.mm;
+        stickerH = 25 * PdfPageFormat.mm;
+      } else if (stickerSize == '55x35mm') {
+        stickerW = 55 * PdfPageFormat.mm;
+        stickerH = 35 * PdfPageFormat.mm;
+      } else if (stickerSize == '60x40mm') {
+        stickerW = 60 * PdfPageFormat.mm;
+        stickerH = 40 * PdfPageFormat.mm;
+      } else if (stickerSize == '70x40mm') {
+        stickerW = 70 * PdfPageFormat.mm;
+        stickerH = 40 * PdfPageFormat.mm;
+      } else if (stickerSize == '100x50mm') {
+        stickerW = 100 * PdfPageFormat.mm;
+        stickerH = 50 * PdfPageFormat.mm;
       } else if (stickerSize == '91x24mm') {
         stickerW = 91 * PdfPageFormat.mm;
         stickerH = 24 * PdfPageFormat.mm;
@@ -510,10 +531,10 @@ class BarcodePrinterService {
       final List<pw.Widget> stickers = [];
       for (int idx = 0; idx < printItems.length; idx++) {
         final item = printItems[idx];
-        final stock = item.stock;
-        final barcodeValue = stock.barCode?.trim() ?? '';
+        final product = item.product;
+        final barcodeValue = product.barcode?.trim() ?? '';
         debugPrint(
-            "[BarcodePrint] Item[$idx] -> name='${stock.productName ?? '(null)'}', qty=${item.quantity}, barcode='${barcodeValue.isEmpty ? '(empty)' : barcodeValue}', retail='${stock.retailPrice ?? '(null)'}', mrp='${stock.mrp ?? '(null)'}', mfg=${item.mfgDate}, exp=${item.expDate}");
+            "[BarcodePrint] Item[$idx] -> name='${product.productName ?? '(null)'}', qty=${item.quantity}, barcode='${barcodeValue.isEmpty ? '(empty)' : barcodeValue}', retail='${product.price?.price ?? '(null)'}', mrp='${product.mrp ?? '(null)'}', mfg=${item.mfgDate}, exp=${item.expDate}");
 
         if (barcodeValue.isEmpty) {
           debugPrint(
@@ -654,37 +675,38 @@ class BarcodePrinterService {
     required bool showMfgDate,
     required bool showExpiryDate,
   }) {
-    final stock = item.stock;
+    final product = item.product;
     // Format price to 2 decimal places
     final rawPriceText =
-        (stock.retailPrice ?? stock.mrp ?? 'N/A').toString().trim();
+        (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
     final parsedPrice = double.tryParse(rawPriceText);
     final priceToShow =
         parsedPrice != null ? parsedPrice.toStringAsFixed(2) : rawPriceText;
 
-    // Date format: PKG:dd-MM-yy EXD:dd-MM-yy
+    // Date format matching user reference: P:dd/MM/yyyy E:dd/MM/yyyy
     String dateLine = '';
     if (showMfgDate && item.mfgDate != null) {
-      dateLine += "PKG:${DateFormat('dd-MM-yy').format(item.mfgDate!)}";
+      dateLine += "P:${DateFormat('dd/MM/yyyy').format(item.mfgDate!)}";
     }
     if (showExpiryDate && item.expDate != null) {
       if (dateLine.isNotEmpty) dateLine += ' ';
-      dateLine += "EXD:${DateFormat('dd-MM-yy').format(item.expDate!)}";
+      dateLine += "E:${DateFormat('dd/MM/yyyy').format(item.expDate!)}";
     }
 
-    // Use FittedBox to auto-scale content so nothing gets clipped
+    // Use FittedBox with BoxFit.contain to fill width SAFELY without clipping
     return pw.Container(
       width: stickerW,
       height: stickerH,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      padding: const pw.EdgeInsets.all(0.5),
       child: pw.FittedBox(
-        fit: pw.BoxFit.scaleDown,
+        fit: pw.BoxFit.contain,
         alignment: pw.Alignment.center,
         child: pw.SizedBox(
-          width: stickerW * 0.92,
+          width: stickerW,
           child: pw.Column(
             mainAxisSize: pw.MainAxisSize.min,
             mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               // Store Name
               if (showStoreName && storeName.isNotEmpty) ...[
@@ -700,23 +722,21 @@ class BarcodePrinterService {
                 pw.SizedBox(height: elementSpacing),
               ],
 
-              // Barcode graphic + number (width slightly constrained to match preview)
-              if (stock.barCode != null && stock.barCode!.isNotEmpty) ...[
-                pw.Center(
-                  child: pw.SizedBox(
-                    width: stickerW * 0.75,
-                    child: pw.BarcodeWidget(
-                      barcode: pw.Barcode.code128(),
-                      data: stock.barCode!,
-                      height: barcodeHeight,
-                      drawText: false,
-                    ),
+              // Barcode graphic + number
+              if (product.barcode != null && product.barcode!.isNotEmpty) ...[
+                pw.SizedBox(
+                  width: stickerW * 0.98, // Fill width
+                  child: pw.BarcodeWidget(
+                    barcode: pw.Barcode.code128(),
+                    data: product.barcode!,
+                    height: barcodeHeight,
+                    drawText: false,
                   ),
                 ),
-                pw.SizedBox(height: elementSpacing),
+                pw.SizedBox(height: elementSpacing / 2),
                 if (showBarcodeNumber) ...[
                   pw.Text(
-                    stock.barCode!,
+                    product.barcode!,
                     style: barcodeTextStyle,
                     textAlign: pw.TextAlign.center,
                   ),
@@ -738,15 +758,16 @@ class BarcodePrinterService {
                 pw.SizedBox(height: elementSpacing),
               ],
 
-              // Product Name (prevent clip by scaling it nicely horizontal)
+              // Product Name (Only show if Store Name is NOT shown, to match reference image)
               if (showProductName &&
-                  stock.productName != null &&
-                  stock.productName!.isNotEmpty) ...[
+                  !showStoreName &&
+                  product.productName != null &&
+                  product.productName!.isNotEmpty) ...[
                 pw.FittedBox(
                   fit: pw.BoxFit.scaleDown,
                   alignment: pw.Alignment.center,
                   child: pw.Text(
-                    stock.productName!,
+                    product.productName!,
                     style: nameStyle,
                     textAlign: pw.TextAlign.center,
                   ),
