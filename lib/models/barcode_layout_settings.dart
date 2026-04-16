@@ -32,13 +32,13 @@ class BarcodeLayoutSettings {
     this.stickersPerRow = 1,
     this.pageMargin = 0,
     this.stickerGap = 5.0,
-    this.storeNameFontSize = 9,
-    this.productNameFontSize = 9,
-    this.priceFontSize = 11,
-    this.dateFontSize = 7,
-    this.barcodeNumberFontSize = 7,
-    this.barcodeHeight = 30,
-    this.elementSpacing = 0,
+    this.storeNameFontSize = 11,
+    this.productNameFontSize = 11,
+    this.priceFontSize = 13,
+    this.dateFontSize = 9,
+    this.barcodeNumberFontSize = 9,
+    this.barcodeHeight = 20,
+    this.elementSpacing = 0.2,
   });
 
   Map<String, dynamic> toJson() => {
@@ -113,8 +113,22 @@ class BarcodeLayoutSettings {
   /// Returns sticker width in mm parsed from stickerSize.
   double get stickerWidthMm {
     switch (stickerSize) {
+      case '30x20mm':
+        return 30;
       case '40x20mm':
         return 40;
+      case '40x25mm':
+        return 40;
+      case '38x25mm':
+        return 38;
+      case '55x35mm':
+        return 55;
+      case '60x40mm':
+        return 60;
+      case '70x40mm':
+        return 70;
+      case '100x50mm':
+        return 100;
       case '91x24mm':
         return 91;
       default:
@@ -125,8 +139,22 @@ class BarcodeLayoutSettings {
   /// Returns sticker height in mm parsed from stickerSize.
   double get stickerHeightMm {
     switch (stickerSize) {
+      case '30x20mm':
+        return 20;
       case '40x20mm':
         return 20;
+      case '40x25mm':
+        return 25;
+      case '38x25mm':
+        return 25;
+      case '55x35mm':
+        return 35;
+      case '60x40mm':
+        return 40;
+      case '70x40mm':
+        return 40;
+      case '100x50mm':
+        return 50;
       case '91x24mm':
         return 24;
       default:
