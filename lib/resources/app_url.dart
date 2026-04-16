@@ -265,6 +265,8 @@ class APPUrl {
   static String get nonStockReportUrl => '$baseURL/api/v1/non-stock-report';
   static String get listDailySalesClose =>
       '$baseURL/api/v1/daily-sales-close/list';
+  static String viewDailySalesClose(String id) =>
+      '$baseURL/api/v1/daily-sales-close/view/$id';
   static String get dailySalesCloseSummary =>
       '$baseURL/api/v1/daily-sales-close/summary';
   static String get dailySalesCloseCreate =>
