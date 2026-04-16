@@ -37,9 +37,9 @@ class GridSelectionProvider extends ChangeNotifier {
   int totalPages = 1;
   String productNameFromProductId(int value) {
     final product = productList?.cast<GetProduct?>().firstWhere(
-      (product) => product?.productId == value,
-      orElse: () => null,
-    );
+          (product) => product?.productId == value,
+          orElse: () => null,
+        );
 
     return product?.productName ?? "";
   }
@@ -96,9 +96,9 @@ class GridSelectionProvider extends ChangeNotifier {
 
   String? productName(int value) {
     final product = productList?.cast<GetProduct?>().firstWhere(
-      (e) => e?.productId == value,
-      orElse: () => null,
-    );
+          (e) => e?.productId == value,
+          orElse: () => null,
+        );
     return product?.productName;
   }
 
@@ -152,6 +152,7 @@ class GridSelectionProvider extends ChangeNotifier {
     int? categoryId,
     String? filterName,
     String? filterCategory,
+    String? filterBarcode,
     String? filterPrice,
     String? filterCreatedBy,
     String? filterProperties,
@@ -166,6 +167,7 @@ class GridSelectionProvider extends ChangeNotifier {
       if (filterName != null) 'name': filterName,
       if (filterCategory != null && filterCategory != "0")
         'category_id': filterCategory,
+      if (filterBarcode != null) 'barcode': filterBarcode,
       if (filterPrice != null) 'filter_price': filterPrice,
       if (filterCreatedBy != null) 'filter_created_by': filterCreatedBy,
       // if (filterProperties != null) 'filter_properties': filterProperties,
@@ -276,7 +278,7 @@ class GridSelectionProvider extends ChangeNotifier {
     final baseUri = Uri.parse(APPUrl.getSellableProductUrl);
     final finalQueryParams = Map<String, dynamic>.from(baseUri.queryParameters)
       ..addAll(queryParams);
-    
+
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
