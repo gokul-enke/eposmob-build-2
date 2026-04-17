@@ -9,6 +9,7 @@ import 'premium1_receipt_layout.dart';
 import 'premium2_receipt_layout.dart';
 import 'standard_receipt_layout.dart';
 import 'supermarket_receipt_layout.dart';
+import 'supermarket2_receipt_layout.dart';
 import 'bilingual_receipt_layout.dart';
 
 /// Factory class for creating receipt layouts based on theme.
@@ -36,6 +37,7 @@ class ReceiptLayoutFactory {
         ArabicEnglishTableHeadersReceiptLayout(),
     'arabic_and_english_3': () => ArabicAndEnglish3ReceiptLayout(),
     'supermarket': () => SupermarketReceiptLayout(),
+    'supermarket2': () => Supermarket2ReceiptLayout(),
     'bilingual': () => BilingualReceiptLayout(),
   };
 
