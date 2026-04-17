@@ -15,6 +15,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print_daily_close.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/responsive.dart';
 
 class DailySalesCloseDetailScreen extends StatefulWidget {
@@ -29,22 +30,44 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
   final TextEditingController _orderNumberController = TextEditingController();
   String _paymentTypeFilter = 'All';
   List<DailySalesTransaction> _filteredTransactions = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize filtered transactions with all transactions when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final salesProvider = Provider.of<SalesProvider>(context, listen: false);
-      final data = salesProvider.selectedDailySalesCloseData;
-      if (data != null && data.transactions != null) {
-        setState(() {
-          _filteredTransactions = List.from(data.transactions!);
-        });
-      }
-    });
-    
+    _fetchDetails();
     _orderNumberController.addListener(_filterTransactions);
+  }
+
+  Future<void> _fetchDetails() async {
+    final salesProvider = Provider.of<SalesProvider>(context, listen: false);
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final basicData = salesProvider.selectedDailySalesCloseData;
+    
+    if (basicData != null && basicData.id != null) {
+      try {
+        final detailData = await salesProvider.fetchDailySalesCloseDetail(
+          accessToken: authModel.token ?? '',
+          id: basicData.id!,
+        );
+        if (detailData != null) {
+          salesProvider.setSelectedDailySalesCloseData(detailData);
+          if (mounted) {
+            setState(() {
+              _filteredTransactions = List.from(detailData.transactions ?? []);
+              _isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      } catch (e) {
+        debugPrint('Error fetching day close details: $e');
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -140,6 +163,14 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     final salesProvider = Provider.of<SalesProvider>(context);
     final data = salesProvider.selectedDailySalesCloseData;
     Size size = MediaQuery.of(context).size;
+
+    if (_isLoading) {
+      return const SafeArea(
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     if (data == null) {
       return const Center(child: Text("No data selected"));
@@ -305,7 +336,6 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                 children: [
                   Expanded(child: _buildDetailItem('Total Returns (Sales Return)', '$currency ${data.totalReturns ?? '0.00'}', valueColor: Colors.red)),
                   Expanded(child: _buildDetailItem('Total Refunds (Vouchers)', '$currency ${data.totalRefunds ?? '0.00'}', valueColor: Colors.red)),
-                  const Expanded(child: SizedBox()),
                 ],
               ),
             ],

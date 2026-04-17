@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_round_button.dart';
-import 'package:pos_machine/models/list_stock.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 
 class BarcodePrintItem {
-  final ListStockModelData stock;
+  final GetProduct product;
   int quantity;
   DateTime? mfgDate;
   DateTime? expDate;
 
   BarcodePrintItem({
-    required this.stock,
+    required this.product,
     this.quantity = 1,
     this.mfgDate,
     this.expDate,
@@ -21,9 +21,9 @@ class BarcodePrintItem {
 }
 
 class ConfirmBarcodePrintModal extends StatefulWidget {
-  final List<ListStockModelData> selectedStocks;
+  final List<GetProduct> selectedProducts;
 
-  const ConfirmBarcodePrintModal({super.key, required this.selectedStocks});
+  const ConfirmBarcodePrintModal({super.key, required this.selectedProducts});
 
   @override
   _ConfirmBarcodePrintModalState createState() =>
@@ -35,7 +35,18 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   String stickerSize = '50x25mm';
   int stickersPerRow = 1;
 
-  final List<String> stickerSizes = ['50x25mm', '40x20mm', '91x24mm'];
+  final List<String> stickerSizes = [
+    '50x25mm',
+    '30x20mm',
+    '38x25mm',
+    '40x25mm',
+    '55x35mm',
+    '60x40mm',
+    '70x40mm',
+    '100x50mm',
+    '40x20mm',
+    '91x24mm'
+  ];
 
   @override
   void initState() {
@@ -43,18 +54,24 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
     final now = DateTime.now();
     final nextMonth = DateTime(now.year, now.month + 1, now.day);
 
-    printItems = widget.selectedStocks.map((stock) {
+    printItems = widget.selectedProducts.map((product) {
       DateTime? expDateToUse = nextMonth;
-      if (stock.expiryDate != null && stock.expiryDate!.trim().isNotEmpty) {
+      // Get expiry date from product stocks if available, otherwise any identifiable expiry field
+      String? expiryDate;
+      if (product.stock != null && product.stock!.isNotEmpty) {
+        expiryDate = product.stock![0].expiryDate;
+      }
+      
+      if (expiryDate != null && expiryDate.trim().isNotEmpty) {
         try {
-          expDateToUse = DateTime.parse(stock.expiryDate!);
+          expDateToUse = DateTime.parse(expiryDate);
         } catch (e) {
           // Ignore failure, falls back to next month
         }
       }
 
       return BarcodePrintItem(
-        stock: stock,
+        product: product,
         quantity: 1,
         mfgDate: now,
         expDate: expDateToUse,
@@ -309,7 +326,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                         Expanded(
                                           flex: 3,
                                           child: Text(
-                                            item.stock.productName ?? 'N/A',
+                                            item.product.productName ?? 'N/A',
                                             style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s13,

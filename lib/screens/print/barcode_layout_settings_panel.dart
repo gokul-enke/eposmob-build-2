@@ -23,7 +23,18 @@ class _BarcodeLayoutSettingsPanelState
   BarcodeLayoutSettings _settings = BarcodeLayoutSettings();
   bool _loaded = false;
 
-  final List<String> _stickerSizes = ['50x25mm', '40x20mm', '91x24mm'];
+  final List<String> _stickerSizes = [
+    '50x25mm',
+    '30x20mm',
+    '38x25mm',
+    '40x25mm',
+    '55x35mm',
+    '60x40mm',
+    '70x40mm',
+    '100x50mm',
+    '40x20mm',
+    '91x24mm'
+  ];
 
   @override
   void initState() {

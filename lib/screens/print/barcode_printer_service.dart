@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/product/widgets/confirm_barcode_print_modal.dart';
@@ -190,6 +191,91 @@ class BarcodePrinterService {
         .replaceAll('…', '...');
   }
 
+  String _normalizeProductNameMode(String rawValue) {
+    final normalized = rawValue.trim().toLowerCase();
+    switch (normalized) {
+      case 'ar':
+      case 'en':
+      case 'en/ar':
+      case 'ar/en':
+        return normalized;
+      default:
+        return 'en';
+    }
+  }
+
+  String _extractTranslatedName(dynamic names, String languageCode) {
+    if (names == null) return '';
+    final targetCode = languageCode.toLowerCase();
+
+    if (names is Map) {
+      final direct = names[targetCode] ?? names[languageCode];
+      if (direct is String) {
+        return direct.trim();
+      }
+      if (direct is Map) {
+        final fromMap = direct['name'] ?? direct['value'];
+        if (fromMap != null) {
+          return fromMap.toString().trim();
+        }
+      }
+
+      for (final value in names.values) {
+        if (value is! Map) continue;
+        final code = value['code']?.toString().toLowerCase() ??
+            value['language_code']?.toString().toLowerCase();
+        if (code != targetCode) continue;
+
+        final translated = value['name'] ?? value['value'];
+        if (translated != null) {
+          return translated.toString().trim();
+        }
+      }
+    }
+
+    return '';
+  }
+
+  String _resolveProductName(GetProduct product, String productNameMode) {
+    final englishName = _extractTranslatedName(product.names, 'en');
+    final arabicName = _extractTranslatedName(product.names, 'ar');
+    final fallbackName = (product.productName ?? '').trim();
+
+    switch (_normalizeProductNameMode(productNameMode)) {
+      case 'ar':
+        return arabicName.isNotEmpty
+            ? arabicName
+            : englishName.isNotEmpty
+                ? englishName
+                : fallbackName;
+      case 'en/ar':
+        final parts = <String>[
+          if (englishName.isNotEmpty)
+            englishName
+          else if (fallbackName.isNotEmpty)
+            fallbackName,
+          if (arabicName.isNotEmpty) arabicName,
+        ];
+        return parts.join(' / ');
+      case 'ar/en':
+        final parts = <String>[
+          if (arabicName.isNotEmpty) arabicName,
+          if (englishName.isNotEmpty)
+            englishName
+          else if (fallbackName.isNotEmpty)
+            fallbackName,
+        ];
+        return parts.join(' / ');
+      case 'en':
+      default:
+        return englishName.isNotEmpty
+            ? englishName
+            : fallbackName.isNotEmpty
+                ? fallbackName
+                : arabicName;
+    }
+  }
+
   Future<bool> _tryDirectPrintToSelectedPrinter({
     required List<BarcodePrintItem> printItems,
     required String stickerSize,
@@ -197,6 +283,7 @@ class BarcodePrinterService {
     required String currency,
     required bool showStoreName,
     required bool showProductName,
+    required String productNameMode,
     required bool showPrice,
     required bool showBarcodeNumber,
     required bool showMfgDate,
@@ -221,11 +308,12 @@ class BarcodePrinterService {
       for (final item in printItems) {
         if (item.quantity < 1) continue;
 
-        final stock = item.stock;
-        final barcodeValue = (stock.barCode ?? '').trim();
-        final productName = _sanitizeForThermal(stock.productName ?? '');
+        final product = item.product;
+        final barcodeValue = (product.barcode ?? '').trim();
+        final productName =
+            _sanitizeForThermal(_resolveProductName(product, productNameMode));
         final rawPriceText =
-            (stock.retailPrice ?? stock.mrp ?? 'N/A').toString().trim();
+            (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
         final parsedPrice = double.tryParse(rawPriceText);
         final priceToShow =
             parsedPrice != null ? parsedPrice.toStringAsFixed(2) : rawPriceText;
@@ -390,6 +478,9 @@ class BarcodePrinterService {
 
       final showStoreName = readVisible('showStoreName', fallback: false);
       final showProductName = readVisible('showProductName', fallback: true);
+      final productNameMode = showProductName
+          ? _normalizeProductNameMode(readValue('showProductName'))
+          : 'en';
       final showPrice = readVisible('showPrice', fallback: true);
       final showBarcodeNumber =
           readVisible('showBarcodeNumber', fallback: true);
@@ -409,7 +500,7 @@ class BarcodePrinterService {
       debugPrint(
           '[BarcodePrint] Display keys -> ${displayConfig?.keys.toList() ?? []}');
       debugPrint(
-          '[BarcodePrint] Flags -> showStoreName=$showStoreName, showProductName=$showProductName, showPrice=$showPrice, showBarcodeNumber=$showBarcodeNumber, showMfgDate=$showMfgDate, showExpiryDate=$showExpiryDate');
+          '[BarcodePrint] Flags -> showStoreName=$showStoreName, showProductName=$showProductName, productNameMode=$productNameMode, showPrice=$showPrice, showBarcodeNumber=$showBarcodeNumber, showMfgDate=$showMfgDate, showExpiryDate=$showExpiryDate');
       debugPrint(
           "[BarcodePrint] Resolved values -> storeName='${storeName.isEmpty ? '(empty)' : storeName}', currency='$currency'");
 
@@ -420,6 +511,7 @@ class BarcodePrinterService {
         currency: currency,
         showStoreName: showStoreName,
         showProductName: showProductName,
+        productNameMode: productNameMode,
         showPrice: showPrice,
         showBarcodeNumber: showBarcodeNumber,
         showMfgDate: showMfgDate,
@@ -445,9 +537,30 @@ class BarcodePrinterService {
       // Sticker dimensions (in mm → points, 1mm ≈ 2.835pt)
       double stickerW;
       double stickerH;
-      if (stickerSize == '40x20mm') {
+      if (stickerSize == '30x20mm') {
+        stickerW = 30 * PdfPageFormat.mm;
+        stickerH = 20 * PdfPageFormat.mm;
+      } else if (stickerSize == '40x20mm') {
         stickerW = 40 * PdfPageFormat.mm;
         stickerH = 20 * PdfPageFormat.mm;
+      } else if (stickerSize == '40x25mm') {
+        stickerW = 40 * PdfPageFormat.mm;
+        stickerH = 25 * PdfPageFormat.mm;
+      } else if (stickerSize == '38x25mm') {
+        stickerW = 38 * PdfPageFormat.mm;
+        stickerH = 25 * PdfPageFormat.mm;
+      } else if (stickerSize == '55x35mm') {
+        stickerW = 55 * PdfPageFormat.mm;
+        stickerH = 35 * PdfPageFormat.mm;
+      } else if (stickerSize == '60x40mm') {
+        stickerW = 60 * PdfPageFormat.mm;
+        stickerH = 40 * PdfPageFormat.mm;
+      } else if (stickerSize == '70x40mm') {
+        stickerW = 70 * PdfPageFormat.mm;
+        stickerH = 40 * PdfPageFormat.mm;
+      } else if (stickerSize == '100x50mm') {
+        stickerW = 100 * PdfPageFormat.mm;
+        stickerH = 50 * PdfPageFormat.mm;
       } else if (stickerSize == '91x24mm') {
         stickerW = 91 * PdfPageFormat.mm;
         stickerH = 24 * PdfPageFormat.mm;
@@ -510,10 +623,12 @@ class BarcodePrinterService {
       final List<pw.Widget> stickers = [];
       for (int idx = 0; idx < printItems.length; idx++) {
         final item = printItems[idx];
-        final stock = item.stock;
-        final barcodeValue = stock.barCode?.trim() ?? '';
+        final product = item.product;
+        final barcodeValue = product.barcode?.trim() ?? '';
+        final resolvedProductName =
+            _resolveProductName(product, productNameMode);
         debugPrint(
-            "[BarcodePrint] Item[$idx] -> name='${stock.productName ?? '(null)'}', qty=${item.quantity}, barcode='${barcodeValue.isEmpty ? '(empty)' : barcodeValue}', retail='${stock.retailPrice ?? '(null)'}', mrp='${stock.mrp ?? '(null)'}', mfg=${item.mfgDate}, exp=${item.expDate}");
+            "[BarcodePrint] Item[$idx] -> name='${resolvedProductName.isEmpty ? (product.productName ?? '(null)') : resolvedProductName}', qty=${item.quantity}, barcode='${barcodeValue.isEmpty ? '(empty)' : barcodeValue}', retail='${product.price?.price ?? '(null)'}', mrp='${product.mrp ?? '(null)'}', mfg=${item.mfgDate}, exp=${item.expDate}");
 
         if (barcodeValue.isEmpty) {
           debugPrint(
@@ -540,6 +655,7 @@ class BarcodePrinterService {
             currency: currency,
             showStoreName: showStoreName,
             showProductName: showProductName,
+            productNameMode: productNameMode,
             showPrice: showPrice,
             showBarcodeNumber: showBarcodeNumber,
             showMfgDate: showMfgDate,
@@ -649,42 +765,45 @@ class BarcodePrinterService {
     required String currency,
     required bool showStoreName,
     required bool showProductName,
+    required String productNameMode,
     required bool showPrice,
     required bool showBarcodeNumber,
     required bool showMfgDate,
     required bool showExpiryDate,
   }) {
-    final stock = item.stock;
+    final product = item.product;
+    final productName = _resolveProductName(product, productNameMode);
     // Format price to 2 decimal places
     final rawPriceText =
-        (stock.retailPrice ?? stock.mrp ?? 'N/A').toString().trim();
+        (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
     final parsedPrice = double.tryParse(rawPriceText);
     final priceToShow =
         parsedPrice != null ? parsedPrice.toStringAsFixed(2) : rawPriceText;
 
-    // Date format: PKG:dd-MM-yy EXD:dd-MM-yy
+    // Date format matching user reference: P:dd/MM/yyyy E:dd/MM/yyyy
     String dateLine = '';
     if (showMfgDate && item.mfgDate != null) {
-      dateLine += "PKG:${DateFormat('dd-MM-yy').format(item.mfgDate!)}";
+      dateLine += "P:${DateFormat('dd/MM/yyyy').format(item.mfgDate!)}";
     }
     if (showExpiryDate && item.expDate != null) {
       if (dateLine.isNotEmpty) dateLine += ' ';
-      dateLine += "EXD:${DateFormat('dd-MM-yy').format(item.expDate!)}";
+      dateLine += "E:${DateFormat('dd/MM/yyyy').format(item.expDate!)}";
     }
 
-    // Use FittedBox to auto-scale content so nothing gets clipped
+    // Use FittedBox with BoxFit.contain to fill width SAFELY without clipping
     return pw.Container(
       width: stickerW,
       height: stickerH,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      padding: const pw.EdgeInsets.all(0.5),
       child: pw.FittedBox(
-        fit: pw.BoxFit.scaleDown,
+        fit: pw.BoxFit.contain,
         alignment: pw.Alignment.center,
         child: pw.SizedBox(
-          width: stickerW * 0.92,
+          width: stickerW,
           child: pw.Column(
             mainAxisSize: pw.MainAxisSize.min,
             mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               // Store Name
               if (showStoreName && storeName.isNotEmpty) ...[
@@ -700,23 +819,21 @@ class BarcodePrinterService {
                 pw.SizedBox(height: elementSpacing),
               ],
 
-              // Barcode graphic + number (width slightly constrained to match preview)
-              if (stock.barCode != null && stock.barCode!.isNotEmpty) ...[
-                pw.Center(
-                  child: pw.SizedBox(
-                    width: stickerW * 0.75,
-                    child: pw.BarcodeWidget(
-                      barcode: pw.Barcode.code128(),
-                      data: stock.barCode!,
-                      height: barcodeHeight,
-                      drawText: false,
-                    ),
+              // Barcode graphic + number
+              if (product.barcode != null && product.barcode!.isNotEmpty) ...[
+                pw.SizedBox(
+                  width: stickerW * 0.98, // Fill width
+                  child: pw.BarcodeWidget(
+                    barcode: pw.Barcode.code128(),
+                    data: product.barcode!,
+                    height: barcodeHeight,
+                    drawText: false,
                   ),
                 ),
-                pw.SizedBox(height: elementSpacing),
+                pw.SizedBox(height: elementSpacing / 2),
                 if (showBarcodeNumber) ...[
                   pw.Text(
-                    stock.barCode!,
+                    product.barcode!,
                     style: barcodeTextStyle,
                     textAlign: pw.TextAlign.center,
                   ),
@@ -738,15 +855,13 @@ class BarcodePrinterService {
                 pw.SizedBox(height: elementSpacing),
               ],
 
-              // Product Name (prevent clip by scaling it nicely horizontal)
-              if (showProductName &&
-                  stock.productName != null &&
-                  stock.productName!.isNotEmpty) ...[
+              // Product Name
+              if (showProductName && productName.isNotEmpty) ...[
                 pw.FittedBox(
                   fit: pw.BoxFit.scaleDown,
                   alignment: pw.Alignment.center,
                   child: pw.Text(
-                    stock.productName!,
+                    productName,
                     style: nameStyle,
                     textAlign: pw.TextAlign.center,
                   ),

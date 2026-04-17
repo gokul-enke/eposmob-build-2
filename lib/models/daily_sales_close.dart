@@ -43,6 +43,7 @@ class DailySalesCloseData {
   String? totalReturns;
   String? totalRefunds;
   List<DailySalesTransaction>? transactions;
+  ProductSummary? productSummary;
   String? createdAt;
   String? updatedAt;
 
@@ -68,6 +69,7 @@ class DailySalesCloseData {
       this.totalReturns,
       this.totalRefunds,
       this.transactions,
+      this.productSummary,
       this.createdAt,
       this.updatedAt});
 
@@ -99,6 +101,9 @@ class DailySalesCloseData {
       json['transactions'].forEach((v) {
         transactions!.add(DailySalesTransaction.fromJson(v));
       });
+    }
+    if (json['product_summary'] != null) {
+      productSummary = ProductSummary.fromJson(json['product_summary']);
     }
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
@@ -265,5 +270,48 @@ class DailySalesCloseCreateResponse {
     data = json['data'] != null
         ? DailySalesCloseData.fromJson(json['data'])
         : null;
+  }
+}
+
+class ProductSummary {
+  List<ProductSummaryItem>? items;
+  int? grandTotalQty;
+  num? grandTotalAmount;
+
+  ProductSummary({this.items, this.grandTotalQty, this.grandTotalAmount});
+
+  ProductSummary.fromJson(Map<String, dynamic> json) {
+    if (json['items'] != null) {
+      items = <ProductSummaryItem>[];
+      json['items'].forEach((v) {
+        items!.add(ProductSummaryItem.fromJson(v));
+      });
+    }
+    grandTotalQty = json['grand_total_qty'] is num ? (json['grand_total_qty'] as num).toInt() : int.tryParse(json['grand_total_qty']?.toString() ?? '0');
+    grandTotalAmount = json['grand_total_amount'] is num ? json['grand_total_amount'] : num.tryParse(json['grand_total_amount']?.toString() ?? '0');
+  }
+}
+
+class ProductSummaryItem {
+  int? productId;
+  String? productName;
+  num? unitPrice;
+  int? totalQty;
+  num? totalAmount;
+
+  ProductSummaryItem({
+    this.productId,
+    this.productName,
+    this.unitPrice,
+    this.totalQty,
+    this.totalAmount,
+  });
+
+  ProductSummaryItem.fromJson(Map<String, dynamic> json) {
+    productId = json['product_id'] is int ? json['product_id'] : int.tryParse(json['product_id']?.toString() ?? '0');
+    productName = json['product_name'];
+    unitPrice = json['unit_price'] is num ? json['unit_price'] : num.tryParse(json['unit_price']?.toString() ?? '0');
+    totalQty = json['total_qty'] is int ? json['total_qty'] : int.tryParse(json['total_qty']?.toString() ?? '0');
+    totalAmount = json['total_amount'] is num ? json['total_amount'] : num.tryParse(json['total_amount']?.toString() ?? '0');
   }
 }

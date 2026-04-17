@@ -4,27 +4,20 @@ import 'package:get/get.dart';
 
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
+
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/stock_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
-import 'package:pos_machine/widgets/edit_stock_dialog.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
-
-import '../../models/list_stock.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
-import 'widgets/adjust_stock_modal.dart';
-import 'widgets/move_stock_modal.dart';
-import 'widgets/withdraw_stock_modal.dart';
 import 'package:pos_machine/screens/print/barcode_printer_service.dart';
 import 'widgets/confirm_barcode_print_modal.dart';
 
@@ -41,14 +34,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   final TextEditingController categorySearchController =
       TextEditingController();
   final TextEditingController barcodeController = TextEditingController();
-  ListStockModelData? selectedStock;
+  GetProduct? selectedProduct;
   bool initLoading = false;
   bool isInitialized = false;
   List<String> categories = ["All Categories"];
 
-  // Track selected stocks by stable key so selection survives pagination.
-  final Set<String> _selectedStockKeys = {};
-  final Map<String, ListStockModelData> _selectedStocksByKey = {};
+  // Track selected products by stable key so selection survives pagination.
+  final Set<String> _selectedProductKeys = {};
+  final Map<String, GetProduct> _selectedProductsByKey = {};
 
   @override
   void initState() {
@@ -87,8 +80,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
             "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
       }
 
-      await Provider.of<StockProvider>(context, listen: false)
-          .loadAllStocks(accessToken);
+      Provider.of<LocalProductProvider>(context, listen: false)
+          .listAllProducts(categoryId: 0);
 
       _extractCategories();
 
@@ -97,9 +90,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         initLoading = false;
       });
     } catch (error) {
-      debugPrint("Error loading stocks: $error");
+      debugPrint("Error loading products: $error");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading stocks: $error")),
+        SnackBar(content: Text("Error loading products: $error")),
       );
       setState(() {
         initLoading = false;
@@ -126,18 +119,27 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     debugPrint("📋 Categories: $categories");
   }
 
-  void searchStocks() {
-    StockProvider provider = Provider.of<StockProvider>(context, listen: false);
-    provider.applyStockFiltersLocally(
+  void searchProducts(int pageNo) {
+    LocalProductProvider provider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
+
+    int? catId;
+    if (categoryController.text != "All Categories") {
+      catId = categoryProvider.category
+          ?.firstWhereOrNull((c) => c.categoryName == categoryController.text)
+          ?.categoryId;
+    }
+
+    provider.listAllProducts(
       filterName: productNameController.text.isEmpty
           ? null
           : productNameController.text,
-      filterCategory: categoryController.text == "All Categories"
-          ? null
-          : categoryController.text,
+      categoryId: catId,
       filterBarcode:
           barcodeController.text.isEmpty ? null : barcodeController.text,
-      page: 1,
+      page: pageNo,
     );
   }
 
@@ -146,37 +148,38 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       productNameController.clear();
       categoryController.text = "All Categories";
       barcodeController.clear();
-      _selectedStockKeys.clear();
-      _selectedStocksByKey.clear();
+      _selectedProductKeys.clear();
+      _selectedProductsByKey.clear();
     });
-    Provider.of<StockProvider>(context, listen: false).resetStockFilters();
+    Provider.of<LocalProductProvider>(context, listen: false)
+        .listAllProducts(categoryId: 0);
   }
 
-  String _stockSelectionKey(ListStockModelData stock) {
-    if (stock.stockId != null) {
-      return 'id:${stock.stockId}';
+  String _productSelectionKey(GetProduct product) {
+    if (product.productId != null) {
+      return 'id:${product.productId}';
     }
-    return 'fallback:${stock.barCode ?? ''}|${stock.productName ?? ''}|${stock.rack ?? ''}|${stock.storeName ?? ''}';
+    return 'fallback:${product.barcode ?? ''}|${product.productName ?? ''}';
   }
 
-  bool _isStockSelected(ListStockModelData stock) {
-    return _selectedStockKeys.contains(_stockSelectionKey(stock));
+  bool _isProductSelected(GetProduct product) {
+    return _selectedProductKeys.contains(_productSelectionKey(product));
   }
 
-  void _setStockSelected(ListStockModelData stock, bool selected) {
-    final key = _stockSelectionKey(stock);
+  void _setProductSelected(GetProduct product, bool selected) {
+    final key = _productSelectionKey(product);
     if (selected) {
-      _selectedStockKeys.add(key);
-      _selectedStocksByKey[key] = stock;
+      _selectedProductKeys.add(key);
+      _selectedProductsByKey[key] = product;
     } else {
-      _selectedStockKeys.remove(key);
-      _selectedStocksByKey.remove(key);
+      _selectedProductKeys.remove(key);
+      _selectedProductsByKey.remove(key);
     }
   }
 
-  void _showStockDetails(ListStockModelData stock) {
+  void _showProductDetails(GetProduct product) {
     setState(() {
-      selectedStock = stock;
+      selectedProduct = product;
     });
 
     showDialog(
@@ -221,21 +224,22 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow('Product Name', stock.productName ?? 'N/A'),
-                    _buildDetailRow('Category', stock.categoryName ?? 'N/A'),
-                    _buildDetailRow('Store Name', stock.storeName ?? 'N/A'),
-                    _buildDetailRow('Supplier', stock.supplierName ?? 'N/A'),
-                    _buildDetailRow('Unit', stock.unit ?? 'N/A'),
+                    _buildDetailRow('Product Name', product.productName ?? 'N/A'),
                     _buildDetailRow(
-                        'Retail Price', stock.retailPrice?.toString() ?? 'N/A'),
-                    _buildDetailRow('MRP', stock.mrp?.toString() ?? 'N/A'),
+                        'Category', product.category?.name ?? 'N/A'),
+                    _buildDetailRow('Store Name', 'N/A'), // Product API doesn't return generic store info easily here
+                    _buildDetailRow('Supplier', 'N/A'),
+                    _buildDetailRow('Unit', product.unit ?? 'N/A'),
+                    _buildDetailRow('Retail Price',
+                        product.price?.price?.toString() ?? 'N/A'),
+                    _buildDetailRow('MRP', product.mrp?.toString() ?? 'N/A'),
                     _buildDetailRow('Purchase Price',
-                        stock.purchaseRate?.toString() ?? 'N/A'),
-                    _buildDetailRow('Quantity', stock.qty?.toString() ?? 'N/A'),
-                    _buildDetailRow('Rack', stock.rack ?? 'N/A'),
-                    _buildDetailRow('Barcode', stock.barCode ?? 'N/A'),
-                    _buildDetailRow('Wholesale Price',
-                        stock.wholesalePrice?.toString() ?? 'N/A'),
+                        product.purchasePrice?.toString() ?? 'N/A'),
+                    _buildDetailRow('Quantity',
+                        product.numberOfProductsAvailable?.toString() ?? 'N/A'),
+                    _buildDetailRow('Rack', 'N/A'),
+                    _buildDetailRow('Barcode', product.barcode ?? 'N/A'),
+                    _buildDetailRow('Wholesale Price', 'N/A'),
                   ],
                 ),
               ),
@@ -262,74 +266,31 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
-  void _showEditStockModal(ListStockModelData stock) {
-    if (stock.stockId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'Stock id missing. Unable to edit this row.',
-      );
-      return;
-    }
 
-    showEditStockDialog(
-      context: context,
-      stockId: stock.stockId!,
-      title: 'Edit Stock: ${stock.productName ?? ''}',
-      initialRetailPrice: stock.retailPrice ?? '',
-      initialMrp: stock.mrp ?? '',
-      initialPurchasePrice: stock.purchaseRate ?? '',
-      initialQuantity: stock.qty?.toString() ?? '0',
-      initialRack: stock.rack ?? '',
-    );
-  }
 
-  void _showAdjustStockModal(ListStockModelData stock) {
-    debugPrint(
-        '🛠️ SHOW ADJUST STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
-    showDialog(
-      context: context,
-      builder: (context) => AdjustStockModal(stock: stock),
-    );
-  }
+  void _handlePrintSelected(List<GetProduct> selectedProducts) async {
+    debugPrint('🖨️ PRINT triggered for ${selectedProducts.length} items');
 
-  void _showMoveStockModal(ListStockModelData stock) {
-    debugPrint(
-        '🚚 SHOW MOVE STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
-    final purchaseProvider =
-        Provider.of<PurchaseProvider>(context, listen: false);
-    debugPrint('   STORES AVAILABLE: ${purchaseProvider.storeList.length}');
-    showDialog(
-      context: context,
-      builder: (context) => MoveStockModal(
-        stock: stock,
-        stores: purchaseProvider.storeList,
-      ),
-    );
-  }
-
-  void _handlePrintSelected(List<ListStockModelData> selectedStocks) async {
-    debugPrint('🖨️ PRINT triggered for ${selectedStocks.length} items');
-
-    final validStocks = selectedStocks
-        .where((stock) =>
-            stock.barCode != null && stock.barCode!.trim().isNotEmpty)
+    final validProducts = selectedProducts
+        .where((product) =>
+            product.barcode != null && product.barcode!.trim().isNotEmpty)
         .toList();
 
-    if (validStocks.length < selectedStocks.length) {
+    if (validProducts.length < selectedProducts.length) {
       final bool shouldContinue = await showDialog(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Missing Barcode'),
-              content: Text(validStocks.isEmpty
+              content: Text(validProducts.isEmpty
                   ? 'These products don\'t have a barcode. Please add a barcode first.'
                   : 'Some products don\'t have a barcode. Do you want to skip them and continue?'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context,
                       false), // Returning false to indicate cancel/close
-                  child: Text(validStocks.isEmpty ? 'Close' : 'Cancel'),
+                  child: Text(validProducts.isEmpty ? 'Close' : 'Cancel'),
                 ),
-                if (validStocks.isNotEmpty)
+                if (validProducts.isNotEmpty)
                   TextButton(
                     onPressed: () => Navigator.pop(
                         context, true), // Returning true to indicate continue
@@ -340,7 +301,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           ) ??
           false;
 
-      if (!shouldContinue || validStocks.isEmpty) {
+      if (!shouldContinue || validProducts.isEmpty) {
         return;
       }
     }
@@ -348,7 +309,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     final Map<String, dynamic>? result = await showDialog(
       context: context,
       builder: (context) =>
-          ConfirmBarcodePrintModal(selectedStocks: validStocks),
+          ConfirmBarcodePrintModal(selectedProducts: validProducts),
     );
 
     if (result != null &&
@@ -363,10 +324,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     }
   }
 
-  void _handlePrintSingle(ListStockModelData stock) async {
-    debugPrint('🖨️ PRINT single: ${stock.productName}');
+  void _handlePrintSingle(GetProduct product) async {
+    debugPrint('🖨️ PRINT single: ${product.productName}');
 
-    if (stock.barCode == null || stock.barCode!.trim().isEmpty) {
+    if (product.barcode == null || product.barcode!.trim().isEmpty) {
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -386,7 +347,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
     final Map<String, dynamic>? result = await showDialog(
       context: context,
-      builder: (context) => ConfirmBarcodePrintModal(selectedStocks: [stock]),
+      builder: (context) => ConfirmBarcodePrintModal(selectedProducts: [product]),
     );
 
     if (result != null &&
@@ -453,10 +414,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
   Widget _buildTableCell(String text, {Color? textColor, Color? bgColor}) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(4.0),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           decoration: BoxDecoration(
             color: bgColor ?? Colors.transparent,
             borderRadius: BorderRadius.circular(6),
@@ -464,6 +425,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           child: Text(
             text,
             textAlign: TextAlign.center,
+            overflow: TextOverflow.visible,
+            softWrap: false,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -510,21 +473,39 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   ),
                   Row(
                     children: [
-                      // ── NEW: Print Selected button, shown when items are selected ──
-                      if (_selectedStockKeys.isNotEmpty)
+                      if (_selectedProductKeys.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(right: 10),
                           child: CustomRoundButton(
                             title:
-                                "Print Selected (${_selectedStockKeys.length})",
+                                "Print Selected (${_selectedProductKeys.length})",
                             fct: () {
                               final selected =
-                                  _selectedStocksByKey.values.toList();
+                                  _selectedProductsByKey.values.toList();
                               _handlePrintSelected(selected);
                             },
                             fontSize: 12,
                             height: 45,
                             width: 180,
+                          ),
+                        ),
+                      if (_selectedProductKeys.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: CustomRoundButton(
+                            title: "Clear Selected",
+                            fct: () {
+                              setState(() {
+                                _selectedProductKeys.clear();
+                                _selectedProductsByKey.clear();
+                              });
+                            },
+                            fontSize: 12,
+                            height: 45,
+                            width: 150,
+                            boxColor: Colors.white,
+                            textColor: ColorManager.kPrimaryColor,
+                            borderColor: ColorManager.kPrimaryColor,
                           ),
                         ),
                       // CustomRoundButton(
@@ -566,7 +547,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                   categoryController.text =
                                       newValue ?? "All Categories";
                                 });
-                                searchStocks();
+                                searchProducts(1);
                               },
                               displayText: (category) => category,
                               searchController: categorySearchController,
@@ -590,7 +571,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               child: TextField(
                                 controller: productNameController,
                                 onChanged: (value) {
-                                  searchStocks();
+                                  searchProducts(1);
                                 },
                                 decoration: InputDecoration(
                                   hintText: 'Product Name',
@@ -627,7 +608,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               child: TextField(
                                 controller: barcodeController,
                                 onChanged: (value) {
-                                  searchStocks();
+                                  searchProducts(1);
                                 },
                                 decoration: InputDecoration(
                                   hintText: 'Barcode',
@@ -674,39 +655,39 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   children: [
                     Expanded(
                       child: initLoading ||
-                              Provider.of<StockProvider>(context, listen: true)
-                                  .stockIsLoading
+                              Provider.of<LocalProductProvider>(context,
+                                      listen: true)
+                                  .isLoading
                           ? const Center(
                               child: CircularProgressIndicator.adaptive())
-                          : Consumer<StockProvider>(
-                              builder: (context, stockProvider, child) {
-                                List<ListStockModelData>?
-                                    listStockModelDataList =
-                                    stockProvider.listStockModelDataList;
+                          : Consumer<LocalProductProvider>(
+                              builder: (context, gridProvider, child) {
+                                List<GetProduct>? listProductModelDataList =
+                                    gridProvider.paginatedProducts;
 
-                                if (listStockModelDataList == null ||
-                                    listStockModelDataList.isEmpty) {
+                                if (listProductModelDataList.isEmpty) {
                                   return const Center(
-                                      child: Text("No stock data available"));
+                                      child: Text("No product data available"));
                                 }
 
                                 // column widths — shared between header and body
                                 const Map<int, TableColumnWidth> colWidths = {
-                                  0: FixedColumnWidth(48), // Checkbox
-                                  1: FlexColumnWidth(2.0), // Product Name
-                                  2: FlexColumnWidth(1.3), // Barcode
-                                  3: FlexColumnWidth(1.3), // Category
-                                  4: FlexColumnWidth(0.7), // Qty
-                                  5: FlexColumnWidth(1.0), // Price
-                                  6: FlexColumnWidth(1.0), // MRP
-                                  7: FlexColumnWidth(1.1), // SKU
-                                  8: FlexColumnWidth(0.8), // Action
+                                  0: FixedColumnWidth(55), // No
+                                  1: FixedColumnWidth(48), // Checkbox
+                                  2: FlexColumnWidth(2.0), // Product Name
+                                  3: FlexColumnWidth(1.3), // Barcode
+                                  4: FlexColumnWidth(1.3), // Category
+                                  5: FlexColumnWidth(0.7), // Qty
+                                  6: FlexColumnWidth(1.0), // Price
+                                  7: FlexColumnWidth(1.0), // MRP
+                                  8: FlexColumnWidth(1.1), // SKU
+                                  9: FlexColumnWidth(0.8), // Action
                                 };
 
                                 final allSelected =
-                                    listStockModelDataList.isNotEmpty &&
-                                        listStockModelDataList.every(
-                                            (stock) => _isStockSelected(stock));
+                                    listProductModelDataList.isNotEmpty &&
+                                        listProductModelDataList.every((product) =>
+                                            _isProductSelected(product));
 
                                 return BuildBoxShadowContainer(
                                   margin: const EdgeInsets.only(top: 5),
@@ -734,44 +715,45 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                           defaultVerticalAlignment:
                                               TableCellVerticalAlignment.middle,
                                           children: [
-                                            TableRow(
-                                              children: [
-                                                // Select-all checkbox
-                                                Center(
-                                                  child: Checkbox(
-                                                    value: allSelected,
-                                                    onChanged: (val) {
-                                                      setState(() {
-                                                        if (val == true) {
-                                                          for (final stock
-                                                              in listStockModelDataList) {
-                                                            _setStockSelected(
-                                                                stock, true);
-                                                          }
-                                                        } else {
-                                                          for (final stock
-                                                              in listStockModelDataList) {
-                                                            _setStockSelected(
-                                                                stock, false);
-                                                          }
+                                          TableRow(
+                                            children: [
+                                              _buildTableHeader('No'),
+                                              // Select-all checkbox
+                                              Center(
+                                                child: Checkbox(
+                                                  value: allSelected,
+                                                  onChanged: (val) {
+                                                    setState(() {
+                                                      if (val == true) {
+                                                        for (final product
+                                                            in listProductModelDataList) {
+                                                          _setProductSelected(
+                                                              product, true);
                                                         }
-                                                      });
-                                                    },
-                                                    activeColor: ColorManager
-                                                        .kPrimaryColor,
-                                                  ),
+                                                      } else {
+                                                        for (final product
+                                                            in listProductModelDataList) {
+                                                          _setProductSelected(
+                                                              product, false);
+                                                        }
+                                                      }
+                                                    });
+                                                  },
+                                                  activeColor: ColorManager
+                                                      .kPrimaryColor,
                                                 ),
-                                                _buildTableHeader(
-                                                    'Product Name'),
-                                                _buildTableHeader('Barcode'),
-                                                _buildTableHeader('Category'),
-                                                _buildTableHeader('Qty'),
-                                                _buildTableHeader('Price'),
-                                                _buildTableHeader('MRP'),
-                                                _buildTableHeader('SKU'),
-                                                _buildTableHeader('Action'),
-                                              ],
-                                            ),
+                                              ),
+                                              _buildTableHeader(
+                                                  'Product Name'),
+                                              _buildTableHeader('Barcode'),
+                                              _buildTableHeader('Category'),
+                                              _buildTableHeader('Qty'),
+                                              _buildTableHeader('Price'),
+                                              _buildTableHeader('MRP'),
+                                              _buildTableHeader('SKU'),
+                                              _buildTableHeader('Action'),
+                                            ],
+                                          ),
                                           ],
                                         ),
                                       ),
@@ -801,14 +783,19 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                                     TableCellVerticalAlignment
                                                         .middle,
                                                 children: [
-                                                  ...listStockModelDataList
+                                                  ...listProductModelDataList
                                                       .asMap()
                                                       .entries
                                                       .map((entry) {
                                                     final int index = entry.key;
-                                                    final stock = entry.value;
+                                                    final product = entry.value;
                                                     final isSelected =
-                                                        _isStockSelected(stock);
+                                                        _isProductSelected(product);
+                                                    
+                                                    // Calculate serial number based on pagination
+                                                    final serialNumber =
+                                                        gridProvider.paginationFrom +
+                                                            index;
 
                                                     return TableRow(
                                                       decoration: BoxDecoration(
@@ -824,14 +811,16 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                                                         0.1),
                                                       ),
                                                       children: [
+                                                        _buildTableCell(
+                                                            serialNumber.toString()),
                                                         // Row checkbox
                                                         Center(
                                                           child: Checkbox(
                                                             value: isSelected,
                                                             onChanged: (val) {
                                                               setState(() {
-                                                                _setStockSelected(
-                                                                  stock,
+                                                                _setProductSelected(
+                                                                  product,
                                                                   val == true,
                                                                 );
                                                               });
@@ -842,42 +831,68 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                                           ),
                                                         ),
                                                         _buildTableCell(
-                                                            stock.productName ??
+                                                            product.productName ??
                                                                 ''),
                                                         _buildTableCell(
-                                                            stock.barCode ??
+                                                            product.barcode ??
                                                                 'N/A'),
-                                                        _buildTableCell(stock
-                                                                .categoryName ??
+                                                        _buildTableCell(product
+                                                                .category?.name ??
                                                             'N/A'),
-                                                        _buildTableCell(stock
-                                                                .qty
-                                                                ?.toString() ??
+                                                        _buildTableCell(product
+                                                                .numberOfProductsAvailable ??
                                                             'N/A'),
                                                         _buildTableCell(
-                                                            stock.retailPrice ??
+                                                            product.price?.price?.toString() ??
                                                                 'N/A'),
                                                         _buildTableCell(
-                                                            stock.mrp ?? 'N/A'),
+                                                            product.mrp?.toString() ?? 'N/A'),
                                                         _buildTableCell(
-                                                            stock.mrp ?? 'N/A'),
+                                                            product.sku ?? 'N/A'),
                                                         // ── Print icon ──
                                                         Center(
-                                                          child: IconButton(
-                                                            icon: const Icon(
-                                                                Icons.print,
-                                                                size: 18,
-                                                                color: Colors
-                                                                    .blue),
-                                                            onPressed: () =>
-                                                                _handlePrintSingle(
-                                                                    stock),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            constraints:
-                                                                const BoxConstraints(),
-                                                            tooltip:
-                                                                "Print Barcode",
+                                                          child: Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              IconButton(
+                                                                icon: const Icon(
+                                                                    Icons.visibility,
+                                                                    size: 18,
+                                                                    color: Colors
+                                                                        .green),
+                                                                onPressed: () =>
+                                                                    _showProductDetails(
+                                                                        product),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                constraints:
+                                                                    const BoxConstraints(),
+                                                                tooltip:
+                                                                    "View Details",
+                                                              ),
+                                                              const SizedBox(
+                                                                  width: 8),
+                                                              IconButton(
+                                                                icon: const Icon(
+                                                                    Icons.print,
+                                                                    size: 18,
+                                                                    color: Colors
+                                                                        .blue),
+                                                                onPressed: () =>
+                                                                    _handlePrintSingle(
+                                                                        product),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                constraints:
+                                                                    const BoxConstraints(),
+                                                                tooltip:
+                                                                    "Print Barcode",
+                                                              ),
+                                                            ],
                                                           ),
                                                         ),
                                                       ],
@@ -896,18 +911,25 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                             ),
                     ),
                     const SizedBox(height: 10),
-                    // ── ORIGINAL pagination — untouched ──
-                    PaginationControl(
-                      currentPage:
-                          Provider.of<StockProvider>(context, listen: true)
-                              .stockCurrentPage,
-                      totalPages:
-                          Provider.of<StockProvider>(context, listen: true)
-                              .stockTotalPages,
-                      onPageChanged: (int page) {
-                        Provider.of<StockProvider>(context, listen: false)
-                            .goToStockPage(page);
-                      },
+                    // Pagination Always at Bottom
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0, vertical: 10),
+                      child: Consumer<LocalProductProvider>(
+                        builder: (context, productProvider, child) {
+                          if (productProvider.paginatedProducts.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return PaginationControl(
+                            currentPage: productProvider.currentPage,
+                            totalPages: productProvider.totalPages,
+                            onPageChanged: (int page) {
+                              searchProducts(page);
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),

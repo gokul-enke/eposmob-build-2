@@ -66,6 +66,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'arabic_english_table_headers', 'name': 'Arabic&English 2'},
     {'id': 'arabic_and_english_3', 'name': 'Arabic&English 3'},
     {'id': 'supermarket', 'name': 'Supermarket'},
+    {'id': 'supermarket2', 'name': 'Supermarket 2'},
     {'id': 'bilingual', 'name': 'Bilingual'},
   ];
 
@@ -124,6 +125,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'Clean and minimal receipt layout';
       case 'supermarket':
         return 'Modern & clean design with enhanced spacing';
+      case 'supermarket2':
+        return 'Modern with Delivery Icon';
       case 'bilingual':
         return 'Bilingual layout with English and Arabic support';
       default:
