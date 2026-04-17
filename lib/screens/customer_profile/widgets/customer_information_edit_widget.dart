@@ -326,6 +326,39 @@ class _CustomerInformationEditWidgetState
     );
   }
 
+  String _normalizedName() {
+    final fullName = '${firstNameController.text} ${lastNameController.text}'
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ');
+    return fullName;
+  }
+
+  String? _changedText(String? original, String current) {
+    final normalizedOriginal = (original ?? '').trim();
+    final normalizedCurrent = current.trim();
+    return normalizedOriginal == normalizedCurrent ? null : normalizedCurrent;
+  }
+
+  String? _changedOptionalText(String? original, String? current) {
+    final normalizedOriginal = (original ?? '').trim();
+    final normalizedCurrent = (current ?? '').trim();
+    return normalizedOriginal == normalizedCurrent ? null : normalizedCurrent;
+  }
+
+  String? _changedBalanceText(String? original, String? current) {
+    final normalizedOriginal = (original ?? '').trim();
+    final normalizedCurrent = (current ?? '').trim();
+
+    final originalNumber = double.tryParse(normalizedOriginal);
+    final currentNumber = double.tryParse(normalizedCurrent);
+
+    if (originalNumber != null && currentNumber != null) {
+      return originalNumber == currentNumber ? null : normalizedCurrent;
+    }
+
+    return normalizedOriginal == normalizedCurrent ? null : normalizedCurrent;
+  }
+
   void _updateProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -370,27 +403,83 @@ class _CustomerInformationEditWidgetState
       }
 
       final signedBalanceText = _getSignedBalanceText();
+      final updatedName = _normalizedName();
+      final originalBalanceText =
+          widget.customer?.balance?.toStringAsFixed(2) ?? '';
+      final updatedDob = selectedDate?.toIso8601String().split('T')[0] ?? '';
+
+      final changedPhone =
+          _changedText(widget.customer?.phone, phoneController.text);
+      final changedName = _changedText(widget.customer?.name, updatedName);
+      final changedEmail =
+          _changedText(widget.customer?.email, emailController.text);
+      final changedAltPhone =
+          _changedOptionalText(widget.customer?.altPhone, altPhoneController.text);
+      final changedGender =
+          _changedOptionalText(widget.customer?.gender, selectedGender);
+      final changedDob = _changedOptionalText(widget.customer?.dob, updatedDob);
+      final changedBalance =
+          _changedBalanceText(originalBalanceText, signedBalanceText ?? '');
+      final changedPaymentType = _changedOptionalText(
+          widget.customer?.paymentType?.toLowerCase(), paymentTypeValue);
+      final changedCustomerType = _changedOptionalText(
+          widget.customer?.customerType ?? 'B2C', customerTypeToSend);
+
+      String? originalCrNumber;
+      String? originalVatNumber;
+      if (widget.customer?.kyc != null) {
+        for (final item in widget.customer!.kyc!) {
+          final key = (item.key ?? '').toUpperCase();
+          if (key == 'CR NUMBER') {
+            originalCrNumber = item.value;
+          } else if (key == 'VAT NUMBER') {
+            originalVatNumber = item.value;
+          }
+        }
+      }
+
+      final changedCrNumber =
+          _changedOptionalText(originalCrNumber, crToSend);
+      final changedVatNumber =
+          _changedOptionalText(originalVatNumber, vatToSend);
+
+      final hasChanges = [
+        changedPhone,
+        changedName,
+        changedEmail,
+        changedAltPhone,
+        changedGender,
+        changedDob,
+        changedBalance,
+        changedPaymentType,
+        changedCustomerType,
+        changedCrNumber,
+        changedVatNumber,
+      ].any((value) => value != null);
+
+      if (!hasChanges) {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        showScaffold(context: context, message: "No changes to update");
+        return;
+      }
 
       final response = await customerProvider.updateCustomer(
         accessToken,
-        phoneController.text,
-        "${firstNameController.text} ${lastNameController.text}",
-        emailController.text,
-        "", // address - removed since not in API
-        "", "", "", "", // pincode, city, state, country
         customerId,
         context,
-        altPhone: altPhoneController.text,
-        gender: selectedGender,
-        dob: selectedDate
-            ?.toIso8601String()
-            .split('T')[0], // Format as YYYY-MM-DD
-        storeId: widget.customer?.storeId ?? 1,
-        balance: signedBalanceText,
-        paymentType: paymentTypeValue,
-        customerType: customerTypeToSend,
-        crNumber: crToSend,
-        vatNumber: vatToSend,
+        phone: changedPhone,
+        name: changedName,
+        email: changedEmail,
+        altPhone: changedAltPhone,
+        gender: changedGender,
+        dob: changedDob,
+        balance: changedBalance,
+        paymentType: changedPaymentType,
+        customerType: changedCustomerType,
+        crNumber: changedCrNumber,
+        vatNumber: changedVatNumber,
       );
 
       // Close loading dialog - ensure it's properly closed
@@ -412,15 +501,14 @@ class _CustomerInformationEditWidgetState
           // Create a new customer object with updated data
           final updatedCustomer = CustomerListModelData(
             id: widget.customer!.id,
-            name: "${firstNameController.text} ${lastNameController.text}",
+            name: updatedName,
             email: emailController.text,
             phone: phoneController.text,
             altPhone: altPhoneController.text.isNotEmpty
                 ? altPhoneController.text
                 : widget.customer!.altPhone,
             gender: selectedGender ?? widget.customer!.gender,
-            dob: selectedDate?.toIso8601String().split('T')[0] ??
-                widget.customer!.dob,
+            dob: updatedDob.isNotEmpty ? updatedDob : widget.customer!.dob,
             profileImage: widget.customer!.profileImage,
             storeId: widget.customer!.storeId,
             userId: widget.customer!.userId,
