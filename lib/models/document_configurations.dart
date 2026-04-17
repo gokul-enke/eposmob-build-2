@@ -47,6 +47,8 @@ class DocumentConfig {
   final String? type;
   final dynamic logo; // Can be null
   final int? showLogo;
+  final dynamic icon; // Can be null
+  final int? showIcon;
   final String? numberPrefix;
   final dynamic discountMethod; // Can be null
   final String? header;
@@ -76,6 +78,8 @@ class DocumentConfig {
     this.type,
     this.logo,
     this.showLogo,
+    this.icon,
+    this.showIcon,
     this.numberPrefix,
     this.discountMethod,
     this.header,
@@ -134,6 +138,8 @@ class DocumentConfig {
       type: json["type"],
       logo: json["logo"],
       showLogo: json["show_logo"],
+      icon: json["icon"],
+      showIcon: json["show_icon"],
       numberPrefix: json["number_prefix"],
       discountMethod: json["discount_method"],
       header: json["header"],
@@ -165,6 +171,8 @@ class DocumentConfig {
         "type": type,
         "logo": logo,
         "show_logo": showLogo,
+        "icon": icon,
+        "show_icon": showIcon,
         "number_prefix": numberPrefix,
         "discount_method": discountMethod,
         "header": header,

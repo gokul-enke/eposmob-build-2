@@ -1836,8 +1836,8 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     }
 
     // Delivery Icon + Phone Row
-    final bool showDeliveryIcon =
-        displayConfig?['showDeliveryIcon']?.visible == true;
+    final billDocConfig = params.billDocumentConfig;
+    final bool showDeliveryIcon = billDocConfig.showIcon == 1;
     final bool showDeliveryPhone =
         displayConfig?['showDeliveryPhone']?.visible == true;
 
@@ -1846,8 +1846,7 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
 
       ui.Image? deliveryIcon;
       if (showDeliveryIcon) {
-        final iconUrl =
-            displayConfig?['showDeliveryIcon']?.value as String?;
+        final iconUrl = billDocConfig.icon?.toString();
         if (iconUrl != null && iconUrl.isNotEmpty) {
           try {
             deliveryIcon = await _fetchNetworkUiImage(iconUrl);
