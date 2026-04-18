@@ -1866,15 +1866,19 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
       }
 
       if (deliveryIcon != null && deliveryPhone.isNotEmpty) {
-        // Show icon + phone side by side
+          // Show a large icon with the phone number centered below it.
         rows.add(DeliveryInfoRow(
           icon: deliveryIcon,
           phone: deliveryPhone,
-          iconSize: 40.0,
-          scale: 0.85,
+            iconSize: params.is58mm ? 110.0 : 150.0,
+            scale: params.is58mm ? 1.0 : 1.1,
         ));
       } else if (deliveryIcon != null) {
-        rows.add(ImageRow(deliveryIcon, width: 40, height: 40));
+          rows.add(ImageRow(
+            deliveryIcon,
+            width: params.is58mm ? 110 : 150,
+            height: params.is58mm ? 110 : 150,
+          ));
       } else if (deliveryPhone.isNotEmpty) {
         rows.add(TextRow(deliveryPhone, scale: 0.85));
       }
@@ -2588,28 +2592,20 @@ class DeliveryInfoRow extends ReceiptRow {
   final String phone;
   final double iconSize;
   final double scale;
+  final double gap;
 
   DeliveryInfoRow({
     required this.icon,
     required this.phone,
     this.iconSize = 40.0,
     this.scale = 0.85,
+    this.gap = 10.0,
   });
 
   @override
   double calculateHeight(
       double width, double fontSize, TextDirection textDirection) {
     final scaledFontSize = fontSize * scale;
-    return iconSize > scaledFontSize ? iconSize + 10 : scaledFontSize + 10;
-  }
-
-  @override
-  void render(Canvas canvas, double y, double width, double fontSize,
-      TextDirection textDirection) {
-    final scaledFontSize = fontSize * scale;
-    const double gap = 8.0;
-
-    // Measure phone text
     final phonePainter = TextPainter(
       text: TextSpan(
         text: phone,
@@ -2617,27 +2613,49 @@ class DeliveryInfoRow extends ReceiptRow {
           color: Colors.black,
           fontSize: scaledFontSize,
           fontWeight: FontWeight.bold,
+          fontFamily: ArabicPrinterHelper.fontFamily,
         ),
       ),
       textDirection: TextDirection.ltr,
-      textAlign: TextAlign.left,
+      textAlign: TextAlign.center,
+      maxLines: 3,
     )..layout(maxWidth: width);
 
-    // Total content width = icon + gap + phone text
-    final totalWidth = iconSize + gap + phonePainter.width;
-    final startX = (width - totalWidth) / 2;
+    return iconSize + gap + phonePainter.height;
+  }
 
-    // Draw icon
-    final iconY = y + 5 + (phonePainter.height - iconSize).abs() / 2;
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final scaledFontSize = fontSize * scale;
+
+    final phonePainter = TextPainter(
+      text: TextSpan(
+        text: phone,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: scaledFontSize,
+          fontWeight: FontWeight.bold,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+      maxLines: 3,
+    )..layout(maxWidth: width);
+
+    final iconX = (width - iconSize) / 2;
+    final textX = (width - phonePainter.width) / 2;
+
+    // Draw the icon centered and allow the target size to dominate even when the source image is small.
     canvas.drawImageRect(
       icon,
       Rect.fromLTWH(0, 0, icon.width.toDouble(), icon.height.toDouble()),
-      Rect.fromLTWH(startX, iconY, iconSize, iconSize),
+      Rect.fromLTWH(iconX, y, iconSize, iconSize),
       Paint(),
     );
 
-    // Draw phone text vertically centered with icon
-    final textY = y + 5 + (iconSize - phonePainter.height).abs() / 2;
-    phonePainter.paint(canvas, Offset(startX + iconSize + gap, textY));
+    final textY = y + iconSize + gap;
+    phonePainter.paint(canvas, Offset(textX, textY));
   }
 }
