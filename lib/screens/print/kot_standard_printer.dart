@@ -62,6 +62,17 @@ class KotStandardPrinter {
     }
   }
 
+  String _resolveKotHeader(String fallbackHeader, String kotType) {
+    switch (kotType.trim().toLowerCase()) {
+      case 'cancel':
+        return 'CANCEL KOT';
+      case 'add_on':
+        return 'ADD-ON KOT';
+      default:
+        return fallbackHeader;
+    }
+  }
+
   /// Generate and print/open KOT PDF using document configuration
   Future<void> generateAndPrintKotPDF({
     required String orderNumber,
@@ -71,6 +82,7 @@ class KotStandardPrinter {
     required String orderTime,
     required List<Map<String, dynamic>> items,
     String? comment,
+    String kotType = 'standard',
     required String selectedPaperSize,
     DocumentConfig? kotDocumentConfig,
   }) async {
@@ -158,6 +170,7 @@ class KotStandardPrinter {
               : (kotDocumentConfig?.header?.isNotEmpty == true
                   ? kotDocumentConfig!.header!
                   : 'KITCHEN ORDER');
+        final resolvedHeaderText = _resolveKotHeader(headerText, kotType);
 
       final orderLabel =
           (displayConfig?['showOrderNumber']?.value as String?)?.isNotEmpty ==
@@ -272,7 +285,7 @@ class KotStandardPrinter {
                         border: pw.Border.all(width: 2),
                         borderRadius: pw.BorderRadius.circular(6),
                       ),
-                      child: pw.Text(headerText, style: headerStyle),
+                      child: pw.Text(resolvedHeaderText, style: headerStyle),
                     ),
                   ),
                 pw.SizedBox(height: isA5 ? 10 : 15),
