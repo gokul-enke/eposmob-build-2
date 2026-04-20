@@ -335,7 +335,7 @@ class BarcodePrinterService {
           if (showStoreName && storeName.isNotEmpty) {
             bytes.addAll(generator.text(
               _sanitizeForThermal(storeName),
-              styles: PosStyles(
+              styles: const PosStyles(
                 align: PosAlign.center,
                 bold: true,
                 height: PosTextSize.size1,
@@ -346,7 +346,7 @@ class BarcodePrinterService {
           if (showProductName && productName.isNotEmpty) {
             bytes.addAll(generator.text(
               productName,
-              styles: PosStyles(
+              styles: const PosStyles(
                 align: PosAlign.center,
                 bold: true,
                 height: PosTextSize.size1,
@@ -357,7 +357,7 @@ class BarcodePrinterService {
           if (showPrice) {
             bytes.addAll(generator.text(
               '$currency $priceToShow',
-              styles: PosStyles(
+              styles: const PosStyles(
                 align: PosAlign.center,
                 bold: true,
                 height: PosTextSize.size1,
@@ -388,7 +388,7 @@ class BarcodePrinterService {
             if (showBarcodeNumber) {
               bytes.addAll(generator.text(
                 _sanitizeForThermal(barcodeValue),
-                styles: PosStyles(align: PosAlign.center),
+                styles: const PosStyles(align: PosAlign.center),
               ));
             }
           }
@@ -396,7 +396,7 @@ class BarcodePrinterService {
           if (dateLine.isNotEmpty) {
             bytes.addAll(generator.text(
               _sanitizeForThermal(dateLine),
-              styles: PosStyles(
+              styles: const PosStyles(
                 align: PosAlign.center,
                 bold: true,
                 height: PosTextSize.size1,
@@ -711,11 +711,10 @@ class BarcodePrinterService {
       final file = File('${output.path}/barcodes_$timestamp.pdf');
       await file.writeAsBytes(await pdf.save());
 
-      debugPrint("Barcode PDF saved to: ${file.path}");
+      debugPrint('[BarcodePrint] PDF saved to: ${file.path} (${(await file.length())} bytes)');
 
       hideLoadingOverlay();
 
-      // Open the PDF (same pattern as DailyCloseStandardPrinter)
       if (Platform.isWindows) {
         await _handleWindowsPdf(file);
       } else {
@@ -725,7 +724,7 @@ class BarcodePrinterService {
             await _sharePdfFallback(file);
           } else {
             if (context.mounted) {
-              showScaffold(context: context, message: "Barcode PDF opened");
+              showScaffold(context: context, message: 'Barcode PDF opened');
             }
           }
         } catch (e) {
@@ -733,7 +732,7 @@ class BarcodePrinterService {
         }
       }
 
-      debugPrint("Barcode PDF generation complete!");
+      debugPrint('Barcode PDF generation complete!');
       debugPrint('========== BARCODE PRINT DEBUG END ==========');
     } catch (e, stackTrace) {
       hideLoadingOverlay();
@@ -887,25 +886,98 @@ class BarcodePrinterService {
     );
   }
 
-  // Handle Windows PDF opening
+  // Handle Windows PDF printing — tries silent direct print first, then falls back to dialog
   Future<void> _handleWindowsPdf(File file) async {
-    try {
-      final result = await Process.run('cmd', ['/c', 'start', '', file.path]);
-      if (result.exitCode == 0) {
-        if (context.mounted) {
-          showScaffold(context: context, message: "Barcode PDF opened");
-        }
-      } else {
-        if (context.mounted) {
-          showScaffold(context: context, message: "PDF saved: ${file.path}");
+    debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf START ──');
+
+    // Normalize path to use backslashes (Documents dir returns mixed slashes on Windows)
+    final winPath = file.path.replaceAll('/', '\\');
+    debugPrint('[BarcodePrint:Windows] PDF path (normalized): $winPath');
+    debugPrint('[BarcodePrint:Windows] PDF exists: ${await file.exists()}');
+    debugPrint('[BarcodePrint:Windows] PDF size: ${await file.length()} bytes');
+
+    final savedPrinter = await _loadSelectedBarcodePrinter();
+    final printerName = savedPrinter?.deviceName?.trim() ?? '';
+    debugPrint('[BarcodePrint:Windows] Target printer: "${printerName.isEmpty ? "(none saved)" : printerName}"');
+
+    if (printerName.isNotEmpty) {
+      // Strategy 1: SumatraPDF — free PDF viewer with excellent CLI, common in business setups
+      // Command: SumatraPDF.exe -print-to "printer name" -silent file.pdf
+      final sumatraPaths = [
+        r'C:\Program Files\SumatraPDF\SumatraPDF.exe',
+        r'C:\Program Files (x86)\SumatraPDF\SumatraPDF.exe',
+        '${Platform.environment['LOCALAPPDATA'] ?? ''}/SumatraPDF/SumatraPDF.exe',
+        '${Platform.environment['APPDATA'] ?? ''}/SumatraPDF/SumatraPDF.exe',
+      ];
+      debugPrint('[BarcodePrint:Windows] Strategy 1: Trying SumatraPDF...');
+      for (final path in sumatraPaths) {
+        final normalized = path.replaceAll('/', '\\');
+        debugPrint('[BarcodePrint:Windows]   Checking: $normalized');
+        if (await File(normalized).exists()) {
+          debugPrint('[BarcodePrint:Windows]   ✅ Found SumatraPDF at: $normalized');
+          final result = await Process.run(normalized, ['-print-to', printerName, '-silent', winPath]);
+          debugPrint('[BarcodePrint:Windows]   SumatraPDF exit code: ${result.exitCode}');
+          if ((result.stderr as String).isNotEmpty) debugPrint('[BarcodePrint:Windows]   SumatraPDF stderr: ${result.stderr}');
+          if (result.exitCode == 0) {
+            if (context.mounted) showScaffold(context: context, message: 'Sent to printer: $printerName');
+            debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (SumatraPDF) ──');
+            return;
+          }
+          debugPrint('[BarcodePrint:Windows]   SumatraPDF failed, trying next strategy...');
+          break;
         }
       }
-    } catch (e) {
-      debugPrint("Error opening PDF on Windows: $e");
-      if (context.mounted) {
-        showScaffold(context: context, message: "PDF saved: ${file.path}");
+      debugPrint('[BarcodePrint:Windows]   SumatraPDF not found.');
+
+      // Strategy 2: Adobe Reader / Acrobat — common enterprise PDF viewer
+      // Command: AcroRd32.exe /t "file.pdf" "printer name"
+      final adobePaths = [
+        r'C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe',
+        r'C:\Program Files\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe',
+        r'C:\Program Files (x86)\Adobe\Acrobat DC\Acrobat\Acrobat.exe',
+        r'C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe',
+        r'C:\Program Files (x86)\Adobe\Reader 11.0\Reader\AcroRd32.exe',
+      ];
+      debugPrint('[BarcodePrint:Windows] Strategy 2: Trying Adobe Reader/Acrobat...');
+      for (final path in adobePaths) {
+        debugPrint('[BarcodePrint:Windows]   Checking: $path');
+        if (await File(path).exists()) {
+          debugPrint('[BarcodePrint:Windows]   ✅ Found Adobe at: $path');
+          final result = await Process.run(path, ['/t', winPath, printerName]);
+          debugPrint('[BarcodePrint:Windows]   Adobe exit code: ${result.exitCode}');
+          if ((result.stderr as String).isNotEmpty) debugPrint('[BarcodePrint:Windows]   Adobe stderr: ${result.stderr}');
+          if (result.exitCode == 0) {
+            if (context.mounted) showScaffold(context: context, message: 'Sent to printer: $printerName');
+            debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (Adobe) ──');
+            return;
+          }
+          debugPrint('[BarcodePrint:Windows]   Adobe failed, trying next strategy...');
+          break;
+        }
       }
+      debugPrint('[BarcodePrint:Windows]   Adobe Reader/Acrobat not found.');
     }
+
+    // Strategy 3: Print dialog via Windows shell Print verb
+    // Edge (always on Windows 10/11) handles this and shows a print dialog
+    debugPrint('[BarcodePrint:Windows] Strategy 3: Opening print dialog via shell Print verb...');
+    final psCmd = "Start-Process -FilePath '$winPath' -Verb Print";
+    debugPrint('[BarcodePrint:Windows]   PowerShell: $psCmd');
+    final dialogResult = await Process.run('powershell', ['-command', psCmd]);
+    debugPrint('[BarcodePrint:Windows]   Print dialog exit code: ${dialogResult.exitCode}');
+    if ((dialogResult.stderr as String).isNotEmpty) debugPrint('[BarcodePrint:Windows]   Print dialog stderr: ${dialogResult.stderr}');
+
+    if (dialogResult.exitCode == 0) {
+      if (context.mounted) showScaffold(context: context, message: 'Print dialog opened');
+      debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (dialog) ──');
+      return;
+    }
+
+    // Strategy 4: Last resort — just open the file in the default PDF viewer
+    debugPrint('[BarcodePrint:Windows] ⚠️ All print strategies failed. Falling back to open.');
+    await Process.run('cmd', ['/c', 'start', '', winPath]);
+    if (context.mounted) showScaffold(context: context, message: 'Barcode PDF opened');
+    debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (open fallback) ──');
   }
 
   // Fallback to sharing PDF

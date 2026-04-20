@@ -88,7 +88,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   url_launcher: ^6.2.5
-  # printing: ^5.9.3  # Commented out due to Windows build issues
+  # printing: ^5.9.3  # Blocked: printing needs image ^4.x, esc_pos_utils needs image ^3.x — irreconcilable conflict
   internet_connection_checker_plus: ^2.8.0
   virtual_keyboard_custom_layout: ^1.0.1
   whatsapp_bot_flutter: ^2.1.1
