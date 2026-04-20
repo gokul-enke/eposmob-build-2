@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -22,12 +26,83 @@ class CustomerOrdersWidget extends StatefulWidget {
 }
 
 class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
-  late List<CustomerOrder> orders;
+  final SalesProvider _salesProvider = SalesProvider();
+  List<ListOrderModelData> orders = [];
+  bool isLoading = false;
+  String? errorMessage;
+  int currentPage = 1;
+  int totalPages = 1;
 
   @override
   void initState() {
     super.initState();
-    orders = widget.customer.orders ?? [];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadOrders(page: 1, showLoader: true);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomerOrdersWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.customer.id != widget.customer.id) {
+      _loadOrders(page: 1, showLoader: true);
+    }
+  }
+
+  Future<void> _loadOrders({required int page, bool showLoader = false}) async {
+    final customerId = widget.customer.id;
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+
+    if (customerId == null || accessToken == null || accessToken.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        orders = [];
+        errorMessage = customerId == null
+            ? 'Customer ID is not available.'
+            : 'Please login again.';
+      });
+      return;
+    }
+
+    if (showLoader && mounted) {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+    }
+
+    try {
+      await _salesProvider.fetchOrders(
+        accessToken: accessToken,
+        customerId: customerId,
+        page: page,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        orders = List<ListOrderModelData>.from(_salesProvider.orders);
+        currentPage = _salesProvider.currentPage;
+        totalPages = _salesProvider.totalPages;
+        isLoading = false;
+        errorMessage = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        orders = [];
+        errorMessage = 'Failed to load orders';
+      });
+    }
+  }
+
+  void _onPageChanged(int page) {
+    if (page < 1 || page > totalPages || page == currentPage) {
+      return;
+    }
+    _loadOrders(page: page, showLoader: true);
   }
 
   @override
@@ -43,15 +118,28 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
           children: [
             _buildHeader(),
             Expanded(
-              child: orders.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                      ? _buildErrorState()
+                      : orders.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: orders.length,
                       itemBuilder: (context, index) =>
                           _buildOrderCard(orders[index]),
                     ),
             ),
+            if (!isLoading && orders.isNotEmpty && totalPages > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: PaginationControl(
+                  currentPage: currentPage,
+                  totalPages: totalPages,
+                  onPageChanged: _onPageChanged,
+                ),
+              ),
           ],
         ),
       ),
@@ -119,7 +207,43 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
     );
   }
 
-  Widget _buildOrderCard(CustomerOrder order) {
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline,
+                size: 50, color: ColorManager.kRed),
+            const SizedBox(height: 16),
+            Text(
+              'Error Loading Orders',
+              style: buildCustomStyle(FontWeightManager.semiBold,
+                  FontSize.s18, 0, ColorManager.kTitleTextColor),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage ?? 'An unknown error occurred.',
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0, ColorManager.kGreyColor),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _loadOrders(page: currentPage, showLoader: true),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: ColorManager.kPrimaryColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(ListOrderModelData order) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -151,7 +275,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '$currency${order.grandTotal ?? '0.00'}',
+                    '$currency${_getGrandTotal(order)}',
                     style: buildCustomStyle(FontWeightManager.bold,
                         FontSize.s14, 0, ColorManager.kSuccessColor),
                   ),
@@ -206,7 +330,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
     );
   }
 
-  Widget _buildOrderDetails(CustomerOrder order) {
+  Widget _buildOrderDetails(ListOrderModelData order) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -221,25 +345,22 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
         children: [
           _buildDetailRow('Payment Status', order.paymentStatus,
               valueColor: _getPaymentStatusColor(order.paymentStatus)),
-          _buildDetailRow(
-              'Payment Method', _formatPaymentMethod(order.paymentMethod)),
+          _buildDetailRow('Customer', _getCustomerDisplayName(order)),
           const Divider(height: 20),
-          ..._buildOrderItemsList(order.items),
-          const Divider(height: 20),
-          _buildTotalRow('Subtotal', order.subTotal),
-          if (order.discount != null && order.discount != '0.00')
-            _buildTotalRow('Discount', '-${order.discount}',
-                color: ColorManager.kRed),
-          if (order.tax != null && order.tax != '0.00')
-            _buildTotalRow('Tax', order.tax),
+          ..._buildOrderItemsList(order.cartItems),
+          if (order.cartItems != null && order.cartItems!.isNotEmpty)
+            const Divider(height: 20),
+          if ((order.priceSummary?.taxTotal ?? '').isNotEmpty &&
+              order.priceSummary?.taxTotal != '0.00')
+            _buildTotalRow('Tax', order.priceSummary?.taxTotal),
           const SizedBox(height: 8),
-          _buildTotalRow('Grand Total', order.grandTotal, isGrandTotal: true),
+          _buildTotalRow('Grand Total', _getGrandTotal(order), isGrandTotal: true),
         ],
       ),
     );
   }
 
-  List<Widget> _buildOrderItemsList(List<OrderItem>? items) {
+  List<Widget> _buildOrderItemsList(List<CartItem>? items) {
     if (items == null || items.isEmpty) {
       return [const Text('No items in this order.')];
     }
@@ -256,7 +377,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Product: ${item.productName} (x${item.quantity})',
+                      'Product: ${item.productName ?? 'N/A'} (x${item.quantity ?? 0})',
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s12, 0, ColorManager.kTitleTextColor),
                     ),
@@ -349,14 +470,20 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
     }
   }
 
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'N/A';
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateString;
-    }
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'N/A';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _getGrandTotal(ListOrderModelData order) {
+    return order.priceSummary?.grandTotal ?? order.grantTotal ?? '0.00';
+  }
+
+  String _getCustomerDisplayName(ListOrderModelData order) {
+    return order.customerName ??
+        order.customerDetails?.name ??
+        widget.customer.name ??
+        'N/A';
   }
 
   String _formatPaymentMethod(dynamic paymentMethod) {

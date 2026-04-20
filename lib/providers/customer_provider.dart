@@ -545,16 +545,16 @@ class CustomerProvider extends ChangeNotifier {
 
   Future<dynamic> updateCustomer(
     String accessToken,
-    String phone,
-    String name,
-    String email,
-    String address,
-    String pincode,
-    String city,
-    String state,
-    String country,
     int customerId,
     BuildContext context, {
+    String? phone,
+    String? name,
+    String? email,
+    String? address,
+    String? pincode,
+    String? city,
+    String? state,
+    String? country,
     String? altPhone,
     String? gender,
     String? dob,
@@ -567,43 +567,59 @@ class CustomerProvider extends ChangeNotifier {
   }) async {
     debugPrint("updateCustomer API called");
     final Map<String, dynamic> apiBodyData = {
-      'phone': phone,
-      'name': name,
-      'email': email,
-      'address': address,
-      'pin_code': pincode,
-      'city': city,
-      'state': state,
-      'country': country,
       'customer_id': customerId,
     };
 
-    // Add optional fields if provided
-    if (altPhone != null && altPhone.isNotEmpty) {
+    if (phone != null) {
+      apiBodyData['phone'] = phone;
+    }
+    if (name != null) {
+      apiBodyData['name'] = name;
+    }
+    if (email != null) {
+      apiBodyData['email'] = email;
+    }
+    if (address != null) {
+      apiBodyData['address'] = address;
+    }
+    if (pincode != null) {
+      apiBodyData['pin_code'] = pincode;
+    }
+    if (city != null) {
+      apiBodyData['city'] = city;
+    }
+    if (state != null) {
+      apiBodyData['state'] = state;
+    }
+    if (country != null) {
+      apiBodyData['country'] = country;
+    }
+
+    if (altPhone != null) {
       apiBodyData['alt_phone'] = altPhone;
     }
-    if (gender != null && gender.isNotEmpty) {
+    if (gender != null) {
       apiBodyData['gender'] = gender;
     }
-    if (dob != null && dob.isNotEmpty) {
+    if (dob != null) {
       apiBodyData['dob'] = dob;
     }
     if (storeId != null) {
       apiBodyData['store_id'] = storeId;
     }
-    if (balance != null && balance.isNotEmpty) {
+    if (balance != null) {
       apiBodyData['balance'] = balance;
     }
-    if (paymentType != null && paymentType.isNotEmpty) {
+    if (paymentType != null) {
       apiBodyData['payment_type'] = paymentType;
     }
-    if (customerType != null && customerType.isNotEmpty) {
+    if (customerType != null) {
       apiBodyData['customer_type'] = customerType;
     }
-    if (crNumber != null && crNumber.isNotEmpty) {
+    if (crNumber != null) {
       apiBodyData['cr_number'] = crNumber;
     }
-    if (vatNumber != null && vatNumber.isNotEmpty) {
+    if (vatNumber != null) {
       apiBodyData['vat_number'] = vatNumber;
     }
     debugPrint("API request body: ${apiBodyData.toString()}");

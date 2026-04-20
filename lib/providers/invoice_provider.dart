@@ -211,10 +211,11 @@ class InvoiceProvider extends ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Add store_id to query parameters
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
+    // Temporarily disable store_id filtering for customer transactions so
+    // records with null store_id are also returned.
+    // if (activeStoreId != null) {
+    //   queryParams['store_id'] = activeStoreId.toString();
+    // }
 
     final uri = Uri.parse(APPUrl.customerTransactions)
         .replace(queryParameters: queryParams);

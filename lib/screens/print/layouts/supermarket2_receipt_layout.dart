@@ -141,7 +141,8 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
           sarSymbol, appSettings?.currency ?? 'INR');
 
       // ========== FOOTER SECTION (Part 2) ==========
-      await _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);
+      await _buildFooterSection(
+          part2Rows, params, displayConfig, isEnglish, context);
 
       // ========== RENDER IMAGES ==========
       debugPrint("Rendering standard receipt images...");
@@ -292,8 +293,8 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
             _getBilingualText(arabic: arabicName, english: englishName);
       } else {
         // Single language mode
-        storeNameText = displayConfig?['showStoreName']?.value as String? ??
-            'STORE NAME';
+        storeNameText =
+            displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME';
       }
 
       // Dynamic scaling based on name length
@@ -332,8 +333,8 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
         descriptionText =
             _getBilingualText(arabic: arabicDesc, english: englishDesc);
       } else {
-        descriptionText = displayConfig?['showDescription']?.value as String? ??
-            '';
+        descriptionText =
+            displayConfig?['showDescription']?.value as String? ?? '';
       }
 
       if (descriptionText.isNotEmpty) {
@@ -569,7 +570,7 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
     final bool showInvoiceNumber =
-      displayConfig?['showInvoiceNumber']?.visible == true;
+        displayConfig?['showInvoiceNumber']?.visible == true;
 
     if (showInvoiceNumber) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
@@ -651,27 +652,21 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     }
 
     final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
-      isEnglish ? "Customer:" : "العميل:");
+        isEnglish ? "Customer:" : "العميل:");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
-      isEnglish ? "Phone:" : "الهاتف:");
+        isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = _getLabel(displayConfig, paymentConfigKey, null,
-      isEnglish ? "Payment:" : "الدفع:");
+        isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
-      isEnglish ? "Address:" : "العنوان:");
+        isEnglish ? "Address:" : "العنوان:");
     final commentLabel = _getLabel(displayConfig, commentConfigKey, null,
-      isEnglish ? "Comment:" : "تعليق:");
+        isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
-      isEnglish ? "Delivery:" : "التوصيل:");
-    final customerVatLabel = _getLabel(
-      displayConfig,
-      'showCustomerVatNumber',
-      null,
-      isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
-    final customerCrLabel = _getLabel(
-      displayConfig,
-      'showCustomerCrNumber',
-      null,
-      isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
+        isEnglish ? "Delivery:" : "التوصيل:");
+    final customerVatLabel = _getLabel(displayConfig, 'showCustomerVatNumber',
+        null, isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
+    final customerCrLabel = _getLabel(displayConfig, 'showCustomerCrNumber',
+        null, isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -1278,19 +1273,19 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     debugPrint("=======================================");
 
     final subtotalLabel = _getLabel(displayConfig, 'showMRPTotal', null,
-      isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
+        isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
 
-    final discountLabel = _getLabel(displayConfig, 'showDiscount', null,
-      isEnglish ? "DISCOUNTS" : "الخصم");
+    final discountLabel = _getLabel(
+        displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "الخصم");
 
     final vatLabel = _getLabel(displayConfig, 'showTax', resolvedLabels?.tax,
-      isEnglish ? "VAT" : "الضريبة");
+        isEnglish ? "VAT" : "الضريبة");
 
     final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
-      isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
+        isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
-    final cashLabel = _getLabel(
-      displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
+    final cashLabel =
+        _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
 
     // Prepare boxed items
     List<StandardBoxedLineItem> boxedItems = [];
@@ -1458,9 +1453,9 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
         rows.add(TextRow('$arabicText فقط.',
             scale: is58mm ? 0.65 : 0.75, isBold: true));
         rows.add(TextRow('$englishText Only.',
-          scale: is58mm ? 0.65 : 0.75,
-          isBold: true,
-          textDirectionOverride: TextDirection.ltr));
+            scale: is58mm ? 0.65 : 0.75,
+            isBold: true,
+            textDirectionOverride: TextDirection.ltr));
       } else {
         final language =
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
@@ -1474,11 +1469,11 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
 
     // Items Count
     if (displayConfig?['showItemsCount']?.visible == true) {
-        final itemsCountText = _getDisplayValue(
+      final itemsCountText = _getDisplayValue(
         displayConfig?['showItemsCount']?.value,
         null,
         isEnglish ? 'Items' : 'العدد',
-        );
+      );
 
       if (itemsCountText.isNotEmpty) {
         rows.add(SpacingRow(_itemGap));
@@ -1489,7 +1484,7 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
 
     // You Saved
     if (displayConfig?['showSaved']?.visible == true && saved > 0) {
-        final savedLabel = _getLabel(displayConfig, 'showSaved', null,
+      final savedLabel = _getLabel(displayConfig, 'showSaved', null,
           isEnglish ? "You Saved:" : "لقد وفرت:");
       rows.add(SpacingRow(_itemGap));
       rows.add(TextRow(
@@ -1538,20 +1533,17 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
 
-    final prevBalanceLabel = _getLabel(
-      displayConfig,
-      'showCustomerPrevBalance',
-      null,
-      isEnglish ? "Previous Balance" : "الرصيد السابق");
+    final prevBalanceLabel = _getLabel(displayConfig, 'showCustomerPrevBalance',
+        null, isEnglish ? "Previous Balance" : "الرصيد السابق");
 
     final paidAmountLabel = _getLabel(displayConfig, 'showCustomerPaidAmount',
-      null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
+        null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
 
     final currentBalanceLabel = _getLabel(
-      displayConfig,
-      'showCustomerCurrentBalance',
-      null,
-      isEnglish ? "Current Balance" : "الرصيد الحالي");
+        displayConfig,
+        'showCustomerCurrentBalance',
+        null,
+        isEnglish ? "Current Balance" : "الرصيد الحالي");
 
     // Previous Balance
     if (displayConfig?['showCustomerPrevBalance']?.visible != false &&
@@ -1862,19 +1854,24 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         deliveryPhone =
-            appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? '';
+            appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ??
+                '';
       }
 
       if (deliveryIcon != null && deliveryPhone.isNotEmpty) {
-        // Show icon + phone side by side
+        // Show a large icon with the phone number centered below it.
         rows.add(DeliveryInfoRow(
           icon: deliveryIcon,
           phone: deliveryPhone,
-          iconSize: 40.0,
-          scale: 0.85,
+          iconSize: params.is58mm ? 110.0 : 150.0,
+          scale: params.is58mm ? 1.0 : 1.1,
         ));
       } else if (deliveryIcon != null) {
-        rows.add(ImageRow(deliveryIcon, width: 40, height: 40));
+        rows.add(ImageRow(
+          deliveryIcon,
+          width: params.is58mm ? 110 : 200,
+          height: params.is58mm ? 110 : 200,
+        ));
       } else if (deliveryPhone.isNotEmpty) {
         rows.add(TextRow(deliveryPhone, scale: 0.85));
       }
@@ -1994,9 +1991,8 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     final needsTightJoin = trimmedPrefix.endsWith('-') ||
         trimmedPrefix.endsWith('/') ||
         trimmedPrefix.endsWith('#');
-    final joined = needsTightJoin
-        ? '$trimmedPrefix$number'
-        : '$trimmedPrefix $number';
+    final joined =
+        needsTightJoin ? '$trimmedPrefix$number' : '$trimmedPrefix $number';
 
     if (RegExp(r'^[A-Za-z0-9\-/#\s]+$').hasMatch(trimmedPrefix)) {
       return '\u202A$joined\u202C';
@@ -2252,8 +2248,13 @@ class StandardBoxedTotalsRow extends ReceiptRow {
             final double iconX = rightEdge - valuePainter.width - iconSize - 4;
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
-            final dst = Rect.fromLTWH(iconX,
-                currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
+            final dst = Rect.fromLTWH(
+                iconX,
+                currentY +
+                    (itemFontSize - iconSize) / 2 +
+                    (itemFontSize * 0.08),
+                iconSize,
+                iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
           }
         } else {
@@ -2264,7 +2265,12 @@ class StandardBoxedTotalsRow extends ReceiptRow {
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
             final dst = Rect.fromLTWH(
-                padding, currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
+                padding,
+                currentY +
+                    (itemFontSize - iconSize) / 2 +
+                    (itemFontSize * 0.08),
+                iconSize,
+                iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
             valueOffsetX += iconSize + 4;
           }
@@ -2401,15 +2407,14 @@ class TextRow extends ReceiptRow {
   @override
   double calculateHeight(
           double width, double fontSize, TextDirection textDirection) =>
-      _createPainter(
-              width, fontSize, textDirectionOverride ?? textDirection)
+      _createPainter(width, fontSize, textDirectionOverride ?? textDirection)
           .height;
 
   @override
   void render(Canvas canvas, double y, double width, double fontSize,
       TextDirection textDirection) {
-    final tp = _createPainter(
-        width, fontSize, textDirectionOverride ?? textDirection);
+    final tp =
+        _createPainter(width, fontSize, textDirectionOverride ?? textDirection);
     double x = 0;
     if (align == TextAlign.center) {
       x = (width - tp.width) / 2;
@@ -2588,28 +2593,20 @@ class DeliveryInfoRow extends ReceiptRow {
   final String phone;
   final double iconSize;
   final double scale;
+  final double gap;
 
   DeliveryInfoRow({
     required this.icon,
     required this.phone,
     this.iconSize = 40.0,
     this.scale = 0.85,
+    this.gap = 10.0,
   });
 
   @override
   double calculateHeight(
       double width, double fontSize, TextDirection textDirection) {
     final scaledFontSize = fontSize * scale;
-    return iconSize > scaledFontSize ? iconSize + 10 : scaledFontSize + 10;
-  }
-
-  @override
-  void render(Canvas canvas, double y, double width, double fontSize,
-      TextDirection textDirection) {
-    final scaledFontSize = fontSize * scale;
-    const double gap = 8.0;
-
-    // Measure phone text
     final phonePainter = TextPainter(
       text: TextSpan(
         text: phone,
@@ -2617,27 +2614,49 @@ class DeliveryInfoRow extends ReceiptRow {
           color: Colors.black,
           fontSize: scaledFontSize,
           fontWeight: FontWeight.bold,
+          fontFamily: ArabicPrinterHelper.fontFamily,
         ),
       ),
       textDirection: TextDirection.ltr,
-      textAlign: TextAlign.left,
+      textAlign: TextAlign.center,
+      maxLines: 3,
     )..layout(maxWidth: width);
 
-    // Total content width = icon + gap + phone text
-    final totalWidth = iconSize + gap + phonePainter.width;
-    final startX = (width - totalWidth) / 2;
+    return iconSize + gap + phonePainter.height;
+  }
 
-    // Draw icon
-    final iconY = y + 5 + (phonePainter.height - iconSize).abs() / 2;
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final scaledFontSize = fontSize * scale;
+
+    final phonePainter = TextPainter(
+      text: TextSpan(
+        text: phone,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: scaledFontSize,
+          fontWeight: FontWeight.bold,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+      maxLines: 3,
+    )..layout(maxWidth: width);
+
+    final iconX = (width - iconSize) / 2;
+    final textX = (width - phonePainter.width) / 2;
+
+    // Draw the icon centered and allow the target size to dominate even when the source image is small.
     canvas.drawImageRect(
       icon,
       Rect.fromLTWH(0, 0, icon.width.toDouble(), icon.height.toDouble()),
-      Rect.fromLTWH(startX, iconY, iconSize, iconSize),
+      Rect.fromLTWH(iconX, y, iconSize, iconSize),
       Paint(),
     );
 
-    // Draw phone text vertically centered with icon
-    final textY = y + 5 + (iconSize - phonePainter.height).abs() / 2;
-    phonePainter.paint(canvas, Offset(startX + iconSize + gap, textY));
+    final textY = y + iconSize + gap;
+    phonePainter.paint(canvas, Offset(textX, textY));
   }
 }
