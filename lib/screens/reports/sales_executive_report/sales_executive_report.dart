@@ -28,9 +28,20 @@ class _SalesExecutiveReportScreenState
     extends State<SalesExecutiveReportScreen> {
   final TextEditingController fromDateController = TextEditingController();
   final TextEditingController toDateController = TextEditingController();
+  final TextEditingController fromTimeController = TextEditingController();
+  final TextEditingController toTimeController = TextEditingController();
 
   SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
+
+  @override
+  void dispose() {
+    fromDateController.dispose();
+    toDateController.dispose();
+    fromTimeController.dispose();
+    toTimeController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -91,6 +102,10 @@ class _SalesExecutiveReportScreenState
           String month = fromDateParts[1].padLeft(2, '0');
           String year = fromDateParts[2];
           fromDate = '$year-$month-$day';
+
+          if (fromTimeController.text.isNotEmpty) {
+            fromDate = '$fromDate ${fromTimeController.text}:00';
+          }
         }
       }
 
@@ -102,6 +117,10 @@ class _SalesExecutiveReportScreenState
           String month = toDateParts[1].padLeft(2, '0');
           String year = toDateParts[2];
           toDate = '$year-$month-$day';
+
+          if (toTimeController.text.isNotEmpty) {
+            toDate = '$toDate ${toTimeController.text}:00';
+          }
         }
       }
 
@@ -148,6 +167,8 @@ class _SalesExecutiveReportScreenState
     setState(() {
       fromDateController.clear();
       toDateController.clear();
+      fromTimeController.clear();
+      toTimeController.clear();
     });
 
     // Clear report data and fetch fresh data
@@ -193,6 +214,42 @@ class _SalesExecutiveReportScreenState
         toDateController.text = formattedDate;
       }
       // Trigger search immediately after date selection
+      searchSalesExecutives();
+    }
+  }
+
+  // Time selection method
+  Future<void> _selectTime(BuildContext context,
+      {required bool isFromTime}) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: ColorManager.kPrimaryColor, // Header background color
+              onPrimary: Colors.white, // Header text color
+              surface: Colors.white, // Dialog background
+              onSurface: Colors.black, // Dialog text color
+            ),
+            dialogBackgroundColor: Colors.white, // Dialog background
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      // Format time as HH:mm
+      final formattedTime =
+          "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
+      if (isFromTime) {
+        fromTimeController.text = formattedTime;
+      } else {
+        toTimeController.text = formattedTime;
+      }
+      // Trigger search immediately after time selection
       searchSalesExecutives();
     }
   }
@@ -255,30 +312,30 @@ class _SalesExecutiveReportScreenState
   Widget _buildSearchBar(Size size) {
     return Column(
       children: [
-        // Filter Row with 4 fields (From Date, To Date, Empty Space, Reset Button)
         SizedBox(
           height: 90,
           child: Row(
             children: [
-              // From Date Filter
               Expanded(
                 flex: 1,
                 child: _buildFromDateFilter(),
               ),
-              const SizedBox(width: 15),
-              // To Date Filter
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 1,
+                child: _buildFromTimeFilter(),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 flex: 1,
                 child: _buildToDateFilter(),
               ),
-              const SizedBox(width: 15),
-              // Empty Space (maintaining 4-field layout)
+              const SizedBox(width: 10),
               Expanded(
                 flex: 1,
-                child: Container(), // Empty space to maintain 4-field layout
+                child: _buildToTimeFilter(),
               ),
-              const SizedBox(width: 15),
-              // Reset Button (always in 4th position)
+              const SizedBox(width: 10),
               Expanded(
                 flex: 1,
                 child: Padding(
@@ -378,6 +435,96 @@ class _SalesExecutiveReportScreenState
                 padding: const EdgeInsets.all(8),
                 child: Icon(
                   Icons.calendar_today,
+                  size: 16,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFromTimeFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "From Time",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: fromTimeController,
+            onTap: () => _selectTime(context, isFromTime: true),
+            readOnly: true,
+            cursorColor: ColorManager.kPrimaryColor,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "HH:MM",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIcon: Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  Icons.access_time, // Clock icon
+                  size: 16,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildToTimeFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "To Time",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: toTimeController,
+            onTap: () => _selectTime(context, isFromTime: false),
+            readOnly: true,
+            cursorColor: ColorManager.kPrimaryColor,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "HH:MM",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIcon: Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  Icons.access_time,
                   size: 16,
                   color: ColorManager.kPrimaryColor,
                 ),
