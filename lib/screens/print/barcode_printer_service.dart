@@ -192,6 +192,20 @@ class BarcodePrinterService {
         .replaceAll('…', '...');
   }
 
+
+  /// Returns a Latin1-safe product name for ESC/POS thermal printing.
+  /// If the resolved name contains any non-Latin1 character (codeUnit > 255),
+  /// falls back to the English name, then productName field, then empty string.
+  String _toThermalSafe(String resolved, GetProduct product) {
+    final hasNonLatin1 = resolved.codeUnits.any((c) => c > 255);
+    if (!hasNonLatin1) return resolved;
+    // Fallback chain: English translation -> productName field -> empty
+    final englishName = _extractTranslatedName(product.names, 'en');
+    if (englishName.isNotEmpty) return englishName;
+    final fallback = (product.productName ?? '').trim();
+    return fallback;
+  }
+
   String _normalizeProductNameMode(String rawValue) {
     final normalized = rawValue.trim().toLowerCase();
     switch (normalized) {
@@ -312,7 +326,7 @@ class BarcodePrinterService {
         final product = item.product;
         final barcodeValue = (product.barcode ?? '').trim();
         final productName =
-            _sanitizeForThermal(_resolveProductName(product, productNameMode));
+            _sanitizeForThermal(_toThermalSafe(_resolveProductName(product, productNameMode), product));
         final rawPriceText =
             (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
         final parsedPrice = double.tryParse(rawPriceText);
@@ -505,29 +519,6 @@ class BarcodePrinterService {
       debugPrint(
           "[BarcodePrint] Resolved values -> storeName='${storeName.isEmpty ? '(empty)' : storeName}', currency='$currency'");
 
-      final didDirectPrint = await _tryDirectPrintToSelectedPrinter(
-        printItems: printItems,
-        stickerSize: stickerSize,
-        storeName: storeName,
-        currency: currency,
-        showStoreName: showStoreName,
-        showProductName: showProductName,
-        productNameMode: productNameMode,
-        showPrice: showPrice,
-        showBarcodeNumber: showBarcodeNumber,
-        showMfgDate: showMfgDate,
-        showExpiryDate: showExpiryDate,
-      );
-
-      if (didDirectPrint) {
-        hideLoadingOverlay();
-        if (context.mounted) {
-          showScaffold(context: context, message: 'Barcode sent to printer');
-        }
-        debugPrint('========== BARCODE PRINT DEBUG END ==========');
-        return;
-      }
-
       // Load user-configured barcode layout settings
       final layoutSettings = await loadBarcodeLayoutSettings();
       final regularFont = await _loadRegularFont();
@@ -717,7 +708,7 @@ class BarcodePrinterService {
       hideLoadingOverlay();
 
       if (Platform.isWindows) {
-        await _handleWindowsPdf(file);
+        await _handleWindowsPdf(file, pageFormat: pageFormat, stickerSize: stickerSize, stickersPerRow: safeStickersPerRow, totalPages: totalPages);
       } else {
         try {
           final result = await OpenFile.open(file.path);
@@ -888,7 +879,13 @@ class BarcodePrinterService {
   }
 
   // Handle Windows PDF printing — tries silent direct print first, then falls back to dialog
-  Future<void> _handleWindowsPdf(File file) async {
+  Future<void> _handleWindowsPdf(
+    File file, {
+    required PdfPageFormat pageFormat,
+    required String stickerSize,
+    required int stickersPerRow,
+    required int totalPages,
+  }) async {
     debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf START ──');
 
     // Normalize path to use backslashes (Documents dir returns mixed slashes on Windows)
@@ -896,10 +893,14 @@ class BarcodePrinterService {
     debugPrint('[BarcodePrint:Windows] PDF path (normalized): $winPath');
     debugPrint('[BarcodePrint:Windows] PDF exists: ${await file.exists()}');
     debugPrint('[BarcodePrint:Windows] PDF size: ${await file.length()} bytes');
+    debugPrint('[BarcodePrint:Windows] Sticker size: $stickerSize, stickers/row: $stickersPerRow, total pages: $totalPages');
+    debugPrint('[BarcodePrint:Windows] Page format: ${(pageFormat.width / PdfPageFormat.mm).toStringAsFixed(2)}mm x ${(pageFormat.height / PdfPageFormat.mm).toStringAsFixed(2)}mm');
 
     final savedPrinter = await _loadSelectedBarcodePrinter();
     final printerName = savedPrinter?.deviceName?.trim() ?? '';
-    debugPrint('[BarcodePrint:Windows] Target printer: "${printerName.isEmpty ? "(none saved)" : printerName}"');
+    debugPrint('[BarcodePrint:Windows] Saved printer name: "${printerName.isEmpty ? "(none saved)" : printerName}"');
+    debugPrint('[BarcodePrint:Windows] Saved printer type: ${savedPrinter?.typePrinter}');
+    debugPrint('[BarcodePrint:Windows] Saved printer address: ${savedPrinter?.address ?? "(none)"}');
 
     if (printerName.isNotEmpty) {
       // Strategy 0: printing package — native Windows print spooler, no external viewer needed
@@ -907,7 +908,10 @@ class BarcodePrinterService {
       try {
         final pdfBytes = await file.readAsBytes();
         final printers = await Printing.listPrinters();
-        debugPrint('[BarcodePrint:Windows]   Available printers: ${printers.map((p) => p.name).toList()}');
+        debugPrint('[BarcodePrint:Windows]   System printers (${printers.length}):');
+        for (final p in printers) {
+          debugPrint('[BarcodePrint:Windows]     - "${p.name}" | default=${p.isDefault} | available=${p.isAvailable} | url=${p.url}');
+        }
         final targetPrinter = printers.firstWhere(
           (p) => p.name.toLowerCase() == printerName.toLowerCase(),
           orElse: () => printers.firstWhere(
@@ -915,11 +919,14 @@ class BarcodePrinterService {
             orElse: () => printers.isEmpty ? throw Exception('No printers') : printers.first,
           ),
         );
-        debugPrint('[BarcodePrint:Windows]   Using printer: ${targetPrinter.name}');
+        debugPrint('[BarcodePrint:Windows]   Selected printer: "${targetPrinter.name}" | default=${targetPrinter.isDefault} | available=${targetPrinter.isAvailable}');
+        debugPrint('[BarcodePrint:Windows]   Sending ${pdfBytes.length} bytes to spooler...');
+        debugPrint('[BarcodePrint:Windows]   Page format hint: ${(pageFormat.width / PdfPageFormat.mm).toStringAsFixed(2)}mm x ${(pageFormat.height / PdfPageFormat.mm).toStringAsFixed(2)}mm');
         final success = await Printing.directPrintPdf(
           printer: targetPrinter,
           onLayout: (_) async => pdfBytes,
           name: 'Barcodes',
+          format: pageFormat,
         );
         debugPrint('[BarcodePrint:Windows]   directPrintPdf result: $success');
         if (success) {
