@@ -443,8 +443,8 @@ class _SideMenuState extends State<SideMenu> {
                   listTitle5: "Admin Day Sale records",
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
-                  showTitle2: hasConfirmedOrdersPermission,
-                  showTitle3: hasSalesReturnPermission,
+                  showTitle2: hasConfirmedOrdersPermission && !isCompanyAdmin,
+                  showTitle3: hasSalesReturnPermission && !isCompanyAdmin,
                   showTitle4: hasSalesPermission && !isCompanyAdmin,
                   showTitle5: isCompanyAdmin && hasSalesPermission,
                   icon: fa.FontAwesomeIcons.shoppingCart,

@@ -565,6 +565,11 @@ class _SignInScreenState extends State<SignInScreen> {
                                                             .index.value =
                                                         56; // Kitchen Master Page
                                                     break;
+                                                  case 'company_admin':
+                                                    sideBarController
+                                                            .index.value =
+                                                        1; // Dashboard
+                                                    break;
                                                   case 'sales_executive':
                                                   default:
                                                     sideBarController
