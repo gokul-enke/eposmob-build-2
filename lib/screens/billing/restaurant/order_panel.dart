@@ -89,6 +89,10 @@ class OrderPanelState extends State<OrderPanel> {
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
 
+  // Scroll + highlight for newly added items in edit-order view
+  final ScrollController _editOrderScrollController = ScrollController();
+  int? _highlightedCartItemProductId; // product ID to briefly highlight after add
+
   // Payment Method Variables
   bool _isCashSelected = false;
   bool _isCardSelected = false;
@@ -183,6 +187,12 @@ class OrderPanelState extends State<OrderPanel> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchCartItemStatuses();
     });
+  }
+
+  @override
+  void dispose() {
+    _editOrderScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -299,13 +309,40 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   // Public method to refresh saved orders silently (no loading spinner)
-  void refreshSavedOrdersSilently() {
+  Future<void> refreshSavedOrdersSilently() async {
     if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
       debugPrint(
           '🔄 External silent refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
-      _refreshSavedOrdersSilently();
+      await _refreshSavedOrdersSilently();
       _refreshLocalDrafts();
     }
+  }
+
+  /// Scroll to the bottom of the edit-order item list and briefly highlight
+  /// the cart item for [productId] that has no status (newly added item).
+  void scrollToAndHighlightNewItem(int productId) {
+    if (!mounted) return;
+    setState(() {
+      _highlightedCartItemProductId = productId;
+    });
+    // Scroll to end after the frame redraws with the refreshed list
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_editOrderScrollController.hasClients) {
+        _editOrderScrollController.animateTo(
+          _editOrderScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+    // Remove highlight after 2.5 s
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() {
+          _highlightedCartItemProductId = null;
+        });
+      }
+    });
   }
 
   void _hydrateCustomerListFromProviderCache() {
@@ -3664,16 +3701,67 @@ class OrderPanelState extends State<OrderPanel> {
     return [];
   }
 
+  double _parseKotQuantity(dynamic value) {
+    if (value == null) return 0.0;
+    return double.tryParse(value.toString()) ?? 0.0;
+  }
+
+  String _formatKotQuantity(double quantity) {
+    if (quantity == quantity.truncateToDouble()) {
+      return quantity.toStringAsFixed(0);
+    }
+    return quantity.toStringAsFixed(3);
+  }
+
   List<dynamic> _buildCancelKotPrintItems(List<dynamic> cancelQueueItems) {
-    return cancelQueueItems.map((item) {
+    final groupedItems = <String, Map<String, dynamic>>{};
+
+    for (final item in cancelQueueItems) {
       if (item is! Map<String, dynamic>) {
-        return item;
+        continue;
       }
 
+      final productId = item['product_id']?.toString() ?? '';
+      final productName = item['product_name']?.toString() ?? 'Unknown';
+      final comment = item['comment']?.toString() ?? '';
+      final variantKey = json.encode(item['variant_attributes']);
+      final unitPrice = item['unit_price']?.toString() ?? '';
+      final key = [productId, productName, comment, variantKey, unitPrice]
+          .join('|');
+
+      final quantity =
+          _parseKotQuantity(item['cancel_qty'] ?? item['quantity'] ?? 1);
+      final eventId = item['event_id']?.toString();
+
+      if (!groupedItems.containsKey(key)) {
+        groupedItems[key] = {
+          ...item,
+          'quantity': quantity,
+          'product_name': 'CANCEL - $productName',
+          'event_ids': eventId != null && eventId.isNotEmpty
+              ? [eventId]
+              : <String>[],
+        };
+        continue;
+      }
+
+      final existing = groupedItems[key]!;
+      existing['quantity'] = _parseKotQuantity(existing['quantity']) + quantity;
+
+      final existingEventIds =
+          List<String>.from(existing['event_ids'] ?? const <String>[]);
+      if (eventId != null && eventId.isNotEmpty &&
+          !existingEventIds.contains(eventId)) {
+        existingEventIds.add(eventId);
+      }
+      existing['event_ids'] = existingEventIds;
+    }
+
+    return groupedItems.values.map((item) {
+      final totalQuantity = _parseKotQuantity(item['quantity']);
       return {
         ...item,
-        'quantity': item['cancel_qty'] ?? item['quantity'] ?? 1,
-        'product_name': 'CANCEL - ${item['product_name'] ?? 'Unknown'}',
+        'quantity': _formatKotQuantity(totalQuantity),
       };
     }).toList();
   }
@@ -3686,9 +3774,21 @@ class OrderPanelState extends State<OrderPanel> {
       if (item is! Map<String, dynamic>) continue;
 
       final rawEventId = item['event_id']?.toString().trim();
-      if (rawEventId == null || rawEventId.isEmpty) continue;
-      if (seenEventIds.add(rawEventId)) {
-        eventIds.add(rawEventId);
+      if (rawEventId != null && rawEventId.isNotEmpty) {
+        if (seenEventIds.add(rawEventId)) {
+          eventIds.add(rawEventId);
+        }
+      }
+
+      final groupedEventIds = item['event_ids'];
+      if (groupedEventIds is List) {
+        for (final groupedEventId in groupedEventIds) {
+          final normalizedId = groupedEventId?.toString().trim();
+          if (normalizedId == null || normalizedId.isEmpty) continue;
+          if (seenEventIds.add(normalizedId)) {
+            eventIds.add(normalizedId);
+          }
+        }
       }
     }
 
@@ -4198,6 +4298,7 @@ class OrderPanelState extends State<OrderPanel> {
                           },
                         ),
                         child: ListView.separated(
+                          controller: _editOrderScrollController,
                           physics: const AlwaysScrollableScrollPhysics(
                               parent: BouncingScrollPhysics()),
                           padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
@@ -5219,9 +5320,23 @@ class OrderPanelState extends State<OrderPanel> {
 
         // Only refresh the saved orders list in the background to update totals
         // without affecting the current view (silent refresh without loading spinner)
-        Future.delayed(const Duration(milliseconds: 1000), () {
+        final bool isIncrement = newQuantity > currentQuantity;
+        final itemStatus = cartItem['status']?.toString();
+        // Backend creates a NEW cart entry (status=null) whenever the existing
+        // item already has ANY status — not just 'PREPARING' / 'COOKING' etc.
+        // 'STARTED' also triggers this behaviour, so check for any non-null status.
+        final itemAlreadyHasStatus = itemStatus != null && itemStatus.isNotEmpty;
+
+        Future.delayed(const Duration(milliseconds: 1000), () async {
           if (mounted) {
-            _refreshSavedOrdersSilently();
+            await _refreshSavedOrdersSilently();
+            // Scroll to and highlight the newly created item at the bottom.
+            if (isIncrement && itemAlreadyHasStatus) {
+              final productId = cartItem['product_id'];
+              if (productId != null) {
+                scrollToAndHighlightNewItem(int.parse(productId.toString()));
+              }
+            }
           }
         });
       } else {
@@ -7249,14 +7364,24 @@ class OrderPanelState extends State<OrderPanel> {
     final isRemovable = !hasStarted;
     final statusText = _statusTextForDisplay(status);
 
-    return Container(
+    // Highlight newly added item: matches product ID and has no status yet
+    final cartItemProductId = cartItem['product_id']?.toString() ??
+        cartItem['product']?['id']?.toString();
+    final isHighlighted = _highlightedCartItemProductId != null &&
+        cartItemProductId == _highlightedCartItemProductId.toString() &&
+        status == null;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: isHighlighted
+            ? const Color(0xFF059669).withOpacity(0.08)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade200,
-          width: 1,
+          color: isHighlighted ? const Color(0xFF059669) : Colors.grey.shade200,
+          width: isHighlighted ? 2.0 : 1.0,
         ),
       ),
       child: Column(
