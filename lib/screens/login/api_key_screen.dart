@@ -172,7 +172,8 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
+          SafeArea(
+            child: Container(
             alignment: Alignment.center,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -340,6 +341,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                 ),
               ),
             ),
+          ),
           ),
           // Keyboard toggle button (top-right)
           SafeArea(

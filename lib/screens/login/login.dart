@@ -171,7 +171,8 @@ class _SignInScreenState extends State<SignInScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
+          SafeArea(
+            child: Container(
             alignment: Alignment.center,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -465,7 +466,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                                             ?['name']
                                                         ?.toString();
 
-                                                SharedPreferenceProvider()
+                                                await SharedPreferenceProvider()
                                                     .saveAccessTokenandCustomerId(
                                                   executiveModelData
                                                           ?.accessToken ??
@@ -658,6 +659,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ]),
               ),
             ),
+          ),
           ),
           SafeArea(
             child: Align(

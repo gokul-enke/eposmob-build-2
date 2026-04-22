@@ -170,7 +170,9 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
 
           // Submit button
           if (_selectedStoreId != null)
-            Container(
+            SafeArea(
+              top: false,
+              child: Container(
               padding: EdgeInsets.all(isMobile ? 16 : 24),
               child: Consumer<StoreSessionProvider>(
                 builder: (context, storeSession, _) {
@@ -205,6 +207,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                   );
                 },
               ),
+            ),
             ),
         ],
       ),

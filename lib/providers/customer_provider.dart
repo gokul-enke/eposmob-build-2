@@ -103,7 +103,8 @@ class CustomerProvider extends ChangeNotifier {
     if (filterPhone != null && filterPhone.isNotEmpty) {
       filteredList = filteredList
           .where((customer) =>
-              customer.phone != null && customer.phone!.contains(filterPhone))
+              (customer.phone != null && customer.phone!.contains(filterPhone)) ||
+              (customer.altPhone != null && customer.altPhone!.contains(filterPhone)))
           .toList();
     }
 
