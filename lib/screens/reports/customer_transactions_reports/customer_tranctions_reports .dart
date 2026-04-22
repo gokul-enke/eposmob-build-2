@@ -36,7 +36,10 @@ class _CustomerTransactionsReportScreenState
     extends State<CustomerTransactionsReportScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
+  bool _showFilters = true;
   List<ListTransaction>? allTransactions = [];
+
+  bool _isMobile(BuildContext ctx) => MediaQuery.of(ctx).size.width < 768;
 
   // For grouping customer transactions (keyed by customerId when available)
   Map<String, CustomerTransactionSummary> customerSummary = {};
@@ -67,6 +70,7 @@ class _CustomerTransactionsReportScreenState
     loadInitData();
     // Preload customers for dropdown (listAll)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) setState(() => _showFilters = !_isMobile(context));
       try {
         final accessToken = Provider.of<AuthModel>(context, listen: false).token;
         await Provider.of<CustomerProvider>(context, listen: false)
@@ -423,8 +427,11 @@ class _CustomerTransactionsReportScreenState
         dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
       ),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: _isMobile(context) ? 5 : 10,
+            vertical: _isMobile(context) ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
@@ -437,15 +444,17 @@ class _CustomerTransactionsReportScreenState
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: EdgeInsets.symmetric(
+              vertical: _isMobile(context) ? 12.0 : 20.0,
+              horizontal: _isMobile(context) ? 12.0 : 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 15),
-                _buildFilters(),
-                const SizedBox(height: 20),
+                if (_showFilters) _buildFilters(),
+                if (_showFilters) const SizedBox(height: 20),
                 _buildReportTable(),
                 const SizedBox(height: 10),
                 _buildPagination(),
@@ -461,20 +470,66 @@ class _CustomerTransactionsReportScreenState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          "Customer Transactions Report",
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s20,
-            0.30,
-            ColorManager.textColor,
+        Expanded(
+          child: Text(
+            "Customer Transactions Report",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s20,
+              0.30,
+              ColorManager.textColor,
+            ),
           ),
         ),
+        if (_isMobile(context))
+          TextButton.icon(
+            onPressed: () => setState(() => _showFilters = !_showFilters),
+            icon: Icon(
+              _showFilters ? Icons.filter_list_off : Icons.filter_list,
+              size: 18,
+              color: ColorManager.kPrimaryColor,
+            ),
+            label: Text(
+              _showFilters ? 'Hide' : 'Filters',
+              style: const TextStyle(
+                  color: ColorManager.kPrimaryColor, fontSize: 12),
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildFilters() {
+    if (_isMobile(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCustomerAutocompleteField(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDateField("From Date", _fromDateController, true),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildDateField("To Date", _toDateController, false),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          CustomRoundButton(
+            title: "Reset",
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            fct: _resetFilters,
+            height: 45,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
+        ],
+      );
+    }
     return Column(
       children: [
         // First row of filters
@@ -646,11 +701,121 @@ class _CustomerTransactionsReportScreenState
     );
   }
 
-  Widget _buildReportTable() {
+  Widget _buildMobileCustomerCard(
+      CustomerTransactionSummary summary, BuildContext context) {
+    final Color balanceColor =
+        summary.balance < 0 ? Colors.red : Colors.green;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    summary.displayName,
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s14, 0.20, ColorManager.textColor),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.visibility,
+                      size: 18, color: ColorManager.kPrimaryColor),
+                  onPressed: () {
+                    Provider.of<TransactionProvider>(context, listen: false)
+                        .setCustomerName(summary.displayName);
+                    sideBarController.index.value = 66;
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+              ],
+            ),
+            const Divider(height: 12),
+            Row(
+              children: [
+                _buildMobileCardStat(
+                    'Debit', summary.totalDebit.toStringAsFixed(2)),
+                _buildMobileCardStat(
+                    'Credit', summary.totalCredit.toStringAsFixed(2)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Balance',
+                          style: buildCustomStyle(FontWeightManager.regular,
+                              FontSize.s10, 0.15, Colors.grey)),
+                      Text(
+                        summary.balance.toStringAsFixed(2),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: balanceColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildMobileCardStat(
+                    'Transactions', summary.transactionCount.toString()),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileCardStat(String label, String value) {
     return Expanded(
-      child: initLoading
-          ? const Center(child: CircularProgressIndicator.adaptive())
-          : BuildBoxShadowContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
+                  0.15, Colors.grey)),
+          Text(value,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                  0.18, Colors.black87)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportTable() {
+    if (initLoading) {
+      return const Expanded(
+          child: Center(child: CircularProgressIndicator.adaptive()));
+    }
+
+    if (_isMobile(context)) {
+      return Expanded(
+        child: customerSummary.isEmpty
+            ? _buildNoDataFoundUI()
+            : ListView.builder(
+                itemCount: customerSummary.length,
+                itemBuilder: (ctx, i) {
+                  final entry = customerSummary.entries.elementAt(i);
+                  return _buildMobileCustomerCard(entry.value, context);
+                },
+              ),
+      );
+    }
+
+    return Expanded(
+      child: BuildBoxShadowContainer(
               margin: const EdgeInsets.only(top: 5),
               circleRadius: 7,
               offsetValue: const Offset(2, 2),
