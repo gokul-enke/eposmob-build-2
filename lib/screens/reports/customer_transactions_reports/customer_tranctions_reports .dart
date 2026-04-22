@@ -21,8 +21,7 @@ import 'customer_transaction_details_screen.dart';
 // Add imports for customer autocomplete and date filtering
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
-// Import CalendarPickerTableCell component
-import 'package:pos_machine/components/build_calendar_selection.dart';
+// components/build_calendar_selection.dart removed as we now use standard pickers
 import 'dart:async';
 
 class CustomerTransactionsReportScreen extends StatefulWidget {
@@ -257,6 +256,73 @@ class _CustomerTransactionsReportScreenState
     }
 
     return suggestions;
+  }
+
+  // Combined Date and Time selection method
+  Future<void> _selectDateTime(BuildContext context,
+      {required bool isFromDate}) async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: ColorManager.kPrimaryColor, // Header background color
+              onPrimary: Colors.white, // Header text color
+              surface: Colors.white, // Calendar background
+              onSurface: Colors.black, // Calendar text color
+            ),
+            dialogBackgroundColor: Colors.white, // Dialog background
+            cardColor: Colors.white, // Card background
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+                onPrimary: Colors.white,
+                surface: Colors.white,
+                onSurface: Colors.black,
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+
+      if (pickedTime != null) {
+        final DateTime fullDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+        final formattedDateTime =
+            DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
+        setState(() {
+          if (isFromDate) {
+            _fromDateController.text = formattedDateTime;
+          } else {
+            _toDateController.text = formattedDateTime;
+          }
+        });
+        _applyFilters();
+      }
+    }
   }
 
   void _applyFilters() {
@@ -546,26 +612,33 @@ class _CustomerTransactionsReportScreenState
             height: 45,
             width: double.infinity,
             circleRadius: 7,
-            child: CalendarPickerTableCell(
-              onDateSelected: (DateTime selectedDate) {
-                final formattedDate =
-                    DateFormat('yyyy-MM-dd').format(selectedDate);
-                setState(() {
-                  if (isFromDate) {
-                    _fromDateController.text = formattedDate;
-                  } else {
-                    _toDateController.text = formattedDate;
-                  }
-                });
-                _applyFilters();
-              },
-              initialDate: controller.text.isNotEmpty
-                  ? DateFormat('yyyy-MM-dd').parse(controller.text)
-                  : null,
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2101),
-              hintText: "Select Date",
-              isAllowEdit: true,
+            child: TextFormField(
+              controller: controller,
+              onTap: () => _selectDateTime(context, isFromDate: isFromDate),
+              readOnly: true,
+              cursorColor: ColorManager.kPrimaryColor,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: InputDecoration(
+                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIcon: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: ColorManager.kPrimaryColor,
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
             ),
           ),
         ],

@@ -118,7 +118,8 @@ class APPUrl {
       '$baseURL/api/v1/purchase/list-purchase-order';
   static String get addPurchaseOrder =>
       '$baseURL/api/v1/purchase/add-purchase-order';
-  static String receivePurchaseOrder(String purchaseId) => '$baseURL/api/v1/purchase/receive-purchase-order/$purchaseId';
+  static String receivePurchaseOrder(String purchaseId) =>
+      '$baseURL/api/v1/purchase/receive-purchase-order/$purchaseId';
   static String get listPurchaseVoucher =>
       '$baseURL/api/v1/purchases/voucher-searchbar';
   static String get addToPurchaseItem =>
@@ -276,4 +277,6 @@ class APPUrl {
   static String get withdrawStock => '$baseURL/api/v1/stocks/withdraw';
   static String get consumedStocksReport =>
       '$baseURL/api/v1/consumed-stocks-report';
+  static String get getAdminSalesExecutiveReport =>
+      '$baseURL/api/v1/sales-executive-report-admin';
 }

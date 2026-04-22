@@ -283,7 +283,9 @@ class _SideMenuState extends State<SideMenu> {
               : const SizedBox.shrink(),
 
           // 2. DASHBOARD (Index: 1)
-          (userRole == 'sales_executive' || userRole == 'restaurant_sales')
+          (userRole == 'sales_executive' ||
+                  userRole == 'restaurant_sales' ||
+                  userRole == 'company_admin')
               ? Consumer<RoleProvider>(
                   builder: (context, roleProvider, child) {
                     final hasPermission =
@@ -571,11 +573,13 @@ class _SideMenuState extends State<SideMenu> {
               final hasSupplierTransactionsPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'page_SupplierTransactionsReport');
+              final isCompanyAdmin = userRole == 'company_admin';
 
               // Only show the expandable menu if user has at least one permission
               if (!hasSalesExecutiveReportsPermission &&
                   !hasCustomerTransactionsPermission &&
-                  !hasSupplierTransactionsPermission) {
+                  !hasSupplierTransactionsPermission &&
+                  !isCompanyAdmin) {
                 return const SizedBox.shrink();
               }
 
@@ -585,33 +589,39 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 58;
                     },
                     onTapTitle2: () {
-                      sideBarController.index.value = 65;
+                      sideBarController.index.value = 85;
                     },
                     onTapTitle3: () {
-                      sideBarController.index.value = 67;
+                      sideBarController.index.value = 65;
                     },
                     onTapTitle4: () {
-                      sideBarController.index.value = 77;
+                      sideBarController.index.value = 67;
                     },
                     onTapTitle5: () {
+                      sideBarController.index.value = 77;
+                    },
+                    onTapTitle6: () {
                       sideBarController.index.value = 80;
                     },
                     listTitle1: "Sales Executive Reports",
-                    listTitle2: "Customer Transactions Reports",
-                    listTitle3: "Supplier Transactions Reports",
-                    listTitle4: "Non-Stock Report",
-                    listTitle5: "Consumed Stocks Report",
+                    listTitle2: "Executive Reports",
+                    listTitle3: "Customer Transactions Reports",
+                    listTitle4: "Supplier Transactions Reports",
+                    listTitle5: "Non-Stock Report",
+                    listTitle6: "Consumed Stocks Report",
                     // Permission-based visibility
-                    showTitle1: hasSalesExecutiveReportsPermission,
-                    showTitle2: hasCustomerTransactionsPermission,
-                    showTitle3: hasSupplierTransactionsPermission,
-                    showTitle4:
+                    showTitle1:
+                        hasSalesExecutiveReportsPermission && !isCompanyAdmin,
+                    showTitle2: isCompanyAdmin,
+                    showTitle3: hasCustomerTransactionsPermission,
+                    showTitle4: hasSupplierTransactionsPermission,
+                    showTitle5:
                         true, // Show for now, add specific permission if needed
-                    showTitle5: true,
+                    showTitle6: true,
                     icon: fa.FontAwesomeIcons.chartPie,
                     title: 'Reports',
                     onTap: () {
-                      sideBarController.index.value = 58;
+                      sideBarController.index.value = isCompanyAdmin ? 85 : 58;
                     },
                     selected: sideBarController.index.value == 39 ||
                         sideBarController.index.value == 40 ||
@@ -623,7 +633,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 67 ||
                         sideBarController.index.value == 68 ||
                         sideBarController.index.value == 77 ||
-                        sideBarController.index.value == 80),
+                        sideBarController.index.value == 80 ||
+                        sideBarController.index.value == 85),
               );
             },
           ),
@@ -634,6 +645,7 @@ class _SideMenuState extends State<SideMenu> {
               // Check permissions for each sub-item
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync('page_Invoices');
+
               final hasReceiptsPermission =
                   roleProvider.currentUserHasPermissionSync('page_Receipts');
               final hasCustomerVouchersPermission =
