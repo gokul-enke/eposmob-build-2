@@ -85,8 +85,13 @@ class OrderPanelState extends State<OrderPanel> {
   final Set<String> _loadingCartItems =
       {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
+  bool _isLoadingPrintKot = false; // Loading state for edit-order Print KOT button
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
+
+  // Scroll + highlight for newly added items in edit-order view
+  final ScrollController _editOrderScrollController = ScrollController();
+  int? _highlightedCartItemProductId; // product ID to briefly highlight after add
 
   // Payment Method Variables
   bool _isCashSelected = false;
@@ -182,6 +187,12 @@ class OrderPanelState extends State<OrderPanel> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchCartItemStatuses();
     });
+  }
+
+  @override
+  void dispose() {
+    _editOrderScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -298,13 +309,40 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   // Public method to refresh saved orders silently (no loading spinner)
-  void refreshSavedOrdersSilently() {
+  Future<void> refreshSavedOrdersSilently() async {
     if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
       debugPrint(
           '🔄 External silent refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
-      _refreshSavedOrdersSilently();
+      await _refreshSavedOrdersSilently();
       _refreshLocalDrafts();
     }
+  }
+
+  /// Scroll to the bottom of the edit-order item list and briefly highlight
+  /// the cart item for [productId] that has no status (newly added item).
+  void scrollToAndHighlightNewItem(int productId) {
+    if (!mounted) return;
+    setState(() {
+      _highlightedCartItemProductId = productId;
+    });
+    // Scroll to end after the frame redraws with the refreshed list
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_editOrderScrollController.hasClients) {
+        _editOrderScrollController.animateTo(
+          _editOrderScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+    // Remove highlight after 2.5 s
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() {
+          _highlightedCartItemProductId = null;
+        });
+      }
+    });
   }
 
   void _hydrateCustomerListFromProviderCache() {
@@ -3352,8 +3390,8 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
-  // Print KOT for ONLY new items (status == null)
-  void _printNewKOT() async {
+  // Print KOT for new add-on items and pending cancel queue items.
+  Future<void> _printNewKOT() async {
     debugPrint('🖨️ _printNewKOT() called');
 
     if (_selectedOrder == null) {
@@ -3383,85 +3421,125 @@ class OrderPanelState extends State<OrderPanel> {
       return false;
     }).toList();
 
-    debugPrint('🆕 _printNewKOT: New items (status=null): ${newItems.length}');
+    final pendingCancelQueue = await _fetchPendingCancelKotItems(_selectedOrder);
 
-    if (newItems.isEmpty) {
-      debugPrint('⚠️ _printNewKOT: No new items to print');
+    debugPrint('🆕 _printNewKOT: New items (status=null): ${newItems.length}');
+    debugPrint('🚫 _printNewKOT: Pending cancel items: ${pendingCancelQueue.length}');
+
+    if (newItems.isEmpty && pendingCancelQueue.isEmpty) {
+      debugPrint('⚠️ _printNewKOT: No pending add-on or cancel KOT items');
       showScaffoldError(
         context: context,
-        message: 'No new items to print (all items already sent to kitchen)',
+        message: 'No pending KOT items to print',
       );
       return;
     }
 
-    // Call API to update status for null items BEFORE printing
-    debugPrint(
-        '📡 [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
-    debugPrint(
-        '📡 [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
-
-    try {
-      debugPrint('📡 [KOT STATUS UPDATE] Step 1: Getting providers...');
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      debugPrint('📡 [KOT STATUS UPDATE] Step 1: Providers obtained ✅');
-
-      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsing order ID...');
-      final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+    if (newItems.isNotEmpty) {
+      // Call API to update status for null items BEFORE printing
       debugPrint(
-          '📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
-      final orderId = int.tryParse(orderIdValue.toString());
-      final accessToken = authModel.token ?? '';
-      debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
+          '📡 [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
       debugPrint(
-          '📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
+          '📡 [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
 
-      debugPrint('📡 [KOT STATUS UPDATE] Step 3: Checking orderId...');
-      if (orderId != null) {
-        debugPrint(
-            '📡 [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
-        debugPrint(
-            '📡 [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
+      try {
+        debugPrint('📡 [KOT STATUS UPDATE] Step 1: Getting providers...');
+        final authModel = Provider.of<AuthModel>(context, listen: false);
+        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+        debugPrint('📡 [KOT STATUS UPDATE] Step 1: Providers obtained ✅');
 
+        debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsing order ID...');
+        final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
         debugPrint(
-            '📡 [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
-        final response = await cartProvider.updateNullOrderItemsStatus(
-          orderId: orderId,
-          accessToken: accessToken,
-        );
+            '📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
+        final orderId = int.tryParse(orderIdValue.toString());
+        final accessToken = authModel.token ?? '';
+        debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
 
-        debugPrint('📡 [KOT STATUS UPDATE] Step 4: API call completed ✅');
-        debugPrint('📥 [KOT STATUS UPDATE] Full response: $response');
-        debugPrint(
-            '📥 [KOT STATUS UPDATE] Response status: ${response['status']}');
-        debugPrint(
-            '📥 [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
-
-        if (response['status'] == 'success') {
+        debugPrint('📡 [KOT STATUS UPDATE] Step 3: Checking orderId...');
+        if (orderId != null) {
           debugPrint(
-              '✅ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
-          debugPrint('🔄 [KOT STATUS UPDATE] Refreshing order details...');
-          await _refreshSelectedOrderAfterCartUpdate();
-          debugPrint('✅ [KOT STATUS UPDATE] Order refresh completed');
+              '📡 [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
+          debugPrint(
+              '📡 [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
+
+          debugPrint(
+              '📡 [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
+          final response = await cartProvider.updateNullOrderItemsStatus(
+            orderId: orderId,
+            accessToken: accessToken,
+          );
+
+          debugPrint('📡 [KOT STATUS UPDATE] Step 4: API call completed ✅');
+          debugPrint('📥 [KOT STATUS UPDATE] Full response: $response');
+          debugPrint(
+              '📥 [KOT STATUS UPDATE] Response status: ${response['status']}');
+          debugPrint(
+              '📥 [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
+
+          if (response['status'] == 'success') {
+            debugPrint(
+                '✅ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
+            debugPrint('🔄 [KOT STATUS UPDATE] Refreshing order details...');
+            await _refreshSelectedOrderAfterCartUpdate();
+            debugPrint('✅ [KOT STATUS UPDATE] Order refresh completed');
+          } else {
+            debugPrint(
+                '⚠️ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
+          }
         } else {
           debugPrint(
-              '⚠️ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
+              '❌ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
         }
-      } else {
-        debugPrint(
-            '❌ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
+      } catch (e, stackTrace) {
+        debugPrint('❌ [KOT STATUS UPDATE] EXCEPTION: $e');
+        debugPrint('❌ [KOT STATUS UPDATE] Stack trace: $stackTrace');
       }
-    } catch (e, stackTrace) {
-      debugPrint('❌ [KOT STATUS UPDATE] EXCEPTION: $e');
-      debugPrint('❌ [KOT STATUS UPDATE] Stack trace: $stackTrace');
+
+      debugPrint(
+          '📡 [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
     }
 
-    debugPrint(
-        '📡 [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
+    if (newItems.isNotEmpty) {
+      debugPrint('🖨️ _printNewKOT: Printing add-on KOT...');
+      await _printSavedOrderKot(
+        _selectedOrder,
+        newItems,
+        kotType: 'add_on',
+      );
+    }
 
-    // Reuse existing print logic with filtered items
-    debugPrint('🖨️ _printNewKOT: Now calling _printSavedOrderKot...');
-    _printSavedOrderKot(_selectedOrder, newItems);
+    if (pendingCancelQueue.isNotEmpty) {
+      debugPrint('🖨️ _printNewKOT: Printing cancel KOT...');
+      final cancelPrintItems = _buildCancelKotPrintItems(pendingCancelQueue);
+      await _printSavedOrderKot(
+        _selectedOrder,
+        cancelPrintItems,
+        kotType: 'cancel',
+      );
+    }
+  }
+
+  Future<void> _printNewKOTWithLoading() async {
+    if (_isLoadingPrintKot) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingPrintKot = true;
+    });
+
+    try {
+      await _printNewKOT();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingPrintKot = false;
+        });
+      }
+    }
   }
 
   String? _extractTokenNumber(dynamic order) {
@@ -3558,8 +3636,267 @@ class OrderPanelState extends State<OrderPanel> {
     return false;
   }
 
+  List<dynamic> _extractPendingCancelKotItems(dynamic order) {
+    if (order is! Map<String, dynamic>) {
+      return [];
+    }
+
+    final directQueue = order['kot_cancel_queue'];
+    if (directQueue is List) {
+      return List<dynamic>.from(directQueue);
+    }
+
+    final propsMap = order['orderProps'];
+    if (propsMap is Map && propsMap['KOT_CANCEL_QUEUE'] is List) {
+      return List<dynamic>.from(propsMap['KOT_CANCEL_QUEUE']);
+    }
+
+    final propsList = order['order_props'];
+    if (propsList is List) {
+      for (final prop in propsList) {
+        if (prop is! Map) continue;
+        final code =
+            (prop['props_code'] ?? prop['code'])?.toString().toUpperCase();
+        if (code != 'KOT_CANCEL_QUEUE') continue;
+        final value = prop['props_value'] ?? prop['value'];
+        if (value is List) {
+          return List<dynamic>.from(value);
+        }
+      }
+    }
+
+    return [];
+  }
+
+  Future<List<dynamic>> _fetchPendingCancelKotItems(dynamic order) async {
+    final cachedQueue = _extractPendingCancelKotItems(order);
+    if (cachedQueue.isNotEmpty) {
+      return cachedQueue;
+    }
+
+    final orderIdValue = order['id'] ?? order['order_id'];
+    final orderId = orderIdValue?.toString();
+    if (orderId == null || orderId.isEmpty) {
+      return [];
+    }
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final response = await cartProvider.getListOrderDetails(
+        accessToken: authModel.token ?? '',
+        orderId: orderId,
+      );
+
+      if ((response['status'] as String?)?.toLowerCase() == 'success') {
+        final orderDetails = response['order_details'];
+        if (orderDetails is Map<String, dynamic>) {
+          return _extractPendingCancelKotItems(orderDetails);
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to fetch pending cancel KOT items: $e');
+    }
+
+    return [];
+  }
+
+  double _parseKotQuantity(dynamic value) {
+    if (value == null) return 0.0;
+    return double.tryParse(value.toString()) ?? 0.0;
+  }
+
+  String _formatKotQuantity(double quantity) {
+    if (quantity == quantity.truncateToDouble()) {
+      return quantity.toStringAsFixed(0);
+    }
+    return quantity.toStringAsFixed(3);
+  }
+
+  List<dynamic> _buildCancelKotPrintItems(List<dynamic> cancelQueueItems) {
+    final groupedItems = <String, Map<String, dynamic>>{};
+
+    for (final item in cancelQueueItems) {
+      if (item is! Map<String, dynamic>) {
+        continue;
+      }
+
+      final productId = item['product_id']?.toString() ?? '';
+      final productName = item['product_name']?.toString() ?? 'Unknown';
+      final comment = item['comment']?.toString() ?? '';
+      final variantKey = json.encode(item['variant_attributes']);
+      final unitPrice = item['unit_price']?.toString() ?? '';
+      final key = [productId, productName, comment, variantKey, unitPrice]
+          .join('|');
+
+      final quantity =
+          _parseKotQuantity(item['cancel_qty'] ?? item['quantity'] ?? 1);
+      final eventId = item['event_id']?.toString();
+
+      if (!groupedItems.containsKey(key)) {
+        groupedItems[key] = {
+          ...item,
+          'quantity': quantity,
+          'product_name': 'CANCEL - $productName',
+          'event_ids': eventId != null && eventId.isNotEmpty
+              ? [eventId]
+              : <String>[],
+        };
+        continue;
+      }
+
+      final existing = groupedItems[key]!;
+      existing['quantity'] = _parseKotQuantity(existing['quantity']) + quantity;
+
+      final existingEventIds =
+          List<String>.from(existing['event_ids'] ?? const <String>[]);
+      if (eventId != null && eventId.isNotEmpty &&
+          !existingEventIds.contains(eventId)) {
+        existingEventIds.add(eventId);
+      }
+      existing['event_ids'] = existingEventIds;
+    }
+
+    return groupedItems.values.map((item) {
+      final totalQuantity = _parseKotQuantity(item['quantity']);
+      return {
+        ...item,
+        'quantity': _formatKotQuantity(totalQuantity),
+      };
+    }).toList();
+  }
+
+  List<String> _extractKotEventIds(List<dynamic> cartItems) {
+    final eventIds = <String>[];
+    final seenEventIds = <String>{};
+
+    for (final item in cartItems) {
+      if (item is! Map<String, dynamic>) continue;
+
+      final rawEventId = item['event_id']?.toString().trim();
+      if (rawEventId != null && rawEventId.isNotEmpty) {
+        if (seenEventIds.add(rawEventId)) {
+          eventIds.add(rawEventId);
+        }
+      }
+
+      final groupedEventIds = item['event_ids'];
+      if (groupedEventIds is List) {
+        for (final groupedEventId in groupedEventIds) {
+          final normalizedId = groupedEventId?.toString().trim();
+          if (normalizedId == null || normalizedId.isEmpty) continue;
+          if (seenEventIds.add(normalizedId)) {
+            eventIds.add(normalizedId);
+          }
+        }
+      }
+    }
+
+    return eventIds;
+  }
+
+  void _removeAcknowledgedKotEventsFromOrderCache({
+    required dynamic order,
+    required List<String> eventIds,
+  }) {
+    if (order is! Map<String, dynamic> || eventIds.isEmpty) {
+      return;
+    }
+
+    List<dynamic> filterQueue(List<dynamic> queue) {
+      return queue.where((entry) {
+        if (entry is! Map) return true;
+        final eventId = entry['event_id']?.toString();
+        return eventId == null || !eventIds.contains(eventId);
+      }).toList();
+    }
+
+    if (order['kot_cancel_queue'] is List) {
+      order['kot_cancel_queue'] = filterQueue(order['kot_cancel_queue']);
+    }
+
+    final propsMap = order['orderProps'];
+    if (propsMap is Map && propsMap['KOT_CANCEL_QUEUE'] is List) {
+      propsMap['KOT_CANCEL_QUEUE'] = filterQueue(propsMap['KOT_CANCEL_QUEUE']);
+    }
+
+    final propsList = order['order_props'];
+    if (propsList is List) {
+      for (final prop in propsList) {
+        if (prop is! Map) continue;
+        final code =
+            (prop['props_code'] ?? prop['code'])?.toString().toUpperCase();
+        if (code != 'KOT_CANCEL_QUEUE') continue;
+        final valueKey = prop.containsKey('props_value') ? 'props_value' : 'value';
+        if (prop[valueKey] is List) {
+          prop[valueKey] = filterQueue(prop[valueKey]);
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    final currentOrderId = _selectedOrder?['id'] ?? _selectedOrder?['order_id'];
+    final updatedOrderId = order['id'] ?? order['order_id'];
+    if (currentOrderId == updatedOrderId) {
+      setState(() {
+        _selectedOrder = order;
+      });
+    }
+  }
+
+  Future<void> _acknowledgeKotPrintIfNeeded({
+    required dynamic order,
+    required List<String> eventIds,
+  }) async {
+    if (eventIds.isEmpty) {
+      return;
+    }
+
+    final orderIdValue = order['id'] ?? order['order_id'];
+    final orderId = int.tryParse(orderIdValue?.toString() ?? '');
+    if (orderId == null) {
+      debugPrint('⚠️ acknowledgeKotPrint skipped: invalid order ID');
+      return;
+    }
+
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    final response = await cartProvider.acknowledgeKotPrint(
+      orderId: orderId,
+      eventIds: eventIds,
+      accessToken: authModel.token ?? '',
+    );
+
+    if (!mounted) return;
+
+    final status = (response['status'] as String?)?.toLowerCase();
+    if (status == 'success' || status == 'sucesss') {
+      debugPrint('✅ KOT print acknowledged for events: $eventIds');
+      _removeAcknowledgedKotEventsFromOrderCache(
+        order: order,
+        eventIds: eventIds,
+      );
+      Future.microtask(_refreshSavedOrdersSilently);
+      return;
+    }
+
+    final message = response['message']?.toString() ??
+        'KOT printed, but failed to acknowledge printed cancel events';
+    debugPrint('❌ KOT print acknowledge failed: $message');
+    showScaffoldError(
+      context: context,
+      message: message,
+    );
+  }
+
   // Print KOT for a saved order
-  void _printSavedOrderKot(dynamic order, List<dynamic> cartItems) {
+  Future<void> _printSavedOrderKot(
+    dynamic order,
+    List<dynamic> cartItems, {
+    String kotType = 'standard',
+  }) async {
     debugPrint(
         '🖨️ _printSavedOrderKot() called with ${cartItems.length} items');
 
@@ -3601,6 +3938,7 @@ class OrderPanelState extends State<OrderPanel> {
 
     // Get current time
     final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
+    final kotEventIds = _extractKotEventIds(cartItems);
 
     // Build items list for KOT
     List<Map<String, dynamic>> printItems = [];
@@ -3623,7 +3961,9 @@ class OrderPanelState extends State<OrderPanel> {
         }
 
         // Get quantity
-        quantity = (item['quantity'] ?? item['qty'] ?? 1).toString();
+        quantity =
+          (item['quantity'] ?? item['cancel_qty'] ?? item['qty'] ?? 1)
+            .toString();
 
         // Get Price and MRP
         double priceVal = double.tryParse((item['unit_price'] ??
@@ -3732,7 +4072,7 @@ class OrderPanelState extends State<OrderPanel> {
           '📋 Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
 
       // Try auto-print with default printer first
-      KotPrintPage.autoPrint(
+      final success = await KotPrintPage.autoPrint(
         context,
         orderNumber: orderNumber,
         tokenNumber: tokenNumber,
@@ -3741,27 +4081,41 @@ class OrderPanelState extends State<OrderPanel> {
         orderTime: orderTime,
         items: printItems,
         comment: comment,
-      ).then((success) {
-        // Only show print page if auto-print failed
-        if (!success && mounted) {
-          debugPrint(
-              '🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => KotPrintPage(
-                orderNumber: orderNumber,
-                tokenNumber: tokenNumber,
-                tableName: tableName,
-                showTableLabel: showTableLabel,
-                orderTime: orderTime,
-                items: printItems,
-                comment: comment,
-              ),
+        kotType: kotType,
+        onPrintSuccess: kotEventIds.isEmpty
+            ? null
+            : () => _acknowledgeKotPrintIfNeeded(
+                  order: order,
+                  eventIds: kotEventIds,
+                ),
+      );
+
+      // Only show print page if auto-print failed
+      if (!success && mounted) {
+        debugPrint(
+            '🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
+        await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => KotPrintPage(
+              orderNumber: orderNumber,
+              tokenNumber: tokenNumber,
+              tableName: tableName,
+              showTableLabel: showTableLabel,
+              orderTime: orderTime,
+              items: printItems,
+              comment: comment,
+              kotType: kotType,
+              onPrintSuccess: kotEventIds.isEmpty
+                  ? null
+                  : () => _acknowledgeKotPrintIfNeeded(
+                        order: order,
+                        eventIds: kotEventIds,
+                      ),
             ),
-          );
-        }
-      });
+          ),
+        );
+      }
     } else {
       debugPrint(
           '⚠️ _printSavedOrderKot: KOT printing is disabled in app settings');
@@ -3944,6 +4298,7 @@ class OrderPanelState extends State<OrderPanel> {
                           },
                         ),
                         child: ListView.separated(
+                          controller: _editOrderScrollController,
                           physics: const AlwaysScrollableScrollPhysics(
                               parent: BouncingScrollPhysics()),
                           padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
@@ -4111,13 +4466,15 @@ class OrderPanelState extends State<OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _printNewKOT(),
+                      onTap: _isLoadingPrintKot ? null : _printNewKOTWithLoading,
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: _isLoadingPrintKot
+                              ? const Color(0xFFFFF7ED)
+                              : Colors.white,
                           border: Border.all(
                             color: const Color(0xFFD97706),
                             width: 1.5,
@@ -4125,27 +4482,38 @@ class OrderPanelState extends State<OrderPanel> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long,
-                                color: const Color(0xFFD97706),
-                                size: widget.isCompact ? 16 : 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Print KOT',
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    widget.isCompact
-                                        ? FontSize.s13
-                                        : FontSize.s14,
-                                    0.21,
-                                    const Color(0xFFD97706)),
-                              ),
-                            ],
-                          ),
+                          child: _isLoadingPrintKot
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 20,
+                                  height: widget.isCompact ? 16 : 20,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFFD97706),
+                                    ),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.receipt_long,
+                                      color: const Color(0xFFD97706),
+                                      size: widget.isCompact ? 16 : 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Print KOT',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          widget.isCompact
+                                              ? FontSize.s13
+                                              : FontSize.s14,
+                                          0.21,
+                                          const Color(0xFFD97706)),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ),
@@ -4952,9 +5320,23 @@ class OrderPanelState extends State<OrderPanel> {
 
         // Only refresh the saved orders list in the background to update totals
         // without affecting the current view (silent refresh without loading spinner)
-        Future.delayed(const Duration(milliseconds: 1000), () {
+        final bool isIncrement = newQuantity > currentQuantity;
+        final itemStatus = cartItem['status']?.toString();
+        // Backend creates a NEW cart entry (status=null) whenever the existing
+        // item already has ANY status — not just 'PREPARING' / 'COOKING' etc.
+        // 'STARTED' also triggers this behaviour, so check for any non-null status.
+        final itemAlreadyHasStatus = itemStatus != null && itemStatus.isNotEmpty;
+
+        Future.delayed(const Duration(milliseconds: 1000), () async {
           if (mounted) {
-            _refreshSavedOrdersSilently();
+            await _refreshSavedOrdersSilently();
+            // Scroll to and highlight the newly created item at the bottom.
+            if (isIncrement && itemAlreadyHasStatus) {
+              final productId = cartItem['product_id'];
+              if (productId != null) {
+                scrollToAndHighlightNewItem(int.parse(productId.toString()));
+              }
+            }
           }
         });
       } else {
@@ -6982,14 +7364,24 @@ class OrderPanelState extends State<OrderPanel> {
     final isRemovable = !hasStarted;
     final statusText = _statusTextForDisplay(status);
 
-    return Container(
+    // Highlight newly added item: matches product ID and has no status yet
+    final cartItemProductId = cartItem['product_id']?.toString() ??
+        cartItem['product']?['id']?.toString();
+    final isHighlighted = _highlightedCartItemProductId != null &&
+        cartItemProductId == _highlightedCartItemProductId.toString() &&
+        status == null;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: isHighlighted
+            ? const Color(0xFF059669).withOpacity(0.08)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade200,
-          width: 1,
+          color: isHighlighted ? const Color(0xFF059669) : Colors.grey.shade200,
+          width: isHighlighted ? 2.0 : 1.0,
         ),
       ),
       child: Column(

@@ -91,6 +91,17 @@ class KotThermalPrinter {
     return cleaned;
   }
 
+  String _resolveKotHeader(String fallbackHeader, String kotType) {
+    switch (kotType.trim().toLowerCase()) {
+      case 'cancel':
+        return 'CANCEL KOT';
+      case 'add_on':
+        return 'ADD-ON KOT';
+      default:
+        return fallbackHeader;
+    }
+  }
+
   /// Connect to thermal printer (supports both Bluetooth and USB)
   Future<void> _connectToPrinter(BluetoothPrinter printer) async {
     try {
@@ -135,6 +146,7 @@ class KotThermalPrinter {
     required String orderTime,
     required List<Map<String, dynamic>> items,
     String? comment,
+    String kotType = 'standard',
     required String selectedPaperSize,
     DocumentConfig? kotDocumentConfig,
   }) async {
@@ -169,10 +181,11 @@ class KotThermalPrinter {
                 : (kotDocumentConfig?.header?.isNotEmpty == true
                     ? kotDocumentConfig!.header!
                     : 'KITCHEN ORDER');
+        final resolvedHeaderText = _resolveKotHeader(headerText, kotType);
 
         // Header without box
         rows.add(_KotTextRow(
-          headerText.toUpperCase(),
+          resolvedHeaderText.toUpperCase(),
           isBold: true,
           scale: getHeaderScale(is58mm),
           center: true,

@@ -742,6 +742,62 @@ class CartProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> acknowledgeKotPrint({
+    required int orderId,
+    required List<String> eventIds,
+    required String accessToken,
+  }) async {
+    debugPrint("📤 ACKNOWLEDGE KOT PRINT API - Starting request");
+    debugPrint("📦 Order ID: $orderId");
+    debugPrint("🧾 Event IDs: $eventIds");
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final url = Uri.parse(APPUrl.acknowledgeKotPrint);
+    final requestBody = {
+      'order_id': orderId,
+      'event_ids': eventIds,
+    };
+
+    debugPrint('🌐 API URL: ${url.toString()}');
+    debugPrint('📤 ACKNOWLEDGE KOT PRINT request body: ${json.encode(requestBody)}');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: json.encode(requestBody),
+      );
+
+      debugPrint('📥 ACKNOWLEDGE KOT PRINT response status: ${response.statusCode}');
+      debugPrint('📥 ACKNOWLEDGE KOT PRINT response body: ${response.body}');
+
+      final jsonData = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return jsonData;
+      }
+
+      return jsonData is Map<String, dynamic>
+          ? jsonData
+          : {
+              'status': 'error',
+              'message': 'Failed to acknowledge KOT print',
+            };
+    } catch (e) {
+      debugPrint('❌ Exception during KOT print acknowledge API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
   //          *********************** Change Cart Item Price API **********************************
 
   Future<dynamic> updateCartItemPrice({

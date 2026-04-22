@@ -594,7 +594,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
             setState(() {
               _refreshCounter = (_refreshCounter ?? 0) + 1;
             });
-            _orderPanelKey.currentState?.refreshSavedOrdersSilently();
+            await _orderPanelKey.currentState?.refreshSavedOrdersSilently();
+            // Scroll to and highlight the newly added item so it's impossible to miss
+            if (product.productId != null) {
+              _orderPanelKey.currentState
+                  ?.scrollToAndHighlightNewItem(product.productId!);
+            }
 
             // Ensure parent widget also updates its state
             if (mounted) {

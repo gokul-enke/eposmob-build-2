@@ -28,6 +28,8 @@ class KotPrintPage extends StatefulWidget {
   final List<Map<String, dynamic>> items;
   final String? comment;
   final bool showTableLabel;
+  final String kotType;
+  final Future<void> Function()? onPrintSuccess;
 
   const KotPrintPage({
     super.key,
@@ -38,6 +40,8 @@ class KotPrintPage extends StatefulWidget {
     required this.items,
     this.comment,
     this.showTableLabel = true,
+    this.kotType = 'standard',
+    this.onPrintSuccess,
   });
 
   @override
@@ -53,6 +57,8 @@ class KotPrintPage extends StatefulWidget {
     required List<Map<String, dynamic>> items,
     String? comment,
     bool showTableLabel = true,
+    String kotType = 'standard',
+    Future<void> Function()? onPrintSuccess,
   }) async {
     try {
       final printableItems = List<Map<String, dynamic>>.from(items.reversed);
@@ -120,6 +126,7 @@ class KotPrintPage extends StatefulWidget {
           orderTime: formattedTime,
           items: printableItems,
           comment: comment,
+          kotType: kotType,
           selectedPaperSize: paperSize,
           kotDocumentConfig: kotDocumentConfig,
         );
@@ -135,8 +142,30 @@ class KotPrintPage extends StatefulWidget {
           orderTime: formattedTime,
           items: printableItems,
           comment: comment,
+          kotType: kotType,
           selectedPaperSize: paperSize,
           kotDocumentConfig: kotDocumentConfig,
+        );
+      }
+
+      if (onPrintSuccess != null) {
+        try {
+          await onPrintSuccess();
+        } catch (e) {
+          debugPrint('[KotPrintPage] Post-print callback failed: $e');
+        }
+      }
+
+      if (context.mounted) {
+        final normalizedKotType = kotType.trim().toLowerCase();
+        final successMessage = normalizedKotType == 'cancel'
+            ? 'Cancel KOT printed successfully!'
+            : normalizedKotType == 'add_on'
+                ? 'Add-on KOT printed successfully!'
+                : 'KOT printed successfully!';
+        showScaffold(
+          context: context,
+          message: successMessage,
         );
       }
 
@@ -495,9 +524,18 @@ class _KotPrintPageState extends State<KotPrintPage> {
         orderTime: formattedTime,
         items: printableItems,
         comment: widget.comment,
+        kotType: widget.kotType,
         selectedPaperSize: selectedPaperSize,
         kotDocumentConfig: _kotDocumentConfig,
       );
+
+      if (widget.onPrintSuccess != null) {
+        try {
+          await widget.onPrintSuccess!();
+        } catch (e) {
+          debugPrint('[KotPrintPage] Post-print callback failed: $e');
+        }
+      }
 
       if (mounted) {
 
@@ -505,7 +543,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
           context: context,
           message: "KOT printed successfully!",
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -534,9 +572,18 @@ class _KotPrintPageState extends State<KotPrintPage> {
         orderTime: formattedTime,
         items: printableItems,
         comment: widget.comment,
+        kotType: widget.kotType,
         selectedPaperSize: selectedPaperSize,
         kotDocumentConfig: _kotDocumentConfig,
       );
+
+      if (widget.onPrintSuccess != null) {
+        try {
+          await widget.onPrintSuccess!();
+        } catch (e) {
+          debugPrint('[KotPrintPage] Post-print callback failed: $e');
+        }
+      }
 
       if (mounted) {
 
@@ -544,7 +591,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
           context: context,
           message: "KOT PDF generated successfully!",
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -617,7 +664,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pop(context, false);
             SideBarController sideBarController = Get.put(SideBarController());
             sideBarController.index.value = 46;
           },

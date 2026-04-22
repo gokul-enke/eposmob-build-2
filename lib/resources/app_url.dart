@@ -66,6 +66,8 @@ class APPUrl {
 
   static String get listSavedOrders =>
       '$baseURL/api/v1/order/list-saved-orders';
+  static String get acknowledgeKotPrint =>
+      '$baseURL/api/v1/order/acknowledge-kot-print';
 
   static String get loginUrl => '$baseURL/api/v1/user/signin';
   static String get forgotPasswordUrl => '$baseURL/api/v1/user/forgot';
