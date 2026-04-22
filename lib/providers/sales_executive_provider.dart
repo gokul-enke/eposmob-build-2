@@ -21,6 +21,11 @@ class SalesExecutiveProvider extends ChangeNotifier {
   bool _isReportLoading = false;
   String? _reportError;
 
+  // Admin Sales Executive Report state variables
+  List<SalesExecutiveReportData> _adminSalesExecutiveReportList = [];
+  bool _isAdminReportLoading = false;
+  String? _adminReportError;
+
   List<SalesExecutive> get salesExecutives => _salesExecutives;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -30,6 +35,12 @@ class SalesExecutiveProvider extends ChangeNotifier {
       _salesExecutiveReportList;
   bool get isReportLoading => _isReportLoading;
   String? get reportError => _reportError;
+
+  // Admin Sales Executive Report getters
+  List<SalesExecutiveReportData> get adminSalesExecutiveReportList =>
+      _adminSalesExecutiveReportList;
+  bool get isAdminReportLoading => _isAdminReportLoading;
+  String? get adminReportError => _adminReportError;
 
   // Get the current user from the list of sales executives
   SalesExecutive? getCurrentUser(BuildContext context) {
@@ -109,7 +120,8 @@ class SalesExecutiveProvider extends ChangeNotifier {
       if (activeStoreId != null) {
         queryParameters['store_id'] = activeStoreId.toString();
       }
-      final url = Uri.parse(APPUrl.listSalesExecutives).replace(queryParameters: queryParameters);
+      final url = Uri.parse(APPUrl.listSalesExecutives)
+          .replace(queryParameters: queryParameters);
 
       final response = await http.get(
         url,
@@ -220,8 +232,7 @@ class SalesExecutiveProvider extends ChangeNotifier {
       final queryParameters = <String, String>{};
 
       // Determine dateFilter mode
-      final bool hasCustomDates =
-          (fromDate != null && fromDate.isNotEmpty) ||
+      final bool hasCustomDates = (fromDate != null && fromDate.isNotEmpty) ||
           (toDate != null && toDate.isNotEmpty);
 
       if (hasCustomDates) {
@@ -239,7 +250,8 @@ class SalesExecutiveProvider extends ChangeNotifier {
 
       // Attach active store_id if available
       try {
-        final storeProvider = Provider.of<StoreSessionProvider>(context, listen: false);
+        final storeProvider =
+            Provider.of<StoreSessionProvider>(context, listen: false);
         final storeId = storeProvider.activeStore?.storeId;
         if (storeId != null) {
           queryParameters['store_id'] = storeId.toString();
@@ -288,16 +300,16 @@ class SalesExecutiveProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         try {
           final jsonData = json.decode(response.body);
-          
+
           // Validate data structure before parsing
           if (jsonData is! Map<String, dynamic>) {
             throw FormatException('Response is not a valid JSON object');
           }
-          
+
           if (jsonData['data'] != null && jsonData['data'] is! List) {
             throw FormatException('Data field is not a list');
           }
-          
+
           SalesExecutiveReportModel reportModel =
               SalesExecutiveReportModel.fromJson(jsonData);
 
@@ -366,5 +378,124 @@ class SalesExecutiveProvider extends ChangeNotifier {
     _salesExecutiveReportList = [];
     _reportError = null;
     notifyListeners();
+  }
+
+  // Clear admin report data
+  void clearAdminReportData() {
+    _adminSalesExecutiveReportList = [];
+    _adminReportError = null;
+    notifyListeners();
+  }
+
+  /// Fetch sales executive report for admin — calls /api/v1/sales-executive-report-admin
+  Future<dynamic> getAdminSalesExecutiveReport({
+    required BuildContext context,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    debugPrint('📊 getAdminSalesExecutiveReport called');
+
+    _isAdminReportLoading = true;
+    _adminReportError = null;
+    notifyListeners();
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final token = authModel.token;
+
+      if (token == null) {
+        _adminReportError = 'Not authenticated';
+        _isAdminReportLoading = false;
+        notifyListeners();
+        return {'status': 'error', 'message': 'Not authenticated'};
+      }
+
+      final queryParameters = <String, String>{};
+
+      final bool hasCustomDates =
+          (fromDate != null && fromDate.isNotEmpty) ||
+              (toDate != null && toDate.isNotEmpty);
+
+      if (hasCustomDates) {
+        queryParameters['dateFilter'] = 'custom';
+        if (fromDate != null && fromDate.isNotEmpty) {
+          queryParameters['dateFrom'] = fromDate;
+        }
+        if (toDate != null && toDate.isNotEmpty) {
+          queryParameters['dateTo'] = toDate;
+        }
+      } else {
+        queryParameters['dateFilter'] = 'today';
+      }
+
+      try {
+        final storeProvider =
+            Provider.of<StoreSessionProvider>(context, listen: false);
+        final storeId = storeProvider.activeStore?.storeId;
+        if (storeId != null) {
+          queryParameters['store_id'] = storeId.toString();
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          final int? savedStoreId = prefs.getInt('active_store_id');
+          if (savedStoreId != null) {
+            queryParameters['store_id'] = savedStoreId.toString();
+          }
+        }
+      } catch (_) {}
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        _isAdminReportLoading = false;
+        notifyListeners();
+        throw const HttpException('API key not found. Please restart the app.');
+      }
+
+      final Uri url =
+          Uri.parse(APPUrl.getAdminSalesExecutiveReport).replace(
+        queryParameters:
+            queryParameters.isNotEmpty ? queryParameters : null,
+      );
+
+      debugPrint('📊 Admin report API: ${url.toString()}');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonData = json.decode(response.body);
+          final SalesExecutiveReportModel reportModel =
+              SalesExecutiveReportModel.fromJson(jsonData);
+          _adminSalesExecutiveReportList = reportModel.data ?? [];
+          _isAdminReportLoading = false;
+          notifyListeners();
+          return jsonData;
+        } catch (parseError) {
+          _adminReportError = 'Failed to parse response: $parseError';
+          _isAdminReportLoading = false;
+          notifyListeners();
+          return {'status': 'error', 'message': _adminReportError};
+        }
+      } else {
+        _adminReportError =
+            'Failed to load admin report: ${response.reasonPhrase}';
+        _isAdminReportLoading = false;
+        notifyListeners();
+        return {'status': 'error', 'message': _adminReportError};
+      }
+    } catch (error) {
+      _adminReportError = 'Error: $error';
+      _isAdminReportLoading = false;
+      notifyListeners();
+      return {'status': 'error', 'message': _adminReportError};
+    }
   }
 }

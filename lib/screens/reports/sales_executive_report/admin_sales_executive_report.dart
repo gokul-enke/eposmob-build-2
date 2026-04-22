@@ -5,9 +5,8 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/sales_executive_report.dart';
-import 'package:pos_machine/providers/auth_model.dart';
+
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -16,18 +15,21 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
-class SalesExecutiveReportScreen extends StatefulWidget {
-  const SalesExecutiveReportScreen({super.key});
+/// Admin-facing screen that shows sales reports for ALL sales executives.
+/// The API endpoint and response model will be wired up once the backend is ready.
+class AdminSalesExecutiveReportScreen extends StatefulWidget {
+  const AdminSalesExecutiveReportScreen({super.key});
 
   @override
-  State<SalesExecutiveReportScreen> createState() =>
-      _SalesExecutiveReportScreenState();
+  State<AdminSalesExecutiveReportScreen> createState() =>
+      _AdminSalesExecutiveReportScreenState();
 }
 
-class _SalesExecutiveReportScreenState
-    extends State<SalesExecutiveReportScreen> {
+class _AdminSalesExecutiveReportScreenState
+    extends State<AdminSalesExecutiveReportScreen> {
   final TextEditingController fromDateController = TextEditingController();
   final TextEditingController toDateController = TextEditingController();
+  final TextEditingController nameFilterController = TextEditingController();
 
   SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
@@ -36,6 +38,7 @@ class _SalesExecutiveReportScreenState
   void dispose() {
     fromDateController.dispose();
     toDateController.dispose();
+    nameFilterController.dispose();
     super.dispose();
   }
 
@@ -52,17 +55,10 @@ class _SalesExecutiveReportScreenState
           initLoading = true;
         });
       }
-
-      SalesExecutiveProvider salesExecutiveProvider =
-          Provider.of<SalesExecutiveProvider>(context, listen: false);
-
-      // Fetch sales executives first
-      await salesExecutiveProvider.fetchSalesExecutives(context);
-
-      // Then fetch sales executive report data
-      await fetchSalesExecutiveReport();
+      // TODO: Replace with admin-specific fetch once API is confirmed.
+      await fetchAdminSalesReport();
     } catch (error) {
-      debugPrint('Error loading sales executive data: $error');
+      debugPrint('Error loading admin sales executive data: $error');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -78,18 +74,17 @@ class _SalesExecutiveReportScreenState
     }
   }
 
-  Future<void> fetchSalesExecutiveReport() async {
-    // Return early if widget is disposed
+  Future<void> fetchAdminSalesReport() async {
     if (!mounted) return;
 
     try {
-      SalesExecutiveProvider salesExecutiveProvider =
+      SalesExecutiveProvider provider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
 
       String? fromDate;
       String? toDate;
 
-      // Convert to YYYY-MM-DD HH:MM:SS format for API if dates are provided
+      // Dates are directly available in YYYY-MM-DD HH:MM:SS format
       if (fromDateController.text.isNotEmpty) {
         fromDate = fromDateController.text;
       }
@@ -98,16 +93,14 @@ class _SalesExecutiveReportScreenState
         toDate = toDateController.text;
       }
 
-      debugPrint(
-          '📊 Fetching report with dates - From: $fromDate, To: $toDate');
-
-      final response = await salesExecutiveProvider.getSalesExecutiveReport(
+      // TODO: Replace with admin-specific provider method once API is ready.
+      // Currently reuses the existing endpoint as a placeholder.
+      final response = await provider.getAdminSalesExecutiveReport(
         context: context,
         fromDate: fromDate,
         toDate: toDate,
       );
 
-      // Check mounted again after async operation
       if (!mounted) return;
 
       if (response != null && response['status'] == 'error') {
@@ -115,14 +108,9 @@ class _SalesExecutiveReportScreenState
           context: context,
           message: response['message'] ?? 'Failed to fetch report data',
         );
-      } else if (response != null && response['status'] == 'success') {
-        showScaffold(
-          context: context,
-          message: 'Report data loaded successfully',
-        );
       }
     } catch (error) {
-      debugPrint('❌ Error fetching sales executive report: $error');
+      debugPrint('❌ Error fetching admin sales executive report: $error');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -132,26 +120,19 @@ class _SalesExecutiveReportScreenState
     }
   }
 
-  void searchSalesExecutives() {
-    // Fetch report data with current date filters
-    fetchSalesExecutiveReport();
-  }
+  void searchReport() => fetchAdminSalesReport();
 
   void resetSearch() {
     setState(() {
       fromDateController.clear();
       toDateController.clear();
+      nameFilterController.clear();
     });
-
-    // Clear report data and fetch fresh data
-    SalesExecutiveProvider salesExecutiveProvider =
-        Provider.of<SalesExecutiveProvider>(context, listen: false);
-    salesExecutiveProvider.clearReportData();
-
-    fetchSalesExecutiveReport();
+    Provider.of<SalesExecutiveProvider>(context, listen: false)
+        .clearAdminReportData();
+    fetchAdminSalesReport();
   }
 
-  // Combined Date and Time selection method
   Future<void> _selectDateTime(BuildContext context,
       {required bool isFromDate}) async {
     final DateTime? pickedDate = await showDatePicker(
@@ -159,17 +140,16 @@ class _SalesExecutiveReportScreenState
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
+      builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
             colorScheme: const ColorScheme.light(
-              primary: ColorManager.kPrimaryColor, // Header background color
-              onPrimary: Colors.white, // Header text color
-              surface: Colors.white, // Calendar background
-              onSurface: Colors.black, // Calendar text color
+              primary: ColorManager.kPrimaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
             ),
-            dialogBackgroundColor: Colors.white, // Dialog background
-            cardColor: Colors.white, // Card background
+            dialogBackgroundColor: Colors.white,
           ),
           child: child!,
         );
@@ -180,7 +160,7 @@ class _SalesExecutiveReportScreenState
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
-        builder: (BuildContext context, Widget? child) {
+        builder: (context, child) {
           return Theme(
             data: ThemeData.light().copyWith(
               colorScheme: const ColorScheme.light(
@@ -213,8 +193,7 @@ class _SalesExecutiveReportScreenState
             toDateController.text = formattedDateTime;
           }
         });
-        // Trigger search immediately after selection
-        searchSalesExecutives();
+        searchReport();
       }
     }
   }
@@ -222,8 +201,6 @@ class _SalesExecutiveReportScreenState
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    SalesExecutiveProvider salesExecutiveProvider =
-        Provider.of<SalesExecutiveProvider>(context);
 
     return SafeArea(
       child: RefreshIndicator(
@@ -266,7 +243,7 @@ class _SalesExecutiveReportScreenState
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "My Sales Report",
+          "Sales Executive Reports",
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
@@ -289,6 +266,11 @@ class _SalesExecutiveReportScreenState
               Expanded(
                 flex: 1,
                 child: _buildToDateFilter(),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 1,
+                child: _buildNameFilter(),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -343,11 +325,8 @@ class _SalesExecutiveReportScreenState
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIcon: Container(
                 padding: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
+                child: const Icon(Icons.calendar_today,
+                    size: 16, color: ColorManager.kPrimaryColor),
               ),
               filled: true,
               fillColor: Colors.white,
@@ -388,11 +367,49 @@ class _SalesExecutiveReportScreenState
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIcon: Container(
                 padding: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
+                child: const Icon(Icons.calendar_today,
+                    size: 16, color: ColorManager.kPrimaryColor),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNameFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Search Executive",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: nameFilterController,
+            onChanged: (_) => setState(() {}),
+            cursorColor: ColorManager.kPrimaryColor,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Type name...",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIcon: Container(
+                padding: const EdgeInsets.all(8),
+                child: const Icon(Icons.search,
+                    size: 16, color: ColorManager.kPrimaryColor),
               ),
               filled: true,
               fillColor: Colors.white,
@@ -406,11 +423,20 @@ class _SalesExecutiveReportScreenState
   Widget _buildExecutiveTable() {
     return Expanded(
       child: Consumer<SalesExecutiveProvider>(
-          builder: (context, salesExecutiveProvider, child) {
-        final isLoading = salesExecutiveProvider.isLoading ||
-            salesExecutiveProvider.isReportLoading;
-        final reportList = salesExecutiveProvider.salesExecutiveReportList;
-        final reportError = salesExecutiveProvider.reportError;
+          builder: (context, provider, child) {
+        final isLoading =
+            provider.isLoading || provider.isAdminReportLoading;
+        final allReports = provider.adminSalesExecutiveReportList;
+        final reportError = provider.adminReportError;
+
+        // Client-side name filter
+        final nameQuery = nameFilterController.text.trim().toLowerCase();
+        final reportList = nameQuery.isEmpty
+            ? allReports
+            : allReports
+                .where((r) =>
+                    (r.name ?? '').toLowerCase().contains(nameQuery))
+                .toList();
 
         return Column(
           children: [
@@ -439,17 +465,16 @@ class _SalesExecutiveReportScreenState
                             ),
                             child: Table(
                               columnWidths: const {
-                                0: FlexColumnWidth(2.0), // Executive Name
-                                1: FlexColumnWidth(1.5), // Phone
-                                2: FlexColumnWidth(1.5), // Total Orders
-                                3: FlexColumnWidth(1.5), // Total Sales
-                                4: FlexColumnWidth(1.5), // Online Sales
-                                5: FlexColumnWidth(1.5), // Cash Sales
-                                6: FlexColumnWidth(1.5), // Credit Sales
-                                7: FlexColumnWidth(1.5), // Collected Sales
-                                8: FlexColumnWidth(1.2), // Actions
+                                0: FlexColumnWidth(2.0),
+                                1: FlexColumnWidth(1.5),
+                                2: FlexColumnWidth(1.5),
+                                3: FlexColumnWidth(1.5),
+                                4: FlexColumnWidth(1.5),
+                                5: FlexColumnWidth(1.5),
+                                6: FlexColumnWidth(1.5),
+                                7: FlexColumnWidth(1.5),
+                                8: FlexColumnWidth(1.2),
                               },
-                              border: null,
                               defaultVerticalAlignment:
                                   TableCellVerticalAlignment.middle,
                               children: [
@@ -493,26 +518,16 @@ class _SalesExecutiveReportScreenState
                                             scrollDirection: Axis.vertical,
                                             child: Table(
                                               columnWidths: const {
-                                                0: FlexColumnWidth(
-                                                    2.0), // Executive Name
-                                                1: FlexColumnWidth(
-                                                    1.5), // Phone
-                                                2: FlexColumnWidth(
-                                                    1.5), // Total Orders
-                                                3: FlexColumnWidth(
-                                                    1.5), // Total Sales
-                                                4: FlexColumnWidth(
-                                                    1.5), // Online Sales
-                                                5: FlexColumnWidth(
-                                                    1.5), // Cash Sales
-                                                6: FlexColumnWidth(
-                                                    1.5), // Credit Sales
-                                                7: FlexColumnWidth(
-                                                    1.5), // Collected Sales
-                                                8: FlexColumnWidth(
-                                                    1.2), // Actions
+                                                0: FlexColumnWidth(2.0),
+                                                1: FlexColumnWidth(1.5),
+                                                2: FlexColumnWidth(1.5),
+                                                3: FlexColumnWidth(1.5),
+                                                4: FlexColumnWidth(1.5),
+                                                5: FlexColumnWidth(1.5),
+                                                6: FlexColumnWidth(1.5),
+                                                7: FlexColumnWidth(1.5),
+                                                8: FlexColumnWidth(1.2),
                                               },
-                                              border: null,
                                               defaultVerticalAlignment:
                                                   TableCellVerticalAlignment
                                                       .middle,
@@ -528,10 +543,10 @@ class _SalesExecutiveReportScreenState
                                                         report.name ?? "N/A"),
                                                     _buildTableCell(
                                                         report.phone ?? "N/A"),
-                                                    _buildTableCell(report
-                                                            .orderCount
-                                                            ?.toString() ??
-                                                        "0"),
+                                                    _buildTableCell(
+                                                        report.orderCount
+                                                                ?.toString() ??
+                                                            "0"),
                                                     _buildTableCell(
                                                         "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedTotalSales}"),
                                                     _buildTableCell(
@@ -570,30 +585,20 @@ class _SalesExecutiveReportScreenState
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            Icons.bar_chart_outlined,
-            size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-          ),
+          Icon(Icons.bar_chart_outlined,
+              size: 60,
+              color: ColorManager.kPrimaryColor.withOpacity(0.7)),
           const SizedBox(height: 15),
           Text(
             'No report data found',
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
+                0.27, ColorManager.textColor),
           ),
           const SizedBox(height: 8),
           Text(
             'Try adjusting the date filters or check back later',
             style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.20,
-              Colors.grey,
-            ),
+                FontWeightManager.regular, FontSize.s14, 0.20, Colors.grey),
           ),
         ],
       ),
@@ -609,20 +614,13 @@ class _SalesExecutiveReportScreenState
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 60,
-            color: Colors.red.withOpacity(0.7),
-          ),
+          Icon(Icons.error_outline,
+              size: 60, color: Colors.red.withOpacity(0.7)),
           const SizedBox(height: 15),
           Text(
             'Error Loading Report',
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
+                0.27, ColorManager.textColor),
           ),
           const SizedBox(height: 8),
           Padding(
@@ -631,22 +629,17 @@ class _SalesExecutiveReportScreenState
               error,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.20,
-                Colors.grey,
-              ),
+                  FontWeightManager.regular, FontSize.s14, 0.20, Colors.grey),
             ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () => fetchSalesExecutiveReport(),
+            onPressed: () => fetchAdminSalesReport(),
             style: ElevatedButton.styleFrom(
               backgroundColor: ColorManager.kPrimaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Retry'),
           ),
@@ -661,12 +654,8 @@ class _SalesExecutiveReportScreenState
       child: Text(
         title,
         textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
+        style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18,
+            ColorManager.kPrimaryColor),
       ),
     );
   }
@@ -680,11 +669,7 @@ class _SalesExecutiveReportScreenState
           content,
           textAlign: TextAlign.center,
           style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s9,
-            0.13,
-            Colors.black,
-          ),
+              FontWeightManager.medium, FontSize.s9, 0.13, Colors.black),
         ),
       ),
     );
@@ -700,16 +685,12 @@ class _SalesExecutiveReportScreenState
             margin: const EdgeInsets.only(left: 5, right: 5),
             circleRadius: 5,
             child: IconButton(
-              icon: Icon(
-                Icons.visibility,
-                size: 18,
-                color: ColorManager.kPrimaryColor.withOpacity(0.9),
-              ),
+              icon: Icon(Icons.visibility,
+                  size: 18,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.9)),
               onPressed: () => _showExecutiveDetails(report),
-              constraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
+              constraints:
+                  const BoxConstraints(minWidth: 36, minHeight: 36),
               padding: EdgeInsets.zero,
             ),
           ),
@@ -719,7 +700,6 @@ class _SalesExecutiveReportScreenState
   }
 
   void _showExecutiveDetails(SalesExecutiveReportData report) {
-    // Get date range or default to today
     String dateRange;
     if (fromDateController.text.isNotEmpty &&
         toDateController.text.isNotEmpty) {
@@ -736,9 +716,8 @@ class _SalesExecutiveReportScreenState
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -747,32 +726,25 @@ class _SalesExecutiveReportScreenState
               maxHeight: MediaQuery.of(context).size.height * 0.85,
             ),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.all(24),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sales Executive Details',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s20,
-                          0.30,
-                          Colors.black,
-                        ),
+                        'Executive Details',
+                        style: buildCustomStyle(FontWeightManager.semiBold,
+                            FontSize.s20, 0.30, Colors.black),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: ColorManager.kPrimaryColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                            color: ColorManager.kPrimaryColor,
+                            borderRadius: BorderRadius.circular(8)),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
@@ -780,17 +752,14 @@ class _SalesExecutiveReportScreenState
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
+                                  horizontal: 16, vertical: 8),
                               child: Text(
                                 'Back',
                                 style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s14,
-                                  0.20,
-                                  Colors.white,
-                                ),
+                                    FontWeightManager.medium,
+                                    FontSize.s14,
+                                    0.20,
+                                    Colors.white),
                               ),
                             ),
                           ),
@@ -800,71 +769,53 @@ class _SalesExecutiveReportScreenState
                   ),
                 ),
                 const Divider(height: 1),
-                // Scrollable Content
                 Flexible(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        // Executive Information Section
                         _buildSection(
                           title: 'Executive Information',
                           children: [
                             _buildInfoRow(
-                              _buildInfoItem('Name', report.name ?? 'N/A'),
-                              _buildInfoItem('Phone', report.phone ?? 'N/A'),
+                              _buildInfoItem(
+                                  'Name', report.name ?? 'N/A'),
+                              _buildInfoItem(
+                                  'Phone', report.phone ?? 'N/A'),
                             ),
                             const SizedBox(height: 16),
                             _buildInfoRow(
                               _buildInfoItem('Date Range', dateRange),
-                              _buildInfoItem(
-                                'Total Orders',
-                                (report.orderCount ?? 0).toString(),
-                              ),
+                              _buildInfoItem('Total Orders',
+                                  (report.orderCount ?? 0).toString()),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        // Financial Summary Section
                         _buildSection(
                           title: 'Financial Summary',
                           children: [
                             _buildFinancialItem(
-                              'Total Sales',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}',
-                            ),
+                                'Total Sales',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}'),
                             _buildFinancialItem(
-                              'Total Payment Received',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalPaymentReceived}',
-                            ),
+                                'Online Sales',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedOnlineSales}'),
                             _buildFinancialItem(
-                              'Total Amount Collected On Sale',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalCollectedOnSale}',
-                            ),
+                                'Cash Sales',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}'),
                             _buildFinancialItem(
-                              'Total Credit Collected (Prev Balance)',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}',
-                            ),
+                                'Credit Sales',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}'),
                             _buildFinancialItem(
-                              'Total UPI Sales',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}',
-                            ),
+                                'Collected Sales',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}'),
                             _buildFinancialItem(
-                              'Total Card Sales',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCardSales}',
-                            ),
+                                'UPI Sales',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}'),
                             _buildFinancialItem(
-                              'Total Online Sales',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedOnlineSales}',
-                            ),
-                            _buildFinancialItem(
-                              'Total Cash Sales',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}',
-                            ),
-                            _buildFinancialItem(
-                              'Total Credit Amount',
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}',
-                            ),
+                                'Card Sales',
+                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCardSales}'),
                           ],
                         ),
                       ],
@@ -879,10 +830,8 @@ class _SalesExecutiveReportScreenState
     );
   }
 
-  Widget _buildSection({
-    required String title,
-    required List<Widget> children,
-  }) {
+  Widget _buildSection(
+      {required String title, required List<Widget> children}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -894,15 +843,9 @@ class _SalesExecutiveReportScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s16,
-              0.24,
-              Colors.black,
-            ),
-          ),
+          Text(title,
+              style: buildCustomStyle(FontWeightManager.semiBold,
+                  FontSize.s16, 0.24, Colors.black)),
           const SizedBox(height: 16),
           ...children,
         ],
@@ -926,27 +869,15 @@ class _SalesExecutiveReportScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s12,
-            0.18,
-            Colors.black87,
-          ),
-        ),
+        Text(label,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                0.18, Colors.black87)),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s14,
-            0.20,
-            Colors.black,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        Text(value,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
+                0.20, Colors.black),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
       ],
     );
   }
@@ -958,26 +889,14 @@ class _SalesExecutiveReportScreenState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s13,
-                0.18,
-                Colors.black87,
-              ),
-            ),
+            child: Text(label,
+                style: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s13, 0.18, Colors.black87)),
           ),
           const SizedBox(width: 16),
-          Text(
-            value,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s14,
-              0.20,
-              Colors.black,
-            ),
-          ),
+          Text(value,
+              style: buildCustomStyle(FontWeightManager.semiBold,
+                  FontSize.s14, 0.20, Colors.black)),
         ],
       ),
     );

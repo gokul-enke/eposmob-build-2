@@ -321,6 +321,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         stickerSize: result['size'] ?? '50x25mm',
         stickersPerRow: result['stickersPerRow'] ?? 1,
       );
+
+      // Clear selection after printing
+      setState(() {
+        _selectedProductKeys.clear();
+        _selectedProductsByKey.clear();
+      });
     }
   }
 
@@ -359,6 +365,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         stickerSize: result['size'] ?? '50x25mm',
         stickersPerRow: result['stickersPerRow'] ?? 1,
       );
+
+      // Clear selection after printing
+      setState(() {
+        _selectedProductKeys.clear();
+        _selectedProductsByKey.clear();
+      });
     }
   }
 

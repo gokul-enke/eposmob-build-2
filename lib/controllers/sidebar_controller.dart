@@ -47,6 +47,7 @@ import 'package:pos_machine/screens/reports/product_sales_report/product_sales_r
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
+import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
 import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
@@ -185,5 +186,6 @@ class SideBarController extends GetxController {
     CreatePurchaseOrderScreen(), // 82 Create Purchase Order Screen
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
+    AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
   ];
 }
