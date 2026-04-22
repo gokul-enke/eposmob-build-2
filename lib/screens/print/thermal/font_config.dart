@@ -1,4 +1,4 @@
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+﻿import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 
 /// Font configuration utilities for thermal printing
 /// Provides dynamic font sizing based on paper size (58mm vs 80mm)

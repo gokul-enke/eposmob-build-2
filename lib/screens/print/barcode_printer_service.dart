@@ -1,6 +1,6 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +19,7 @@ import 'package:open_file/open_file.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Barcode Printer Service
@@ -901,6 +902,36 @@ class BarcodePrinterService {
     debugPrint('[BarcodePrint:Windows] Target printer: "${printerName.isEmpty ? "(none saved)" : printerName}"');
 
     if (printerName.isNotEmpty) {
+      // Strategy 0: printing package — native Windows print spooler, no external viewer needed
+      debugPrint('[BarcodePrint:Windows] Strategy 0: Trying Printing.directPrintPdf...');
+      try {
+        final pdfBytes = await file.readAsBytes();
+        final printers = await Printing.listPrinters();
+        debugPrint('[BarcodePrint:Windows]   Available printers: ${printers.map((p) => p.name).toList()}');
+        final targetPrinter = printers.firstWhere(
+          (p) => p.name.toLowerCase() == printerName.toLowerCase(),
+          orElse: () => printers.firstWhere(
+            (p) => p.name.toLowerCase().contains(printerName.toLowerCase()),
+            orElse: () => printers.isEmpty ? throw Exception('No printers') : printers.first,
+          ),
+        );
+        debugPrint('[BarcodePrint:Windows]   Using printer: ${targetPrinter.name}');
+        final success = await Printing.directPrintPdf(
+          printer: targetPrinter,
+          onLayout: (_) async => pdfBytes,
+          name: 'Barcodes',
+        );
+        debugPrint('[BarcodePrint:Windows]   directPrintPdf result: $success');
+        if (success) {
+          if (context.mounted) showScaffold(context: context, message: 'Sent to printer: ${targetPrinter.name}');
+          debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (printing pkg) ──');
+          return;
+        }
+        debugPrint('[BarcodePrint:Windows]   printing pkg returned false, trying next strategy...');
+      } catch (e) {
+        debugPrint('[BarcodePrint:Windows]   printing pkg failed: $e, trying next strategy...');
+      }
+
       // Strategy 1: SumatraPDF — free PDF viewer with excellent CLI, common in business setups
       // Command: SumatraPDF.exe -print-to "printer name" -silent file.pdf
       final sumatraPaths = [
