@@ -33,8 +33,11 @@ class _SupplierTransactionDetailsScreenState
     extends State<SupplierTransactionDetailsScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
+  bool _showFilters = true;
   List<SupplierTransaction> filteredTransactions = [];
   String selectedSupplierName = '';
+
+  bool _isMobile(BuildContext ctx) => MediaQuery.of(ctx).size.width < 768;
 
   // Controllers for filters
   final TextEditingController _fromDateController = TextEditingController();
@@ -52,6 +55,9 @@ class _SupplierTransactionDetailsScreenState
     // Set default date values
     _setInitialDateFilters();
     loadInitData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _showFilters = !_isMobile(context));
+    });
   }
 
   @override
@@ -298,8 +304,11 @@ class _SupplierTransactionDetailsScreenState
       child: RefreshIndicator(
         onRefresh: () async => loadInitData(),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: _isMobile(context) ? 5 : 10,
+            vertical: _isMobile(context) ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
@@ -312,15 +321,17 @@ class _SupplierTransactionDetailsScreenState
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: EdgeInsets.symmetric(
+              vertical: _isMobile(context) ? 12.0 : 20.0,
+              horizontal: _isMobile(context) ? 12.0 : 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 15),
-                _buildFilters(),
-                const SizedBox(height: 20),
+                if (_showFilters) _buildFilters(),
+                if (_showFilters) const SizedBox(height: 20),
                 _buildTransactionTable(),
               ],
             ),
@@ -331,65 +342,170 @@ class _SupplierTransactionDetailsScreenState
   }
 
   Widget _buildHeader(Size size) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Supplier Transaction Details",
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s20,
-                  0.30,
-                  ColorManager.textColor,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Supplier Transaction Details",
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s20,
+                      0.30,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    "Supplier: $selectedSupplierName",
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.27,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!_isMobile(context))
+              Row(
+                children: [
+                  CustomRoundButton(
+                    title: "Print",
+                    boxColor: ColorManager.kPrimaryColor,
+                    textColor: Colors.white,
+                    fct: _printReport,
+                    height: 40,
+                    width: 80,
+                    fontSize: FontSize.s12,
+                  ),
+                  const SizedBox(width: 10),
+                  CustomRoundButton(
+                    title: "Back to Report",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    fct: () {
+                      sideBarController.index.value = 67;
+                    },
+                    height: 40,
+                    width: 120,
+                    fontSize: FontSize.s12,
+                  ),
+                ],
+              ),
+            if (_isMobile(context))
+              TextButton.icon(
+                onPressed: () => setState(() => _showFilters = !_showFilters),
+                icon: Icon(
+                  _showFilters ? Icons.filter_list_off : Icons.filter_list,
+                  size: 18,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                label: Text(
+                  _showFilters ? 'Hide' : 'Filters',
+                  style: const TextStyle(
+                      color: ColorManager.kPrimaryColor, fontSize: 12),
                 ),
               ),
-              const SizedBox(height: 5),
-              Text(
-                "Supplier: $selectedSupplierName",
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s14,
-                  0.27,
-                  ColorManager.kPrimaryColor,
+          ],
+        ),
+        if (_isMobile(context)) const SizedBox(height: 8),
+        if (_isMobile(context))
+          Row(
+            children: [
+              Expanded(
+                child: CustomRoundButton(
+                  title: "Print",
+                  boxColor: ColorManager.kPrimaryColor,
+                  textColor: Colors.white,
+                  fct: _printReport,
+                  height: 36,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CustomRoundButton(
+                  title: "Back",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  fct: () => sideBarController.index.value = 67,
+                  height: 36,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
                 ),
               ),
             ],
           ),
-        ),
-        Row(
-          children: [
-            CustomRoundButton(
-              title: "Print",
-              boxColor: ColorManager.kPrimaryColor,
-              textColor: Colors.white,
-              fct: _printReport,
-              height: 40,
-              width: 80,
-              fontSize: FontSize.s12,
-            ),
-            const SizedBox(width: 10),
-            CustomRoundButton(
-              title: "Back to Report",
-              boxColor: Colors.white,
-              textColor: ColorManager.kPrimaryColor,
-              fct: () {
-                sideBarController.index.value = 67; // Back to Supplier Transaction Report
-              },
-              height: 40,
-              width: 120,
-              fontSize: FontSize.s12,
-            ),
-          ],
-        ),
       ],
     );
   }
 
   Widget _buildFilters() {
+    if (_isMobile(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSearchField(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                  child: _buildDateField("From Date", _fromDateController, true)),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: _buildDateField("To Date", _toDateController, false)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDropdownField(
+                  "Type",
+                  selectedTransactionType,
+                  ['All', 'Credit', 'Debit'],
+                  (value) {
+                    setState(() => selectedTransactionType = value!);
+                    _applyFiltersFromCurrentData();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildDropdownField(
+                  "Payment",
+                  selectedPaymentMethod,
+                  ['All', 'Cash', 'Card', 'Bank Transfer', 'Cheque', 'UPI'],
+                  (value) {
+                    setState(() => selectedPaymentMethod = value!);
+                    _applyFiltersFromCurrentData();
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          CustomRoundButton(
+            title: "Reset",
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            fct: _resetFilters,
+            height: 45,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
+        ],
+      );
+    }
     return Column(
       children: [
         // First row of filters
@@ -703,11 +819,143 @@ class _SupplierTransactionDetailsScreenState
     }
   }
 
-  Widget _buildTransactionTable() {
+  Widget _buildMobileTransactionCard(SupplierTransaction tx, int index) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  tx.date,
+                  style: buildCustomStyle(FontWeightManager.regular,
+                      FontSize.s11, 0.15, Colors.grey),
+                ),
+                Row(
+                  children: [
+                    _buildTypeCell(tx.type),
+                    const SizedBox(width: 6),
+                    _buildStatusChipInline(tx.status),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              tx.reference.isNotEmpty ? tx.reference : '-',
+              style: buildCustomStyle(FontWeightManager.semiBold,
+                  FontSize.s13, 0.20, ColorManager.textColor),
+            ),
+            const Divider(height: 12),
+            Row(
+              children: [
+                _buildMobileCardStat('Amount',
+                    '${tx.currency} ${double.tryParse(tx.amount)?.toStringAsFixed(2) ?? tx.amount}'),
+                _buildMobileCardStat('Payment', tx.paymentMethod),
+              ],
+            ),
+            if (tx.transactionType.isNotEmpty) ...
+              [
+                const SizedBox(height: 4),
+                Text(
+                  tx.transactionType,
+                  style: buildCustomStyle(FontWeightManager.regular,
+                      FontSize.s10, 0.15, Colors.grey),
+                ),
+              ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChipInline(String status) {
+    Color bg;
+    Color fg;
+    String label;
+    switch (status.toUpperCase()) {
+      case 'SUCC':
+      case 'SUCCESS':
+      case 'COMPLETED':
+        bg = Colors.green.withOpacity(0.1);
+        fg = Colors.green;
+        label = 'Success';
+        break;
+      case 'INIT':
+      case 'INITIATED':
+      case 'PENDING':
+        bg = Colors.orange.withOpacity(0.1);
+        fg = Colors.orange;
+        label = 'Pending';
+        break;
+      case 'FAIL':
+      case 'FAILED':
+      case 'CANCELLED':
+        bg = Colors.red.withOpacity(0.1);
+        fg = Colors.red;
+        label = 'Failed';
+        break;
+      default:
+        bg = Colors.grey.withOpacity(0.1);
+        fg = Colors.grey;
+        label = status.isEmpty ? 'N/A' : status;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: fg, fontWeight: FontWeight.bold, fontSize: 11)),
+    );
+  }
+
+  Widget _buildMobileCardStat(String label, String value) {
     return Expanded(
-      child: initLoading
-          ? const Center(child: CircularProgressIndicator.adaptive())
-          : BuildBoxShadowContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
+                  0.15, Colors.grey)),
+          Text(value,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                  0.18, Colors.black87),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionTable() {
+    if (initLoading) {
+      return const Expanded(
+          child: Center(child: CircularProgressIndicator.adaptive()));
+    }
+
+    if (_isMobile(context)) {
+      return Expanded(
+        child: filteredTransactions.isEmpty
+            ? _buildNoDataFoundUI()
+            : ListView.builder(
+                itemCount: filteredTransactions.length,
+                itemBuilder: (ctx, i) =>
+                    _buildMobileTransactionCard(filteredTransactions[i], i),
+              ),
+      );
+    }
+
+    return Expanded(
+      child: BuildBoxShadowContainer(
               margin: const EdgeInsets.only(top: 5),
               circleRadius: 7,
               offsetValue: const Offset(2, 2),
