@@ -1,4 +1,4 @@
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+﻿import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import '../font_config.dart';
 

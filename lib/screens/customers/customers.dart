@@ -313,8 +313,6 @@ class _CustomersScreenState extends State<CustomersScreen> {
                             ),
 
                             const SizedBox(width: 15),
-
-                            // Balance Filter
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

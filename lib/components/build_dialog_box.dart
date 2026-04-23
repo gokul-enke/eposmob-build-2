@@ -19,7 +19,7 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
   // Create a custom overlay message that will appear above modals
   _currentOverlayEntry = OverlayEntry(
     builder: (context) => Positioned(
-      bottom: 20,
+      bottom: 20 + MediaQuery.of(context).padding.bottom,
       left: isMobile ? 16 : null,
       right: 16,
       child: Material(
@@ -161,7 +161,7 @@ ScaffoldMessengerState showScaffoldError(
   // Create a custom overlay message that will appear above modals
   _currentOverlayEntry = OverlayEntry(
     builder: (context) => Positioned(
-      bottom: 20,
+      bottom: 20 + MediaQuery.of(context).padding.bottom,
       left: isMobile ? 16 : null,
       right: 16,
       child: Material(

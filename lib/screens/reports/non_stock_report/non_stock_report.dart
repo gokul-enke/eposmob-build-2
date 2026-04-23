@@ -30,6 +30,9 @@ class NonStockReportScreen extends StatefulWidget {
 class _NonStockReportScreenState extends State<NonStockReportScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
+  bool _showFilters = true;
+
+  bool _isMobile(BuildContext ctx) => MediaQuery.of(ctx).size.width < 768;
 
   // Controllers for filters
   final TextEditingController _barcodeController = TextEditingController();
@@ -47,6 +50,9 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
   void initState() {
     super.initState();
     loadInitData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _showFilters = !_isMobile(context));
+    });
   }
 
   @override
@@ -110,8 +116,11 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
       child: RefreshIndicator(
         onRefresh: () async => await loadInitData(),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: _isMobile(context) ? 5 : 10,
+            vertical: _isMobile(context) ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
@@ -124,15 +133,17 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: EdgeInsets.symmetric(
+              vertical: _isMobile(context) ? 12.0 : 20.0,
+              horizontal: _isMobile(context) ? 12.0 : 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
                 const SizedBox(height: 15),
-                _buildFilters(),
-                const SizedBox(height: 20),
+                if (_showFilters) _buildFilters(),
+                if (_showFilters) const SizedBox(height: 20),
                 _buildReportTable(reportsProvider),
                 const SizedBox(height: 10),
                 _buildPagination(reportsProvider),
@@ -145,14 +156,35 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
   }
 
   Widget _buildHeader() {
-    return Text(
-      "Non-Stock Report",
-      style: buildCustomStyle(
-        FontWeightManager.semiBold,
-        FontSize.s20,
-        0.30,
-        ColorManager.textColor,
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            "Non-Stock Report",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s20,
+              0.30,
+              ColorManager.textColor,
+            ),
+          ),
+        ),
+        if (_isMobile(context))
+          TextButton.icon(
+            onPressed: () => setState(() => _showFilters = !_showFilters),
+            icon: Icon(
+              _showFilters ? Icons.filter_list_off : Icons.filter_list,
+              size: 18,
+              color: ColorManager.kPrimaryColor,
+            ),
+            label: Text(
+              _showFilters ? 'Hide' : 'Filters',
+              style: const TextStyle(
+                  color: ColorManager.kPrimaryColor, fontSize: 12),
+            ),
+          ),
+      ],
     );
   }
 
@@ -161,127 +193,147 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     final categoryProvider = Provider.of<CategoryProvider>(context);
     final productProvider = Provider.of<LocalProductProvider>(context);
 
+    final storeDropdown = _buildFilterDropdown<Store>(
+      label: "Store",
+      hint: "Select a store",
+      value: selectedStoreName != null
+          ? storeProvider.availableStores.firstWhereOrNull(
+              (s) => s.storeName == selectedStoreName)
+          : null,
+      items: storeProvider.availableStores,
+      displayText: (s) => s.storeName ?? "",
+      onChanged: (s) {
+        setState(() {
+          selectedStoreName = s?.storeName;
+          _currentPage = 1;
+        });
+        loadInitData();
+      },
+    );
+
+    final categoryDropdown = _buildFilterDropdown<Category>(
+      label: "Category",
+      hint: "Select a category",
+      value: selectedCategoryName != null
+          ? categoryProvider.category?.firstWhereOrNull(
+              (c) => c.categoryName == selectedCategoryName)
+          : null,
+      items: categoryProvider.category ?? [],
+      displayText: (c) => c.categoryName ?? "",
+      onChanged: (c) {
+        setState(() {
+          selectedCategoryName = c?.categoryName;
+          _currentPage = 1;
+        });
+        loadInitData();
+      },
+    );
+
+    final productDropdown = _buildFilterDropdown<GetProduct>(
+      label: "Product",
+      hint: "Select a product",
+      value: selectedProductName != null
+          ? productProvider.products.firstWhereOrNull(
+              (p) => p.productName == selectedProductName)
+          : null,
+      items: productProvider.products,
+      displayText: (p) => p.productName ?? "",
+      onChanged: (p) {
+        setState(() {
+          selectedProductName = p?.productName;
+          _currentPage = 1;
+        });
+        loadInitData();
+      },
+    );
+
+    final barcodeField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Barcode",
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextField(
+            controller: _barcodeController,
+            onSubmitted: (value) {
+              setState(() {
+                _currentPage = 1;
+              });
+              loadInitData();
+            },
+            decoration: InputDecoration(
+              hintText: "Filter by Barcode",
+              hintStyle: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s12,
+                0.18,
+                Colors.grey,
+              ),
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (_isMobile(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(child: storeDropdown),
+            const SizedBox(width: 8),
+            Expanded(child: categoryDropdown),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: productDropdown),
+            const SizedBox(width: 8),
+            Expanded(child: barcodeField),
+          ]),
+          const SizedBox(height: 8),
+          CustomRoundButton(
+            title: "Reset",
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            fct: _resetFilters,
+            height: 45,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
+        ],
+      );
+    }
+
     return Column(
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Store Filter
-            Expanded(
-              flex: 1,
-              child: _buildFilterDropdown<Store>(
-                label: "Store",
-                hint: "Select a store",
-                value: selectedStoreName != null
-                    ? storeProvider.availableStores.firstWhereOrNull(
-                        (s) => s.storeName == selectedStoreName)
-                    : null,
-                items: storeProvider.availableStores,
-                displayText: (s) => s.storeName ?? "",
-                onChanged: (s) {
-                  setState(() {
-                    selectedStoreName = s?.storeName;
-                    _currentPage = 1;
-                  });
-                  loadInitData();
-                },
-              ),
-            ),
+            Expanded(flex: 1, child: storeDropdown),
             const SizedBox(width: 10),
-            // Category Filter
-            Expanded(
-              flex: 1,
-              child: _buildFilterDropdown<Category>(
-                label: "Category",
-                hint: "Select a category",
-                value: selectedCategoryName != null
-                    ? categoryProvider.category?.firstWhereOrNull(
-                        (c) => c.categoryName == selectedCategoryName)
-                    : null,
-                items: categoryProvider.category ?? [],
-                displayText: (c) => c.categoryName ?? "",
-                onChanged: (c) {
-                  setState(() {
-                    selectedCategoryName = c?.categoryName;
-                    _currentPage = 1;
-                  });
-                  loadInitData();
-                },
-              ),
-            ),
+            Expanded(flex: 1, child: categoryDropdown),
             const SizedBox(width: 10),
-            // Product Filter
-            Expanded(
-              flex: 1,
-              child: _buildFilterDropdown<GetProduct>(
-                label: "Product",
-                hint: "Select a product",
-                value: selectedProductName != null
-                    ? productProvider.products.firstWhereOrNull(
-                        (p) => p.productName == selectedProductName)
-                    : null,
-                items: productProvider.products,
-                displayText: (p) => p.productName ?? "",
-                onChanged: (p) {
-                  setState(() {
-                    selectedProductName = p?.productName;
-                    _currentPage = 1;
-                  });
-                  loadInitData();
-                },
-              ),
-            ),
+            Expanded(flex: 1, child: productDropdown),
             const SizedBox(width: 10),
-            // Barcode Filter
-            Expanded(
-              flex: 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      "Barcode",
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s14,
-                        0.27,
-                        Colors.black.withOpacity(0.6),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  BuildBoxShadowContainer(
-                    height: 45,
-                    width: double.infinity,
-                    circleRadius: 7,
-                    child: TextField(
-                      controller: _barcodeController,
-                      onSubmitted: (value) {
-                        setState(() {
-                          _currentPage = 1;
-                        });
-                        loadInitData();
-                      },
-                      decoration: InputDecoration(
-                        hintText: "Filter by Barcode",
-                        hintStyle: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s12,
-                          0.18,
-                          Colors.grey,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 15, vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            Expanded(flex: 1, child: barcodeField),
             const SizedBox(width: 10),
-            // Reset Button
             Padding(
               padding: const EdgeInsets.only(top: 45),
               child: CustomRoundButton(
@@ -340,11 +392,99 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     );
   }
 
-  Widget _buildReportTable(ReportsProvider reportsProvider) {
+  Widget _buildMobileNonStockCard(
+      int index, NonStockReportData item) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    '#${(_currentPage - 1) * 10 + index + 1}  ${item.name}',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s13, 0.20, ColorManager.textColor),
+                  ),
+                ),
+                _buildStatusTag(item.status ?? ""),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildMobileCardStat(
+                    'Category', item.categoryName ?? '-'),
+                _buildMobileCardStat('Store', item.store ?? '-'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildMobileCardStat('Barcode', item.barcode ?? '-'),
+                _buildMobileCardStat('Unit', item.unit ?? '-'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildMobileCardStat(
+                    'Stock', item.totalQuantity?.toString() ?? '0'),
+                _buildMobileCardStat(
+                    'Reorder', item.reorderLevel?.toString() ?? '0'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileCardStat(String label, String value) {
     return Expanded(
-      child: initLoading
-          ? const Center(child: CircularProgressIndicator.adaptive())
-          : BuildBoxShadowContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
+                  0.15, Colors.grey)),
+          Text(value,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                  0.18, Colors.black87),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportTable(ReportsProvider reportsProvider) {
+    if (initLoading) {
+      return const Expanded(
+          child: Center(child: CircularProgressIndicator.adaptive()));
+    }
+
+    if (_isMobile(context)) {
+      return Expanded(
+        child: reportsProvider.nonStockReport == null ||
+                reportsProvider.nonStockReport!.data.isEmpty
+            ? _buildNoDataFoundUI()
+            : ListView.builder(
+                itemCount: reportsProvider.nonStockReport!.data.length,
+                itemBuilder: (ctx, i) => _buildMobileNonStockCard(
+                    i, reportsProvider.nonStockReport!.data[i]),
+              ),
+      );
+    }
+
+    return Expanded(
+      child: BuildBoxShadowContainer(
               margin: const EdgeInsets.only(top: 5),
               circleRadius: 7,
               offsetValue: const Offset(2, 2),

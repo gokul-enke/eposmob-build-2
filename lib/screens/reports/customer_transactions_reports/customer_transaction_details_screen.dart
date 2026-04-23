@@ -40,8 +40,11 @@ class _SimpleTransactionDetailsScreenState
     extends State<SimpleTransactionDetailsScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
+  bool _showFilters = true;
   List<ListTransaction>? allTransactions = [];
   List<ListTransaction>? filteredTransactions = [];
+
+  bool _isMobile(BuildContext ctx) => MediaQuery.of(ctx).size.width < 768;
 
   // Controllers for filters
   final TextEditingController _customerController = TextEditingController();
@@ -99,6 +102,7 @@ class _SimpleTransactionDetailsScreenState
       setState(() {
         searchCustomer = customerName;
         _customerController.text = customerName;
+        _showFilters = !_isMobile(context);
       });
       // Set default date values
       _setInitialDateFilters();
@@ -128,7 +132,8 @@ class _SimpleTransactionDetailsScreenState
         // If new grouped response, extract the selected customer's transactions
         if (data is Map && data['data'] is List) {
           final groups = (data['data'] as List).cast<dynamic>();
-          final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+          final customerProvider =
+              Provider.of<CustomerProvider>(context, listen: false);
           final selectedIdStr = customerProvider.selectedCustomerId;
           final selectedName = searchCustomer;
 
@@ -137,10 +142,13 @@ class _SimpleTransactionDetailsScreenState
             if (g is! Map) continue;
             final idStr = (g['customer_id']?.toString() ?? '').trim();
             final nameStr = (g['customer_name'] ?? '').toString();
-            final idMatches = (selectedIdStr != null && selectedIdStr.isNotEmpty && idStr == selectedIdStr);
-            final nameMatches = (selectedIdStr == null || selectedIdStr.isEmpty) &&
-                selectedName.isNotEmpty &&
-                nameStr.toLowerCase() == selectedName.toLowerCase();
+            final idMatches = (selectedIdStr != null &&
+                selectedIdStr.isNotEmpty &&
+                idStr == selectedIdStr);
+            final nameMatches =
+                (selectedIdStr == null || selectedIdStr.isEmpty) &&
+                    selectedName.isNotEmpty &&
+                    nameStr.toLowerCase() == selectedName.toLowerCase();
             if (idMatches || nameMatches) {
               matchedGroup = g;
               break;
@@ -154,16 +162,19 @@ class _SimpleTransactionDetailsScreenState
               if (t is Map<String, dynamic>) {
                 // Coerce numeric fields that the model expects as String
                 final coerced = Map<String, dynamic>.from(t);
-                if (coerced.containsKey('amount') && coerced['amount'] != null) {
+                if (coerced.containsKey('amount') &&
+                    coerced['amount'] != null) {
                   coerced['amount'] = coerced['amount'].toString();
                 }
-                if (coerced.containsKey('balance') && coerced['balance'] != null) {
+                if (coerced.containsKey('balance') &&
+                    coerced['balance'] != null) {
                   coerced['balance'] = coerced['balance'].toString();
                 }
                 txns.add(ListTransaction.fromJson({
                   ...coerced,
                   'order_number': coerced['order_number'],
-                  'reference_id': coerced['reference_id'] ?? coerced['reference'],
+                  'reference_id':
+                      coerced['reference_id'] ?? coerced['reference'],
                   'transaction_type': coerced['transaction_type'],
                   'customer_name': matchedGroup['customer_name'],
                   'customer_id': matchedGroup['customer_id'],
@@ -191,7 +202,8 @@ class _SimpleTransactionDetailsScreenState
           allTransactions = txns;
           // Populate suggestions (optional from groups)
           customerSuggestions = groups
-              .map((e) => (e is Map ? (e['customer_name'] ?? '').toString() : ''))
+              .map((e) =>
+                  (e is Map ? (e['customer_name'] ?? '').toString() : ''))
               .where((s) => s.isNotEmpty)
               .cast<String>()
               .toList();
@@ -490,109 +502,226 @@ class _SimpleTransactionDetailsScreenState
     );
   }
 
-  Widget _buildReportTable() {
+  Widget _buildMobileTransactionCard(int slNo, ListTransaction tx) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '#$slNo  ${tx.orderNumber?.toString() ?? 'N/A'}',
+                  style: buildCustomStyle(FontWeightManager.semiBold,
+                      FontSize.s13, 0.20, ColorManager.textColor),
+                ),
+                Row(
+                  children: [
+                    _buildTypeCell(tx.type ?? 'N/A'),
+                    const SizedBox(width: 6),
+                    _buildStatusChipInline(tx.status ?? 'N/A'),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 12),
+            Row(
+              children: [
+                _buildMobileCardStat('Txn Type', tx.transactionType ?? 'N/A'),
+                _buildMobileCardStat('Amount', tx.amount ?? '0.00'),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              tx.date ?? 'N/A',
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChipInline(String status) {
+    Color bg;
+    Color fg;
+    String label;
+    switch (status.toUpperCase()) {
+      case 'SUCC':
+      case 'SUCCESS':
+      case 'COMPLETED':
+        bg = Colors.green.withOpacity(0.1);
+        fg = Colors.green;
+        label = 'Success';
+        break;
+      case 'INIT':
+      case 'INITIATED':
+      case 'PENDING':
+        bg = Colors.orange.withOpacity(0.1);
+        fg = Colors.orange;
+        label = 'Pending';
+        break;
+      case 'FAIL':
+      case 'FAILED':
+      case 'CANCELLED':
+        bg = Colors.red.withOpacity(0.1);
+        fg = Colors.red;
+        label = 'Failed';
+        break;
+      default:
+        bg = Colors.grey.withOpacity(0.1);
+        fg = Colors.grey;
+        label = status.isEmpty ? 'N/A' : status;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+      child: Text(label,
+          style:
+              TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 11)),
+    );
+  }
+
+  Widget _buildMobileCardStat(String label, String value) {
     return Expanded(
-      child: initLoading
-          ? const Center(child: CircularProgressIndicator.adaptive())
-          : Consumer<InvoiceProvider>(
-              builder: (context, invoiceProvider, child) {
-                return BuildBoxShadowContainer(
-                  margin: const EdgeInsets.only(top: 5),
-                  circleRadius: 7,
-                  offsetValue: const Offset(2, 2),
-                  blurRadius: 8.0,
-                  color: Colors.white,
-                  child: Column(
-                    children: [
-                      // Fixed table header
-                      Container(
-                        decoration: const BoxDecoration(
-                          color: ColorManager.tableBGColor,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              offset: Offset(0, 2),
-                              blurRadius: 2.0,
-                            ),
-                          ],
-                        ),
-                        child: Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(0.8), // Sl No
-                            1: FlexColumnWidth(1.5), // Order Number
-                            2: FlexColumnWidth(1.5), // Transaction Type
-                            3: FlexColumnWidth(1.2), // Amount
-                            4: FlexColumnWidth(1.0), // Type
-                            5: FlexColumnWidth(1.5), // Transaction Date
-                            6: FlexColumnWidth(1.0), // Status
-                          },
-                          border: null,
-                          defaultVerticalAlignment:
-                              TableCellVerticalAlignment.middle,
-                          children: [
-                            TableRow(
-                              children: [
-                                _buildTableHeader("Sl No"),
-                                _buildTableHeader("Order Number"),
-                                _buildTableHeader("Transaction Type"),
-                                _buildTableHeader("Amount"),
-                                _buildTableHeader("Type"),
-                                _buildTableHeader("Transaction Date"),
-                                _buildTableHeader("Status"),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Scrollable table body
-                      Expanded(
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.grab,
-                          child: ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(context).copyWith(
-                              dragDevices: {
-                                PointerDeviceKind.mouse,
-                                PointerDeviceKind.touch,
-                                PointerDeviceKind.stylus,
-                                PointerDeviceKind.trackpad,
-                              },
-                            ),
-                            child: (filteredTransactions?.isEmpty ?? true)
-                                ? _buildNoDataFoundUI()
-                                : SingleChildScrollView(
-                                    physics: const BouncingScrollPhysics(),
-                                    scrollDirection: Axis.vertical,
-                                    child: Table(
-                                      columnWidths: const {
-                                        0: FlexColumnWidth(0.8), // Sl No
-                                        1: FlexColumnWidth(1.5), // Order Number
-                                        2: FlexColumnWidth(
-                                            1.5), // Transaction Type
-                                        3: FlexColumnWidth(1.2), // Amount
-                                        4: FlexColumnWidth(1.0), // Type
-                                        5: FlexColumnWidth(
-                                            1.5), // Transaction Date
-                                        6: FlexColumnWidth(1.0), // Status
-                                      },
-                                      border: null,
-                                      defaultVerticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      children: filteredTransactions!
-                                          .asMap()
-                                          .entries
-                                          .map((entry) => _buildTransactionRow(
-                                              entry.key + 1, entry.value))
-                                          .toList(),
-                                    ),
-                                  ),
-                          ),
-                        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
+          Text(value,
+              style: buildCustomStyle(
+                  FontWeightManager.medium, FontSize.s12, 0.18, Colors.black87),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportTable() {
+    if (initLoading) {
+      return const Expanded(
+          child: Center(child: CircularProgressIndicator.adaptive()));
+    }
+
+    if (_isMobile(context)) {
+      return Expanded(
+        child: (filteredTransactions?.isEmpty ?? true)
+            ? _buildNoDataFoundUI()
+            : ListView.builder(
+                itemCount: filteredTransactions!.length,
+                itemBuilder: (ctx, i) => _buildMobileTransactionCard(
+                    i + 1, filteredTransactions![i]),
+              ),
+      );
+    }
+
+    return Expanded(
+      child: Consumer<InvoiceProvider>(
+        builder: (context, invoiceProvider, child) {
+          return BuildBoxShadowContainer(
+            margin: const EdgeInsets.only(top: 5),
+            circleRadius: 7,
+            offsetValue: const Offset(2, 2),
+            blurRadius: 8.0,
+            color: Colors.white,
+            child: Column(
+              children: [
+                // Fixed table header
+                Container(
+                  decoration: const BoxDecoration(
+                    color: ColorManager.tableBGColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        offset: Offset(0, 2),
+                        blurRadius: 2.0,
                       ),
                     ],
                   ),
-                );
-              },
+                  child: Table(
+                    columnWidths: const {
+                      0: FlexColumnWidth(0.8), // Sl No
+                      1: FlexColumnWidth(1.5), // Order Number
+                      2: FlexColumnWidth(1.5), // Transaction Type
+                      3: FlexColumnWidth(1.2), // Amount
+                      4: FlexColumnWidth(1.0), // Type
+                      5: FlexColumnWidth(1.5), // Transaction Date
+                      6: FlexColumnWidth(1.0), // Status
+                    },
+                    border: null,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      TableRow(
+                        children: [
+                          _buildTableHeader("Sl No"),
+                          _buildTableHeader("Order Number"),
+                          _buildTableHeader("Transaction Type"),
+                          _buildTableHeader("Amount"),
+                          _buildTableHeader("Type"),
+                          _buildTableHeader("Transaction Date"),
+                          _buildTableHeader("Status"),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Scrollable table body
+                Expanded(
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: (filteredTransactions?.isEmpty ?? true)
+                          ? _buildNoDataFoundUI()
+                          : SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              scrollDirection: Axis.vertical,
+                              child: Table(
+                                columnWidths: const {
+                                  0: FlexColumnWidth(0.8), // Sl No
+                                  1: FlexColumnWidth(1.5), // Order Number
+                                  2: FlexColumnWidth(1.5), // Transaction Type
+                                  3: FlexColumnWidth(1.2), // Amount
+                                  4: FlexColumnWidth(1.0), // Type
+                                  5: FlexColumnWidth(1.5), // Transaction Date
+                                  6: FlexColumnWidth(1.0), // Status
+                                },
+                                border: null,
+                                defaultVerticalAlignment:
+                                    TableCellVerticalAlignment.middle,
+                                children: filteredTransactions!
+                                    .asMap()
+                                    .entries
+                                    .map((entry) => _buildTransactionRow(
+                                        entry.key + 1, entry.value))
+                                    .toList(),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 
@@ -915,8 +1044,10 @@ class _SimpleTransactionDetailsScreenState
     double savedAmount = 0.0;
 
     // Get current date and time for the report
-    String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateHelper.now());
-    String orderNumber = "TXN-REPORT-${DateHelper.now().millisecondsSinceEpoch}";
+    String orderDate =
+        DateFormat('yyyy-MM-dd HH:mm:ss').format(DateHelper.now());
+    String orderNumber =
+        "TXN-REPORT-${DateHelper.now().millisecondsSinceEpoch}";
 
     // Get date range values
     String? fromDate =
@@ -967,8 +1098,11 @@ class _SimpleTransactionDetailsScreenState
       child: RefreshIndicator(
         onRefresh: () async => loadInitData(),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: _isMobile(context) ? 5 : 10,
+            vertical: _isMobile(context) ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
@@ -981,15 +1115,17 @@ class _SimpleTransactionDetailsScreenState
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: EdgeInsets.symmetric(
+              vertical: _isMobile(context) ? 12.0 : 20.0,
+              horizontal: _isMobile(context) ? 12.0 : 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 20),
-                _buildFilters(),
-                const SizedBox(height: 20),
+                if (_showFilters) _buildFilters(),
+                if (_showFilters) const SizedBox(height: 20),
                 _buildReportTable(),
               ],
             ),
@@ -1000,56 +1136,154 @@ class _SimpleTransactionDetailsScreenState
   }
 
   Widget _buildHeader(Size size) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            CustomBackButton(
-              onPressed: () {
-                sideBarController.index.value =
-                    65; // Navigate back to Customer Transactions Report
-              },
-              text: 'All Customers',
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CustomBackButton(
+                  onPressed: () {
+                    sideBarController.index.value = 65;
+                  },
+                  text: 'All Customers',
+                ),
+                Text(
+                  "Transaction Details",
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s20,
+                    0.30,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              "Transaction Details",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s20,
-                0.30,
-                ColorManager.textColor,
+            if (!_isMobile(context))
+              CustomRoundButton(
+                title: "Print",
+                boxColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+                fct: _printReport,
+                height: 40,
+                width: 120,
+                fontSize: FontSize.s12,
               ),
-            ),
+            if (_isMobile(context))
+              TextButton.icon(
+                onPressed: () => setState(() => _showFilters = !_showFilters),
+                icon: Icon(
+                  _showFilters ? Icons.filter_list_off : Icons.filter_list,
+                  size: 18,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                label: Text(
+                  _showFilters ? 'Hide' : 'Filters',
+                  style: const TextStyle(
+                      color: ColorManager.kPrimaryColor, fontSize: 12),
+                ),
+              ),
           ],
         ),
-        CustomRoundButton(
-          title: "Print",
-          boxColor: ColorManager.kPrimaryColor,
-          textColor: Colors.white,
-          fct: _printReport,
-          height: 40,
-          width: 120,
-          fontSize: FontSize.s12,
-        ),
+        if (_isMobile(context)) const SizedBox(height: 8),
+        if (_isMobile(context))
+          CustomRoundButton(
+            title: "Print",
+            boxColor: ColorManager.kPrimaryColor,
+            textColor: Colors.white,
+            fct: _printReport,
+            height: 36,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
       ],
     );
   }
 
   Widget _buildFilters() {
+    if (_isMobile(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildDropdownField(
+                  "Type",
+                  _transactionTypeController,
+                  transactionTypes,
+                  (value) {
+                    setState(() => searchTransactionType = value);
+                    _applyFilters();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildDropdownField(
+                  "Status",
+                  _statusController,
+                  statuses,
+                  (value) {
+                    setState(() => searchStatus = value);
+                    _applyFilters();
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDropdownField(
+                  "Cr/Dr",
+                  _typeController,
+                  types,
+                  (value) {
+                    setState(() => searchType = value);
+                    _applyFilters();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildDateField("From Date", _fromDateController, true),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDateField("To Date", _toDateController, false),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 42),
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    fct: _resetFilters,
+                    height: 45,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Text(
-        //   "Filters",
-        //   style: buildCustomStyle(
-        //     FontWeightManager.semiBold,
-        //     FontSize.s16,
-        //     0.25,
-        //     ColorManager.textColor,
-        //   ),
-        // ),
         const SizedBox(height: 15),
         // First row of filters (4 filters)
         SizedBox(

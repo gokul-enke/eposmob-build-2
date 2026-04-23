@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import '../font_config.dart';

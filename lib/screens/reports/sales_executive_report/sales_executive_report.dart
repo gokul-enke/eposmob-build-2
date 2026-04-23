@@ -31,6 +31,9 @@ class _SalesExecutiveReportScreenState
 
   SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
+  bool _showFilters = true;
+
+  bool _isMobile(BuildContext ctx) => MediaQuery.of(ctx).size.width < 768;
 
   @override
   void dispose() {
@@ -43,6 +46,9 @@ class _SalesExecutiveReportScreenState
   void initState() {
     loadInitData();
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _showFilters = !_isMobile(context));
+    });
   }
 
   void loadInitData() async {
@@ -229,8 +235,11 @@ class _SalesExecutiveReportScreenState
       child: RefreshIndicator(
         onRefresh: () async => loadInitData(),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: _isMobile(context) ? 5 : 10,
+            vertical: _isMobile(context) ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
@@ -243,15 +252,17 @@ class _SalesExecutiveReportScreenState
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: EdgeInsets.symmetric(
+              vertical: _isMobile(context) ? 12.0 : 20.0,
+              horizontal: _isMobile(context) ? 12.0 : 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 15),
-                _buildSearchBar(size),
-                const SizedBox(height: 20),
+                if (_showFilters) _buildSearchBar(size),
+                if (_showFilters) const SizedBox(height: 20),
                 _buildExecutiveTable(),
               ],
             ),
@@ -265,16 +276,56 @@ class _SalesExecutiveReportScreenState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          "My Sales Report",
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-              0.30, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            "My Sales Report",
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                0.30, ColorManager.textColor),
+          ),
         ),
+        if (_isMobile(context))
+          TextButton.icon(
+            onPressed: () => setState(() => _showFilters = !_showFilters),
+            icon: Icon(
+              _showFilters ? Icons.filter_list_off : Icons.filter_list,
+              size: 18,
+              color: ColorManager.kPrimaryColor,
+            ),
+            label: Text(
+              _showFilters ? 'Hide' : 'Filters',
+              style: const TextStyle(
+                  color: ColorManager.kPrimaryColor, fontSize: 12),
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildSearchBar(Size size) {
+    if (_isMobile(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _buildFromDateFilter()),
+              const SizedBox(width: 8),
+              Expanded(child: _buildToDateFilter()),
+            ],
+          ),
+          const SizedBox(height: 8),
+          CustomRoundButton(
+            title: "Reset",
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            fct: resetSearch,
+            height: 45,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
+        ],
+      );
+    }
     return Column(
       children: [
         SizedBox(
@@ -403,6 +454,92 @@ class _SalesExecutiveReportScreenState
     );
   }
 
+  Widget _buildMobileExecutiveCard(SalesExecutiveReportData report) {
+    final currency =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR';
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    report.name ?? 'N/A',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s14, 0.20, ColorManager.textColor),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.visibility,
+                      size: 18, color: ColorManager.kPrimaryColor),
+                  onPressed: () => _showExecutiveDetails(report),
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+              ],
+            ),
+            Text(
+              report.phone ?? 'N/A',
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
+                  0.18, Colors.grey),
+            ),
+            const Divider(height: 16),
+            Row(
+              children: [
+                _buildMobileCardStat(
+                    'Orders', (report.orderCount ?? 0).toString()),
+                _buildMobileCardStat(
+                    'Total Sales', '$currency ${report.formattedTotalSales}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildMobileCardStat(
+                    'Cash Sales', '$currency ${report.formattedCashSales}'),
+                _buildMobileCardStat(
+                    'Online Sales', '$currency ${report.formattedOnlineSales}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildMobileCardStat(
+                    'Credit Sales', '$currency ${report.formattedCreditSales}'),
+                _buildMobileCardStat('Collected',
+                    '$currency ${report.formattedCollectedSales}'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileCardStat(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
+                  0.15, Colors.grey)),
+          Text(value,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                  0.18, Colors.black87)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildExecutiveTable() {
     return Expanded(
       child: Consumer<SalesExecutiveProvider>(
@@ -412,12 +549,32 @@ class _SalesExecutiveReportScreenState
         final reportList = salesExecutiveProvider.salesExecutiveReportList;
         final reportError = salesExecutiveProvider.reportError;
 
+        if (isLoading) {
+          return const Center(child: CircularProgressIndicator.adaptive());
+        }
+
+        if (_isMobile(context)) {
+          return Column(
+            children: [
+              Expanded(
+                child: reportError != null
+                    ? _buildErrorUI(reportError)
+                    : reportList.isEmpty
+                        ? _buildNoDataFoundUI()
+                        : ListView.builder(
+                            itemCount: reportList.length,
+                            itemBuilder: (ctx, i) =>
+                                _buildMobileExecutiveCard(reportList[i]),
+                          ),
+              ),
+            ],
+          );
+        }
+
         return Column(
           children: [
             Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator.adaptive())
-                  : BuildBoxShadowContainer(
+              child: BuildBoxShadowContainer(
                       margin: const EdgeInsets.only(top: 5),
                       circleRadius: 7,
                       offsetValue: const Offset(2, 2),

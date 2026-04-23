@@ -74,6 +74,6 @@ class ImageAssets {
 
 //---------------------------sales page Icons-------------------------------------------
   static const String whatsappIcon = '$iconPath/icons-whatsapp.svg';
-  static const String reportIcon = '$iconPath/icons-report2.svg';
+  static const String reportIcon = '$iconPath/icon-report2.svg';
   static const String settingsIcon = '$iconPath/settings.svg';
 }

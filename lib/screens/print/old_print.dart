@@ -1,7 +1,7 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -977,7 +977,7 @@ class ThermalPrinter {
     try {
       bytes += generator.qrcode(
         qrData,
-        size: QRSize.Size4,
+        size: QRSize.size4,
         align: PosAlign.center,
       );
       debugPrint("QR code generated successfully");

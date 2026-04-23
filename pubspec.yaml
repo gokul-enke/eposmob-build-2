@@ -76,7 +76,7 @@ dependencies:
   web_date_picker: ^1.0.0+3
   multi_select_flutter: ^4.1.3
   # esc_pos_bluetooth: ^0.4.1
-  esc_pos_utils: ^1.1.0
+  esc_pos_utils_plus: ^2.0.4
   flutter_pos_printer_platform_image_3: ^1.2.4
   permission_handler: ^12.0.1
   pdf: ^3.8.4
@@ -88,7 +88,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   url_launcher: ^6.2.5
-  # printing: ^5.9.3  # Blocked: printing needs image ^4.x, esc_pos_utils needs image ^3.x — irreconcilable conflict
+  printing: ^5.13.2
   internet_connection_checker_plus: ^2.8.0
   virtual_keyboard_custom_layout: ^1.0.1
   whatsapp_bot_flutter: ^2.1.1
@@ -126,12 +126,8 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   build_runner: ^2.4.13
   hive_generator: ^2.0.1
-  flutter_launcher_icons: ^0.11.0
-  msix: ^3.7.0
-
-dependency_overrides:
-  msix:
-    path: third_party/msix
+  flutter_launcher_icons: ^0.13.0
+  msix: ^3.16.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -341,7 +341,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _filteredCustomers = _allCustomers.where((customer) {
           final name = (customer.name ?? '').toLowerCase();
           final phone = (customer.phone ?? '').toLowerCase();
-          return name.contains(query) || phone.contains(query);
+          final altPhone = (customer.altPhone ?? '').toLowerCase();
+          return name.contains(query) || phone.contains(query) || altPhone.contains(query);
         }).toList();
       }
 
@@ -537,8 +538,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _filteredCustomers = _allCustomers.where((customer) {
           final name = (customer.name ?? '').toLowerCase();
           final phone = (customer.phone ?? '').toLowerCase();
+          final altPhone = (customer.altPhone ?? '').toLowerCase();
           return name.contains(_customerSearchQuery) ||
-              phone.contains(_customerSearchQuery);
+              phone.contains(_customerSearchQuery) ||
+              altPhone.contains(_customerSearchQuery);
         }).toList();
       }
     });

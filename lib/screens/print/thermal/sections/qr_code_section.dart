@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import '../font_config.dart';
 
@@ -48,7 +48,7 @@ class QrCodeSectionBuilder {
     try {
       bytes += generator.qrcode(
         qrData,
-        size: QRSize.Size4,
+        size: QRSize.size4,
         align: PosAlign.center,
       );
     } catch (e) {

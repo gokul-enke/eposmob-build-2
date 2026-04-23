@@ -34,10 +34,14 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
   void initState() {
     super.initState();
     _loadUserRole();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint("🟡 [SideMenuMobile] initState postFrame: userRole='$userRole'");
+    });
   }
 
   void _loadUserRole() async {
     String role = await SharedPreferenceProvider().getUserRole();
+    debugPrint("🟡 [SideMenuMobile] _loadUserRole: loaded role = '$role'");
     if (mounted) {
       setState(() {
         userRole = role;
@@ -56,9 +60,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.find<SideBarController>();
+    debugPrint("🟡 [SideMenuMobile] build: userRole='$userRole'");
 
     // Helper function to handle navigation and drawer closing
     void navigate(int index) {
@@ -131,6 +135,13 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       onTap: () => navigate(1),
                       selected: sideBarController.index.value == 1,
                     )),
+              if (_hasRole('company_admin'))
+                Obx(() => DrawerListTile(
+                      iconPath: ImageAssets.dashBoardIcon,
+                      title: 'Dashboard',
+                      onTap: () => navigate(1),
+                      selected: sideBarController.index.value == 1,
+                    )),
               if (_hasAnyRole(
                   ['kitchen_master', 'attender', 'sales_executive']))
                 Obx(() => DrawerListTileExpandableColumn(
@@ -153,6 +164,53 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                         navigate(2);
                       },
                       selected: [2, 51, 54, 50, 49, 11]
+                          .contains(sideBarController.index.value),
+                    )),
+              if (_hasRole('company_admin'))
+                Obx(() => DrawerListTileExpandableColumn(
+                      onTapTitle1: () => navigate(2),
+                      onTapTitle4: () => navigate(84),
+                      listTitle1: "Sales",
+                      listTitle4: "Admin Day Sale Records",
+                      showTitle1: true,
+                      showTitle2: false,
+                      showTitle4: true,
+                      iconPath: ImageAssets.saleIcon,
+                      title: 'Sales',
+                      onTap: () {
+                        final salesProvider =
+                            Provider.of<SalesProvider>(context, listen: false);
+                        String? accessToken =
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
+                        salesProvider.fetchOrders(
+                            accessToken: accessToken ?? '', storeId: 1);
+                        navigate(2);
+                      },
+                      selected: [2, 54, 84]
+                          .contains(sideBarController.index.value),
+                    )),
+              if (_hasRole('company_admin'))
+                Obx(() => DrawerListTileExpandableColumn(
+                      onTapTitle1: () => navigate(85),
+                      onTapTitle2: () => navigate(65),
+                      onTapTitle3: () => navigate(67),
+                      onTapTitle4: () => navigate(77),
+                      onTapTitle5: () => navigate(80),
+                      listTitle1: "Executive Reports",
+                      listTitle2: "Customer Transactions Reports",
+                      listTitle3: "Supplier Transactions Reports",
+                      listTitle4: "Non-Stock Report",
+                      listTitle5: "Consumed Stocks Report",
+                      showTitle1: true,
+                      showTitle2: true,
+                      showTitle3: true,
+                      showTitle4: true,
+                      showTitle5: true,
+                      iconPath: ImageAssets.reportIcon,
+                      title: 'Reports',
+                      onTap: () => navigate(85),
+                      selected: [85, 65, 67, 77, 80]
                           .contains(sideBarController.index.value),
                     )),
               if (_hasAnyRole(['kitchen_master', 'sales_executive', 'admin']))
