@@ -656,6 +656,8 @@ class Stock {
   final String? pkgMfg;
   final String? rack;
   final String? hsnCode; // Added HSN code field
+  final String? wholesalePrice;
+  final int? wholesaleMinUnit;
 
   Stock({
     this.id,
@@ -675,6 +677,8 @@ class Stock {
     this.pkgMfg,
     this.rack,
     this.hsnCode, // Added HSN code field
+    this.wholesalePrice,
+    this.wholesaleMinUnit,
   });
 
   Stock copyWith({
@@ -695,6 +699,8 @@ class Stock {
     String? pkgMfg,
     String? rack,
     String? hsnCode,
+    String? wholesalePrice,
+    int? wholesaleMinUnit,
   }) {
     return Stock(
       id: id ?? this.id,
@@ -714,6 +720,8 @@ class Stock {
       pkgMfg: pkgMfg ?? this.pkgMfg,
       rack: rack ?? this.rack,
       hsnCode: hsnCode ?? this.hsnCode,
+      wholesalePrice: wholesalePrice ?? this.wholesalePrice,
+      wholesaleMinUnit: wholesaleMinUnit ?? this.wholesaleMinUnit,
     );
   }
 
@@ -753,6 +761,13 @@ class Stock {
         pkgMfg: json["pkg_mfg"]?.toString(),
         rack: json["rack"]?.toString(),
         hsnCode: json["hsn_code"]?.toString(), // Added HSN code field
+        wholesalePrice: json["wholesale_price"]?.toString(),
+        wholesaleMinUnit: (() {
+          final value = json["wholesale_min_unit"];
+          if (value == null) return null;
+          if (value is int) return value;
+          return int.tryParse(value.toString());
+        })(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -773,6 +788,8 @@ class Stock {
         "pkg_mfg": pkgMfg,
         "rack": rack,
         "hsn_code": hsnCode, // Added HSN code field
+        "wholesale_price": wholesalePrice,
+        "wholesale_min_unit": wholesaleMinUnit,
       };
 }
 

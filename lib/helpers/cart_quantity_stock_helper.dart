@@ -95,7 +95,8 @@ class CartQuantityStockHelper {
       }
     };
 
-    final currentProduct = provider.getProductById(productId) ?? cartItem.product;
+    final currentProduct =
+        provider.getProductById(productId) ?? cartItem.product;
 
     num appliedQuantity = currentQuantity;
     num remainingIncrease = newQuantity - currentQuantity;
@@ -128,7 +129,8 @@ class CartQuantityStockHelper {
     }
 
     while (remainingIncrease > 0) {
-      final refreshedProduct = provider.getProductById(productId) ?? currentProduct;
+      final refreshedProduct =
+          provider.getProductById(productId) ?? currentProduct;
       final alternativeStocks = provider.getAlternativeStockOptions(
         product: refreshedProduct,
         selectedStock: cartItem.selectedStock,
@@ -151,8 +153,7 @@ class CartQuantityStockHelper {
         break;
       }
 
-      final availableForSelection =
-          provider.getAvailableQuantityForSelection(
+      final availableForSelection = provider.getAvailableQuantityForSelection(
         product: refreshedProduct,
         selectedStock: selection.selectedStock,
         stockGroupIds: selection.stockGroupIds,
@@ -210,6 +211,8 @@ class CartQuantityStockHelper {
           unit: group.unit,
           purchasePrice: group.purchasePrice,
           hsnCode: group.hsnCode,
+          wholesalePrice: group.wholesalePrice,
+          wholesaleMinUnit: group.wholesaleMinUnit,
         ),
         stockGroupIds: group.originalStocks
             .map((stock) => stock.id)
@@ -237,10 +240,9 @@ class CartQuantityStockHelper {
       return null;
     }
 
-    final originalStocks = (result['originalStocks'] as List?)
-            ?.whereType<Stock>()
-            .toList() ??
-        const <Stock>[];
+    final originalStocks =
+        (result['originalStocks'] as List?)?.whereType<Stock>().toList() ??
+            const <Stock>[];
     final stockGroupIds = originalStocks
         .map((stock) => stock.id)
         .whereType<int>()

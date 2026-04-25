@@ -78,16 +78,19 @@ Future<void> handleAddProductToCart({
           unit: group.unit,
           purchasePrice: group.purchasePrice,
           hsnCode: group.hsnCode,
+          wholesalePrice: group.wholesalePrice,
+          wholesaleMinUnit: group.wholesaleMinUnit,
         );
 
         localProductProvider.addToCart(
           product: product,
           quantity: quantity,
-          price: price ?? (double.tryParse(autoStock.price ?? "0") ?? 0.0),
-          mrp: mrp ?? (double.tryParse(autoStock.mrp ?? "0") ?? 0.0),
+          price: price,
+          mrp: mrp,
           selectedStock: autoStock,
           isIncreamentUsingCompactQuantityControl:
               isIncreamentUsingCompactQuantityControl,
+          markPriceAsManualOverride: price != null,
         );
 
         if (onSuccess != null) {
@@ -109,12 +112,12 @@ Future<void> handleAddProductToCart({
           localProductProvider.addToCart(
             product: product,
             quantity: quantity,
-            price:
-                price ?? (double.tryParse(selectedStock.price ?? "0") ?? 0.0),
-            mrp: mrp ?? (double.tryParse(selectedStock.mrp ?? "0") ?? 0.0),
+            price: price,
+            mrp: mrp,
             selectedStock: selectedStock,
             isIncreamentUsingCompactQuantityControl:
                 isIncreamentUsingCompactQuantityControl,
+            markPriceAsManualOverride: price != null,
           );
 
           if (onSuccess != null) {
@@ -132,6 +135,7 @@ Future<void> handleAddProductToCart({
         mrp: mrp,
         isIncreamentUsingCompactQuantityControl:
             isIncreamentUsingCompactQuantityControl,
+        markPriceAsManualOverride: price != null,
       );
 
       if (onSuccess != null) {

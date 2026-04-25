@@ -75,6 +75,9 @@ class LocalCartItem {
   /// Optional per-item comment/note (e.g. "no ice", "extra spicy")
   String? comment;
 
+  /// When true, quantity-based wholesale recalculation must not overwrite [price].
+  bool isManualPriceOverride;
+
   LocalCartItem({
     required this.product,
     this.price,
@@ -87,6 +90,7 @@ class LocalCartItem {
     List<int>? stockGroupIds,
     List<StockReservation>? stockReservations,
     this.comment,
+    this.isManualPriceOverride = false,
   })  : stockGroupIds = stockGroupIds ?? <int>[],
         stockReservations = stockReservations ?? <StockReservation>[];
 
@@ -395,6 +399,102 @@ class LocalProductProvider extends ChangeNotifier {
     return (price * taxRate) / (100 + taxRate);
   }
 
+  double? _parseAmount(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    return double.tryParse(value.trim());
+  }
+
+  double _resolveMrp({
+    required GetProduct product,
+    Stock? selectedStock,
+    double? fallbackMrp,
+  }) {
+    return _parseAmount(selectedStock?.mrp) ??
+        _parseAmount(product.mrp?.toString()) ??
+        fallbackMrp ??
+        0.0;
+  }
+
+  int? _resolveWholesaleMinUnit(Stock? selectedStock) {
+    final wholesaleMinUnit = selectedStock?.wholesaleMinUnit;
+    if (wholesaleMinUnit == null || wholesaleMinUnit <= 0) {
+      return null;
+    }
+    return wholesaleMinUnit;
+  }
+
+  double? _resolveWholesalePrice(Stock? selectedStock) {
+    final wholesalePrice = _parseAmount(selectedStock?.wholesalePrice);
+    if (wholesalePrice == null || wholesalePrice <= 0) {
+      return null;
+    }
+    return wholesalePrice;
+  }
+
+  bool _qualifiesForWholesalePrice({
+    required num quantity,
+    Stock? selectedStock,
+  }) {
+    final wholesalePrice = _resolveWholesalePrice(selectedStock);
+    final wholesaleMinUnit = _resolveWholesaleMinUnit(selectedStock);
+    return wholesalePrice != null &&
+        wholesaleMinUnit != null &&
+        quantity >= wholesaleMinUnit;
+  }
+
+  double _resolveUnitPrice({
+    required GetProduct product,
+    required num quantity,
+    Stock? selectedStock,
+    double? fallbackPrice,
+  }) {
+    final wholesalePrice = _resolveWholesalePrice(selectedStock);
+    if (wholesalePrice != null &&
+        _qualifiesForWholesalePrice(
+          quantity: quantity,
+          selectedStock: selectedStock,
+        )) {
+      return wholesalePrice;
+    }
+
+    return _parseAmount(selectedStock?.price) ??
+        _parseAmount(product.price?.price?.toString()) ??
+        fallbackPrice ??
+        0.0;
+  }
+
+  void _refreshCartItemPricing(
+    LocalCartItem item, {
+    Stock? selectedStock,
+    bool forcePriceRefresh = false,
+  }) {
+    final effectiveStock = selectedStock ?? item.selectedStock;
+    if (forcePriceRefresh || !item.isManualPriceOverride) {
+      item.price = _resolveUnitPrice(
+        product: item.product,
+        quantity: item.quantity,
+        selectedStock: effectiveStock,
+        fallbackPrice: item.price,
+      );
+    }
+
+    item.mrp = _resolveMrp(
+      product: item.product,
+      selectedStock: effectiveStock,
+      fallbackMrp: item.mrp,
+    );
+
+    final effectiveTaxRate = _resolveCartTaxRate(
+      item.product,
+      selectedStock: effectiveStock,
+      fallbackTaxRate: item.taxRate,
+    );
+    item.taxRate = effectiveTaxRate;
+    item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, effectiveTaxRate);
+  }
+
   List<int> _normalizeStockGroupIds(List<int>? stockGroupIds) {
     if (stockGroupIds == null || stockGroupIds.isEmpty) {
       return <int>[];
@@ -462,9 +562,8 @@ class LocalProductProvider extends ChangeNotifier {
       if (decoded is List) {
         return _normalizeStockGroupIds(
           decoded
-              .map((value) => value is int
-                  ? value
-                  : int.tryParse(value?.toString() ?? ''))
+              .map((value) =>
+                  value is int ? value : int.tryParse(value?.toString() ?? ''))
               .whereType<int>()
               .toList(),
         );
@@ -514,7 +613,8 @@ class LocalProductProvider extends ChangeNotifier {
 
     Stock? selectedStock;
     if (hiveCartItem.serializedSelectedStock != null) {
-      final stockJson = json.decode(hiveCartItem.serializedSelectedStock!.value);
+      final stockJson =
+          json.decode(hiveCartItem.serializedSelectedStock!.value);
       selectedStock = Stock.fromJson(stockJson);
     }
 
@@ -549,13 +649,15 @@ class LocalProductProvider extends ChangeNotifier {
       stockGroupIds: stockGroupIds,
       stockReservations: stockReservations,
       comment: hiveCartItem.comment,
+      isManualPriceOverride: hiveCartItem.isManualPriceOverride,
     );
   }
 
   HiveLocalCartItem _buildHiveCartItem(LocalCartItem item) {
     HiveStringValue? serializedStock;
     if (item.selectedStock != null) {
-      serializedStock = HiveStringValue(json.encode(item.selectedStock!.toJson()));
+      serializedStock =
+          HiveStringValue(json.encode(item.selectedStock!.toJson()));
     }
 
     final serializedStockGroupIds = _serializeStockGroupIds(item.stockGroupIds);
@@ -579,6 +681,7 @@ class LocalProductProvider extends ChangeNotifier {
       serializedStockReservations: serializedStockReservations == null
           ? null
           : HiveStringValue(serializedStockReservations),
+      isManualPriceOverride: item.isManualPriceOverride,
     );
   }
 
@@ -595,6 +698,7 @@ class LocalProductProvider extends ChangeNotifier {
       stockGroupIds: List<int>.from(item.stockGroupIds),
       stockReservations: _cloneStockReservations(item.stockReservations),
       comment: item.comment,
+      isManualPriceOverride: item.isManualPriceOverride,
     );
   }
 
@@ -633,8 +737,7 @@ class LocalProductProvider extends ChangeNotifier {
     Stock? selectedStock,
     List<int>? stockGroupIds,
   }) {
-    final currentProduct =
-        getProductById(product.productId ?? -1) ?? product;
+    final currentProduct = getProductById(product.productId ?? -1) ?? product;
     final currentStocks = currentProduct.stock ?? const <Stock>[];
     final normalizedGroupIds = _normalizeStockGroupIds(stockGroupIds);
 
@@ -650,7 +753,8 @@ class LocalProductProvider extends ChangeNotifier {
       return const <Stock>[];
     }
 
-    final matchingStock = currentStocks.where((stock) => stock.id == selectedStock!.id);
+    final matchingStock =
+        currentStocks.where((stock) => stock.id == selectedStock!.id);
     if (matchingStock.isNotEmpty) {
       return matchingStock.toList();
     }
@@ -670,8 +774,8 @@ class LocalProductProvider extends ChangeNotifier {
     final merged = _cloneStockReservations(item.stockReservations);
 
     for (final delta in deltas) {
-      final existingIndex =
-          merged.indexWhere((reservation) => reservation.stockId == delta.stockId);
+      final existingIndex = merged
+          .indexWhere((reservation) => reservation.stockId == delta.stockId);
       if (existingIndex == -1) {
         merged.add(delta.copy());
       } else {
@@ -714,9 +818,8 @@ class LocalProductProvider extends ChangeNotifier {
         continue;
       }
 
-      final requestedQuantity = remaining > availableQuantity
-          ? availableQuantity
-          : remaining;
+      final requestedQuantity =
+          remaining > availableQuantity ? availableQuantity : remaining;
       final actualChange = _updateStockQuantityInternal(
         candidate,
         -requestedQuantity,
@@ -843,7 +946,8 @@ class LocalProductProvider extends ChangeNotifier {
 
       if (normalizedIncomingGroupIds.isNotEmpty) {
         if (item.stockGroupIds.isNotEmpty) {
-          return _stockGroupIdsEqual(item.stockGroupIds, normalizedIncomingGroupIds);
+          return _stockGroupIdsEqual(
+              item.stockGroupIds, normalizedIncomingGroupIds);
         }
 
         return item.selectedStock?.id == selectedStock?.id;
@@ -883,10 +987,13 @@ class LocalProductProvider extends ChangeNotifier {
       if (unreservedQuantity > 0 || item.stockReservations.isEmpty) {
         items.add({
           'product_id': item.product.productId,
-          'quantity': item.stockReservations.isEmpty ? item.quantity : unreservedQuantity,
+          'quantity': item.stockReservations.isEmpty
+              ? item.quantity
+              : unreservedQuantity,
           'price': item.price,
           'mrp': item.mrp,
-          'stock_id': item.stockReservations.isEmpty ? item.selectedStock?.id : null,
+          'stock_id':
+              item.stockReservations.isEmpty ? item.selectedStock?.id : null,
         });
       }
     }
@@ -901,17 +1008,29 @@ class LocalProductProvider extends ChangeNotifier {
     _productsByBarcode.clear();
 
     for (final product in _products) {
-      final barcode = _normalizeBarcode(product.barcode);
-      if (barcode.isEmpty) {
-        continue;
+      _indexProductBarcode(product.barcode, product);
+      for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+        _indexProductBarcode(saleUnit.barcode, product);
       }
+    }
+  }
 
-      final existing = _productsByBarcode[barcode];
-      if (existing == null) {
-        _productsByBarcode[barcode] = <GetProduct>[product];
-      } else {
-        existing.add(product);
-      }
+  void _indexProductBarcode(String? rawBarcode, GetProduct product) {
+    final barcode = _normalizeBarcode(rawBarcode);
+    if (barcode.isEmpty) {
+      return;
+    }
+
+    final existing = _productsByBarcode[barcode];
+    if (existing == null) {
+      _productsByBarcode[barcode] = <GetProduct>[product];
+      return;
+    }
+
+    final alreadyIndexed =
+        existing.any((item) => item.productId == product.productId);
+    if (!alreadyIndexed) {
+      existing.add(product);
     }
   }
 
@@ -939,9 +1058,8 @@ class LocalProductProvider extends ChangeNotifier {
     _confirmedOrders.clear();
     try {
       for (var hiveSavedOrder in _confirmedOrdersBox.values) {
-        final orderItems = hiveSavedOrder.items
-            .map(_buildLocalCartItemFromHive)
-            .toList();
+        final orderItems =
+            hiveSavedOrder.items.map(_buildLocalCartItemFromHive).toList();
 
         _confirmedOrders.add(SavedOrder(
           id: hiveSavedOrder.id,
@@ -1075,9 +1193,8 @@ class LocalProductProvider extends ChangeNotifier {
     int idx = 0;
     for (var hiveSavedOrder in _savedOrdersBox.values) {
       idx++;
-      final orderItems = hiveSavedOrder.items
-          .map(_buildLocalCartItemFromHive)
-          .toList();
+      final orderItems =
+          hiveSavedOrder.items.map(_buildLocalCartItemFromHive).toList();
 
       final savedOrder = SavedOrder(
         id: hiveSavedOrder.id,
@@ -1684,12 +1801,14 @@ class LocalProductProvider extends ChangeNotifier {
     if (index == -1) {
       // If the product does not exist, add it to the first position in the list
       _products.insert(0, product);
+      _rebuildBarcodeIndex();
       _saveProductsToHive();
       notifyListeners(); // Notify listeners about the change
       debugPrint("✅ Product added to local storage successfully");
     } else {
       // Optionally, you can update the existing product if needed
       _products[index] = product; // Update the existing product
+      _rebuildBarcodeIndex();
       _saveProductsToHive();
       notifyListeners(); // Notify listeners about the change
       debugPrint("✅ Product updated in local storage successfully");
@@ -1798,6 +1917,7 @@ class LocalProductProvider extends ChangeNotifier {
     bool? isIncreamentUsingCompactQuantityControl = false,
     Stock? selectedStock,
     List<int>? stockGroupIds,
+    bool markPriceAsManualOverride = false,
   }) {
     debugPrint("🛒 ADD TO CART STARTED");
     debugPrint("Product: ${product?.productName}");
@@ -1851,82 +1971,32 @@ class LocalProductProvider extends ChangeNotifier {
       }
 
       // If the product already exists in cart with the same stock, just update the quantity and price
-      existingItem.quantity += cartQuantity; // Increment by the specified quantity
+      existingItem.quantity +=
+          cartQuantity; // Increment by the specified quantity
 
-      // 🔧 FIX: Handle price updates based on explicit price provision and source
       if (price != null) {
-        // When ANY source provides an explicit price, use it (custom pricing from Add Item, quantity control, etc.)
         existingItem.price = price;
+        existingItem.isManualPriceOverride = markPriceAsManualOverride;
         debugPrint("💰 Using explicit price: $price");
-      } else if (!isIncreamentUsingCompactQuantityControl!) {
-        // When adding from external sources WITHOUT explicit price, preserve existing custom price
-        // Only update if it's a completely new addition (no existing price set)
-        if (existingItem.price == null || existingItem.price == 0.0) {
-          // No existing price set, use defaults
-          if (selectedStock != null && selectedStock.price != null) {
-            existingItem.price = double.tryParse(selectedStock.price!);
-            debugPrint("💰 Using stock price: ${existingItem.price}");
-          } else {
-            existingItem.price = product.price?.price != null
-                ? double.tryParse(product.price!.price!)
-                : 0.0;
-            debugPrint("💰 Using product price: ${existingItem.price}");
-          }
-        } else {
-          debugPrint(
-              "💰 Preserving existing price: ${existingItem.price}");
-        }
-        // If existing price exists (could be custom), preserve it when adding from external sources without explicit price
-      } else {
-        debugPrint(
-          "💰 Preserving existing price from quantity control: ${existingItem.price}");
       }
-      // Always use explicit price when provided, otherwise preserve existing custom price
 
-      // 🔧 FIX: Apply same logic for MRP to preserve custom values
       if (mrp != null) {
-        // When ANY source provides an explicit MRP, use it
         existingItem.mrp = mrp;
         debugPrint("💰 Using explicit MRP: $mrp");
-      } else if (!isIncreamentUsingCompactQuantityControl!) {
-        // When adding from external sources WITHOUT explicit MRP, preserve existing custom MRP
-        // Only update if it's a completely new addition (no existing MRP set)
-        if (existingItem.mrp == null || existingItem.mrp == 0.0) {
-          // No existing MRP set, use defaults
-          if (selectedStock != null && selectedStock.mrp != null) {
-            existingItem.mrp = double.tryParse(selectedStock.mrp!);
-            debugPrint("💰 Using stock MRP: ${existingItem.mrp}");
-          } else {
-            existingItem.mrp =
-                product.mrp != null ? double.tryParse(product.mrp!) : 0.0;
-            debugPrint("💰 Using product MRP: ${existingItem.mrp}");
-          }
-        } else {
-          debugPrint("💰 Preserving existing MRP: ${existingItem.mrp}");
-        }
-        // If existing MRP exists (could be custom), preserve it when adding from external sources without explicit MRP
-      } else {
-        debugPrint(
-          "💰 Preserving existing MRP from quantity control: ${existingItem.mrp}");
       }
-      // Always use explicit MRP when provided, otherwise preserve existing custom MRP
 
-      if (!isIncreamentUsingCompactQuantityControl!) {
+      if (isIncreamentUsingCompactQuantityControl != true) {
         // Move this item to the beginning of the array
         final cartItem = _cartItems.removeAt(index);
         _cartItems.insert(0, cartItem);
       }
 
-      final targetIndex = !isIncreamentUsingCompactQuantityControl! ? 0 : index;
-      final effectiveTaxRate = _resolveCartTaxRate(
-        product,
+      final targetIndex =
+          isIncreamentUsingCompactQuantityControl == true ? index : 0;
+      _refreshCartItemPricing(
+        _cartItems[targetIndex],
         selectedStock: selectedStock,
-        fallbackTaxRate: _cartItems[targetIndex].taxRate,
       );
-      final currentPrice = _cartItems[targetIndex].price ?? 0.0;
-      _cartItems[targetIndex].taxRate = effectiveTaxRate;
-      _cartItems[targetIndex].taxAmount =
-          _calculateTaxAmount(currentPrice, effectiveTaxRate);
     } else {
       debugPrint("🆕 Adding new product to cart");
 
@@ -1944,23 +2014,17 @@ class LocalProductProvider extends ChangeNotifier {
       }
 
       // Safely handle null product price when adding new cart item
-      double productPrice = 0.0;
-      double productMrp = 0.0;
-      if (price != null) {
-        productPrice = price;
-      } else if (selectedStock != null && selectedStock.price != null) {
-        productPrice = double.tryParse(selectedStock.price!) ?? 0.0;
-      } else if (product.price?.price != null) {
-        productPrice = double.tryParse(product.price!.price!) ?? 0.0;
-      }
-
-      if (mrp != null) {
-        productMrp = mrp;
-      } else if (selectedStock != null && selectedStock.mrp != null) {
-        productMrp = double.tryParse(selectedStock.mrp!) ?? 0.0;
-      } else if (product.mrp != null) {
-        productMrp = double.tryParse(product.mrp!) ?? 0.0;
-      }
+      final double productPrice = price ??
+          _resolveUnitPrice(
+            product: product,
+            quantity: cartQuantity,
+            selectedStock: selectedStock,
+          );
+      final double productMrp = mrp ??
+          _resolveMrp(
+            product: product,
+            selectedStock: selectedStock,
+          );
 
       final double taxRate = _resolveCartTaxRate(
         product,
@@ -1981,7 +2045,9 @@ class LocalProductProvider extends ChangeNotifier {
             selectedStock: selectedStock,
             stockDeducted: _sumStockReservations(initialStockReservations),
             stockGroupIds: List<int>.from(normalizedStockGroupIds),
-            stockReservations: _cloneStockReservations(initialStockReservations),
+            stockReservations:
+                _cloneStockReservations(initialStockReservations),
+            isManualPriceOverride: markPriceAsManualOverride,
           ));
     }
 
@@ -2039,7 +2105,8 @@ class LocalProductProvider extends ChangeNotifier {
 
       // STOCK RESTORATION: Add back only what was actually deducted
       if (isStockEnabled && quantityToRestore > 0) {
-        _restoreStockReservations(cartItem, quantityToRestore, "REMOVE_FROM_CART");
+        _restoreStockReservations(
+            cartItem, quantityToRestore, "REMOVE_FROM_CART");
         _saveProductsToHive();
       }
 
@@ -2063,8 +2130,8 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (index != -1) {
       _cartItems[index].price = newPrice;
+      _cartItems[index].isManualPriceOverride = true;
 
-      // 🔧 FIX: Recalculate taxAmount when price changes
       final double taxRate = _cartItems[index].taxRate ?? 0.0;
       _cartItems[index].taxAmount = (newPrice * taxRate) / (100 + taxRate);
 
@@ -2124,25 +2191,37 @@ class LocalProductProvider extends ChangeNotifier {
           selectedStock: item.selectedStock,
           fallbackTaxRate: newTax,
         );
+        final resolvedPrice = item.isManualPriceOverride
+            ? (item.price ?? newPrice)
+            : _resolveUnitPrice(
+                product: updatedProduct ?? item.product,
+                quantity: item.quantity,
+                selectedStock: item.selectedStock,
+                fallbackPrice: newPrice,
+              );
         if (updatedProduct != null) {
           _cartItems[i] = LocalCartItem(
             product: updatedProduct,
-            price: newPrice,
+            price: resolvedPrice,
             mrp: newMrp,
             taxRate: effectiveTax,
-            taxAmount: _calculateTaxAmount(newPrice, effectiveTax),
+            taxAmount: _calculateTaxAmount(resolvedPrice, effectiveTax),
             quantity: item.quantity,
             selectedStock: item.selectedStock,
             stockDeducted: item.stockDeducted,
             stockGroupIds: List<int>.from(item.stockGroupIds),
             stockReservations: _cloneStockReservations(item.stockReservations),
             comment: item.comment,
+            isManualPriceOverride: item.isManualPriceOverride,
           );
         } else {
-          item.price = newPrice;
+          if (!item.isManualPriceOverride) {
+            item.price = newPrice;
+          }
           item.mrp = newMrp;
           item.taxRate = effectiveTax;
-          item.taxAmount = _calculateTaxAmount(newPrice, effectiveTax);
+          item.taxAmount =
+              _calculateTaxAmount(item.price ?? newPrice, effectiveTax);
         }
         cartUpdated = true;
         cartUpdatedCount++;
@@ -2160,13 +2239,21 @@ class LocalProductProvider extends ChangeNotifier {
             selectedStock: orderItem.selectedStock,
             fallbackTaxRate: newTax,
           );
+          final resolvedPrice = orderItem.isManualPriceOverride
+              ? (orderItem.price ?? newPrice)
+              : _resolveUnitPrice(
+                  product: updatedProduct ?? orderItem.product,
+                  quantity: orderItem.quantity,
+                  selectedStock: orderItem.selectedStock,
+                  fallbackPrice: newPrice,
+                );
           if (updatedProduct != null) {
             order.items[i] = LocalCartItem(
               product: updatedProduct,
-              price: newPrice,
+              price: resolvedPrice,
               mrp: newMrp,
               taxRate: effectiveTax,
-              taxAmount: _calculateTaxAmount(newPrice, effectiveTax),
+              taxAmount: _calculateTaxAmount(resolvedPrice, effectiveTax),
               quantity: orderItem.quantity,
               selectedStock: orderItem.selectedStock,
               stockDeducted: orderItem.stockDeducted,
@@ -2174,12 +2261,16 @@ class LocalProductProvider extends ChangeNotifier {
               stockReservations:
                   _cloneStockReservations(orderItem.stockReservations),
               comment: orderItem.comment,
+              isManualPriceOverride: orderItem.isManualPriceOverride,
             );
           } else {
-            orderItem.price = newPrice;
+            if (!orderItem.isManualPriceOverride) {
+              orderItem.price = newPrice;
+            }
             orderItem.mrp = newMrp;
             orderItem.taxRate = effectiveTax;
-            orderItem.taxAmount = _calculateTaxAmount(newPrice, effectiveTax);
+            orderItem.taxAmount =
+                _calculateTaxAmount(orderItem.price ?? newPrice, effectiveTax);
           }
           savedOrdersUpdated = true;
           savedOrderItemUpdatedCount++;
@@ -2231,18 +2322,27 @@ class LocalProductProvider extends ChangeNotifier {
           selectedStock: resolvedStock,
           fallbackTaxRate: item.taxRate,
         );
+        final resolvedPrice = item.isManualPriceOverride
+            ? (item.price ?? newPrice)
+            : _resolveUnitPrice(
+                product: updatedProduct ?? item.product,
+                quantity: item.quantity,
+                selectedStock: resolvedStock,
+                fallbackPrice: newPrice,
+              );
         _cartItems[i] = LocalCartItem(
           product: updatedProduct ?? item.product,
-          price: newPrice,
+          price: resolvedPrice,
           mrp: newMrp,
           taxRate: effectiveTax,
-          taxAmount: _calculateTaxAmount(newPrice, effectiveTax),
+          taxAmount: _calculateTaxAmount(resolvedPrice, effectiveTax),
           quantity: item.quantity,
           selectedStock: resolvedStock,
           stockDeducted: item.stockDeducted,
           stockGroupIds: List<int>.from(item.stockGroupIds),
           stockReservations: _cloneStockReservations(item.stockReservations),
           comment: item.comment,
+          isManualPriceOverride: item.isManualPriceOverride,
         );
         cartUpdated = true;
         cartUpdatedCount++;
@@ -2261,12 +2361,20 @@ class LocalProductProvider extends ChangeNotifier {
             selectedStock: resolvedStock,
             fallbackTaxRate: orderItem.taxRate,
           );
+          final resolvedPrice = orderItem.isManualPriceOverride
+              ? (orderItem.price ?? newPrice)
+              : _resolveUnitPrice(
+                  product: updatedProduct ?? orderItem.product,
+                  quantity: orderItem.quantity,
+                  selectedStock: resolvedStock,
+                  fallbackPrice: newPrice,
+                );
           order.items[i] = LocalCartItem(
             product: updatedProduct ?? orderItem.product,
-            price: newPrice,
+            price: resolvedPrice,
             mrp: newMrp,
             taxRate: effectiveTax,
-            taxAmount: _calculateTaxAmount(newPrice, effectiveTax),
+            taxAmount: _calculateTaxAmount(resolvedPrice, effectiveTax),
             quantity: orderItem.quantity,
             selectedStock: resolvedStock,
             stockDeducted: orderItem.stockDeducted,
@@ -2274,6 +2382,7 @@ class LocalProductProvider extends ChangeNotifier {
             stockReservations:
                 _cloneStockReservations(orderItem.stockReservations),
             comment: orderItem.comment,
+            isManualPriceOverride: orderItem.isManualPriceOverride,
           );
           savedOrdersUpdated = true;
           savedOrderItemUpdatedCount++;
@@ -2336,6 +2445,7 @@ class LocalProductProvider extends ChangeNotifier {
         }
 
         _cartItems[index].quantity--;
+        _refreshCartItemPricing(_cartItems[index]);
         debugPrint("📝 Decremented quantity to: ${_cartItems[index].quantity}");
       } else {
         // STOCK RESTORATION: Add back the last unit if we have stock to restore
@@ -2372,7 +2482,8 @@ class LocalProductProvider extends ChangeNotifier {
     if (isStockEnabled) {
       for (var cartItem in _cartItems) {
         if (cartItem.stockDeducted > 0) {
-          _restoreStockReservations(cartItem, cartItem.stockDeducted, "CLEAR_CART");
+          _restoreStockReservations(
+              cartItem, cartItem.stockDeducted, "CLEAR_CART");
         }
       }
       _saveProductsToHive();
@@ -3295,8 +3406,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// Sets the exact quantity of a cart item. Supports fractional quantities.
   /// If [newQuantity] is 0 or less, the item is removed from the cart.
   /// Stock levels are adjusted based on the difference between old and new quantities.
-  void setCartItemQuantity(
-      int productId, Stock? selectedStock, num newQuantity,
+  void setCartItemQuantity(int productId, Stock? selectedStock, num newQuantity,
       {List<int>? stockGroupIds}) {
     debugPrint("🔄 SET CART ITEM QUANTITY STARTED");
     debugPrint("Product ID: $productId");
@@ -3363,6 +3473,7 @@ class LocalProductProvider extends ChangeNotifier {
     } else {
       // Update quantity
       _cartItems[index].quantity = newQuantity;
+      _refreshCartItemPricing(_cartItems[index]);
       debugPrint("✅ Quantity updated: $currentQuantity → $newQuantity");
     }
 

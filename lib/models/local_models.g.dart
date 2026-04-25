@@ -63,13 +63,14 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       comment: fields[9] as String?,
       serializedStockGroupIds: fields[10] as HiveStringValue?,
       serializedStockReservations: fields[11] as HiveStringValue?,
+      isManualPriceOverride: fields[12] == null ? false : fields[12] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveLocalCartItem obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -89,11 +90,13 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       ..writeByte(8)
       ..write(obj.stockDeducted)
       ..writeByte(9)
-        ..write(obj.comment)
-        ..writeByte(10)
-        ..write(obj.serializedStockGroupIds)
-        ..writeByte(11)
-        ..write(obj.serializedStockReservations);
+      ..write(obj.comment)
+      ..writeByte(10)
+      ..write(obj.serializedStockGroupIds)
+      ..writeByte(11)
+      ..write(obj.serializedStockReservations)
+      ..writeByte(12)
+      ..write(obj.isManualPriceOverride);
   }
 
   @override
