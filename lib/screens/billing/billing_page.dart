@@ -340,11 +340,11 @@ class BillingPageState extends State<BillingPage>
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
 
-        final generalSettingsProvider =
+      final generalSettingsProvider =
           Provider.of<GeneralSettingsProvider>(context, listen: false);
-        _generalSettingsListener = _syncStockEnabledSetting;
-        generalSettingsProvider.addListener(_generalSettingsListener!);
-        _syncStockEnabledSetting();
+      _generalSettingsListener = _syncStockEnabledSetting;
+      generalSettingsProvider.addListener(_generalSettingsListener!);
+      _syncStockEnabledSetting();
 
       // Listen for cart changes to reset payment modal flag
       final localProductProvider =
@@ -893,6 +893,7 @@ class BillingPageState extends State<BillingPage>
             "🔴 [BillingPage.processBarcode] First product: ${filteredProducts.first.productName}");
         // Get the first product
         GetProduct product = filteredProducts.first;
+        final matchedSaleUnit = _findMatchingSaleUnit(product, query);
 
         num? quantity;
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
@@ -909,6 +910,16 @@ class BillingPageState extends State<BillingPage>
             query.length == 14) {
           // Count-based product
           quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        } else if (matchedSaleUnit != null) {
+          quantity = _resolveSaleUnitQuantity(matchedSaleUnit);
+          debugPrint(
+              "🔴 [BillingPage.processBarcode] Matched sale unit barcode:");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode]   - Unit: ${matchedSaleUnit.unitName}");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode]   - Conversion rate: ${matchedSaleUnit.conversionRate}");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode]   - Base quantity to add: $quantity");
         }
 
         // Use centralized helper for stock handling
@@ -988,6 +999,30 @@ class BillingPageState extends State<BillingPage>
       debugPrint(
           "🔴 [BillingPage.processBarcode] ========== PROCESS BARCODE END ==========\n");
     }
+  }
+
+  SaleUnit? _findMatchingSaleUnit(GetProduct product, String barcode) {
+    final normalizedBarcode = barcode.trim();
+    if (normalizedBarcode.isEmpty) {
+      return null;
+    }
+
+    for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+      final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+      if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == normalizedBarcode) {
+        return saleUnit;
+      }
+    }
+
+    return null;
+  }
+
+  num _resolveSaleUnitQuantity(SaleUnit saleUnit) {
+    final parsedRate = num.tryParse(saleUnit.conversionRate?.trim() ?? '');
+    if (parsedRate == null || parsedRate <= 0) {
+      return 1;
+    }
+    return parsedRate;
   }
 
   @override
@@ -1999,14 +2034,20 @@ class BillingPageState extends State<BillingPage>
                                       localProductProvider.selectedProduct;
 
                                   if (selectedProduct != null) {
-                                    final customPrice = double.tryParse(unitPriceController.text);
-                                    final customQuantity = num.tryParse(quantityController.text);
+                                    final customPrice = double.tryParse(
+                                        unitPriceController.text);
+                                    final customQuantity =
+                                        num.tryParse(quantityController.text);
 
-                                    await ProductCartHelper.handleProductSelection(
+                                    await ProductCartHelper
+                                        .handleProductSelection(
                                       context: context,
                                       product: selectedProduct,
                                       quantity: customQuantity,
-                                      customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+                                      customPrice:
+                                          customPrice != null && customPrice > 0
+                                              ? customPrice
+                                              : null,
                                     );
 
                                     // Clear input fields
@@ -6411,8 +6452,8 @@ class BillingPageState extends State<BillingPage>
       debugPrint("🖨️ BILLING SAVE AND PRINT CALCULATION:");
       debugPrint("  - Total MRP: $totalMRP");
       debugPrint("  - Net Total: $netTotal");
-        debugPrint("  - Total Tax: $totalTax");
-        debugPrint("  - Net Exc Tax: $netExcTax");
+      debugPrint("  - Total Tax: $totalTax");
+      debugPrint("  - Net Exc Tax: $netExcTax");
       debugPrint("  - You Saved: $youSaved");
       debugPrint("Sending ${cartItems.length} items to PrintPage");
       debugPrint(
