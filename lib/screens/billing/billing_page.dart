@@ -5079,8 +5079,7 @@ class BillingPageState extends State<BillingPage>
     // Reload payment methods
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    final methods =
-        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
+    final methods = await masterDataProvider.fetchPaymentMethods();
 
     if (methods != null && mounted) {
       final billingProvider =
