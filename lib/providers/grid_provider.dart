@@ -592,6 +592,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String purchasePrice,
     List<Map<String, dynamic>>? productNames,
     List<Map<String, dynamic>>? saleUnits,
+    String? conversionRateBase,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -602,6 +603,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'quantity': quantity,
       'unit': unit,
       'purchase_rate': double.parse(purchasePrice),
+      'conversion_rate_base': num.parse(conversionRateBase ?? '1'),
     };
 
     if (productNames != null && productNames.isNotEmpty) {
@@ -657,6 +659,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String purchasePrice,
     List<Map<String, dynamic>>? productNames,
     List<Map<String, dynamic>>? saleUnits,
+    String? conversionRateBase,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -666,6 +669,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'barcode': barcode,
       'unit': unit,
       'purchase_rate': double.parse(purchasePrice),
+      'conversion_rate_base': num.parse(conversionRateBase ?? '1'),
     };
 
     if (productNames != null && productNames.isNotEmpty) {

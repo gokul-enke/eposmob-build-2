@@ -69,6 +69,8 @@ class _AddProductWithBarcodeModalState
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
+  final TextEditingController _baseConversionRateController =
+      TextEditingController(text: '1');
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
   final Map<int, FocusNode> _translateButtonFocusNodes = {};
@@ -1005,6 +1007,7 @@ class _AddProductWithBarcodeModalState
     _productPurchasePriceController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
+    _baseConversionRateController.dispose();
 
     for (final controller in _languageNameControllers.values) {
       if (controller != _productNameController) {
@@ -2160,23 +2163,6 @@ class _AddProductWithBarcodeModalState
                   ColorManager.textColor,
                 ),
               ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Conversion Rate = 1',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s10,
-                    0.27,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -2192,10 +2178,15 @@ class _AddProductWithBarcodeModalState
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildReadOnlyInfoField(
+                child: _buildTextField(
                   'Conversion Rate',
-                  '1',
+                  _baseConversionRateController,
+                  TextInputType.number,
                   size,
+                  isRequired: true,
+                  inputFormatter: FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d*\.?\d{0,3}$'),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -2551,6 +2542,25 @@ class _AddProductWithBarcodeModalState
         return;
       }
 
+      if (_showAdvancedOptions) {
+        final baseRate = _baseConversionRateController.text.trim();
+        if (baseRate.isEmpty) {
+          showScaffoldError(
+            context: context,
+            message: 'Base unit conversion rate is required.',
+          );
+          return;
+        }
+        final parsedRate = num.tryParse(baseRate);
+        if (parsedRate == null || parsedRate <= 0) {
+          showScaffoldError(
+            context: context,
+            message: 'Base unit conversion rate must be greater than 0.',
+          );
+          return;
+        }
+      }
+
       final canContinue = await _ensureBarcodeDuplicateConfirmed();
       if (!canContinue) {
         return;
@@ -2588,6 +2598,10 @@ class _AddProductWithBarcodeModalState
           purchasePrice: _productPurchasePriceController.text,
           productNames: productNames.isNotEmpty ? productNames : null,
           saleUnits: saleUnits.isNotEmpty ? saleUnits : null,
+          conversionRateBase:
+              _baseConversionRateController.text.trim().isNotEmpty
+                  ? _baseConversionRateController.text.trim()
+                  : '1',
         );
 
         if (!mounted) {
@@ -2695,6 +2709,7 @@ class _AddProductWithBarcodeModalState
     _productQuantityController.text = '0';
     _productSellingPriceController.clear();
     _productPurchasePriceController.clear();
+    _baseConversionRateController.text = '1';
     for (var controller in _languageNameControllers.values) {
       if (controller != _productNameController) {
         controller.clear();
