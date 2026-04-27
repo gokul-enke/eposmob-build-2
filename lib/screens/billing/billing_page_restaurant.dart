@@ -5362,57 +5362,54 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   List<Map<String, dynamic>> _getPaidMethods() {
-    List<Map<String, dynamic>> paidMethods = [];
+    final paidMethods = <Map<String, dynamic>>[];
 
     // Get payment method IDs from BillingProvider
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
+    final cashId = billingProvider.cashPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('CASH')?.toString() ??
+        "CASH";
+    final cardId = billingProvider.cardPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('CARD')?.toString() ??
+        "CARD";
+    final upiId = billingProvider.upiPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('UPI')?.toString() ??
+        "UPI";
+    final codId = billingProvider.codPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('COD')?.toString() ??
+        "COD";
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.cashPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('CASH')?.toString();
-      // Adjust cash amount by deducting balance (change returned to customer)
-      double rawCashAmount = double.tryParse(_cashAmountController.text) ?? 0;
-      double netCashAmount = rawCashAmount - _balanceAmount;
-      // Only add if net cash is positive (skip if balance equals or exceeds cash)
-      if (netCashAmount > 0) {
-        paidMethods.add({
-          // Use payment method ID if available, otherwise fallback to string
-          "method": id ?? "CASH",
-          "amount": netCashAmount, // Net cash kept in drawer
-        });
-      }
+      paidMethods.add({
+        "method": cashId,
+        "amount": double.tryParse(_cashAmountController.text) ?? 0,
+      });
     }
 
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.cardPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('CARD')?.toString();
       paidMethods.add({
-        "method": id ?? "CARD",
+        "method": cardId,
         "amount": double.tryParse(_cardAmountController.text) ?? 0,
       });
     }
 
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.upiPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('UPI')?.toString();
       paidMethods.add({
-        "method": id ?? "UPI",
+        "method": upiId,
         "amount": double.tryParse(_upiAmountController.text) ?? 0,
       });
     }
 
     if (_isCodSelected &&
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.codPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('COD')?.toString();
       paidMethods.add({
-        "method": id ?? "COD",
+        "method": codId,
         "amount": double.tryParse(_codAmountController.text) ?? 0,
       });
     }
@@ -5424,7 +5421,12 @@ class BillingPageState extends State<BillingPageRestaurant>
     //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
     //   });
     // }
-    return paidMethods;
+    return PaymentHelper.normalizePaidMethodsForApi(
+      paidMethods: paidMethods,
+      balanceAmount: _balanceAmount,
+      cashMethodId: cashId,
+      codMethodId: codId,
+    );
   }
 
   Widget _buildQuickAccessIcons() {

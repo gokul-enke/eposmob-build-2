@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import '../models/customer_list.dart';
 import '../models/list_cart.dart';
@@ -1005,11 +1006,15 @@ class BillingProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> getPaidMethods() {
-    List<Map<String, dynamic>> paidMethods = [];
+    final paidMethods = <Map<String, dynamic>>[];
+    final cashId = cashPaymentMethodId ?? "CASH";
+    final cardId = cardPaymentMethodId ?? "CARD";
+    final upiId = upiPaymentMethodId ?? "UPI";
+    final codId = codPaymentMethodId ?? "COD";
 
     if (_isCashSelected) {
       paidMethods.add({
-        "method": "CASH",
+        "method": cashId,
         "amount": double.tryParse(cashAmountController.text) ?? 0,
       });
     }
@@ -1018,7 +1023,7 @@ class BillingProvider extends ChangeNotifier {
     final double cardAmount = double.tryParse(cardAmountController.text) ?? 0;
     if (_isCardSelected && cardAmount > 0) {
       paidMethods.add({
-        "method": "CARD",
+        "method": cardId,
         "amount": cardAmount,
       });
     }
@@ -1026,7 +1031,7 @@ class BillingProvider extends ChangeNotifier {
     final double upiAmount = double.tryParse(upiAmountController.text) ?? 0;
     if (_isUpiSelected && upiAmount > 0) {
       paidMethods.add({
-        "method": "UPI",
+        "method": upiId,
         "amount": upiAmount,
       });
     }
@@ -1034,7 +1039,7 @@ class BillingProvider extends ChangeNotifier {
     final double codAmount = double.tryParse(codAmountController.text) ?? 0;
     if (_isCodSelected && codAmount > 0) {
       paidMethods.add({
-        "method": "COD",
+        "method": codId,
         "amount": codAmount,
       });
     }
@@ -1049,7 +1054,12 @@ class BillingProvider extends ChangeNotifier {
 
     // Note: DEBIT (to customer credit) is excluded from paid methods list
 
-    return paidMethods;
+    return PaymentHelper.normalizePaidMethodsForApi(
+      paidMethods: paidMethods,
+      balanceAmount: _balanceAmount,
+      cashMethodId: cashId,
+      codMethodId: codId,
+    );
   }
 
   bool validatePayment() {
@@ -1339,47 +1349,37 @@ class BillingProvider extends ChangeNotifier {
   // Create order data for API
   Map<String, dynamic> createOrderData() {
     // Build payment information aligned with billing_page.dart
-    final List<String> selectedMethods =
-        getSelectedPaymentMethodsExcludingEmpty();
+    final List<String> selectedMethods = getSelectedPaymentMethodsForApi();
     String paymentMethodValue = "";
     String paidAmountValue = "0";
 
-    if (selectedMethods.length > 1) {
-      // Multi-payment JSON payload
+    if (selectedMethods.isNotEmpty) {
+      final methodsForStorage = List<String>.from(selectedMethods);
+      final double debitAmount =
+          double.tryParse(debitAmountController.text) ?? 0.0;
+      if (_toCustomerCreditEnabled && debitAmount > 0) {
+        methodsForStorage.add('DEBIT');
+      }
+
+      final cashId = cashPaymentMethodId ?? "CASH";
+      final cardId = cardPaymentMethodId ?? "CARD";
+      final upiId = upiPaymentMethodId ?? "UPI";
+      final codId = codPaymentMethodId ?? "COD";
+
       final multiPaymentData = {
-        "methods": selectedMethods,
+        "methods": methodsForStorage,
         "amounts": {
-          "CASH": cashAmountController.text,
-          "CARD": cardAmountController.text,
-          "CARD": cardAmountController.text,
-          "UPI": upiAmountController.text,
-          "COD": codAmountController.text,
+          cashId: cashAmountController.text,
+          cardId: cardAmountController.text,
+          upiId: upiAmountController.text,
+          codId: codAmountController.text,
+          "ONLINE": _isOnlineSelected ? totalOrderAmount.toString() : "0",
           "DEBIT": debitAmountController.text,
         },
         "isMultiPayment": true,
       };
       paymentMethodValue = json.encode(multiPaymentData);
       paidAmountValue = getTotalPaidAmount().toString();
-    } else if (selectedMethods.isNotEmpty) {
-      // Single payment method
-      final method = selectedMethods.first;
-      paymentMethodValue = method;
-      switch (method) {
-        case 'CASH':
-          paidAmountValue = cashAmountController.text;
-          break;
-        case 'CARD':
-          paidAmountValue = cardAmountController.text;
-          break;
-        case 'UPI':
-          paidAmountValue = upiAmountController.text;
-          break;
-        case 'COD':
-          paidAmountValue = codAmountController.text;
-          break;
-        default:
-          paidAmountValue = getTotalPaidAmount().toString();
-      }
     }
 
     return {
@@ -1457,6 +1457,78 @@ class BillingProvider extends ChangeNotifier {
               debitAmountController.text = (amounts['DEBIT'] ?? '0').toString();
             }
 
+            bool hasMethodOrAmount(List<String> candidates) {
+              final normalizedCandidates = candidates
+                  .map((candidate) => candidate.toUpperCase())
+                  .toSet();
+              final hasMethod = methods.any((method) =>
+                  normalizedCandidates.contains(method.toUpperCase()));
+              final hasAmount = candidates.any((candidate) {
+                final amount =
+                    double.tryParse((amounts[candidate] ?? '0').toString()) ??
+                        0.0;
+                return amount > 0;
+              });
+              return hasMethod || hasAmount;
+            }
+
+            String firstAmount(List<String> candidates) {
+              for (final candidate in candidates) {
+                if (amounts.containsKey(candidate)) {
+                  return (amounts[candidate] ?? '0').toString();
+                }
+              }
+              return '0';
+            }
+
+            if (!_isCashSelected &&
+                hasMethodOrAmount([
+                  'CASH',
+                  if (cashPaymentMethodId != null) cashPaymentMethodId!,
+                ])) {
+              _isCashSelected = true;
+              cashAmountController.text = firstAmount([
+                'CASH',
+                if (cashPaymentMethodId != null) cashPaymentMethodId!,
+              ]);
+            }
+            if (!_isCardSelected &&
+                hasMethodOrAmount([
+                  'CARD',
+                  if (cardPaymentMethodId != null) cardPaymentMethodId!,
+                ])) {
+              _isCardSelected = true;
+              cardAmountController.text = firstAmount([
+                'CARD',
+                if (cardPaymentMethodId != null) cardPaymentMethodId!,
+              ]);
+            }
+            if (!_isUpiSelected &&
+                hasMethodOrAmount([
+                  'UPI',
+                  if (upiPaymentMethodId != null) upiPaymentMethodId!,
+                ])) {
+              _isUpiSelected = true;
+              upiAmountController.text = firstAmount([
+                'UPI',
+                if (upiPaymentMethodId != null) upiPaymentMethodId!,
+              ]);
+            }
+            if (!_isCodSelected &&
+                hasMethodOrAmount([
+                  'COD',
+                  if (codPaymentMethodId != null) codPaymentMethodId!,
+                ])) {
+              _isCodSelected = true;
+              codAmountController.text = firstAmount([
+                'COD',
+                if (codPaymentMethodId != null) codPaymentMethodId!,
+              ]);
+            }
+            if (!_isOnlineSelected && hasMethodOrAmount(const ['ONLINE'])) {
+              _isOnlineSelected = true;
+            }
+
             // Reflect Pine Labs success if ONLINE was part of saved methods
             if (_isOnlineSelected) {
               debugPrint(
@@ -1496,6 +1568,20 @@ class BillingProvider extends ChangeNotifier {
                   '♻️ [Rehydrate] ONLINE detected in single-payment. Setting PineLabs success');
               setPineLabsPaymentSuccess(true);
               break;
+          }
+
+          if (pm == cashPaymentMethodId) {
+            setPaymentMethod('CASH', true);
+            cashAmountController.text = paidText;
+          } else if (pm == cardPaymentMethodId) {
+            setPaymentMethod('CARD', true);
+            cardAmountController.text = paidText;
+          } else if (pm == upiPaymentMethodId) {
+            setPaymentMethod('UPI', true);
+            upiAmountController.text = paidText;
+          } else if (pm == codPaymentMethodId) {
+            setPaymentMethod('COD', true);
+            codAmountController.text = paidText;
           }
         }
 
@@ -2394,16 +2480,18 @@ class BillingProvider extends ChangeNotifier {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
     double onlineAmount = _isOnlineSelected ? totalOrderAmount : 0.0;
     // Note: We don't include debit/toCustomerCredit in total paid amount
     // as it represents money going to customer credit, not money collected
-    return cashAmount + cardAmount + upiAmount + onlineAmount;
+    return cashAmount + cardAmount + upiAmount + codAmount + onlineAmount;
   }
 
   // MISSED LOGIC: Get selected payment methods excluding debit when no amount
   List<String> getSelectedPaymentMethodsExcludingEmpty() {
     List<String> methods = [];
-    if (_isCashSelected) {
+    if (_isCashSelected &&
+        (double.tryParse(cashAmountController.text) ?? 0) > 0) {
       methods.add("CASH");
     }
     if (_isCardSelected &&
@@ -2414,10 +2502,40 @@ class BillingProvider extends ChangeNotifier {
         (double.tryParse(upiAmountController.text) ?? 0) > 0) {
       methods.add("UPI");
     }
+    if (_isCodSelected &&
+        (double.tryParse(codAmountController.text) ?? 0) > 0) {
+      methods.add("COD");
+    }
     if (_isOnlineSelected) {
       methods.add("ONLINE");
     }
     // Note: Debit is handled separately as customer credit, not a payment method
+    return methods;
+  }
+
+  List<String> getSelectedPaymentMethodsForApi() {
+    final methods = <String>[];
+
+    if (_isCashSelected &&
+        (double.tryParse(cashAmountController.text) ?? 0) > 0) {
+      methods.add(cashPaymentMethodId ?? "CASH");
+    }
+    if (_isCardSelected &&
+        (double.tryParse(cardAmountController.text) ?? 0) > 0) {
+      methods.add(cardPaymentMethodId ?? "CARD");
+    }
+    if (_isUpiSelected &&
+        (double.tryParse(upiAmountController.text) ?? 0) > 0) {
+      methods.add(upiPaymentMethodId ?? "UPI");
+    }
+    if (_isCodSelected &&
+        (double.tryParse(codAmountController.text) ?? 0) > 0) {
+      methods.add(codPaymentMethodId ?? "COD");
+    }
+    if (_isOnlineSelected) {
+      methods.add("ONLINE");
+    }
+
     return methods;
   }
 
@@ -2429,6 +2547,7 @@ class BillingProvider extends ChangeNotifier {
     if (methods.contains("CASH")) activeMethods.add("Cash");
     if (methods.contains("CARD")) activeMethods.add("Card");
     if (methods.contains("UPI")) activeMethods.add("UPI");
+    if (methods.contains("COD")) activeMethods.add("COD");
     if (methods.contains("ONLINE")) activeMethods.add("Online");
     // DEBIT is not shown in label for collected payments
 

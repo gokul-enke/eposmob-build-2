@@ -16,7 +16,6 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -33,7 +32,6 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
@@ -44,6 +42,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
@@ -3954,6 +3953,8 @@ class BillingPageState extends State<BillingPage>
         mobileNumberTextController.clear();
         _autocompletePhoneKey = GlobalKey();
       });
+      Provider.of<CustomerSelectionProvider>(context, listen: false)
+          .clearSelectedCustomer();
       showScaffold(
         context: context,
         message: "billing.cart_cleared".tr,
@@ -4318,6 +4319,7 @@ class BillingPageState extends State<BillingPage>
       }
 
       resetAutocomplete(shouldFetchCustomers: false);
+      localProductProvider.clearCartAfterOrder();
       _clearCart();
     } catch (error) {
       debugPrint(error.toString());
@@ -4711,6 +4713,8 @@ class BillingPageState extends State<BillingPage>
             _debitAmountController.clear();
             _autocompletePhoneKey = GlobalKey();
           });
+          Provider.of<CustomerSelectionProvider>(context, listen: false)
+              .clearSelectedCustomer();
           resetAutocomplete(
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
@@ -4942,6 +4946,8 @@ class BillingPageState extends State<BillingPage>
             _debitAmountController.clear();
             _autocompletePhoneKey = GlobalKey();
           });
+          Provider.of<CustomerSelectionProvider>(context, listen: false)
+              .clearSelectedCustomer();
           resetAutocomplete(
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
@@ -5720,31 +5726,28 @@ class BillingPageState extends State<BillingPage>
   }
 
   List<Map<String, dynamic>> _getPaidMethods() {
-    List<Map<String, dynamic>> paidMethods = [];
+    final paidMethods = <Map<String, dynamic>>[];
 
     // Get payment method IDs from BillingProvider
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
+    final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
+    final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
+    final codId = billingProvider.codPaymentMethodId ?? "COD";
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
-      // Adjust cash amount by deducting balance (change returned to customer)
-      double rawCashAmount = double.tryParse(_cashAmountController.text) ?? 0;
-      double netCashAmount = rawCashAmount - _balanceAmount;
-      // Only add if net cash is positive (skip if balance equals or exceeds cash)
-      if (netCashAmount > 0) {
-        paidMethods.add({
-          // Use payment method ID if available, otherwise fallback to string
-          "method": billingProvider.cashPaymentMethodId ?? "CASH",
-          "amount": netCashAmount, // Net cash kept in drawer
-        });
-      }
+      paidMethods.add({
+        "method": cashId,
+        "amount": double.tryParse(_cashAmountController.text) ?? 0,
+      });
     }
 
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": billingProvider.cardPaymentMethodId ?? "CARD",
+        "method": cardId,
         "amount": double.tryParse(_cardAmountController.text) ?? 0,
       });
     }
@@ -5752,7 +5755,7 @@ class BillingPageState extends State<BillingPage>
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": billingProvider.upiPaymentMethodId ?? "UPI",
+        "method": upiId,
         "amount": double.tryParse(_upiAmountController.text) ?? 0,
       });
     }
@@ -5760,7 +5763,7 @@ class BillingPageState extends State<BillingPage>
     if (_isCodSelected &&
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": billingProvider.codPaymentMethodId ?? "COD",
+        "method": codId,
         "amount": double.tryParse(_codAmountController.text) ?? 0,
       });
     }
@@ -5772,7 +5775,12 @@ class BillingPageState extends State<BillingPage>
     //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
     //   });
     // }
-    return paidMethods;
+    return PaymentHelper.normalizePaidMethodsForApi(
+      paidMethods: paidMethods,
+      balanceAmount: _balanceAmount,
+      cashMethodId: cashId,
+      codMethodId: codId,
+    );
   }
 
   Widget _buildQuickAccessIcons() {
@@ -6453,6 +6461,21 @@ class BillingPageState extends State<BillingPage>
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {
     try {
+      {
+        final printService = const PrintService();
+        Future<bool> printOnce() => printService.printSavedOrder(
+              context,
+              savedOrder,
+            );
+
+        final autoPrintSuccess = await printOnce();
+        await _maybePrintCustomerCopy(
+          canPrompt: autoPrintSuccess,
+          printAction: printOnce,
+        );
+        return;
+      }
+/*
       // Extract cart items from the saved order
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
@@ -6552,6 +6575,7 @@ class BillingPageState extends State<BillingPage>
         canPrompt: autoPrintSuccess,
         printAction: printOnce,
       );
+*/
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
       showScaffoldError(

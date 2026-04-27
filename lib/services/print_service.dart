@@ -15,6 +15,26 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 class PrintService {
   const PrintService();
 
+  double _calculateSavedOrderDiscountAmount(SavedOrder savedOrder) {
+    final subtotal = savedOrder.items.fold<double>(
+      0.0,
+      (sum, item) =>
+          sum +
+          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+    );
+
+    final flatDiscount = savedOrder.flatDiscount ?? 0.0;
+    final percentageValue = savedOrder.percentageDiscount ?? 0.0;
+    final percentageDiscount = subtotal * percentageValue / 100;
+    final totalDiscount = flatDiscount + percentageDiscount;
+
+    if (totalDiscount > subtotal) {
+      return subtotal;
+    }
+
+    return totalDiscount;
+  }
+
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
     if (phone == null || phone.isEmpty) return false;
@@ -109,8 +129,130 @@ class PrintService {
   }
 
   /// Print a locally saved order (offline/confirmed in local storage)
-  Future<void> printSavedOrder(BuildContext context, SavedOrder savedOrder) async {
+  Future<bool> printSavedOrder(
+      BuildContext context, SavedOrder savedOrder) async {
     try {
+      {
+        final cartItems = <Map<String, dynamic>>[];
+        double totalMRP = 0.0;
+        double netTotal = 0.0;
+        double totalTax = 0.0;
+
+        for (var item in savedOrder.items) {
+          final double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
+          final double itemPrice =
+              item.price ?? item.product.price?.price ?? 0.0;
+          final double itemTotalPrice = itemPrice * item.quantity;
+          final double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+
+          totalMRP += itemMrp * item.quantity;
+          netTotal += itemTotalPrice;
+          totalTax += itemTax;
+
+          cartItems.add({
+            'productName': item.product.productName ?? 'Unknown',
+            'mrp': itemMrp.toString(),
+            'quantity': item.quantity.toString(),
+            'unitPrice': itemPrice.toString(),
+            'totalPrice': itemTotalPrice.toString(),
+            'tax_amount': itemTax.toString(),
+          });
+        }
+
+        double youSaved = totalMRP - netTotal;
+        if (youSaved < 0) youSaved = 0.0;
+        final double netExcTax = netTotal - totalTax;
+        final double discountAmount =
+            _calculateSavedOrderDiscountAmount(savedOrder);
+
+        debugPrint("LOCAL PRINT CALCULATION:");
+        debugPrint("  - Total MRP: $totalMRP");
+        debugPrint("  - Net Total: $netTotal");
+        debugPrint("  - Total Tax: $totalTax");
+        debugPrint("  - Net Exc Tax: $netExcTax");
+        debugPrint("  - You Saved: $youSaved");
+        if (cartItems.isNotEmpty) {
+          debugPrint("  - Sample item: ${json.encode(cartItems.first)}");
+        }
+
+        if (!context.mounted) return false;
+
+        final storeSession =
+            Provider.of<StoreSessionProvider>(context, listen: false);
+        final storeName = storeSession.activeStore?.storeName ?? "Store";
+        final parsedPayment = PaymentHelper.parseLocalMultiPayment(
+            context, savedOrder.paymentMethod);
+        final String? displayPaymentMethod =
+            parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod;
+        final Map<String, dynamic>? paymentBreakdown =
+            parsedPayment?.paymentBreakdown;
+        final double? paidAmount =
+            (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
+                ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
+                : null;
+
+        final autoPrintSuccess = await PrintPage.autoPrint(
+          context,
+          storeName: storeName,
+          cartItems: cartItems,
+          formattedTotal: savedOrder.total.toString(),
+          savedTotal: youSaved.toString(),
+          discountAmount: discountAmount.toString(),
+          orderDate: savedOrder.createdAt,
+          orderNumber: savedOrder.orderNumber,
+          isFromLocalStorage: true,
+          customerName: savedOrder.customerName,
+          customerPhone: savedOrder.customerPhone,
+          customerAddress: savedOrder.address,
+          paymentMethod: displayPaymentMethod,
+          paymentBreakdown: paymentBreakdown,
+          customerAlternatePhone: savedOrder.alternatePhone,
+          customerVatNumber: savedOrder.customerVatNumber,
+          customerCrNumber: savedOrder.customerCrNumber,
+          orderComment: savedOrder.comment,
+          deliveryMethod: savedOrder.deliveryMethod,
+          paidAmount: paidAmount,
+          isDefaultCustomer:
+              _isDefaultCustomerPhone(context, savedOrder.customerPhone),
+          netExcTax: netExcTax.toString(),
+        );
+
+        if (!autoPrintSuccess && context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PrintPage(
+                storeName: storeName,
+                cartItems: cartItems,
+                formattedTotal: savedOrder.total.toString(),
+                savedTotal: youSaved.toString(),
+                discountAmount: discountAmount.toString(),
+                orderDate: savedOrder.createdAt,
+                orderNumber: savedOrder.orderNumber,
+                isFromLocalStorage: true,
+                customerName: savedOrder.customerName,
+                customerPhone: savedOrder.customerPhone,
+                customerAddress: savedOrder.address,
+                paymentMethod: displayPaymentMethod,
+                paymentBreakdown: paymentBreakdown,
+                customerAlternatePhone: savedOrder.alternatePhone,
+                customerVatNumber: savedOrder.customerVatNumber,
+                customerCrNumber: savedOrder.customerCrNumber,
+                orderComment: savedOrder.comment,
+                deliveryMethod: savedOrder.deliveryMethod,
+                paidAmount: paidAmount,
+                isDefaultCustomer:
+                    _isDefaultCustomerPhone(context, savedOrder.customerPhone),
+                netExcTax: netExcTax.toString(),
+              ),
+            ),
+          );
+        }
+
+        return autoPrintSuccess;
+      }
+
+/*
       // Build items payload for PrintPage
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
@@ -145,7 +287,7 @@ class PrintService {
         debugPrint("  - Sample item: ${json.encode(cartItems.first)}");
       }
 
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
 
       // Get active store name
       final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
@@ -230,8 +372,11 @@ class PrintService {
           ),
         );
       }
+      return autoPrintSuccess;
+*/
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
+      return false;
     }
   }
 }

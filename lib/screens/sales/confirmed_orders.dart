@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -10,13 +8,11 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/screens/sales/widgets/confirmed_order_detail_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -315,6 +311,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
 
   void _printOrder(SavedOrder order) async {
     try {
+      await const PrintService().printSavedOrder(context, order);
+      return;
+/*
       // Convert SavedOrder items to the format expected by PrintPage
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
@@ -435,6 +434,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           ),
         );
       }
+*/
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
       showScaffoldError(
@@ -669,22 +669,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       debugPrint("  - Percentage Discount: ${order.percentageDiscount}");
       debugPrint("  - Coupon ID: ${order.couponId}");
 
-      // Prepare items for API
-      List<Map<String, dynamic>> items = [];
-      for (var item in order.items) {
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': item.quantity,
-          'price': item.price,
-          'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
-          'stock_id': item
-              .selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
-        });
-      }
+      // Prepare items for API using the same expansion logic as online confirm flow
+      final List<Map<String, dynamic>> items =
+          LocalProductProvider.buildOrderItemsPayloadFrom(order.items);
 
       bool orderProcessed = false;
 
       try {
+/*
         // Build sync payment payload in multi-payment format for consistency.
         String? paymentMethod;
         String? paidAmount;
@@ -873,6 +865,20 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           debugPrint("  - Paid Amount: $paidAmount");
         }
 
+*/
+        final paymentPayload = PaymentHelper.buildApiPaymentPayloadFromLocal(
+          context: context,
+          storedPaymentMethod: order.paymentMethod,
+          storedPaidAmount: order.paidAmount,
+          storedBalanceAmount: order.balanceAmount,
+        );
+
+        debugPrint("Normalized sync payment payload for ${order.orderNumber}:");
+        debugPrint("  - paymentMethod: ${paymentPayload.paymentMethod}");
+        debugPrint("  - paidAmount: ${paymentPayload.paidAmount}");
+        debugPrint("  - paymentMethods: ${paymentPayload.paymentMethods}");
+        debugPrint("  - paidMethods: ${paymentPayload.paidMethods}");
+
         // Call API to add order and WAIT for completion
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
         final response = await cartProvider.addToOrderAPI(
@@ -880,19 +886,18 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           cartIds: 0, // Not used in API, but required parameter
           accessToken: accessToken,
           // Use stored data from local order, with fallbacks if needed
-          transactionId: order.transactionId ?? order.orderNumber,
+          transactionId: order.transactionId ?? '',
           totalPrice: order.total.toString(),
           customerId: order.customerId,
           customerPhone: order.customerPhone ?? "",
-          paymentMethod: paymentMethod,
-          paidAmount: paidAmount,
-          paymentMethods: paymentMethods,
-          paidMethods: paidMethods,
+          paymentMethod: paymentPayload.paymentMethod,
+          paidAmount: paymentPayload.paidAmount,
+          paymentMethods: paymentPayload.paymentMethods,
+          paidMethods: paymentPayload.paidMethods,
           balanceAmount: order.balanceAmount ?? "0.0",
           couponId: order.couponId,
           comment: order.comment,
-          deliveryMethodId: order.deliveryMethodId ??
-              "1", // Use stored delivery method or default
+          deliveryMethodId: order.deliveryMethodId,
           carNumber: order.carNumber,
           status:
               "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")

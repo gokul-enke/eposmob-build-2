@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -6067,15 +6066,9 @@ class OrderPanelState extends State<OrderPanel> {
               cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
           paidAmount = totalPaid.toString();
 
-          // Prepare paidMethods array with IDs (only include methods with amount > 0)
+          // Prepare raw paid methods, then normalize balance/change once.
           if (_isCashSelected && cashAmountVal > 0) {
-            // Adjust cash amount by deducting balance (change returned to customer)
-            final orderAmount = double.tryParse(totalPrice) ?? 0.0;
-            final balanceAmountVal = totalPaid - orderAmount;
-            final netCashAmount = cashAmountVal - balanceAmountVal;
-            if (netCashAmount > 0) {
-              paidMethods.add({"method": cashId, "amount": netCashAmount});
-            }
+            paidMethods.add({"method": cashId, "amount": cashAmountVal});
           }
           if (_isCardSelected && cardAmountVal > 0) {
             paidMethods.add({"method": cardId, "amount": cardAmountVal});
@@ -6086,6 +6079,15 @@ class OrderPanelState extends State<OrderPanel> {
           if (_isCodSelected && codAmountVal > 0) {
             paidMethods.add({"method": codId, "amount": codAmountVal});
           }
+
+          final orderAmount = double.tryParse(totalPrice) ?? 0.0;
+          final balanceAmountVal = totalPaid - orderAmount;
+          paidMethods = PaymentHelper.normalizePaidMethodsForApi(
+            paidMethods: paidMethods,
+            balanceAmount: balanceAmountVal > 0 ? balanceAmountVal : 0.0,
+            cashMethodId: cashId,
+            codMethodId: codId,
+          );
 
           // Keep for logs only; API will use paymentMethods/paidMethods format
           paymentMethod =

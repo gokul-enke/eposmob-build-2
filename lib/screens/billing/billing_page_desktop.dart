@@ -300,6 +300,49 @@ class BillingPageState extends State<BillingPage>
                   billingProvider.debitAmountController.text =
                       (amounts['DEBIT'] ?? '0').toString();
                 }
+                if (!methods.contains('CASH') &&
+                    (methods.contains(billingProvider.cashPaymentMethodId) ||
+                        amounts.containsKey(billingProvider.cashPaymentMethodId))) {
+                  billingProvider.setPaymentMethod('CASH', true);
+                  billingProvider.cashAmountController.text = (amounts[
+                              billingProvider.cashPaymentMethodId] ??
+                          '0')
+                      .toString();
+                }
+                if (!methods.contains('CARD') &&
+                    (methods.contains(billingProvider.cardPaymentMethodId) ||
+                        amounts.containsKey(billingProvider.cardPaymentMethodId))) {
+                  billingProvider.setPaymentMethod('CARD', true);
+                  billingProvider.cardAmountController.text = (amounts[
+                              billingProvider.cardPaymentMethodId] ??
+                          '0')
+                      .toString();
+                }
+                if (!methods.contains('UPI') &&
+                    (methods.contains(billingProvider.upiPaymentMethodId) ||
+                        amounts.containsKey(billingProvider.upiPaymentMethodId))) {
+                  billingProvider.setPaymentMethod('UPI', true);
+                  billingProvider.upiAmountController.text = (amounts[
+                              billingProvider.upiPaymentMethodId] ??
+                          '0')
+                      .toString();
+                }
+                if (methods.contains('COD') ||
+                    methods.contains(billingProvider.codPaymentMethodId) ||
+                    amounts.containsKey('COD') ||
+                    amounts.containsKey(billingProvider.codPaymentMethodId)) {
+                  billingProvider.setPaymentMethod('COD', true);
+                  billingProvider.codAmountController.text =
+                      (amounts['COD'] ??
+                              amounts[billingProvider.codPaymentMethodId] ??
+                              '0')
+                          .toString();
+                }
+                if (methods.contains('ONLINE') ||
+                    amounts.containsKey('ONLINE')) {
+                  billingProvider.setPaymentMethod('ONLINE', true);
+                  billingProvider.setPineLabsPaymentSuccess(true);
+                }
               }
             } catch (e) {
               debugPrint("Error parsing payment JSON on rehydration: $e");
@@ -317,6 +360,27 @@ class BillingPageState extends State<BillingPage>
               billingProvider.upiAmountController.text = paid;
             if (pm.toUpperCase() == 'DEBIT')
               billingProvider.debitAmountController.text = paid;
+            if (pm == billingProvider.cashPaymentMethodId) {
+              billingProvider.setPaymentMethod('CASH', true);
+              billingProvider.cashAmountController.text = paid;
+            }
+            if (pm == billingProvider.cardPaymentMethodId) {
+              billingProvider.setPaymentMethod('CARD', true);
+              billingProvider.cardAmountController.text = paid;
+            }
+            if (pm == billingProvider.upiPaymentMethodId) {
+              billingProvider.setPaymentMethod('UPI', true);
+              billingProvider.upiAmountController.text = paid;
+            }
+            if (pm == billingProvider.codPaymentMethodId ||
+                pm.toUpperCase() == 'COD') {
+              billingProvider.setPaymentMethod('COD', true);
+              billingProvider.codAmountController.text = paid;
+            }
+            if (pm.toUpperCase() == 'ONLINE') {
+              billingProvider.setPaymentMethod('ONLINE', true);
+              billingProvider.setPineLabsPaymentSuccess(true);
+            }
           }
         }
 

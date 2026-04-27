@@ -1058,9 +1058,14 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> buildOrderItemsPayload() {
+    return buildOrderItemsPayloadFrom(_cartItems);
+  }
+
+  static List<Map<String, dynamic>> buildOrderItemsPayloadFrom(
+      List<LocalCartItem> cartItems) {
     final items = <Map<String, dynamic>>[];
 
-    for (final item in _cartItems) {
+    for (final item in cartItems) {
       num reservedQuantity = 0;
 
       for (final reservation in item.stockReservations) {
@@ -3244,6 +3249,8 @@ class LocalProductProvider extends ChangeNotifier {
     String? tableId,
     String? address,
     double? deliveryCharge,
+    String? customerVatNumber,
+    String? customerCrNumber,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -3301,6 +3308,10 @@ class LocalProductProvider extends ChangeNotifier {
         alternatePhone: _savedOrders[index].alternatePhone,
         address: address ?? _savedOrders[index].address,
         deliveryCharge: deliveryCharge ?? _savedOrders[index].deliveryCharge,
+        customerVatNumber:
+            customerVatNumber ?? _savedOrders[index].customerVatNumber,
+        customerCrNumber:
+            customerCrNumber ?? _savedOrders[index].customerCrNumber,
       );
 
       // Update in list

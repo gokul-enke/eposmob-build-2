@@ -918,7 +918,8 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
       if (showItems) {
-        cells.add(_dataCell(name, bodyStyle, align: pw.Alignment.centerLeft));
+        cells.add(_dataCell(name, bodyStyle,
+            align: pw.Alignment.centerLeft, textDirection: pw.TextDirection.ltr));
       }
       if (showQty) {
         cells.add(_dataCell(qty.toStringAsFixed(3), bodyStyle));
@@ -953,10 +954,11 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   /// Data cell for items table.
   pw.Widget _dataCell(String text, pw.TextStyle style,
-      {pw.Alignment align = pw.Alignment.center}) {
+      {pw.Alignment align = pw.Alignment.center, pw.TextDirection? textDirection}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      child: pw.Align(alignment: align, child: pw.Text(text, style: style)),
+      child: pw.Align(
+          alignment: align, child: pw.Text(text, style: style, textDirection: textDirection)),
     );
   }
 }

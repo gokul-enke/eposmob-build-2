@@ -1007,7 +1007,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
             ? '$slNumber. $productName'
             : productName;
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left),
+          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
         ]));
       }
       // Price details row with spacer matching header name columns
@@ -1042,7 +1042,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         final String itemText =
             w.containsKey('sl') ? '$slNumber. $productName' : productName;
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
+          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
         ]));
       }
       // Price details row (RTL order) with spacer on right

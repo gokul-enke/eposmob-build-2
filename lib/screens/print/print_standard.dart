@@ -1185,7 +1185,8 @@ class StandardPrinter {
       }
 
       // Use full product name without truncation for PDF
-      String displayProductName = productName;
+      // Prepend LRM (Left-to-Right Mark) to force LTR rendering even in RTL context
+      String displayProductName = '\u200E$productName';
 
       List<String> rowData = [];
       if (displayConfig?['showSLNumber']?.visible == true) {

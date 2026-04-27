@@ -912,30 +912,10 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    // Create a mutable copy of paidMethods to adjust the cash amount
+    // Callers now pass already-normalized paid methods.
     List<Map<String, dynamic>>? finalPaidMethods = paidMethods != null
         ? List<Map<String, dynamic>>.from(paidMethods)
         : null;
-    double parsedBalance = double.tryParse(balanceAmount ?? '0.0') ?? 0.0;
-
-    if (parsedBalance > 0 && finalPaidMethods != null) {
-      // Check for CASH or COD to apply balance deduction
-      final adjustmentIndex = finalPaidMethods
-          .indexWhere((p) => p['method'] == 'CASH' || p['method'] == 'COD');
-
-      if (adjustmentIndex != -1) {
-        final payment = finalPaidMethods[adjustmentIndex];
-        String methodType = payment['method'];
-        double amount = (payment['amount'] as num).toDouble();
-
-        if (amount >= parsedBalance) {
-          finalPaidMethods[adjustmentIndex] = {
-            'method': methodType,
-            'amount': amount - parsedBalance,
-          };
-        }
-      }
-    }
 
     debugPrint("paymentMethods $paymentMethods");
     debugPrint("paidMethods $finalPaidMethods");
@@ -1091,30 +1071,10 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    // Create a mutable copy of paidMethods to adjust the cash amount
+    // Callers now pass already-normalized paid methods.
     List<Map<String, dynamic>>? finalPaidMethods = paidMethods != null
         ? List<Map<String, dynamic>>.from(paidMethods)
         : null;
-    double parsedBalance = double.tryParse(balanceAmount ?? '0.0') ?? 0.0;
-
-    if (parsedBalance > 0 && finalPaidMethods != null) {
-      // Check for CASH or COD to apply balance deduction
-      final adjustmentIndex = finalPaidMethods
-          .indexWhere((p) => p['method'] == 'CASH' || p['method'] == 'COD');
-
-      if (adjustmentIndex != -1) {
-        final payment = finalPaidMethods[adjustmentIndex];
-        String methodType = payment['method'];
-        double amount = (payment['amount'] as num).toDouble();
-
-        if (amount >= parsedBalance) {
-          finalPaidMethods[adjustmentIndex] = {
-            'method': methodType,
-            'amount': amount - parsedBalance,
-          };
-        }
-      }
-    }
 
     // Use multi-payment format if available, otherwise fall back to single payment
     if (paymentMethods != null &&
@@ -1124,7 +1084,7 @@ class CartProvider with ChangeNotifier {
         "phone": customerPhone,
         "transaction_number": transactionId,
         "payment_method": paymentMethods,
-        "payment_methods": finalPaidMethods,
+        "paid_methods": finalPaidMethods,
         "source_type": "executive",
         "balance": balanceAmount,
         "coupon_id": couponId,
@@ -1243,30 +1203,10 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    // Create a mutable copy of paidMethods to adjust the cash amount
+    // Callers now pass already-normalized paid methods.
     List<Map<String, dynamic>>? finalPaidMethods = paidMethods != null
         ? List<Map<String, dynamic>>.from(paidMethods)
         : null;
-    double parsedBalance = double.tryParse(balanceAmount ?? '0.0') ?? 0.0;
-
-    if (parsedBalance > 0 && finalPaidMethods != null) {
-      // Check for CASH or COD to apply balance deduction
-      final adjustmentIndex = finalPaidMethods
-          .indexWhere((p) => p['method'] == 'CASH' || p['method'] == 'COD');
-
-      if (adjustmentIndex != -1) {
-        final payment = finalPaidMethods[adjustmentIndex];
-        String methodType = payment['method'];
-        double amount = (payment['amount'] as num).toDouble();
-
-        if (amount >= parsedBalance) {
-          finalPaidMethods[adjustmentIndex] = {
-            'method': methodType,
-            'amount': amount - parsedBalance,
-          };
-        }
-      }
-    }
 
     // Use multi-payment format if available, otherwise fall back to single payment
     if (paymentMethods != null &&
@@ -1275,7 +1215,7 @@ class CartProvider with ChangeNotifier {
       apiBodyData = {
         "phone": customerPhone,
         "transaction_number": transactionId,
-        "payment_methods": paymentMethods,
+        "payment_method": paymentMethods,
         "paid_methods": finalPaidMethods,
         "source_type": "executive",
         "balance": balanceAmount,

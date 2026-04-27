@@ -410,7 +410,7 @@ class KotStandardPrinter {
                           child: pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
-                              pw.Text(name, style: itemStyle),
+                              pw.Text(name, style: itemStyle, textDirection: pw.TextDirection.ltr),
                               if (itemNotes != null && itemNotes.isNotEmpty)
                                 pw.Text('  Note: $itemNotes',
                                     style: commentStyle),
