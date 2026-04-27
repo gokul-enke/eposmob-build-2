@@ -41,6 +41,7 @@ class ProductCartHelper {
     double? customMrp,
     int? customerId,
     String? customerName,
+    SaleUnit? selectedSaleUnit,
   }) async {
     debugPrint("=== PRODUCT CART HELPER DEBUG START ===");
     debugPrint("Product selected: ${product.productName}");
@@ -100,6 +101,7 @@ class ProductCartHelper {
     double? finalMrp = customMrp;
     num? finalQuantity = quantity;
     bool hasExplicitPriceOverride = customPrice != null;
+    final requestedQuantity = finalQuantity ?? 1;
 
     // STEP 1: Handle stock selection if stock management is enabled
     if (stockEnabled && product.stock != null && product.stock!.isNotEmpty) {
@@ -162,50 +164,90 @@ class ProductCartHelper {
               finalPrice ?? double.tryParse(selectedStock.price ?? "0") ?? 0;
           finalMrp = finalMrp ?? double.tryParse(selectedStock.mrp ?? "0") ?? 0;
         } else {
-          // Multiple pricing groups → show stock selection modal
-          debugPrint(
-              "📱 ${groups.length} pricing groups - showing stock selection modal...");
+          final preferredSaleUnitStocks = selectedSaleUnit == null
+              ? const <Stock>[]
+              : _resolvePreferredSaleUnitStocks(
+                  availableStocks,
+                  selectedSaleUnit,
+                );
+          final preferredSaleUnitGroups = preferredSaleUnitStocks.isEmpty
+              ? const <CombinedStock>[]
+              : groupStocksByPricing(preferredSaleUnitStocks);
 
-          final result = await showDialog(
-            context: context,
-            builder: (context) => StockSelectionModal(
-              product: product,
-              stockOptions: availableStocks,
-            ),
-          );
-
-          if (result != null) {
-            debugPrint("✅ User selected stock from modal");
-            selectedStock = result['stock'] as Stock?;
-            if (selectedStock == null) {
-              debugPrint("❌ Stock selection modal returned no stock");
-              debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-              return;
-            }
-            final originalStocks = (result['originalStocks'] as List?)
-                    ?.whereType<Stock>()
-                    .toList() ??
-                const <Stock>[];
-            selectedStockGroupIds = originalStocks
+          if (preferredSaleUnitGroups.length == 1 &&
+              preferredSaleUnitGroups.first.totalQuantity >=
+                  requestedQuantity) {
+            final preferredGroup = preferredSaleUnitGroups.first;
+            selectedStockGroupIds = preferredGroup.originalStocks
                 .map((stock) => stock.id)
                 .whereType<int>()
                 .toSet()
                 .toList()
               ..sort();
+            selectedStock = preferredGroup.firstStock.copyWith(
+              quantity: preferredGroup.totalQuantity,
+              price: preferredGroup.price,
+              mrp: preferredGroup.mrp,
+              unit: preferredGroup.unit,
+              purchasePrice: preferredGroup.purchasePrice,
+              hsnCode: preferredGroup.hsnCode,
+              wholesalePrice: preferredGroup.wholesalePrice,
+              wholesaleMinUnit: preferredGroup.wholesaleMinUnit,
+            );
 
-            debugPrint("📦 Selected stock details:");
-            debugPrint("  - Stock ID: ${selectedStock.id}");
-            debugPrint("  - Stock Price: ${selectedStock.price}");
-            debugPrint("  - Stock MRP: ${selectedStock.mrp}");
-
+            debugPrint(
+                "📦 Sale-unit preferred stock group auto-selected for ${selectedSaleUnit?.unitName}");
             finalPrice =
                 finalPrice ?? double.tryParse(selectedStock.price ?? "0") ?? 0;
             finalMrp =
                 finalMrp ?? double.tryParse(selectedStock.mrp ?? "0") ?? 0;
           } else {
-            debugPrint("❌ User cancelled stock selection - aborting");
-            debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-            return;
+            // Multiple pricing groups → show stock selection modal
+            debugPrint(
+                "📱 ${groups.length} pricing groups - showing stock selection modal...");
+
+            final result = await showDialog(
+              context: context,
+              builder: (context) => StockSelectionModal(
+                product: product,
+                stockOptions: availableStocks,
+              ),
+            );
+
+            if (result != null) {
+              debugPrint("✅ User selected stock from modal");
+              selectedStock = result['stock'] as Stock?;
+              if (selectedStock == null) {
+                debugPrint("❌ Stock selection modal returned no stock");
+                debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+                return;
+              }
+              final originalStocks = (result['originalStocks'] as List?)
+                      ?.whereType<Stock>()
+                      .toList() ??
+                  const <Stock>[];
+              selectedStockGroupIds = originalStocks
+                  .map((stock) => stock.id)
+                  .whereType<int>()
+                  .toSet()
+                  .toList()
+                ..sort();
+
+              debugPrint("📦 Selected stock details:");
+              debugPrint("  - Stock ID: ${selectedStock.id}");
+              debugPrint("  - Stock Price: ${selectedStock.price}");
+              debugPrint("  - Stock MRP: ${selectedStock.mrp}");
+
+              finalPrice = finalPrice ??
+                  double.tryParse(selectedStock.price ?? "0") ??
+                  0;
+              finalMrp =
+                  finalMrp ?? double.tryParse(selectedStock.mrp ?? "0") ?? 0;
+            } else {
+              debugPrint("❌ User cancelled stock selection - aborting");
+              debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+              return;
+            }
           }
         }
       }
@@ -225,6 +267,21 @@ class ProductCartHelper {
       debugPrint("💰 Product base pricing (No Stock):");
       debugPrint("  - Final Price: $finalPrice");
       debugPrint("  - Final MRP: $finalMrp");
+    }
+
+    if (stockEnabled &&
+        selectedSaleUnit != null &&
+        selectedStock != null &&
+        (selectedStock.quantity ?? 0) < requestedQuantity) {
+      showScaffoldError(
+        context: context,
+        message:
+            'Insufficient stock for ${selectedSaleUnit.unitName ?? product.unit ?? "selected unit"}',
+      );
+      debugPrint(
+          "❌ Selected stock does not cover requested sale-unit quantity");
+      debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+      return;
     }
 
     // STEP 2: Check for customer purchase history if customer is selected and we're adding directly to cart
@@ -402,6 +459,7 @@ class ProductCartHelper {
         final bool itemExistsInCart = localProductProvider.cartItems.any(
             (item) =>
                 item.product.productId == product.productId &&
+                item.saleUnitId == selectedSaleUnit?.id &&
                 ((selectedStockGroupIds.isNotEmpty &&
                         item.stockGroupIds.isNotEmpty &&
                         item.stockGroupIds.length ==
@@ -417,6 +475,7 @@ class ProductCartHelper {
           final existingItem = localProductProvider.cartItems.firstWhere(
             (item) =>
                 item.product.productId == product.productId &&
+                item.saleUnitId == selectedSaleUnit?.id &&
                 ((selectedStockGroupIds.isNotEmpty &&
                         item.stockGroupIds.isNotEmpty &&
                         item.stockGroupIds.length ==
@@ -460,6 +519,9 @@ class ProductCartHelper {
         selectedStock: selectedStock,
         stockGroupIds: selectedStockGroupIds,
         markPriceAsManualOverride: hasExplicitPriceOverride,
+        saleUnitId: selectedSaleUnit?.id,
+        saleUnitName: selectedSaleUnit?.unitName,
+        saleUnitConversionRate: _parseSaleUnitConversionRate(selectedSaleUnit),
       );
 
       showScaffold(
@@ -469,5 +531,37 @@ class ProductCartHelper {
     }
 
     debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+  }
+
+  static double? _parseSaleUnitConversionRate(SaleUnit? saleUnit) {
+    if (saleUnit == null) {
+      return null;
+    }
+    final parsedRate = double.tryParse(saleUnit.conversionRate?.trim() ?? '');
+    if (parsedRate == null || parsedRate <= 0) {
+      return null;
+    }
+    return parsedRate;
+  }
+
+  static List<Stock> _resolvePreferredSaleUnitStocks(
+    List<Stock> stocks,
+    SaleUnit saleUnit,
+  ) {
+    final saleUnitId = saleUnit.id?.toString().trim();
+    final unitId = saleUnit.unitId?.toString().trim();
+    final unitName = saleUnit.unitName?.trim().toLowerCase();
+
+    return stocks.where((stock) {
+      final purchaseUnitId = stock.purchaseUnitId?.trim().toLowerCase();
+      if (purchaseUnitId == null || purchaseUnitId.isEmpty) {
+        return false;
+      }
+
+      return (saleUnitId != null &&
+              purchaseUnitId == saleUnitId.toLowerCase()) ||
+          (unitId != null && purchaseUnitId == unitId.toLowerCase()) ||
+          (unitName != null && purchaseUnitId == unitName);
+    }).toList();
   }
 }

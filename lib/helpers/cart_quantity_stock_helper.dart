@@ -63,6 +63,7 @@ class CartQuantityStockHelper {
         cartItem.selectedStock,
         newQuantity,
         stockGroupIds: cartItem.stockGroupIds,
+        saleUnitId: cartItem.saleUnitId,
       );
 
       return CartQuantityChangeResult(
@@ -97,6 +98,7 @@ class CartQuantityStockHelper {
 
     final currentProduct =
         provider.getProductById(productId) ?? cartItem.product;
+    final saleUnitStep = cartItem.hasSaleUnit ? cartItem.toBaseQuantity(1) : 1;
 
     num appliedQuantity = currentQuantity;
     num remainingIncrease = newQuantity - currentQuantity;
@@ -109,8 +111,12 @@ class CartQuantityStockHelper {
       stockGroupIds: cartItem.stockGroupIds,
     );
 
-    final quantityOnCurrentSelection =
-        _minQuantity(remainingIncrease, availableOnCurrentSelection);
+    final quantityOnCurrentSelection = cartItem.hasSaleUnit
+        ? _snapQuantityToStep(
+            _minQuantity(remainingIncrease, availableOnCurrentSelection),
+            saleUnitStep,
+          )
+        : _minQuantity(remainingIncrease, availableOnCurrentSelection);
 
     if (quantityOnCurrentSelection > 0) {
       provider.addToCart(
@@ -121,6 +127,9 @@ class CartQuantityStockHelper {
         isIncreamentUsingCompactQuantityControl: true,
         selectedStock: cartItem.selectedStock,
         stockGroupIds: cartItem.stockGroupIds,
+        saleUnitId: cartItem.saleUnitId,
+        saleUnitName: cartItem.saleUnitName,
+        saleUnitConversionRate: cartItem.saleUnitConversionRate,
       );
 
       appliedQuantity += quantityOnCurrentSelection;
@@ -166,8 +175,19 @@ class CartQuantityStockHelper {
         continue;
       }
 
-      final quantityForSelection =
-          _minQuantity(remainingIncrease, availableForSelection);
+      final quantityForSelection = cartItem.hasSaleUnit
+          ? _snapQuantityToStep(
+              _minQuantity(remainingIncrease, availableForSelection),
+              saleUnitStep,
+            )
+          : _minQuantity(remainingIncrease, availableForSelection);
+
+      if (quantityForSelection <= 0) {
+        onBlocked(
+          'Selected stock does not have enough quantity for one ${cartItem.saleUnitName ?? cartItem.product.unit ?? "unit"}.',
+        );
+        break;
+      }
 
       provider.addToCart(
         product: refreshedProduct,
@@ -175,8 +195,12 @@ class CartQuantityStockHelper {
         isIncreamentUsingCompactQuantityControl: true,
         selectedStock: selection.selectedStock,
         stockGroupIds: selection.stockGroupIds,
+        saleUnitId: cartItem.saleUnitId,
+        saleUnitName: cartItem.saleUnitName,
+        saleUnitConversionRate: cartItem.saleUnitConversionRate,
       );
 
+      appliedQuantity += quantityForSelection;
       remainingIncrease -= quantityForSelection;
       changed = true;
     }
@@ -189,6 +213,15 @@ class CartQuantityStockHelper {
 
   static num _minQuantity(num first, num second) {
     return first < second ? first : second;
+  }
+
+  static num _snapQuantityToStep(num quantity, num step) {
+    if (step <= 0) {
+      return quantity;
+    }
+
+    final multiplier = (quantity / step).floor();
+    return multiplier * step;
   }
 
   static Future<CartQuantityStockSelection?> _selectAdditionalStock({

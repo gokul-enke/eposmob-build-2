@@ -419,6 +419,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
       if (filteredProducts.isNotEmpty) {
         GetProduct product = filteredProducts.first;
         num? quantity;
+        SaleUnit? matchedSaleUnit;
+
+        for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+          final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+          if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == query.trim()) {
+            matchedSaleUnit = saleUnit;
+            break;
+          }
+        }
 
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
             prefix == '000' &&
@@ -431,6 +440,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
             prefix == '000' &&
             query.length == 14) {
           quantity = int.parse(lastFive!);
+        } else if (matchedSaleUnit != null) {
+          quantity =
+              num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
         }
 
         await ProductCartHelper.handleProductSelection(
@@ -440,6 +452,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
           addToCartDirectly: true,
           customerId: billingProvider.selectedCustomerID,
           customerName: billingProvider.selectedCustomer?.name,
+          selectedSaleUnit: matchedSaleUnit,
         );
 
         setState(() {
@@ -563,16 +576,22 @@ class BillingPageMobileState extends State<BillingPageMobile>
   }
 
   void createOrderAndPrint() async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-    final selectedMethods = billingProvider.getSelectedPaymentMethodsExcludingEmpty();
-    
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final selectedMethods =
+        billingProvider.getSelectedPaymentMethodsExcludingEmpty();
+
     debugPrint('🖨️ [Print Order] Starting print order...');
     debugPrint('🖨️ [Print Order] Selected payment methods: $selectedMethods');
-    debugPrint('🖨️ [Print Order] isOnlineSelected: ${billingProvider.isOnlineSelected}');
-    debugPrint('🖨️ [Print Order] isCashSelected: ${billingProvider.isCashSelected}');
-    debugPrint('🖨️ [Print Order] isCardSelected: ${billingProvider.isCardSelected}');
-    debugPrint('🖨️ [Print Order] isUpiSelected: ${billingProvider.isUpiSelected}');
-    
+    debugPrint(
+        '🖨️ [Print Order] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+    debugPrint(
+        '🖨️ [Print Order] isCashSelected: ${billingProvider.isCashSelected}');
+    debugPrint(
+        '🖨️ [Print Order] isCardSelected: ${billingProvider.isCardSelected}');
+    debugPrint(
+        '🖨️ [Print Order] isUpiSelected: ${billingProvider.isUpiSelected}');
+
     final createdOrderNumber =
         await CheckoutService(context).createOrderAndPrint();
     if (createdOrderNumber != null && createdOrderNumber.isNotEmpty) {

@@ -933,6 +933,9 @@ class BillingPageState extends State<BillingPage>
         debugPrint(
             "🔴 [BillingPage.processBarcode]   - Customer Name: ${selectedCustomer?.name}");
 
+        final bool useSaleUnit = matchedSaleUnit != null &&
+            _resolveSaleUnitQuantity(matchedSaleUnit) > 1;
+
         await ProductCartHelper.handleProductSelection(
           context: context,
           product: product,
@@ -940,6 +943,7 @@ class BillingPageState extends State<BillingPage>
           addToCartDirectly: true,
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
+          selectedSaleUnit: useSaleUnit ? matchedSaleUnit : null,
         );
 
         debugPrint(
@@ -2302,7 +2306,7 @@ class BillingPageState extends State<BillingPage>
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 2),
                                       child: Text(
-                                        item.product.unit ?? '-',
+                                        item.displayUnitName,
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
                                           fontProvider.billingTableItemSize,
@@ -2323,7 +2327,7 @@ class BillingPageState extends State<BillingPage>
                                             vertical: 2),
                                         child: CompactQuantityControlLocal(
                                           key: ValueKey(
-                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}',
+                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
                                           ),
                                           productId: item.product.productId!,
                                           quantity: item.quantity.toDouble(),
@@ -2368,7 +2372,7 @@ class BillingPageState extends State<BillingPage>
                                           width: 70,
                                           child: MrpTextField(
                                             key: ValueKey(
-                                              'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                              'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
                                             ),
                                             item: item,
                                             localProductProvider:
@@ -2389,7 +2393,7 @@ class BillingPageState extends State<BillingPage>
                                         width: 70,
                                         child: PriceTextField(
                                           key: ValueKey(
-                                            'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                            'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
                                           ),
                                           item: item,
                                           localProductProvider:
@@ -2480,6 +2484,7 @@ class BillingPageState extends State<BillingPage>
                                             item.product.productId!,
                                             item.selectedStock,
                                             stockGroupIds: item.stockGroupIds,
+                                            saleUnitId: item.saleUnitId,
                                           );
                                         },
                                       ),

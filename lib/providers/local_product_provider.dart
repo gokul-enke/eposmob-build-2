@@ -51,6 +51,8 @@ class StockReservation {
 }
 
 class LocalCartItem {
+  static const double _saleUnitEpsilon = 0.0001;
+
   final GetProduct product;
   double? price;
   double? mrp;
@@ -78,6 +80,12 @@ class LocalCartItem {
   /// When true, quantity-based wholesale recalculation must not overwrite [price].
   bool isManualPriceOverride;
 
+  /// Optional sale-unit metadata used when a cart line originates from an
+  /// alternate sale unit barcode such as CASE / PACK / BOX.
+  final int? saleUnitId;
+  final String? saleUnitName;
+  final double? saleUnitConversionRate;
+
   LocalCartItem({
     required this.product,
     this.price,
@@ -91,10 +99,83 @@ class LocalCartItem {
     List<StockReservation>? stockReservations,
     this.comment,
     this.isManualPriceOverride = false,
+    this.saleUnitId,
+    this.saleUnitName,
+    this.saleUnitConversionRate,
   })  : stockGroupIds = stockGroupIds ?? <int>[],
         stockReservations = stockReservations ?? <StockReservation>[];
 
   bool get hasGroupedStockSelection => stockGroupIds.length > 1;
+
+  bool get hasSaleUnit =>
+      saleUnitId != null &&
+      saleUnitConversionRate != null &&
+      saleUnitConversionRate! > 0;
+
+  String get displayUnitName {
+    final candidate = hasSaleUnit ? saleUnitName : product.unit;
+    if (candidate == null || candidate.trim().isEmpty) {
+      return '-';
+    }
+    return candidate.trim();
+  }
+
+  num get displayQuantity => toDisplayQuantity(quantity);
+
+  double? get displayPrice => toDisplayAmount(price);
+
+  double? get displayMrp => toDisplayAmount(mrp);
+
+  num toDisplayQuantity(num baseQuantity) {
+    final rate = saleUnitConversionRate;
+    if (!hasSaleUnit || rate == null || rate <= 0) {
+      return baseQuantity;
+    }
+    return _normalizeQuantity(baseQuantity / rate);
+  }
+
+  num toBaseQuantity(num displayQuantity) {
+    final rate = saleUnitConversionRate;
+    if (!hasSaleUnit || rate == null || rate <= 0) {
+      return displayQuantity;
+    }
+    return _normalizeQuantity(displayQuantity * rate);
+  }
+
+  double? toDisplayAmount(double? baseAmount) {
+    final rate = saleUnitConversionRate;
+    if (baseAmount == null || !hasSaleUnit || rate == null || rate <= 0) {
+      return baseAmount;
+    }
+    return baseAmount * rate;
+  }
+
+  double? toBaseAmount(double? displayAmount) {
+    final rate = saleUnitConversionRate;
+    if (displayAmount == null || !hasSaleUnit || rate == null || rate <= 0) {
+      return displayAmount;
+    }
+    return displayAmount / rate;
+  }
+
+  bool canUseSaleUnitPayloadFor(num baseQuantity) {
+    if (!hasSaleUnit) {
+      return false;
+    }
+    final displayQuantity = toDisplayQuantity(baseQuantity);
+    final reconstructedBase = toBaseQuantity(displayQuantity);
+    return (reconstructedBase - baseQuantity).abs() < _saleUnitEpsilon;
+  }
+
+  num _normalizeQuantity(num value) {
+    if (value is double) {
+      final roundedValue = value.roundToDouble();
+      if ((value - roundedValue).abs() < _saleUnitEpsilon) {
+        return roundedValue.toInt();
+      }
+    }
+    return value;
+  }
 }
 
 /// Represents a saved order stored locally
@@ -650,6 +731,9 @@ class LocalProductProvider extends ChangeNotifier {
       stockReservations: stockReservations,
       comment: hiveCartItem.comment,
       isManualPriceOverride: hiveCartItem.isManualPriceOverride,
+      saleUnitId: hiveCartItem.saleUnitId,
+      saleUnitName: hiveCartItem.saleUnitName,
+      saleUnitConversionRate: hiveCartItem.saleUnitConversionRate,
     );
   }
 
@@ -682,6 +766,9 @@ class LocalProductProvider extends ChangeNotifier {
           ? null
           : HiveStringValue(serializedStockReservations),
       isManualPriceOverride: item.isManualPriceOverride,
+      saleUnitId: item.saleUnitId,
+      saleUnitName: item.saleUnitName,
+      saleUnitConversionRate: item.saleUnitConversionRate,
     );
   }
 
@@ -699,6 +786,9 @@ class LocalProductProvider extends ChangeNotifier {
       stockReservations: _cloneStockReservations(item.stockReservations),
       comment: item.comment,
       isManualPriceOverride: item.isManualPriceOverride,
+      saleUnitId: item.saleUnitId,
+      saleUnitName: item.saleUnitName,
+      saleUnitConversionRate: item.saleUnitConversionRate,
     );
   }
 
@@ -936,11 +1026,16 @@ class LocalProductProvider extends ChangeNotifier {
     int productId, {
     Stock? selectedStock,
     List<int>? stockGroupIds,
+    int? saleUnitId,
   }) {
     final normalizedIncomingGroupIds = _normalizeStockGroupIds(stockGroupIds);
 
     return _cartItems.indexWhere((item) {
       if (item.product.productId != productId) {
+        return false;
+      }
+
+      if (item.saleUnitId != saleUnitId) {
         return false;
       }
 
@@ -973,27 +1068,49 @@ class LocalProductProvider extends ChangeNotifier {
           continue;
         }
 
+        final payloadQuantity =
+            item.canUseSaleUnitPayloadFor(reservation.quantity)
+                ? item.toDisplayQuantity(reservation.quantity)
+                : reservation.quantity;
+        final payloadPrice = item.canUseSaleUnitPayloadFor(reservation.quantity)
+            ? item.toDisplayAmount(item.price)
+            : item.price;
+        final payloadMrp = item.canUseSaleUnitPayloadFor(reservation.quantity)
+            ? item.toDisplayAmount(item.mrp)
+            : item.mrp;
+
         items.add({
           'product_id': item.product.productId,
-          'quantity': reservation.quantity,
-          'price': item.price,
-          'mrp': item.mrp,
+          'quantity': payloadQuantity,
+          'price': payloadPrice,
+          'mrp': payloadMrp,
           'stock_id': reservation.stockId,
+          if (item.canUseSaleUnitPayloadFor(reservation.quantity))
+            'sale_unit_id': item.saleUnitId,
         });
         reservedQuantity += reservation.quantity;
       }
 
       final unreservedQuantity = item.quantity - reservedQuantity;
       if (unreservedQuantity > 0 || item.stockReservations.isEmpty) {
+        final baseQuantity =
+            item.stockReservations.isEmpty ? item.quantity : unreservedQuantity;
+        final canUseSaleUnitPayload =
+            item.canUseSaleUnitPayloadFor(baseQuantity);
+
         items.add({
           'product_id': item.product.productId,
-          'quantity': item.stockReservations.isEmpty
-              ? item.quantity
-              : unreservedQuantity,
-          'price': item.price,
-          'mrp': item.mrp,
+          'quantity': canUseSaleUnitPayload
+              ? item.toDisplayQuantity(baseQuantity)
+              : baseQuantity,
+          'price': canUseSaleUnitPayload
+              ? item.toDisplayAmount(item.price)
+              : item.price,
+          'mrp':
+              canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
           'stock_id':
               item.stockReservations.isEmpty ? item.selectedStock?.id : null,
+          if (canUseSaleUnitPayload) 'sale_unit_id': item.saleUnitId,
         });
       }
     }
@@ -1918,6 +2035,9 @@ class LocalProductProvider extends ChangeNotifier {
     Stock? selectedStock,
     List<int>? stockGroupIds,
     bool markPriceAsManualOverride = false,
+    int? saleUnitId,
+    String? saleUnitName,
+    double? saleUnitConversionRate,
   }) {
     debugPrint("🛒 ADD TO CART STARTED");
     debugPrint("Product: ${product?.productName}");
@@ -1944,6 +2064,7 @@ class LocalProductProvider extends ChangeNotifier {
       product.productId!,
       selectedStock: selectedStock,
       stockGroupIds: normalizedStockGroupIds,
+      saleUnitId: saleUnitId,
     );
 
     bool didMutateStock = false;
@@ -2048,6 +2169,9 @@ class LocalProductProvider extends ChangeNotifier {
             stockReservations:
                 _cloneStockReservations(initialStockReservations),
             isManualPriceOverride: markPriceAsManualOverride,
+            saleUnitId: saleUnitId,
+            saleUnitName: saleUnitName,
+            saleUnitConversionRate: saleUnitConversionRate,
           ));
     }
 
@@ -2070,11 +2194,12 @@ class LocalProductProvider extends ChangeNotifier {
   /// Updates the comment on a specific cart item by product ID and stock.
   void updateCartItemComment(
       int productId, Stock? selectedStock, String? comment,
-      {List<int>? stockGroupIds}) {
+      {List<int>? stockGroupIds, int? saleUnitId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      saleUnitId: saleUnitId,
     );
     if (index != -1) {
       _cartItems[index].comment = comment;
@@ -2084,7 +2209,7 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void removeFromCart(int productId, Stock? selectedStock,
-      {List<int>? stockGroupIds}) {
+      {List<int>? stockGroupIds, int? saleUnitId}) {
     debugPrint("🗑️ REMOVE FROM CART STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -2094,6 +2219,7 @@ class LocalProductProvider extends ChangeNotifier {
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      saleUnitId: saleUnitId,
     );
 
     if (index != -1) {
@@ -2121,11 +2247,12 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemPrice(int productId, Stock? selectedStock, double newPrice,
-      {List<int>? stockGroupIds}) {
+      {List<int>? stockGroupIds, int? saleUnitId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      saleUnitId: saleUnitId,
     );
 
     if (index != -1) {
@@ -2141,11 +2268,12 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemMrp(int productId, Stock? selectedStock, double newMrp,
-      {List<int>? stockGroupIds}) {
+      {List<int>? stockGroupIds, int? saleUnitId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      saleUnitId: saleUnitId,
     );
 
     if (index != -1) {
@@ -2156,11 +2284,12 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemTax(int productId, Stock? selectedStock, double newTaxRate,
-      {List<int>? stockGroupIds}) {
+      {List<int>? stockGroupIds, int? saleUnitId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      saleUnitId: saleUnitId,
     );
 
     if (index != -1) {
@@ -2213,6 +2342,9 @@ class LocalProductProvider extends ChangeNotifier {
             stockReservations: _cloneStockReservations(item.stockReservations),
             comment: item.comment,
             isManualPriceOverride: item.isManualPriceOverride,
+            saleUnitId: item.saleUnitId,
+            saleUnitName: item.saleUnitName,
+            saleUnitConversionRate: item.saleUnitConversionRate,
           );
         } else {
           if (!item.isManualPriceOverride) {
@@ -2262,6 +2394,9 @@ class LocalProductProvider extends ChangeNotifier {
                   _cloneStockReservations(orderItem.stockReservations),
               comment: orderItem.comment,
               isManualPriceOverride: orderItem.isManualPriceOverride,
+              saleUnitId: orderItem.saleUnitId,
+              saleUnitName: orderItem.saleUnitName,
+              saleUnitConversionRate: orderItem.saleUnitConversionRate,
             );
           } else {
             if (!orderItem.isManualPriceOverride) {
@@ -2343,6 +2478,9 @@ class LocalProductProvider extends ChangeNotifier {
           stockReservations: _cloneStockReservations(item.stockReservations),
           comment: item.comment,
           isManualPriceOverride: item.isManualPriceOverride,
+          saleUnitId: item.saleUnitId,
+          saleUnitName: item.saleUnitName,
+          saleUnitConversionRate: item.saleUnitConversionRate,
         );
         cartUpdated = true;
         cartUpdatedCount++;
@@ -2383,6 +2521,9 @@ class LocalProductProvider extends ChangeNotifier {
                 _cloneStockReservations(orderItem.stockReservations),
             comment: orderItem.comment,
             isManualPriceOverride: orderItem.isManualPriceOverride,
+            saleUnitId: orderItem.saleUnitId,
+            saleUnitName: orderItem.saleUnitName,
+            saleUnitConversionRate: orderItem.saleUnitConversionRate,
           );
           savedOrdersUpdated = true;
           savedOrderItemUpdatedCount++;
@@ -2417,7 +2558,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// If the quantity becomes less than 1, the product is removed from the cart.
   /// Also handles stock restoration when stock management is enabled.
   void decrementCartItem(int productId, Stock? selectedStock,
-      {List<int>? stockGroupIds}) {
+      {List<int>? stockGroupIds, int? saleUnitId}) {
     debugPrint("➖ DECREMENT CART ITEM STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -2427,24 +2568,28 @@ class LocalProductProvider extends ChangeNotifier {
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      saleUnitId: saleUnitId,
     );
 
     if (index != -1) {
+      final decrementAmount = _cartItems[index].hasSaleUnit
+          ? _cartItems[index].toBaseQuantity(1)
+          : 1;
       debugPrint(
           "📝 Found cart item - current quantity: ${_cartItems[index].quantity}, stockDeducted: ${_cartItems[index].stockDeducted}");
 
-      if (_cartItems[index].quantity > 1) {
-        // STOCK RESTORATION: Only restore 1 unit if we actually have stock to restore
+      if (_cartItems[index].quantity > decrementAmount) {
+        // STOCK RESTORATION: Only restore the quantity reduced from the cart line.
         if (isStockEnabled && _cartItems[index].stockDeducted > 0) {
           _restoreStockReservations(
             _cartItems[index],
-            1,
+            decrementAmount,
             "DECREMENT_CART_ITEM",
           );
           _saveProductsToHive();
         }
 
-        _cartItems[index].quantity--;
+        _cartItems[index].quantity -= decrementAmount;
         _refreshCartItemPricing(_cartItems[index]);
         debugPrint("📝 Decremented quantity to: ${_cartItems[index].quantity}");
       } else {
@@ -3407,7 +3552,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// If [newQuantity] is 0 or less, the item is removed from the cart.
   /// Stock levels are adjusted based on the difference between old and new quantities.
   void setCartItemQuantity(int productId, Stock? selectedStock, num newQuantity,
-      {List<int>? stockGroupIds}) {
+      {List<int>? stockGroupIds, int? saleUnitId}) {
     debugPrint("🔄 SET CART ITEM QUANTITY STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -3418,6 +3563,7 @@ class LocalProductProvider extends ChangeNotifier {
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      saleUnitId: saleUnitId,
     );
 
     if (index == -1) {

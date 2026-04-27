@@ -656,6 +656,8 @@ class Stock {
   final String? pkgMfg;
   final String? rack;
   final String? hsnCode; // Added HSN code field
+  final String? purchaseUnitId;
+  final num? purchaseQty;
   final String? wholesalePrice;
   final int? wholesaleMinUnit;
 
@@ -677,6 +679,8 @@ class Stock {
     this.pkgMfg,
     this.rack,
     this.hsnCode, // Added HSN code field
+    this.purchaseUnitId,
+    this.purchaseQty,
     this.wholesalePrice,
     this.wholesaleMinUnit,
   });
@@ -699,6 +703,8 @@ class Stock {
     String? pkgMfg,
     String? rack,
     String? hsnCode,
+    String? purchaseUnitId,
+    num? purchaseQty,
     String? wholesalePrice,
     int? wholesaleMinUnit,
   }) {
@@ -720,6 +726,8 @@ class Stock {
       pkgMfg: pkgMfg ?? this.pkgMfg,
       rack: rack ?? this.rack,
       hsnCode: hsnCode ?? this.hsnCode,
+      purchaseUnitId: purchaseUnitId ?? this.purchaseUnitId,
+      purchaseQty: purchaseQty ?? this.purchaseQty,
       wholesalePrice: wholesalePrice ?? this.wholesalePrice,
       wholesaleMinUnit: wholesaleMinUnit ?? this.wholesaleMinUnit,
     );
@@ -761,6 +769,13 @@ class Stock {
         pkgMfg: json["pkg_mfg"]?.toString(),
         rack: json["rack"]?.toString(),
         hsnCode: json["hsn_code"]?.toString(), // Added HSN code field
+        purchaseUnitId: json["purchase_unit_id"]?.toString(),
+        purchaseQty: (() {
+          final value = json["purchase_qty"];
+          if (value == null) return null;
+          if (value is num) return value;
+          return num.tryParse(value.toString());
+        })(),
         wholesalePrice: json["wholesale_price"]?.toString(),
         wholesaleMinUnit: (() {
           final value = json["wholesale_min_unit"];
@@ -788,6 +803,8 @@ class Stock {
         "pkg_mfg": pkgMfg,
         "rack": rack,
         "hsn_code": hsnCode, // Added HSN code field
+        "purchase_unit_id": purchaseUnitId,
+        "purchase_qty": purchaseQty,
         "wholesale_price": wholesalePrice,
         "wholesale_min_unit": wholesaleMinUnit,
       };

@@ -58,6 +58,15 @@ class HiveLocalCartItem {
   @HiveField(12)
   final bool isManualPriceOverride;
 
+  @HiveField(13)
+  final int? saleUnitId;
+
+  @HiveField(14)
+  final String? saleUnitName;
+
+  @HiveField(15)
+  final double? saleUnitConversionRate;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -72,6 +81,9 @@ class HiveLocalCartItem {
     this.serializedStockGroupIds,
     this.serializedStockReservations,
     this.isManualPriceOverride = false,
+    this.saleUnitId,
+    this.saleUnitName,
+    this.saleUnitConversionRate,
   });
 }
 

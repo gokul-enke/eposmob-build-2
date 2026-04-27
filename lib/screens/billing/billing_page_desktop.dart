@@ -610,6 +610,15 @@ class BillingPageState extends State<BillingPage>
         GetProduct product = filteredProducts.first;
 
         num? quantity;
+        SaleUnit? matchedSaleUnit;
+
+        for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+          final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+          if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == query.trim()) {
+            matchedSaleUnit = saleUnit;
+            break;
+          }
+        }
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
             prefix == '000' &&
             query.length == 14) {
@@ -624,6 +633,9 @@ class BillingPageState extends State<BillingPage>
             query.length == 14) {
           // Count-based product
           quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        } else if (matchedSaleUnit != null) {
+          quantity =
+              num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
         }
 
         // Use centralized helper for stock handling
@@ -643,6 +655,7 @@ class BillingPageState extends State<BillingPage>
           addToCartDirectly: true,
           customerId: billingProvider.selectedCustomerID,
           customerName: billingProvider.selectedCustomer?.name,
+          selectedSaleUnit: matchedSaleUnit,
         );
 
         // Clear input fields

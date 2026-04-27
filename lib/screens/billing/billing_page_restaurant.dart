@@ -1034,6 +1034,15 @@ class BillingPageState extends State<BillingPageRestaurant>
             "🔴 [BillingPageRestaurant.processBarcode] First product: ${filteredProducts.first.productName}");
         // Get the first product
         GetProduct product = filteredProducts.first;
+        SaleUnit? matchedSaleUnit;
+
+        for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+          final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+          if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == query.trim()) {
+            matchedSaleUnit = saleUnit;
+            break;
+          }
+        }
 
         num? quantity;
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
@@ -1050,6 +1059,9 @@ class BillingPageState extends State<BillingPageRestaurant>
             query.length == 14) {
           // Count-based product
           quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        } else if (matchedSaleUnit != null) {
+          quantity =
+              num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
         }
 
         // Use centralized helper for stock handling
@@ -1071,6 +1083,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           addToCartDirectly: true,
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
+          selectedSaleUnit: matchedSaleUnit,
         );
 
         debugPrint(
@@ -2301,14 +2314,20 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       localProductProvider.selectedProduct;
 
                                   if (selectedProduct != null) {
-                                    final customPrice = double.tryParse(unitPriceController.text);
-                                    final customQuantity = num.tryParse(quantityController.text);
+                                    final customPrice = double.tryParse(
+                                        unitPriceController.text);
+                                    final customQuantity =
+                                        num.tryParse(quantityController.text);
 
-                                    await ProductCartHelper.handleProductSelection(
+                                    await ProductCartHelper
+                                        .handleProductSelection(
                                       context: context,
                                       product: selectedProduct,
                                       quantity: customQuantity,
-                                      customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+                                      customPrice:
+                                          customPrice != null && customPrice > 0
+                                              ? customPrice
+                                              : null,
                                     );
 
                                     // Clear input fields
@@ -2741,6 +2760,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             item.product.productId!,
                                             item.selectedStock,
                                             stockGroupIds: item.stockGroupIds,
+                                            saleUnitId: item.saleUnitId,
                                           );
                                         },
                                       ),
@@ -6980,8 +7000,11 @@ class BillingPageState extends State<BillingPageRestaurant>
                     product: item.product,
                     quantity: diff,
                     selectedStock: item.selectedStock,
-                      stockGroupIds: item.stockGroupIds,
+                    stockGroupIds: item.stockGroupIds,
                     isIncreamentUsingCompactQuantityControl: true,
+                    saleUnitId: item.saleUnitId,
+                    saleUnitName: item.saleUnitName,
+                    saleUnitConversionRate: item.saleUnitConversionRate,
                   );
                 } else if (diff < 0) {
                   for (int i = 0; i < diff.abs(); i++) {
@@ -6989,6 +7012,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       item.product.productId!,
                       item.selectedStock,
                       stockGroupIds: item.stockGroupIds,
+                      saleUnitId: item.saleUnitId,
                     );
                   }
                 }
@@ -7213,8 +7237,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                                     GestureDetector(
                                       onTap: () {
                                         localProductProvider.removeFromCart(
-                                            item.product.productId!,
-                                            item.selectedStock);
+                                          item.product.productId!,
+                                          item.selectedStock,
+                                          saleUnitId: item.saleUnitId,
+                                        );
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
@@ -7280,8 +7306,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                             item.product
                                                                 .productId!,
                                                             item.selectedStock,
-                                                            stockGroupIds:
-                                                                item.stockGroupIds,
+                                                            stockGroupIds: item
+                                                                .stockGroupIds,
+                                                            saleUnitId:
+                                                                item.saleUnitId,
                                                           );
                                                         },
                                                         child: const Icon(
@@ -7325,6 +7353,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                                 .selectedStock,
                                                             isIncreamentUsingCompactQuantityControl:
                                                                 true,
+                                                            stockGroupIds: item
+                                                                .stockGroupIds,
+                                                            saleUnitId:
+                                                                item.saleUnitId,
+                                                            saleUnitName: item
+                                                                .saleUnitName,
+                                                            saleUnitConversionRate:
+                                                                item.saleUnitConversionRate,
                                                           );
                                                         },
                                                         child: const Icon(

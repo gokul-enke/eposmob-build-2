@@ -179,7 +179,7 @@ class CartItemsTable extends StatelessWidget {
                             // Unit
                             _buildFixedContentCell(
                               Text(
-                                item.product.unit ?? '-',
+                                item.displayUnitName,
                                 style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   12,
@@ -196,7 +196,7 @@ class CartItemsTable extends StatelessWidget {
                             _buildFixedContentCell(
                               CompactQuantityControlLocal(
                                 key: ValueKey(
-                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}',
+                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
                                 ),
                                 productId: item.product.productId!,
                                 quantity: item.quantity.toDouble(),
@@ -216,7 +216,7 @@ class CartItemsTable extends StatelessWidget {
                                 width: 70,
                                 child: MrpTextField(
                                   key: ValueKey(
-                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
                                   ),
                                   item: item,
                                   localProductProvider: localProductProvider,
@@ -232,7 +232,7 @@ class CartItemsTable extends StatelessWidget {
                                 width: 70,
                                 child: PriceTextField(
                                   key: ValueKey(
-                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
+                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
                                   ),
                                   item: item,
                                   localProductProvider: localProductProvider,
@@ -286,6 +286,7 @@ class CartItemsTable extends StatelessWidget {
                                       item.product.productId!,
                                       item.selectedStock,
                                       stockGroupIds: item.stockGroupIds,
+                                      saleUnitId: item.saleUnitId,
                                     );
                                   } finally {
                                     billingProvider.setLoadingAddItem(false);
