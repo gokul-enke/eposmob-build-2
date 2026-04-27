@@ -4158,8 +4158,11 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if customer is selected
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      // Check if customer is selected (consider pre-filled default text)
+      final hasCustomer = selectedCustomerID != null ||
+          (mobileNumberText?.isNotEmpty == true) ||
+          (salesExecutivemobileNumberText?.isNotEmpty == true);
+      if (!hasCustomer) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4403,7 +4406,10 @@ class BillingPageState extends State<BillingPage>
       isLoadingCreateOrder = true;
     });
     try {
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      final hasCustomer = selectedCustomerID != null ||
+          (mobileNumberText?.isNotEmpty == true) ||
+          (salesExecutivemobileNumberText?.isNotEmpty == true);
+      if (!hasCustomer) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4670,10 +4676,9 @@ class BillingPageState extends State<BillingPage>
           // Clear the mobile number after successful save
           setState(() {
             mobileNumberText = ""; // Clear the variable
+            salesExecutivemobileNumberText = ""; // Clear default phone display
             selectedCustomerID = null;
             selectedCustomerPhone = null;
-            // Remove iconColor reset
-            // iconColor = 1; // DELETE THIS LINE
             mobileNumberTextController.clear();
             quantityController.clear();
             barcodeController.clear();
@@ -4691,6 +4696,20 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            _isCustomerManuallySelected = false;
+            _hasOpenedPaymentModalOnce = false;
+            _toCustomerCreditEnabled = false;
+            _isCashSelected = false;
+            _isCardSelected = false;
+            _isUpiSelected = false;
+            _isCodSelected = false;
+            _isDebitSelected = false;
+            _cashAmountController.clear();
+            _cardAmountController.clear();
+            _upiAmountController.clear();
+            _codAmountController.clear();
+            _debitAmountController.clear();
+            _autocompletePhoneKey = GlobalKey();
           });
           resetAutocomplete(
               shouldFetchCustomers:
@@ -4740,7 +4759,10 @@ class BillingPageState extends State<BillingPage>
       isLoadingConfirmOrder = true;
     });
     try {
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      final hasCustomer = selectedCustomerID != null ||
+          (mobileNumberText?.isNotEmpty == true) ||
+          (salesExecutivemobileNumberText?.isNotEmpty == true);
+      if (!hasCustomer) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4885,10 +4907,9 @@ class BillingPageState extends State<BillingPage>
           // Clear the mobile number after successful save
           setState(() {
             mobileNumberText = ""; // Clear the variable
+            salesExecutivemobileNumberText = ""; // Clear default phone display
             selectedCustomerID = null;
             selectedCustomerPhone = null;
-            // Remove iconColor reset
-            // iconColor = 1; // DELETE THIS LINE
             mobileNumberTextController.clear();
             quantityController.clear();
             barcodeController.clear();
@@ -4906,6 +4927,20 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            _isCustomerManuallySelected = false;
+            _hasOpenedPaymentModalOnce = false;
+            _toCustomerCreditEnabled = false;
+            _isCashSelected = false;
+            _isCardSelected = false;
+            _isUpiSelected = false;
+            _isCodSelected = false;
+            _isDebitSelected = false;
+            _cashAmountController.clear();
+            _cardAmountController.clear();
+            _upiAmountController.clear();
+            _codAmountController.clear();
+            _debitAmountController.clear();
+            _autocompletePhoneKey = GlobalKey();
           });
           resetAutocomplete(
               shouldFetchCustomers:
