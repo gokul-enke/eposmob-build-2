@@ -4061,59 +4061,6 @@ class BillingPageState extends State<BillingPage>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: "saved",
-          deliveryDate: deliveryDate, // Pass deliveryDate
-          deliveryTime: deliveryTime, // Pass deliveryTime
-          toCustomerCredit: _toCustomerCreditEnabled,
-          context: context,
-          // context: context, // Pass context
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_updated_success".tr,
-        );
-        // Centralized clear
-        _clearCart();
-      } else {
-        // Save as new order
-        debugPrint("💾 Saving as new order");
-
-        // Debug customer info being saved
-        debugPrint("📝 SAVING NEW ORDER - Customer info:");
-        debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
-        debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
-        debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
-        debugPrint("  - selectedCustomerID: $selectedCustomerID");
-        debugPrint(
-            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-
-        // **FIX**: Properly determine customer info for phone-only orders
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        // Determine payment method and data
-        Map<String, String> paymentData = _getPaymentMethodData();
-        String paymentMethod = paymentData["paymentMethod"]!;
-        String paidAmount = paymentData["paidAmount"]!;
-
-        localProductProvider.saveCurrentCartAsOrder(
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          // Include all API-compatible fields
-          customerId: selectedCustomerID,
-          paymentMethod: paymentMethod,
-          paidAmount: paidAmount,
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "saved",
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           context: context, // Pass context
@@ -4237,7 +4184,6 @@ class BillingPageState extends State<BillingPage>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: "saved",
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           toCustomerCredit: _toCustomerCreditEnabled,
@@ -4890,7 +4836,7 @@ class BillingPageState extends State<BillingPage>
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
       )
-          .then((response) {
+          .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
         if (response["order_id"] != null) {
           showScaffold(

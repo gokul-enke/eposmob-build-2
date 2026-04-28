@@ -79,6 +79,40 @@ class PrintService {
       final customerEmail = orderDetails.data?.customerDetails?.email;
       final customerAddress =
           orderDetails.data?.customerDetails?.address?.join(', ');
+      final customerAlternatePhone =
+          orderDetails.data?.customerDetails?.alternatePhone;
+      final customerVatNumber = orderDetails.data?.kycInfo?.vatNumber;
+      final customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
+
+      final paymentMethod =
+          orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
+      final Map<String, dynamic>? paymentBreakdown =
+          orderDetails.data?.payments;
+
+      double? paidAmount;
+      if (paymentBreakdown != null) {
+        final totalPaid = paymentBreakdown.values.fold<double>(
+          0.0,
+          (sum, val) =>
+              sum + (val is num ? val.toDouble() : double.tryParse(val.toString()) ?? 0.0),
+        );
+        if (totalPaid > 0) paidAmount = totalPaid;
+      }
+
+      String? orderComment;
+      if (orderDetails.data?.orderProps != null) {
+        try {
+          final commentProp = orderDetails.data!.orderProps!.firstWhere(
+            (prop) => prop.propsCode == "COMMENT",
+            orElse: () => OrderDetailsModelDataOrderProp(),
+          );
+          orderComment = commentProp.propsValue;
+        } catch (_) {}
+      }
+
+      final deliveryMethod = orderDetails.data?.deliveryMethodName;
+      final netExcTax =
+          orderDetails.data?.cart?.priceSummary?.netExcTax?.toString();
 
       if (!context.mounted) return;
 
@@ -97,7 +131,16 @@ class PrintService {
         customerPhone: customerPhone,
         customerEmail: customerEmail,
         customerAddress: customerAddress,
+        customerAlternatePhone: customerAlternatePhone,
+        customerVatNumber: customerVatNumber,
+        customerCrNumber: customerCrNumber,
+        paymentMethod: paymentMethod,
+        paymentBreakdown: paymentBreakdown,
+        orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
+        paidAmount: paidAmount,
         isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
+        netExcTax: netExcTax,
       );
 
       // Only show print page if auto-print failed
@@ -118,7 +161,16 @@ class PrintService {
               customerPhone: customerPhone,
               customerEmail: customerEmail,
               customerAddress: customerAddress,
+              customerAlternatePhone: customerAlternatePhone,
+              customerVatNumber: customerVatNumber,
+              customerCrNumber: customerCrNumber,
+              paymentMethod: paymentMethod,
+              paymentBreakdown: paymentBreakdown,
+              orderComment: orderComment,
+              deliveryMethod: deliveryMethod,
+              paidAmount: paidAmount,
               isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
+              netExcTax: netExcTax,
             ),
           ),
         );
