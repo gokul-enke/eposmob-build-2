@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
 class MobileProductAutocomplete extends StatefulWidget {
@@ -85,13 +86,22 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
     }
 
     final productProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+    final itemCodeEnabled = appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
+    final lowerQuery = query.toLowerCase();
 
     // Search through the complete products list, not the filtered one
-    return productProvider.products
-        .where((product) => (product.productName ?? '')
-            .toLowerCase()
-            .contains(query.toLowerCase()))
-        .toList();
+    return productProvider.products.where((product) {
+      final nameMatch = (product.productName ?? '').toLowerCase().contains(lowerQuery);
+      if (nameMatch) return true;
+      if (itemCodeEnabled) {
+        final itemCode = product.itemCode ?? '';
+        if (itemCode.isNotEmpty && itemCode.toLowerCase().contains(lowerQuery)) {
+          return true;
+        }
+      }
+      return false;
+    }).toList();
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
@@ -222,6 +232,9 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
           );
         },
         optionsViewBuilder: (context, onSelected, options) {
+          final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+          final itemCodeEnabled = appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
+
           currentOptions = options;
 
           if (_highlightedOptionIndex != null && _highlightedOptionIndex! >= options.length) {
@@ -283,6 +296,18 @@ return Align(
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
+              subtitle: (itemCodeEnabled && (option.itemCode ?? '').isNotEmpty)
+                  ? Text(
+                      option.itemCode!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isHighlighted
+                            ? Colors.blue.shade600
+                            : Colors.grey.shade600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : null,
               trailing: Text(
                 '${option.price?.price ?? ''} ${option.currency ?? ''}',
                 style: TextStyle(

@@ -305,6 +305,9 @@ class HiveGetProduct extends HiveObject {
   @HiveField(20)
   final List<HiveProductTax>? taxes;
 
+  @HiveField(21)
+  final String? itemCode;
+
   HiveGetProduct({
     this.productId,
     this.categoryId,
@@ -327,6 +330,7 @@ class HiveGetProduct extends HiveObject {
     this.productLocation,
     this.totalTaxRate,
     this.taxes,
+    this.itemCode,
   });
 
   // Convert from app model to Hive model
@@ -361,6 +365,7 @@ class HiveGetProduct extends HiveObject {
       taxes: product.taxes != null && product.taxes!.isNotEmpty
           ? product.taxes!.map((t) => HiveProductTax.fromProductTax(t)).toList()
           : [],
+      itemCode: product.itemCode,
     );
   }
 
@@ -387,6 +392,7 @@ class HiveGetProduct extends HiveObject {
       productLocation: productLocation,
       // Restore taxes!
       taxes: taxes?.map((t) => t.toProductTax()).toList() ?? [],
+      itemCode: itemCode,
     )..isSelected = isSelected;
   }
 }

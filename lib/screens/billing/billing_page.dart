@@ -2179,6 +2179,9 @@ class BillingPageState extends State<BillingPage>
                             flex: 1, alignment: Alignment.center),
                         _buildHeaderCell('billing.table_item_name'.tr,
                             flex: 3, alignment: Alignment.centerLeft),
+                        if (appSettings?.itemCodeEnabled == true)
+                          _buildHeaderCell('Item Code',
+                              flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_unit'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_qty'.tr,
@@ -2302,6 +2305,28 @@ class BillingPageState extends State<BillingPage>
                                     flex: 3,
                                     alignment: Alignment.centerLeft,
                                   ),
+
+                                  // Item Code
+                                  if (appSettings?.itemCodeEnabled == true)
+                                    _buildContentCell(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: Text(
+                                          item.product.itemCode ?? '-',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.regular,
+                                            fontProvider.billingTableItemSize,
+                                            0.21,
+                                            ColorManager.textColor,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      flex: 1,
+                                      alignment: Alignment.centerLeft,
+                                    ),
 
                                   // Unit
                                   _buildContentCell(

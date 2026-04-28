@@ -94,13 +94,25 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
 
     final productProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final itemCodeEnabled =
+        appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
+    final lowerQuery = query.toLowerCase();
 
     // Search through only sellable products for billing autocomplete
-    return productProvider.sellableProducts
-        .where((product) => (product.productName ?? '')
-            .toLowerCase()
-            .contains(query.toLowerCase()))
-        .toList();
+    return productProvider.sellableProducts.where((product) {
+      final nameMatch =
+          (product.productName ?? '').toLowerCase().contains(lowerQuery);
+      if (nameMatch) return true;
+      if (itemCodeEnabled) {
+        final itemCode = product.itemCode ?? '';
+        if (itemCode.isNotEmpty && itemCode.toLowerCase().contains(lowerQuery)) {
+          return true;
+        }
+      }
+      return false;
+    }).toList();
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
@@ -253,11 +265,11 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
         },
         optionsViewBuilder: (context, onSelected, options) {
           // Get currency from app settings
-          final currency =
-              Provider.of<AppSettingsProvider>(context, listen: false)
-                      .appSettings
-                      ?.currency ??
-                  'INR';
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: false);
+          final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+          final itemCodeEnabled =
+              appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
 
           // Update current options reference for Enter key handling
           currentOptions = options;
@@ -325,6 +337,19 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
+                        subtitle: (itemCodeEnabled &&
+                                (option.itemCode ?? '').isNotEmpty)
+                            ? Text(
+                                option.itemCode!,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isHighlighted
+                                      ? Colors.blue.shade600
+                                      : Colors.grey.shade600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : null,
                         trailing: Text(
                           '$currency ${option.price?.price ?? ''}',
                           style: TextStyle(

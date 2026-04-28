@@ -77,6 +77,7 @@ class GetProduct {
   final String? productName;
   final String? productSlug;
   final String? barcode;
+  final String? itemCode;
   final ProductCategory? category;
   final String? numberOfProductsAvailable;
   final String? rating;
@@ -109,6 +110,7 @@ class GetProduct {
     this.productName,
     this.productSlug,
     this.barcode,
+    this.itemCode,
     this.category,
     this.numberOfProductsAvailable,
     this.rating,
@@ -141,6 +143,7 @@ class GetProduct {
     String? productName,
     String? productSlug,
     String? barcode,
+    String? itemCode,
     ProductCategory? category,
     String? numberOfProductsAvailable,
     String? rating,
@@ -172,6 +175,7 @@ class GetProduct {
       productName: productName ?? this.productName,
       productSlug: productSlug ?? this.productSlug,
       barcode: barcode ?? this.barcode,
+      itemCode: itemCode ?? this.itemCode,
       category: category ?? this.category,
       numberOfProductsAvailable:
           numberOfProductsAvailable ?? this.numberOfProductsAvailable,
@@ -220,6 +224,7 @@ class GetProduct {
         productName: json["product_name"] ?? json["name"] ?? json["title"],
         productSlug: json["product_slug"] ?? json["slug"],
         barcode: json["barcode"],
+        itemCode: json["item_code"],
         category: json["category"] == null
             ? null
             : ProductCategory.fromJson(json["category"]),
@@ -312,6 +317,7 @@ class GetProduct {
         "product_name": productName,
         "product_slug": productSlug,
         "barcode": barcode,
+        "item_code": itemCode,
         "category": category?.toJson(),
         "number_of_products_available": numberOfProductsAvailable,
         "rating": rating,
