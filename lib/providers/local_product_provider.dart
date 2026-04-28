@@ -338,6 +338,7 @@ class LocalProductProvider extends ChangeNotifier {
   // Currently loaded order (for editing)
   SavedOrder? _currentOrder;
   SavedOrder? get currentOrder => _currentOrder;
+  int _lastLocalOrderIdMicros = 0;
 
   PriceSummary? priceSummary;
 
@@ -2856,6 +2857,15 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   /// Saves the current cart as a confirmed order
+  String _generateLocalOrderId() {
+    final nowMicros = DateHelper.now().microsecondsSinceEpoch;
+    final nextMicros = nowMicros <= _lastLocalOrderIdMicros
+        ? _lastLocalOrderIdMicros + 1
+        : nowMicros;
+    _lastLocalOrderIdMicros = nextMicros;
+    return nextMicros.toString();
+  }
+
   SavedOrder saveCurrentCartAsConfirmedOrder({
     String? customerName,
     String? customerPhone,
@@ -2886,8 +2896,7 @@ class LocalProductProvider extends ChangeNotifier {
       throw Exception("Cannot save an empty cart as confirmed order");
     }
 
-    // Generate a unique ID for the order (timestamp-based)
-    final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
+    final String orderId = _generateLocalOrderId();
 
     // Calculate total with rounding if enabled
     final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;
@@ -3079,8 +3088,7 @@ class LocalProductProvider extends ChangeNotifier {
       throw Exception("Cannot save an empty cart as order");
     }
 
-    // Generate a unique ID for the order (timestamp-based)
-    final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
+    final String orderId = _generateLocalOrderId();
 
     // Calculate total with rounding if enabled
     final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;

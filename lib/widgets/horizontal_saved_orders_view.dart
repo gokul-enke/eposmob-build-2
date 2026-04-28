@@ -16,10 +16,14 @@ import 'package:get/get.dart';
 /// A widget to display saved orders in a grid layout with new order button at top
 class HorizontalSavedOrdersView extends StatefulWidget {
   final Function(String) onOrderSelected;
+  final Future<void> Function()? onNewOrderPressed;
+  final bool isBusy;
 
   const HorizontalSavedOrdersView({
     Key? key,
     required this.onOrderSelected,
+    this.onNewOrderPressed,
+    this.isBusy = false,
   }) : super(key: key);
 
   @override
@@ -93,6 +97,15 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         color: Colors.white,
         child: InkWell(
           onTap: () async {
+            if (widget.isBusy) {
+              return;
+            }
+
+            if (widget.onNewOrderPressed != null) {
+              await widget.onNewOrderPressed!();
+              return;
+            }
+
             debugPrint("===== NEW ORDER (+) BUTTON PRESSED =====");
             debugPrint("🔄 Current state:");
             debugPrint("  - Current order ID: ${provider.currentOrder?.id}");
@@ -217,8 +230,10 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     String time = DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
 
-    debugPrint("SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
-    debugPrint("SavedOrder ${order.orderNumber} formatted date: $date | formatted time: $time");
+    debugPrint(
+        "SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
+    debugPrint(
+        "SavedOrder ${order.orderNumber} formatted date: $date | formatted time: $time");
 
     return ConstrainedBox(
       constraints: const BoxConstraints(
@@ -232,7 +247,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
             ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
             : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
         child: InkWell(
-          onTap: () => widget.onOrderSelected(order.id),
+          onTap: widget.isBusy ? null : () => widget.onOrderSelected(order.id),
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.all(8),
@@ -278,7 +293,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   children: [
                     Consumer<AppSettingsProvider>(
                       builder: (context, settings, _) {
-                        final currency = settings.appSettings?.currency ?? 'INR';
+                        final currency =
+                            settings.appSettings?.currency ?? 'INR';
                         return Text(
                           "$currency ${order.total.toStringAsFixed(2)}",
                           style: const TextStyle(
@@ -305,7 +321,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   children: [
                     IconButton(
                       onPressed: () async {
-                        await const PrintService().printSavedOrder(context, order);
+                        await const PrintService()
+                            .printSavedOrder(context, order);
                       },
                       icon: const Icon(Icons.print, size: 20),
                       color: Colors.blue,
@@ -362,6 +379,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
       ),
     );
   }
+
   void _showDeleteConfirmationDialog(
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
     DeleteConfirmationDialog.show(

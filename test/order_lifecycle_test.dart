@@ -163,6 +163,44 @@ void main() {
       expect(updatedProduct.stock!.firstWhere((s) => s.id == 2).quantity, 5);
     });
 
+    test('switching saved orders releases current stock before reloading', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(true);
+      final stock = buildStock(id: 1, quantity: 10, price: '10', mrp: '12');
+      final product = buildProduct(productId: 1, stocks: [stock]);
+      provider.initializeProducts([product]);
+
+      provider.addToCart(product: product, quantity: 3, selectedStock: stock);
+      final firstOrder = provider.saveCurrentCartAsOrder(status: 'saved');
+      provider.clearCart();
+
+      provider.addToCart(product: product, quantity: 2, selectedStock: stock);
+      final secondOrder = provider.saveCurrentCartAsOrder(status: 'saved');
+      provider.clearCart();
+
+      provider.loadOrderForEditing(firstOrder.id);
+      expect(provider.getProductById(1)!.stock!.first.quantity, 7);
+
+      provider.loadOrderForEditing(secondOrder.id);
+      expect(provider.cartItems.single.quantity, 2);
+      expect(provider.currentOrder?.id, secondOrder.id);
+      expect(provider.getProductById(1)!.stock!.first.quantity, 8);
+    });
+
+    test('rapid local saves get unique ids', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      final product = buildProduct(productId: 1);
+      provider.initializeProducts([product]);
+      provider.addToCart(product: product, quantity: 1);
+
+      final firstOrder = provider.saveCurrentCartAsOrder();
+      final secondOrder = provider.saveCurrentCartAsOrder();
+
+      expect(firstOrder.id, isNot(secondOrder.id));
+      expect(firstOrder.orderNumber, isNot(secondOrder.orderNumber));
+    });
+
     test('clearCart restores all deducted stock', () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);
@@ -366,8 +404,10 @@ void main() {
       final product = buildProduct(productId: 1, stocks: [stockOne, stockTwo]);
       provider.initializeProducts([product]);
 
-      provider.addToCart(product: product, quantity: 1, selectedStock: stockOne);
-      provider.addToCart(product: product, quantity: 1, selectedStock: stockTwo);
+      provider.addToCart(
+          product: product, quantity: 1, selectedStock: stockOne);
+      provider.addToCart(
+          product: product, quantity: 1, selectedStock: stockTwo);
 
       expect(provider.cartItems.length, 2);
     });

@@ -155,8 +155,11 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingCreateOrder = false;
   bool isLoadingConfirmOrder = false;
   bool isLoadingSaveOrderAndPrint = false;
+  bool isLoadingCreateNewOrder = false;
+  bool isLoadingRestoreSavedOrder = false;
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
+  bool _isOrderActionInProgress = false;
   final ListQueue<String> _barcodeQueue = ListQueue<String>();
   bool _toCustomerCreditEnabled = false;
   bool _isResyncingProducts = false;
@@ -204,6 +207,28 @@ class BillingPageState extends State<BillingPage>
 
   bool get _hasInternet =>
       Provider.of<BillingProvider>(context, listen: false).hasInternet;
+
+  bool get _isOrderActionBusy =>
+      _isOrderActionInProgress ||
+      isLoadingClearCart ||
+      isLoadingSaveOrder ||
+      isLoadingCreateOrder ||
+      isLoadingConfirmOrder ||
+      isLoadingSaveOrderAndPrint ||
+      isLoadingCreateNewOrder ||
+      isLoadingRestoreSavedOrder;
+
+  bool _beginOrderAction() {
+    if (_isOrderActionInProgress) {
+      return false;
+    }
+    _isOrderActionInProgress = true;
+    return true;
+  }
+
+  void _endOrderAction() {
+    _isOrderActionInProgress = false;
+  }
 
   bool _shouldSuppressSystemKeyboard() {
     return SystemKeyboardPolicy.shouldSuppressForContext(
@@ -1645,52 +1670,31 @@ class BillingPageState extends State<BillingPage>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: HorizontalSavedOrdersView(
+              isBusy: _isOrderActionBusy,
+              onNewOrderPressed: _createNewOrder,
               onOrderSelected: (orderId) {
-                // Get the local provider
+                if (_isOrderActionBusy) {
+                  return;
+                }
+
                 final localProductProvider =
                     Provider.of<LocalProductProvider>(context, listen: false);
 
-                // If we're editing an order and there are items in the cart, update that order
-                if (localProductProvider.currentOrder != null &&
+                final isSwitchingOrder =
+                    localProductProvider.currentOrder?.id != orderId;
+                if (isSwitchingOrder &&
                     localProductProvider.cartItems.isNotEmpty) {
                   try {
-                    // Update the current order being edited
-                    localProductProvider.updateSavedOrder(
-                      localProductProvider.currentOrder!.id,
-                      customerName: selectedCustomer?.name,
-                      customerPhone: selectedCustomerPhone ?? mobileNumberText,
-                      comment: _commentController.text,
-                      deliveryMethod: deliveryMethod,
-                      context: context,
-                      deliveryDate: deliveryDate, // Pass deliveryDate
-                      deliveryTime: deliveryTime, // Pass deliveryTime
-                    );
-
-                    // Show quick feedback
-                    showScaffold(
-                      context: context,
-                      message: "billing.order_updated".tr,
-                    );
-                  } catch (e) {
-                    debugPrint("Error updating current order: $e");
-                  }
-                } // If cart has items, save as new order
-                else if (localProductProvider.cartItems.isNotEmpty) {
-                  try {
-                    localProductProvider.saveCurrentCartAsOrder(
-                      deliveryDate: deliveryDate, // Pass deliveryDate
-                      deliveryTime: deliveryTime, // Pass deliveryTime
-                    );
+                    _saveCurrentCartAsDraft(localProductProvider);
                     showScaffold(
                       context: context,
                       message: "billing.order_saved".tr,
                     );
                   } catch (e) {
-                    // Swallow exception if cart is empty
+                    debugPrint("Error preserving current order: $e");
                   }
                 }
 
-                // Now load the selected order
                 _loadSavedOrderForEditing(orderId);
               },
             ),
@@ -3803,6 +3807,8 @@ class BillingPageState extends State<BillingPage>
   }
 
   Widget _buildActionButtons() {
+    final disableActions = _isOrderActionBusy;
+
     return Align(
       alignment: Alignment.bottomCenter,
       child: Row(
@@ -3813,6 +3819,7 @@ class BillingPageState extends State<BillingPage>
             color: ColorManager.kButtonRed,
             onPressed: _clearCart,
             isLoading: isLoadingClearCart,
+            isDisabled: disableActions && !isLoadingClearCart,
           ),
           _buildActionButton(
             text: 'billing.save_order'.tr,
@@ -3820,6 +3827,7 @@ class BillingPageState extends State<BillingPage>
             onPressed: () =>
                 _showCheckoutModal(actionMode: CheckoutActionMode.save),
             isLoading: isLoadingSaveOrder,
+            isDisabled: disableActions && !isLoadingSaveOrder,
           ),
           if (_hasInternet) ...[
             _buildActionButton(
@@ -3828,6 +3836,7 @@ class BillingPageState extends State<BillingPage>
               onPressed: () =>
                   _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
               isLoading: isLoadingCreateOrder,
+              isDisabled: disableActions && !isLoadingCreateOrder,
             ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
                     .appSettings
@@ -3839,6 +3848,7 @@ class BillingPageState extends State<BillingPage>
                 onPressed: () =>
                     _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
                 isLoading: isLoadingConfirmOrder,
+                isDisabled: disableActions && !isLoadingConfirmOrder,
               ),
           ],
           if (!_hasInternet) ...[
@@ -3848,6 +3858,7 @@ class BillingPageState extends State<BillingPage>
               onPressed: () =>
                   _showCheckoutModal(actionMode: CheckoutActionMode.save),
               isLoading: isLoadingSaveOrderAndPrint,
+              isDisabled: disableActions && !isLoadingSaveOrderAndPrint,
             ),
           ],
         ],
@@ -3860,17 +3871,18 @@ class BillingPageState extends State<BillingPage>
     required Color color,
     required VoidCallback onPressed,
     required bool isLoading,
+    bool isDisabled = false,
   }) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: GestureDetector(
-          onTap: isLoading ? null : onPressed,
+          onTap: (isLoading || isDisabled) ? null : onPressed,
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10.0),
-              color: color,
+              color: isDisabled ? color.withOpacity(0.55) : color,
             ),
             child: Center(
               child: isLoading
@@ -3896,7 +3908,155 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  void _clearCart() {
+  String? _trimToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _customerNameForOrder() => _trimToNull(selectedCustomer?.name);
+
+  String? _customerPhoneForOrder() {
+    return _trimToNull(selectedCustomerPhone) ??
+        _trimToNull(selectedCustomer?.phone) ??
+        _trimToNull(mobileNumberText) ??
+        _trimToNull(mobileNumberTextController.text);
+  }
+
+  SavedOrder _saveCurrentCartAsDraft(
+      LocalProductProvider localProductProvider) {
+    final paymentData = _getPaymentMethodData();
+    final customerNameToSave = _customerNameForOrder();
+    final customerPhoneToSave = _customerPhoneForOrder();
+    final customerIdToSave = selectedCustomerID ?? selectedCustomer?.id;
+    final couponIdToSave =
+        isCouponApplied ? _trimToNull(coupenCodeTextController.text) : null;
+    final currentOrder = localProductProvider.currentOrder;
+
+    if (currentOrder != null) {
+      localProductProvider.updateSavedOrder(
+        currentOrder.id,
+        customerName: customerNameToSave,
+        customerPhone: customerPhoneToSave,
+        comment: _commentController.text,
+        deliveryMethod: deliveryMethod,
+        customerId: customerIdToSave,
+        paymentMethod: paymentData["paymentMethod"],
+        paidAmount: paymentData["paidAmount"],
+        balanceAmount: _balanceAmount.toString(),
+        transactionId: _transactionNumberController.text,
+        couponId: couponIdToSave,
+        deliveryMethodId: deliveryMethodId,
+        carNumber: _carNumberController.text,
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
+        context: context,
+        toCustomerCredit: _toCustomerCreditEnabled,
+        address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
+      );
+      return localProductProvider.findOrderById(currentOrder.id) ??
+          currentOrder;
+    }
+
+    return localProductProvider.saveCurrentCartAsOrder(
+      customerName: customerNameToSave,
+      customerPhone: customerPhoneToSave,
+      comment: _commentController.text,
+      deliveryMethod: deliveryMethod,
+      customerId: customerIdToSave,
+      paymentMethod: paymentData["paymentMethod"],
+      paidAmount: paymentData["paidAmount"],
+      balanceAmount: _balanceAmount.toString(),
+      transactionId: _transactionNumberController.text,
+      couponId: couponIdToSave,
+      deliveryMethodId: deliveryMethodId,
+      carNumber: _carNumberController.text,
+      status: "saved",
+      deliveryDate: deliveryDate,
+      deliveryTime: deliveryTime,
+      context: context,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      address: deliveryAddress,
+      deliveryCharge: _getDeliveryChargeForOrder(),
+    );
+  }
+
+  void _resetBillingWorkspaceUi({bool refocus = true}) {
+    if (!mounted) return;
+
+    setState(() {
+      coupenCodeTextController.clear();
+      _transactionNumberController.clear();
+      _paidAmountController.clear();
+      _balanceAmount = 0;
+      _isCashSelected = false;
+      _isCardSelected = false;
+      _isUpiSelected = false;
+      _isDebitSelected = false;
+      _isCodSelected = false;
+      _cashAmountController.clear();
+      _cardAmountController.clear();
+      _upiAmountController.clear();
+      _codAmountController.clear();
+      _debitAmountController.clear();
+      _autocompleteProductKey = GlobalKey();
+      quantityController.clear();
+      barcodeController.clear();
+      selectedProductIdController.clear();
+      unitPriceController.clear();
+      selectedProductNameController.clear();
+      isCouponApplied = false;
+      _hasOpenedPaymentModalOnce = false;
+      _isCustomerManuallySelected = false;
+      _toCustomerCreditEnabled = false;
+      deliveryDate = null;
+      deliveryTime = null;
+      deliveryAddress = null;
+      _selectedDeliveryCharge = null;
+      _commentController.clear();
+      _carNumberController.clear();
+      mobileNumberText = "";
+      selectedCustomerID = null;
+      selectedCustomerPhone = null;
+      selectedCustomer = null;
+      isCustomerFound = false;
+      salesExecutivemobileNumberText = "";
+      mobileNumberTextController.clear();
+      _autocompletePhoneKey = GlobalKey();
+      _lastRehydratedOrderId = null;
+    });
+
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
+    resetAutocomplete(shouldFetchCustomers: false);
+    _applyDefaultCustomerFromCacheIfNeeded();
+    if (refocus) {
+      _focusTextField();
+    }
+  }
+
+  void _clearOrderWorkspace({
+    required LocalProductProvider localProductProvider,
+    required bool preserveStockDeduction,
+    bool providerCartAlreadyCleared = false,
+    bool refocus = true,
+  }) {
+    if (!providerCartAlreadyCleared) {
+      if (preserveStockDeduction) {
+        localProductProvider.clearCartAfterOrder();
+      } else {
+        localProductProvider.clearCart();
+      }
+    }
+    localProductProvider.clearCurrentOrder();
+    _resetBillingWorkspaceUi(refocus: refocus);
+  }
+
+  Future<void> _clearCart() async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     debugPrint("Clear Cart pressed");
     setState(() {
       isLoadingClearCart = true; // Indicate that loading has started
@@ -3905,64 +4065,14 @@ class BillingPageState extends State<BillingPage>
       // Clear local cart
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      localProductProvider.clearCart();
-      localProductProvider.clearCurrentOrder();
-
-      // Clear UI state
-      setState(() {
-        coupenCodeTextController.clear();
-        _transactionNumberController.clear();
-        _paidAmountController.clear();
-        _balanceAmount = 0;
-        // Reset all payment methods to none
-        _isCashSelected = false;
-        _isCardSelected = false;
-        _isUpiSelected = false;
-        _isDebitSelected = false;
-        _isCodSelected = false;
-        _cashAmountController.clear();
-        _cardAmountController.clear();
-        _upiAmountController.clear();
-        _codAmountController.clear();
-        _debitAmountController.clear();
-        _autocompleteProductKey = GlobalKey();
-        quantityController.clear();
-        barcodeController.clear();
-        selectedProductIdController.clear();
-        unitPriceController.clear();
-        isCouponApplied = false;
-        _hasOpenedPaymentModalOnce = false;
-        _isCustomerManuallySelected = false;
-        _toCustomerCreditEnabled = false;
-        // Clear delivery date and time
-        deliveryDate = null;
-        deliveryTime = null;
-        deliveryAddress = null;
-        _selectedDeliveryCharge = null;
-        // Clear delivery comment and car number
-        _commentController.clear();
-        _carNumberController.clear();
-
-        // Clear customer-related state completely
-        mobileNumberText = "";
-        selectedCustomerID = null;
-        selectedCustomerPhone = null;
-        selectedCustomer = null;
-        isCustomerFound = false;
-        salesExecutivemobileNumberText = "";
-        mobileNumberTextController.clear();
-        _autocompletePhoneKey = GlobalKey();
-      });
-      Provider.of<CustomerSelectionProvider>(context, listen: false)
-          .clearSelectedCustomer();
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: false,
+      );
       showScaffold(
         context: context,
         message: "billing.cart_cleared".tr,
       );
-      resetAutocomplete(
-          shouldFetchCustomers:
-              false); // Don't reset customer selection when clearing cart
-      _focusTextField();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
       // showScaffold(
@@ -3977,27 +4087,30 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingClearCart = false;
       });
+      _endOrderAction();
     }
   }
 
   Future<void> _saveOrder() async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     setState(() {
       isLoadingSaveOrder = true; // Indicate that loading has started
     });
     debugPrint("Save Order pressed");
     try {
-      if (Provider.of<LocalProductProvider>(context, listen: false)
-          .cartItems
-          .isEmpty) {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
           message: "billing.add_items_to_cart".tr,
         );
         return;
       }
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
 
       // Debug: Log current cart items with custom pricing
       debugPrint("💾 LOCAL SAVE - Cart items with custom pricing:");
@@ -4021,62 +4134,16 @@ class BillingPageState extends State<BillingPage>
       //   return;
       // }
 
-      // Check if we're editing an existing order
-      SavedOrder? currentOrder = localProductProvider.currentOrder;
+      _saveCurrentCartAsDraft(localProductProvider);
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: false,
+      );
 
-      if (currentOrder != null) {
-        // Update existing order
-        debugPrint("💾 Updating existing order: ${currentOrder.orderNumber}");
-
-        // Get payment method and data using multi-payment system
-        Map<String, String> paymentData = _getPaymentMethodData();
-        String paymentMethod = paymentData["paymentMethod"]!;
-        String paidAmount = paymentData["paidAmount"]!;
-
-        // Debug customer info being saved
-        debugPrint("📝 UPDATING ORDER - Customer info:");
-        debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
-        debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
-        debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
-        debugPrint("  - selectedCustomerID: $selectedCustomerID");
-        debugPrint(
-            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-
-        // **FIX**: Properly determine customer info for phone-only orders
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        localProductProvider.updateSavedOrder(
-          currentOrder.id,
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          // Include all API-compatible fields
-          customerId: selectedCustomerID,
-          paymentMethod: paymentMethod,
-          paidAmount: paidAmount,
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          deliveryDate: deliveryDate,
-          deliveryTime: deliveryTime,
-          context: context, // Pass context
-          toCustomerCredit: _toCustomerCreditEnabled,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_saved_success".tr,
-        );
-        resetAutocomplete(shouldFetchCustomers: false);
-        // Centralized clear
-        _clearCart();
-      }
+      showScaffold(
+        context: context,
+        message: "billing.order_saved_success".tr,
+      );
     } catch (e) {
       debugPrint("Error saving order: $e");
       showScaffoldError(
@@ -4087,10 +4154,15 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingSaveOrder = false;
       });
+      _endOrderAction();
     }
   }
 
   Future<void> _saveOrderAndPrint() async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     setState(() {
       isLoadingSaveOrderAndPrint = true; // Indicate that loading has started
     });
@@ -4257,16 +4329,16 @@ class BillingPageState extends State<BillingPage>
       }
 
       try {
-        if (orderToUse != null) {
-          await printFromSavedOrder(orderToUse);
-        }
+        await printFromSavedOrder(orderToUse);
       } catch (error) {
         debugPrint("Error printing saved order: ${error.toString()}");
       }
 
       resetAutocomplete(shouldFetchCustomers: false);
-      localProductProvider.clearCartAfterOrder();
-      _clearCart();
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: true,
+      );
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -4277,11 +4349,94 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingSaveOrderAndPrint = false;
       });
+      _endOrderAction();
+    }
+  }
+
+  Future<void> _createNewOrder() async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        isLoadingCreateNewOrder = true;
+      });
+    }
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      if (localProductProvider.cartItems.isNotEmpty) {
+        _saveCurrentCartAsDraft(localProductProvider);
+      }
+
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: false,
+      );
+
+      showScaffold(
+        context: context,
+        message: "common.create_new_order".tr,
+      );
+    } catch (error) {
+      debugPrint("Error creating new order: $error");
+      showScaffoldError(
+        context: context,
+        message: "billing.failed_save_order".tr,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingCreateNewOrder = false;
+        });
+      }
+      _endOrderAction();
     }
   }
 
   // Function to load a saved order for editing
   void _loadSavedOrderForEditing(String orderId) async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        isLoadingRestoreSavedOrder = true;
+      });
+    }
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      localProductProvider.loadOrderForEditing(orderId);
+      _rehydrateFromProvider();
+
+      showScaffold(
+        context: context,
+        message: "billing.order_loaded_editing".tr,
+      );
+
+      unawaited(_refreshPaymentMethodIdsThenRehydrate(orderId));
+    } catch (error) {
+      debugPrint("Error loading order: $error");
+      showScaffoldError(
+          context: context, message: "billing.failed_load_order".tr);
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingRestoreSavedOrder = false;
+        });
+      }
+      _endOrderAction();
+    }
+  }
+
+  Future<void> _refreshPaymentMethodIdsThenRehydrate(String orderId) async {
     try {
       final masterDataProvider =
           Provider.of<MasterDataProvider>(context, listen: false);
@@ -4289,46 +4444,38 @@ class BillingPageState extends State<BillingPage>
           Provider.of<BillingProvider>(context, listen: false);
 
       final methods = await masterDataProvider.fetchPaymentMethods();
-      if (methods != null && mounted) {
-        String? cashId, cardId, upiId, codId;
-        for (var m in methods) {
-          final val = m.value.toUpperCase();
-          if (val == 'CASH') {
-            cashId = m.id.toString();
-          } else if (val == 'CARD') {
-            cardId = m.id.toString();
-          } else if (val == 'UPI') {
-            upiId = m.id.toString();
-          } else if (val == 'COD') {
-            codId = m.id.toString();
-          }
-        }
-
-        billingProvider.updatePaymentMethodIds(
-          cashId: cashId,
-          cardId: cardId,
-          upiId: upiId,
-          codId: codId,
-        );
+      if (methods == null || !mounted) {
+        return;
       }
+
+      String? cashId, cardId, upiId, codId;
+      for (var method in methods) {
+        final value = method.value.toUpperCase();
+        if (value == 'CASH') {
+          cashId = method.id.toString();
+        } else if (value == 'CARD') {
+          cardId = method.id.toString();
+        } else if (value == 'UPI') {
+          upiId = method.id.toString();
+        } else if (value == 'COD') {
+          codId = method.id.toString();
+        }
+      }
+
+      billingProvider.updatePaymentMethodIds(
+        cashId: cashId,
+        cardId: cardId,
+        upiId: upiId,
+        codId: codId,
+      );
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-
-      // Load the order into the provider's state
-      localProductProvider.loadOrderForEditing(orderId);
-
-      // Rehydrate the entire UI from the newly loaded order
-      _rehydrateFromProvider();
-
-      showScaffold(
-        context: context,
-        message: "billing.order_loaded_editing".tr,
-      );
+      if (localProductProvider.currentOrder?.id == orderId) {
+        _rehydrateFromProvider();
+      }
     } catch (error) {
-      debugPrint("Error loading order: $error");
-      showScaffoldError(
-          context: context, message: "billing.failed_load_order".tr);
+      debugPrint("Error refreshing payment methods for saved order: $error");
     }
   }
 
@@ -4347,6 +4494,10 @@ class BillingPageState extends State<BillingPage>
     // Auto-show payment modal if never opened
     if (!_hasOpenedPaymentModalOnce) {
       _showPaymentMethodModal(onAfterApply: _createOrderAndPrint);
+      return;
+    }
+
+    if (!_beginOrderAction()) {
       return;
     }
 
@@ -4665,8 +4816,11 @@ class BillingPageState extends State<BillingPage>
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
 
-          _clearCart();
-          _focusTextField();
+          _clearOrderWorkspace(
+            localProductProvider: localProductProvider,
+            preserveStockDeduction: true,
+            providerCartAlreadyCleared: true,
+          );
         } else {
           debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
@@ -4683,6 +4837,7 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingCreateOrder = false; // Indicate that loading has finished
       });
+      _endOrderAction();
       debugPrint("🏁 Create Order and Print process completed");
     }
   }
@@ -4702,6 +4857,10 @@ class BillingPageState extends State<BillingPage>
     // Auto-show payment modal if never opened
     if (!_hasOpenedPaymentModalOnce) {
       _showPaymentMethodModal(onAfterApply: _confirmOrder);
+      return;
+    }
+
+    if (!_beginOrderAction()) {
       return;
     }
 
@@ -4915,6 +5074,7 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingConfirmOrder = false; // Indicate that loading has finished
       });
+      _endOrderAction();
       debugPrint("🏁 Confirm Order process completed");
     }
   }
@@ -5054,6 +5214,9 @@ class BillingPageState extends State<BillingPage>
   void _showCheckoutModal(
       {CheckoutActionMode actionMode = CheckoutActionMode.confirm}) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
+    if (_isOrderActionBusy) {
+      return;
+    }
 
     // Release global shortcut focus so modal text fields receive keyboard input reliably.
     _focusNode.unfocus();

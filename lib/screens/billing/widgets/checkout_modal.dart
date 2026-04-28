@@ -2148,12 +2148,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _lIsDebitSelected;
   }
 
-  // Check if Confirm and Print buttons should be enabled
+  // Check if Confirm button should be enabled
   bool get _canConfirmOrPrint {
     if (!widget.requireCheckoutCompletion) {
       return true;
     }
 
+    return _localSelectedCustomer != null &&
+        _hasOpenedPaymentModalOnce &&
+        _hasPaymentMethod();
+  }
+
+  // Check if Print button should be enabled (always requires payment tab visited)
+  bool get _canPrint {
     return _localSelectedCustomer != null &&
         _hasOpenedPaymentModalOnce &&
         _hasPaymentMethod();
@@ -2227,20 +2234,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 if (onPrint != null)
                   Expanded(
                     child: Opacity(
-                      opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                      opacity: _canPrint ? 1.0 : 0.5,
                       child: CustomRoundButtonWithIconAdvanced(
                         title: widget.printButtonTitle,
                         isLoading: _isPrinting,
-                        fct: _canConfirmOrPrint
+                        fct: _canPrint
                             ? onPrint
                             : () {
                                 // Auto-navigate to payment tab and show feedback
                                 _goToStep(3);
                                 showScaffoldError(
                                   context: context,
-                                  message: widget.requireCheckoutCompletion
-                                      ? 'Please configure payment before confirm'
-                                      : 'Unable to proceed',
+                                  message: 'Please configure payment before printing',
                                 );
                               },
                         size: MediaQuery.of(context).size,
@@ -2249,10 +2254,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         height: 48,
                         width: double.infinity,
                         fontSize: FontSize.s14,
-                        boxColor: _canConfirmOrPrint
+                        boxColor: _canPrint
                             ? const Color(0xFF059669)
                             : Colors.grey.shade400,
-                        borderColor: _canConfirmOrPrint
+                        borderColor: _canPrint
                             ? const Color(0xFF059669)
                             : Colors.grey.shade400,
                         textColor: Colors.white,
