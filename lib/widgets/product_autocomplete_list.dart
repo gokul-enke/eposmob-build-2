@@ -44,6 +44,9 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
   final double _itemHeight =
       48.0; // Increased to account for margins and padding
 
+  // Tracks previous controller text to differentiate text changes from selection changes
+  String _previousControllerText = '';
+
   @override
   void dispose() {
     _textFieldFocus.dispose();
@@ -184,15 +187,27 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               focusNode.requestFocus();
             }
 
-            // After ensuring focus, place caret at end so characters append in correct order
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              textEditingController.selection = TextSelection.fromPosition(
-                TextPosition(offset: textEditingController.text.length),
-              );
-            });
+            final currentText = textEditingController.text;
+            final previousText = _previousControllerText;
+            _previousControllerText = currentText;
+
+            // Only snap cursor to end when text was actually appended (virtual
+            // keyboard typing). This preserves Ctrl+A, arrow keys, cursor
+            // placement, and other selection operations.
+            if (currentText.length > previousText.length &&
+                currentText.startsWith(previousText)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (textEditingController.text == currentText) {
+                  textEditingController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: textEditingController.text.length),
+                  );
+                }
+              });
+            }
           }
 
           // Attach the listener once; remove any existing to avoid duplicates
+          _previousControllerText = textEditingController.text;
           textEditingController.removeListener(_ensureFocus);
           textEditingController.addListener(_ensureFocus);
           // Replace the provided focusNode with our own
@@ -200,7 +215,14 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
             focusNode: _textFieldFocus,
             onKeyEvent: (KeyEvent event) {
               if (event is KeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                if (event.logicalKey == LogicalKeyboardKey.keyA &&
+                    HardwareKeyboard.instance.isControlPressed) {
+                  // Ctrl+A: select all text in the field
+                  textEditingController.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: textEditingController.text.length,
+                  );
+                } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                   setState(() {
                     if (_highlightedOptionIndex == null) {
                       _highlightedOptionIndex = 0;

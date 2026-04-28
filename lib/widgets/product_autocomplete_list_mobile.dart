@@ -40,6 +40,9 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
   final double _itemHeight = 56.0; // Mobile-friendly touch targets
   final double _maxOptionsHeight = 300.0; // Reduced max height for mobile
 
+  // Tracks previous controller text to differentiate text changes from selection changes
+  String _previousControllerText = '';
+
   @override
   void dispose() {
     _textFieldFocus.dispose();
@@ -165,13 +168,27 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
             if (!focusNode.hasFocus) {
               focusNode.requestFocus();
             }
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              textEditingController.selection = TextSelection.fromPosition(
-                TextPosition(offset: textEditingController.text.length),
-              );
-            });
+
+            final currentText = textEditingController.text;
+            final previousText = _previousControllerText;
+            _previousControllerText = currentText;
+
+            // Only snap cursor to end when text was actually appended (virtual
+            // keyboard typing). This preserves Ctrl+A, arrow keys, cursor
+            // placement, and other selection operations.
+            if (currentText.length > previousText.length &&
+                currentText.startsWith(previousText)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (textEditingController.text == currentText) {
+                  textEditingController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: textEditingController.text.length),
+                  );
+                }
+              });
+            }
           }
 
+          _previousControllerText = textEditingController.text;
           textEditingController.removeListener(_ensureFocus);
           textEditingController.addListener(_ensureFocus);
           
@@ -179,7 +196,14 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
             focusNode: _textFieldFocus,
             onKeyEvent: (KeyEvent event) {
               if (event is KeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                if (event.logicalKey == LogicalKeyboardKey.keyA &&
+                    HardwareKeyboard.instance.isControlPressed) {
+                  // Ctrl+A: select all text in the field
+                  textEditingController.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: textEditingController.text.length,
+                  );
+                } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                   setState(() {
                     if (_highlightedOptionIndex == null) {
                       _highlightedOptionIndex = 0;
