@@ -52,6 +52,12 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
   static const double _smallItemGap = 3.0;
   static const double _headerGap = 0.0;
 
+  /// Helper to check visibility from display config.
+  /// Defaults to true (visible) when displayConfig is null or key is missing.
+  bool _isVisible(Map<String, DisplayOption>? displayConfig, String key) {
+    return displayConfig?[key]?.visible ?? true;
+  }
+
   @override
   String get layoutId => 'supermarket';
 
@@ -880,6 +886,29 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
+    debugPrint("===== SUPERMARKET2 CART ITEMS DEBUG =====");
+    debugPrint("Cart items count: ${params.cartItems.length}");
+    debugPrint("isFromLocalStorage: ${params.isFromLocalStorage}");
+    debugPrint("isEnglish: $isEnglish");
+    debugPrint("isDualLanguage: ${(params.billDocumentConfig.language ?? '').toLowerCase() == 'ar'}");
+    debugPrint("displayConfig keys: ${displayConfig?.keys.toList() ?? 'null'}");
+    debugPrint("showParticulars visible: ${displayConfig?['showParticulars']?.visible}");
+    debugPrint("showSLNumber visible: ${displayConfig?['showSLNumber']?.visible}");
+    debugPrint("showMRP visible: ${displayConfig?['showMRP']?.visible}");
+    debugPrint("showQty visible: ${displayConfig?['showQty']?.visible}");
+    debugPrint("showRate visible: ${displayConfig?['showRate']?.visible}");
+    debugPrint("showTotal visible: ${displayConfig?['showTotal']?.visible}");
+    debugPrint("showTaxHeader visible: ${displayConfig?['showTaxHeader']?.visible}");
+    for (int i = 0; i < params.cartItems.length; i++) {
+      final item = params.cartItems[i];
+      if (params.isFromLocalStorage) {
+        debugPrint("Item $i: name=${item['productName']}, qty=${item['quantity']}, total=${item['totalPrice']}");
+      } else {
+        debugPrint("Item $i: name=${item.productName}, qty=${item.quantity}, total=${item.totalPrice}, tax=${item.taxAmount}");
+      }
+    }
+    debugPrint("=========================================");
+
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
@@ -971,69 +1000,69 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     List<ReceiptTableColumn> headerCols = [];
 
     if (isEnglish) {
-      if (displayConfig?['showSLNumber']?.visible == true) {
+      if (_isVisible(displayConfig, 'showSLNumber')) {
         headerCols.add(ReceiptTableColumn(slLabel,
             weight: 0.06, align: TextAlign.left, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showParticulars']?.visible == true) {
+      if (_isVisible(displayConfig, 'showParticulars')) {
         headerCols.add(ReceiptTableColumn(particularsLabel,
             weight:
-                displayConfig?['showSLNumber']?.visible == true ? 0.18 : 0.24,
+                _isVisible(displayConfig, 'showSLNumber') ? 0.18 : 0.24,
             align: TextAlign.left,
             isBold: true,
             scale: 0.75));
       }
-      if (displayConfig?['showMRP']?.visible == true) {
+      if (_isVisible(displayConfig, 'showMRP')) {
         headerCols.add(ReceiptTableColumn(mrpLabel,
             weight: 0.13, align: TextAlign.center, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showQty']?.visible == true) {
+      if (_isVisible(displayConfig, 'showQty')) {
         headerCols.add(ReceiptTableColumn(qtyLabel,
             weight: 0.12, align: TextAlign.center, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showRate']?.visible == true) {
+      if (_isVisible(displayConfig, 'showRate')) {
         headerCols.add(ReceiptTableColumn(rateLabel,
             weight: 0.14, align: TextAlign.right, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showTaxHeader']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTaxHeader')) {
         headerCols.add(ReceiptTableColumn(taxHeaderLabel,
             weight: 0.16, align: TextAlign.right, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showTotal']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTotal')) {
         headerCols.add(ReceiptTableColumn(totalLabel,
             weight: 0.21, align: TextAlign.right, isBold: true, scale: 0.75));
       }
     } else {
       // Arabic header (RTL)
-      if (displayConfig?['showTotal']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTotal')) {
         headerCols.add(ReceiptTableColumn(totalLabel,
             weight: 0.18, align: TextAlign.right, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showTaxHeader']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTaxHeader')) {
         headerCols.add(ReceiptTableColumn(taxHeaderLabel,
             weight: 0.15, align: TextAlign.right, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showRate']?.visible == true) {
+      if (_isVisible(displayConfig, 'showRate')) {
         headerCols.add(ReceiptTableColumn(rateLabel,
             weight: 0.15, align: TextAlign.right, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showQty']?.visible == true) {
+      if (_isVisible(displayConfig, 'showQty')) {
         headerCols.add(ReceiptTableColumn(qtyLabel,
             weight: 0.12, align: TextAlign.right, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showMRP']?.visible == true) {
+      if (_isVisible(displayConfig, 'showMRP')) {
         headerCols.add(ReceiptTableColumn(mrpLabel,
             weight: 0.15, align: TextAlign.right, isBold: true, scale: 0.75));
       }
-      if (displayConfig?['showParticulars']?.visible == true) {
+      if (_isVisible(displayConfig, 'showParticulars')) {
         headerCols.add(ReceiptTableColumn(particularsLabel,
             weight:
-                displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+                _isVisible(displayConfig, 'showSLNumber') ? 0.17 : 0.25,
             align: TextAlign.right,
             isBold: true,
             scale: 0.75));
       }
-      if (displayConfig?['showSLNumber']?.visible == true) {
+      if (_isVisible(displayConfig, 'showSLNumber')) {
         headerCols.add(ReceiptTableColumn(slLabel,
             weight: 0.08, align: TextAlign.right, isBold: true, scale: 0.75));
       }
@@ -1104,11 +1133,13 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
 
     String slNumber = (index + 1).toString();
 
+    debugPrint("_buildCartItemRow[$index]: productName='$productName', qty='$quantity', mrp='$mrp', unitPrice='$unitPrice', totalPrice='$totalPrice', tax='$itemTaxAmount', isEnglish=$isEnglish");
+
     if (isEnglish) {
       // Product name row (English - single name)
-      if (displayConfig?['showParticulars']?.visible == true ||
-          displayConfig?['showSLNumber']?.visible == true) {
-        String itemText = displayConfig?['showSLNumber']?.visible == true
+      if (_isVisible(displayConfig, 'showParticulars') ||
+          _isVisible(displayConfig, 'showSLNumber')) {
+        String itemText = _isVisible(displayConfig, 'showSLNumber')
             ? '$slNumber. $productName'
             : productName;
         rows.add(ReceiptTableRow([
@@ -1119,23 +1150,23 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
       // Price details row
       List<ReceiptTableColumn> priceCols = [];
       priceCols.add(ReceiptTableColumn("", weight: 0.24));
-      if (displayConfig?['showMRP']?.visible == true) {
+      if (_isVisible(displayConfig, 'showMRP')) {
         priceCols.add(ReceiptTableColumn(mrp,
             weight: 0.13, align: TextAlign.center, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showQty']?.visible == true) {
+      if (_isVisible(displayConfig, 'showQty')) {
         priceCols.add(ReceiptTableColumn(quantity,
             weight: 0.12, align: TextAlign.center, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showRate']?.visible == true) {
+      if (_isVisible(displayConfig, 'showRate')) {
         priceCols.add(ReceiptTableColumn(unitPrice,
             weight: 0.14, align: TextAlign.right, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showTaxHeader']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTaxHeader')) {
         priceCols.add(ReceiptTableColumn(itemTaxAmount,
             weight: 0.16, align: TextAlign.right, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showTotal']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTotal')) {
         priceCols.add(ReceiptTableColumn(totalPrice,
             weight: 0.21, align: TextAlign.right, scale: 0.7, isBold: true));
       }
@@ -1144,13 +1175,13 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
       }
     } else {
       // Arabic: RTL layout with bilingual names
-      if (displayConfig?['showParticulars']?.visible == true ||
-          displayConfig?['showSLNumber']?.visible == true) {
+      if (_isVisible(displayConfig, 'showParticulars') ||
+          _isVisible(displayConfig, 'showSLNumber')) {
         // Show Arabic name (line 1) and English name (line 2) when available
         String itemText = '';
         if (productNameArabic.isNotEmpty) {
           // Bilingual: Arabic on line 1, English on line 2
-          if (displayConfig?['showSLNumber']?.visible == true) {
+          if (_isVisible(displayConfig, 'showSLNumber')) {
             itemText = '$slNumber. $productNameArabic';
           } else {
             itemText = productNameArabic;
@@ -1168,7 +1199,7 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
           ]));
         } else {
           // Fallback to single name (English or Arabic)
-          String itemText = displayConfig?['showSLNumber']?.visible == true
+          String itemText = _isVisible(displayConfig, 'showSLNumber')
               ? '$slNumber. $productName'
               : productName;
           rows.add(ReceiptTableRow([
@@ -1179,23 +1210,23 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
       }
       // Price details row (RTL order)
       List<ReceiptTableColumn> priceCols = [];
-      if (displayConfig?['showTotal']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTotal')) {
         priceCols.add(ReceiptTableColumn(totalPrice,
             weight: 0.25, align: TextAlign.right, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showTaxHeader']?.visible == true) {
+      if (_isVisible(displayConfig, 'showTaxHeader')) {
         priceCols.add(ReceiptTableColumn(itemTaxAmount,
             weight: 0.15, align: TextAlign.right, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showRate']?.visible == true) {
+      if (_isVisible(displayConfig, 'showRate')) {
         priceCols.add(ReceiptTableColumn(unitPrice,
             weight: 0.15, align: TextAlign.right, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showQty']?.visible == true) {
+      if (_isVisible(displayConfig, 'showQty')) {
         priceCols.add(ReceiptTableColumn(quantity,
             weight: 0.12, align: TextAlign.right, scale: 0.7, isBold: true));
       }
-      if (displayConfig?['showMRP']?.visible == true) {
+      if (_isVisible(displayConfig, 'showMRP')) {
         priceCols.add(ReceiptTableColumn(mrp,
             weight: 0.15, align: TextAlign.right, scale: 0.7, isBold: true));
       }

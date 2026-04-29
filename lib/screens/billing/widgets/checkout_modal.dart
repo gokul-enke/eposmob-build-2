@@ -103,6 +103,11 @@ class CheckoutModal extends StatefulWidget {
   final Future<void> Function() onConfirmOrder;
   final Future<void> Function() onConfirmAndPrint;
 
+  /// Optional initial step the modal should open at:
+  /// 0 = Customer, 1 = Delivery, 2 = Discount, 3 = Payment.
+  /// When null, the modal uses its default behavior (step 0, with skip-customer setting).
+  final int? initialStep;
+
   const CheckoutModal({
     super.key,
     required this.cartTotal,
@@ -150,6 +155,7 @@ class CheckoutModal extends StatefulWidget {
     required this.onPaymentUpdated,
     required this.onConfirmOrder,
     required this.onConfirmAndPrint,
+    this.initialStep,
   });
 
   @override
@@ -157,8 +163,7 @@ class CheckoutModal extends StatefulWidget {
 }
 
 class _CheckoutModalState extends State<CheckoutModal> {
-  int _currentStep =
-      0; // 0: Customer, 1: Discount/Delivery, ... logic updated below
+  late int _currentStep; // 0: Customer, 1: Delivery, 2: Discount, 3: Payment
   bool _hasEvaluatedSkipCustomerSelection = false;
   bool _isConfirming = false;
   bool _isPrinting = false;
@@ -251,6 +256,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
   @override
   void initState() {
     super.initState();
+    _currentStep = _resolveInitialStep(widget.initialStep);
+    debugPrint(
+        "⌨️ [CheckoutModal] initState | customer=${widget.selectedCustomer?.id} | enableDelivery=${widget.enableDelivery} | paymentVisited=${widget.hasOpenedPaymentModalOnce} | initialStep=${widget.initialStep} | resolvedStep=$_currentStep");
     _allCustomers = List<CustomerListModelData>.from(widget.availableCustomers);
     _filteredCustomers = List<CustomerListModelData>.from(_allCustomers);
 
@@ -293,6 +301,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyDefaultPaymentMethod();
     });
+    HardwareKeyboard.instance.addHandler(_onHardwareKey);
+    debugPrint("⌨️ [CheckoutModal] Hardware keyboard handler registered");
   }
 
   @override
@@ -301,8 +311,20 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _applyInitialStepFromSettings();
   }
 
+  int _resolveInitialStep(int? requested) {
+    if (requested == null) return 0;
+    if (requested < 0 || requested > 3) return 0;
+    if (requested == 1 && !widget.enableDelivery) return 0;
+    return requested;
+  }
+
   void _applyInitialStepFromSettings() {
     if (_hasEvaluatedSkipCustomerSelection) {
+      return;
+    }
+    // Respect explicit caller-provided initial step (e.g. F3/F4/F5/F10 on billing page).
+    if (widget.initialStep != null) {
+      _hasEvaluatedSkipCustomerSelection = true;
       return;
     }
 
@@ -382,11 +404,69 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   @override
   void dispose() {
+    debugPrint(
+        "⌨️ [CheckoutModal] dispose | step=$_currentStep | paymentVisited=$_hasOpenedPaymentModalOnce");
+    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _customerSearchController.dispose();
     _lCarNumberController.dispose();
     _lCommentController.dispose();
     _lAddressController.dispose();
     super.dispose();
+  }
+
+  bool _onHardwareKey(KeyEvent event) {
+    if (!mounted) return false;
+    if (event is! KeyDownEvent) return false;
+
+    debugPrint(
+        "⌨️ [CheckoutModal] key=${event.logicalKey.debugName} | step=$_currentStep | customer=${_localSelectedCustomer?.id} | canConfirm=$_canConfirmOrPrint | canPrint=$_canPrint | paymentVisited=$_hasOpenedPaymentModalOnce");
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      debugPrint("⌨️ [CheckoutModal] Handling Esc -> close modal");
+      Navigator.of(context).pop();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f2) {
+      debugPrint("⌨️ [CheckoutModal] Handling F2 -> confirm");
+      if (_canConfirmOrPrint && !_isConfirming) _handleConfirm();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f3) {
+      debugPrint("⌨️ [CheckoutModal] Handling F3 -> customer step");
+      _goToStep(0);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f4) {
+      debugPrint("⌨️ [CheckoutModal] Handling F4 -> delivery step");
+      if (widget.enableDelivery) _goToStep(1);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f5) {
+      debugPrint("⌨️ [CheckoutModal] Handling F5 -> payment step");
+      _goToStep(3);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f6) {
+      debugPrint("⌨️ [CheckoutModal] Handling F6 -> print");
+      if (_canPrint && !_isPrinting) _handlePrint();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f8) {
+      debugPrint("⌨️ [CheckoutModal] Handling F8 -> confirm");
+      if (_canConfirmOrPrint && !_isConfirming) _handleConfirm();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f9) {
+      debugPrint("⌨️ [CheckoutModal] Handling F9 -> print");
+      if (_canPrint && !_isPrinting) _handlePrint();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f10) {
+      debugPrint("⌨️ [CheckoutModal] Handling F10 -> discount step");
+      _goToStep(2);
+      return true;
+    }
+    return false;
   }
 
   void _nextStep() {
@@ -653,55 +733,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return Focus(
       autofocus: true,
       canRequestFocus: true,
-      onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-
-        if (event.logicalKey == LogicalKeyboardKey.escape) {
-          Navigator.of(context).pop();
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f2) {
-          if (_canConfirmOrPrint && !_isConfirming) {
-            _handleConfirm();
-          }
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f3) {
-          _goToStep(0);
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f4) {
-          if (widget.enableDelivery) _goToStep(1);
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f5) {
-          _goToStep(3);
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f6) {
-          if (_canPrint && !_isPrinting) {
-            _handlePrint();
-          }
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f8) {
-          if (_canConfirmOrPrint && !_isConfirming) {
-            _handleConfirm();
-          }
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f9) {
-          if (_canPrint && !_isPrinting) {
-            _handlePrint();
-          }
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.f10) {
-          _goToStep(2);
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
       child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,

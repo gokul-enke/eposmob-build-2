@@ -264,6 +264,8 @@ class BillingPageState extends State<BillingPage>
     _focusNode.addListener(_handleFocusChange);
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
+    HardwareKeyboard.instance.addHandler(_onBillingHardwareKey);
+    debugPrint("⌨️ [BillingPage] HardwareKeyboard handler registered in initState");
 
     // Debug logging for AppSettings
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -384,8 +386,12 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
+  bool _isCheckoutModalOpen = false;
+
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onBillingHardwareKey);
+    debugPrint("⌨️ [BillingPage] HardwareKeyboard handler removed in dispose");
     _barcodeSubscription?.cancel();
     barcodeController.dispose();
     mobileNumberTextController.dispose();
@@ -787,56 +793,160 @@ class BillingPageState extends State<BillingPage>
     // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    if (appSettingsProvider.appSettings!.barcodeSales) {
+    final barcodeSales = appSettingsProvider.appSettings?.barcodeSales ?? false;
+    debugPrint(
+        "⌨️ [BillingPage] _focusTextField called | barcodeSales=$barcodeSales | ${_focusDebugSummary()}");
+    if (barcodeSales) {
       FocusScope.of(context).requestFocus(_barcodeNode);
     } else {}
     selectedProductNameController.clear();
     Provider.of<LocalProductProvider>(context, listen: false)
         .resetSelectedProduct();
+    debugPrint(
+        "⌨️ [BillingPage] _focusTextField completed | ${_focusDebugSummary()}");
+  }
+
+  String _focusDebugSummary() {
+    final primaryFocus = FocusManager.instance.primaryFocus;
+    final focusedWidget = primaryFocus?.context?.widget;
+    return "pageHasFocus=${_focusNode.hasFocus}, "
+        "pagePrimary=${_focusNode.hasPrimaryFocus}, "
+        "barcodeHasFocus=${_barcodeNode.hasFocus}, "
+        "customerHasFocus=${_customerTextFieldFocus.hasFocus}, "
+        "primaryFocus=${primaryFocus?.debugLabel ?? primaryFocus}, "
+        "primaryWidget=${focusedWidget?.runtimeType}";
+  }
+
+  void _restoreShortcutFocus(String reason) {
+    debugPrint(
+        "⌨️ [BillingPage] Restoring shortcut focus ($reason) | before: ${_focusDebugSummary()}");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final barcodeSales = Provider.of<AppSettingsProvider>(context,
+                  listen: false)
+              .appSettings
+              ?.barcodeSales ??
+          false;
+      if (barcodeSales) {
+        FocusScope.of(context).requestFocus(_barcodeNode);
+        debugPrint(
+            "⌨️ [BillingPage] Requested barcode focus after $reason");
+      } else {
+        _focusNode.requestFocus();
+        debugPrint(
+            "⌨️ [BillingPage] Requested page shortcut focus after $reason");
+      }
+      debugPrint(
+          "⌨️ [BillingPage] Restoring shortcut focus ($reason) | after: ${_focusDebugSummary()}");
+    });
+  }
+
+  bool _isBillingShortcutKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.f1 ||
+        key == LogicalKeyboardKey.f2 ||
+        key == LogicalKeyboardKey.f3 ||
+        key == LogicalKeyboardKey.f4 ||
+        key == LogicalKeyboardKey.f5 ||
+        key == LogicalKeyboardKey.f6 ||
+        key == LogicalKeyboardKey.f7 ||
+        key == LogicalKeyboardKey.f8 ||
+        key == LogicalKeyboardKey.f9 ||
+        key == LogicalKeyboardKey.f10 ||
+        key == LogicalKeyboardKey.f11 ||
+        key == LogicalKeyboardKey.f12;
   }
 
   void _handleFocusChange() {
+    debugPrint("⌨️ [BillingPage] Focus change | ${_focusDebugSummary()}");
     if (_focusNode.hasFocus) {
       // debugPrint('Focus gained');
     }
   }
 
+  bool _onBillingHardwareKey(KeyEvent event) {
+    if (!mounted) return false;
+    if (event is! KeyDownEvent) return false;
+    // Trace EVERY key event reaching the billing page so missing handlers are visible in logs.
+    debugPrint(
+        "⌨️ [BillingPage] HW raw key=${event.logicalKey.debugName} | modalOpen=$_isCheckoutModalOpen");
+    if (_isCheckoutModalOpen) {
+      debugPrint(
+          "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} IGNORED (checkout modal open)");
+      return false;
+    }
+    if (!_isBillingShortcutKey(event.logicalKey)) {
+      return false;
+    }
+    debugPrint(
+        "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} | ${_focusDebugSummary()}");
+    _handleKeyPress(event);
+    return true;
+  }
+
   void _handleKeyPress(KeyEvent event) {
     if (event is! KeyDownEvent) return;
+
+    debugPrint(
+        "⌨️ [BillingPage] _handleKeyPress ${event.logicalKey.debugName} | ${_focusDebugSummary()}");
 
     try {
       // Always allow F11/F12 even when text fields are focused
       if (event.logicalKey == LogicalKeyboardKey.f11) {
+        debugPrint("⌨️ [BillingPage] Handling F11 -> focus text field");
         _focusTextField();
         return;
       }
       if (event.logicalKey == LogicalKeyboardKey.f12) {
+        debugPrint("⌨️ [BillingPage] Handling F12 -> toggle sidebar");
         setState(() {
           _selectedSidebarTab = _selectedSidebarTab == 0 ? 1 : 0;
         });
         return;
       }
 
-      // For other shortcuts, skip if a text field is focused
-      final focusedContext = FocusManager.instance.primaryFocus?.context;
-      if (focusedContext != null && focusedContext.widget is EditableText) {
-        return;
-      }
-
       if (event.logicalKey == LogicalKeyboardKey.f1) {
+        debugPrint("⌨️ [BillingPage] Handling F1 -> clear cart");
         _clearCart();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
+        debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
         _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+      } else if (event.logicalKey == LogicalKeyboardKey.f3) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F3 -> open checkout at Customer step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 0);
+      } else if (event.logicalKey == LogicalKeyboardKey.f4) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F4 -> open checkout at Delivery step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 1);
+      } else if (event.logicalKey == LogicalKeyboardKey.f5) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F5 -> open checkout at Payment step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 3);
       } else if (event.logicalKey == LogicalKeyboardKey.f6) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F6 -> open checkout confirm & print");
         _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
       } else if (event.logicalKey == LogicalKeyboardKey.f7) {
+        debugPrint("⌨️ [BillingPage] Handling F7 -> create new order");
         _createNewOrder();
       } else if (event.logicalKey == LogicalKeyboardKey.f8) {
+        debugPrint("⌨️ [BillingPage] Handling F8 -> open checkout save");
         _showCheckoutModal(actionMode: CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f9) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F9 -> open checkout save & print");
         _showCheckoutModal(actionMode: CheckoutActionMode.save);
+      } else if (event.logicalKey == LogicalKeyboardKey.f10) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F10 -> open checkout at Discount step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 2);
       }
     } catch (e) {
+      debugPrint("⌨️ [BillingPage] Error handling key press: $e");
       // debugPrint("Error handling key press: $e");
     }
   }
@@ -1105,9 +1215,9 @@ class BillingPageState extends State<BillingPage>
         Provider.of<GridSelectionProvider>(context, listen: false);
 
     return SafeArea(
-      child: KeyboardListener(
+      child: Focus(
         focusNode: _focusNode,
-        onKeyEvent: _handleKeyPress,
+        autofocus: true,
         child: Scaffold(
           body: Stack(
             children: [
@@ -4427,7 +4537,11 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _createNewOrder() async {
+    debugPrint(
+        "⌨️ [BillingPage] _createNewOrder started | ${_focusDebugSummary()}");
     if (!_beginOrderAction()) {
+      debugPrint(
+          "⌨️ [BillingPage] _createNewOrder ignored because another action is in progress");
       return;
     }
 
@@ -4455,6 +4569,8 @@ class BillingPageState extends State<BillingPage>
         message: "common.create_new_order".tr,
       );
     } catch (error) {
+      debugPrint(
+          "⌨️ [BillingPage] Error creating new order: $error | ${_focusDebugSummary()}");
       debugPrint("Error creating new order: $error");
       showScaffoldError(
         context: context,
@@ -4467,6 +4583,9 @@ class BillingPageState extends State<BillingPage>
         });
       }
       _endOrderAction();
+      _restoreShortcutFocus('create new order');
+      debugPrint(
+          "⌨️ [BillingPage] _createNewOrder finished | ${_focusDebugSummary()}");
     }
   }
 
@@ -5284,16 +5403,27 @@ class BillingPageState extends State<BillingPage>
 
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
   /// This is called when clicking Confirm Order or Confirm & Print buttons
-  void _showCheckoutModal(
-      {CheckoutActionMode actionMode = CheckoutActionMode.confirm}) async {
+  void _showCheckoutModal({
+    CheckoutActionMode actionMode = CheckoutActionMode.confirm,
+    int? initialStep,
+  }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
+    debugPrint(
+        "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
     if (_isOrderActionBusy) {
+      debugPrint(
+          "⌨️ [BillingPage] _showCheckoutModal ignored because order action is busy");
       return;
     }
 
+    _isCheckoutModalOpen = true;
+    debugPrint(
+        "⌨️ [BillingPage] Releasing focus before checkout modal | ${_focusDebugSummary()}");
     // Release global shortcut focus so modal text fields receive keyboard input reliably.
     _focusNode.unfocus();
     FocusManager.instance.primaryFocus?.unfocus();
+    debugPrint(
+        "⌨️ [BillingPage] Focus released before checkout modal | ${_focusDebugSummary()}");
 
     // Ensure default customer is resolved from cached list before opening checkout.
     _hydrateCustomerListFromProviderCache();
@@ -5369,11 +5499,14 @@ class BillingPageState extends State<BillingPage>
     // Check if delivery should be enabled (if methods exist)
     bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
 
-    showDialog(
+    debugPrint(
+        "⌨️ [BillingPage] Opening checkout modal | mode=$actionMode | ${_focusDebugSummary()}");
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
         return CheckoutModal(
+          initialStep: initialStep,
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
@@ -5641,6 +5774,10 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+    _isCheckoutModalOpen = false;
+    debugPrint(
+        "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
+    _restoreShortcutFocus('checkout modal closed');
   }
 
   // Multi-payment helper methods
