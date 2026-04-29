@@ -67,6 +67,7 @@ import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
 
 enum CheckoutActionMode { confirm, save }
 
@@ -1888,6 +1889,17 @@ class BillingPageState extends State<BillingPage>
             // Live Clock
             const LiveClock(),
             const SizedBox(width: 12),
+            // Keyboard shortcuts help button
+            IconButton(
+              icon: Icon(
+                Icons.help_outline,
+                color: Colors.grey.shade600,
+              ),
+              tooltip: 'Keyboard Shortcuts',
+              onPressed: () {
+                KeyboardShortcutsHelpDialog.show(context);
+              },
+            ),
             // Keyboard toggle button
             IconButton(
               icon: Icon(
