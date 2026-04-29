@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -66,6 +67,8 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final TextEditingController _productPurchasePriceController =
       TextEditingController();
+  final TextEditingController _productItemCodeController =
+      TextEditingController();
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
@@ -83,6 +86,7 @@ class _AddProductWithBarcodeModalState
   final FocusNode _quantityFocusNode = FocusNode();
   final FocusNode _sellingPriceFocusNode = FocusNode();
   final FocusNode _purchasePriceFocusNode = FocusNode();
+  final FocusNode _itemCodeFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
   final FocusNode _generateBarcodeFocusNode = FocusNode();
@@ -128,6 +132,7 @@ class _AddProductWithBarcodeModalState
       _quantityFocusNode,
       _sellingPriceFocusNode,
       _purchasePriceFocusNode,
+      _itemCodeFocusNode,
       _unitFocusNode,
       _categoryFocusNode,
     ];
@@ -525,6 +530,7 @@ class _AddProductWithBarcodeModalState
     setState(() {
       _productNameController.text = product.productName?.trim() ?? '';
       _productBarcodeController.text = product.barcode?.trim() ?? '';
+      _productItemCodeController.text = product.itemCode?.trim() ?? '';
       _productSellingPriceController.text = resolvedSellingPrice;
       _productMRPController.text = resolvedMrp;
       _productPurchasePriceController.text = resolvedPurchasePrice;
@@ -1005,6 +1011,7 @@ class _AddProductWithBarcodeModalState
     _productQuantityController.dispose();
     _productSellingPriceController.dispose();
     _productPurchasePriceController.dispose();
+    _productItemCodeController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
     _baseConversionRateController.dispose();
@@ -1029,6 +1036,7 @@ class _AddProductWithBarcodeModalState
     _quantityFocusNode.dispose();
     _sellingPriceFocusNode.dispose();
     _purchasePriceFocusNode.dispose();
+    _itemCodeFocusNode.dispose();
     _unitFocusNode.dispose();
     _categoryFocusNode.dispose();
     _generateBarcodeFocusNode.dispose();
@@ -1375,7 +1383,7 @@ class _AddProductWithBarcodeModalState
                   ),
                   const SizedBox(height: 12),
 
-                  // Row 3: Selling Price, Quantity, Empty
+                  // Row 3: Selling Price, Quantity, Item Code (conditional)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1405,8 +1413,25 @@ class _AddProductWithBarcodeModalState
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Expanded(
-                        child: SizedBox.shrink(),
+                      Expanded(
+                        child: Consumer<AppSettingsProvider>(
+                          builder: (context, appSettingsProvider, child) {
+                            final itemCodeEnabled =
+                                appSettingsProvider.appSettings?.itemCodeEnabled ??
+                                    false;
+                            if (!itemCodeEnabled) {
+                              return const SizedBox.shrink();
+                            }
+                            return _buildTextField(
+                              "Item Code",
+                              _productItemCodeController,
+                              TextInputType.text,
+                              size,
+                              isRequired: false,
+                              focusNode: _itemCodeFocusNode,
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -2586,6 +2611,12 @@ class _AddProductWithBarcodeModalState
             _buildProductNamesPayload(languageProvider.languages);
         final saleUnits = _buildSaleUnitsPayload();
 
+        final itemCodeEnabled = Provider.of<AppSettingsProvider>(context,
+                    listen: false)
+                .appSettings
+                ?.itemCodeEnabled ??
+            false;
+
         final result = await gridSelectionProvider.createProductAPI(
           categoryId: selectedCategory!.categoryId.toString(),
           productName: _productNameController.text,
@@ -2602,6 +2633,7 @@ class _AddProductWithBarcodeModalState
               _baseConversionRateController.text.trim().isNotEmpty
                   ? _baseConversionRateController.text.trim()
                   : '1',
+          itemCode: itemCodeEnabled ? _productItemCodeController.text.trim() : null,
         );
 
         if (!mounted) {
@@ -2709,6 +2741,7 @@ class _AddProductWithBarcodeModalState
     _productQuantityController.text = '0';
     _productSellingPriceController.clear();
     _productPurchasePriceController.clear();
+    _productItemCodeController.clear();
     _baseConversionRateController.text = '1';
     for (var controller in _languageNameControllers.values) {
       if (controller != _productNameController) {
