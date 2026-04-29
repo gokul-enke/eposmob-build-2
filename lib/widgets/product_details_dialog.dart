@@ -1054,10 +1054,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }
 
   Widget _buildViewTab(GetProduct product) {
-    final currency = Provider.of<AppSettingsProvider>(context, listen: true)
-            .appSettings
-            ?.currency ??
-        'INR';
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: true);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+    final itemCodeEnabled =
+        appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
     return SelectionArea(
       child: ListView(
         shrinkWrap: true,
@@ -1074,6 +1075,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
                     _buildDetailRow(
                         'Category', product.category?.name ?? 'N/A'),
+                    if (itemCodeEnabled)
+                      _buildDetailRowWithCopy(
+                          'Item Code', product.itemCode ?? 'N/A'),
                     _buildDetailRowWithCopy(
                         'Barcode', product.barcode ?? 'N/A'),
                     _buildDetailRow('Unit', product.unit ?? 'N/A'),

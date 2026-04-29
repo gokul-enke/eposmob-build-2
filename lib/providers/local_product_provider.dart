@@ -1813,6 +1813,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? filterProperties,
     String? filterStore,
     String? filterSupplier,
+    String? filterItemCode,
     int page = 1,
     bool sellableOnly = true, // Added but currently unused for local filtering
   }) {
@@ -1865,6 +1866,15 @@ class LocalProductProvider extends ChangeNotifier {
         // Check if the price string contains the filter text
         return priceString.contains(filterPrice);
       }).toList();
+    }
+
+    // Item Code filter
+    if (filterItemCode != null && filterItemCode.isNotEmpty) {
+      result = result
+          .where((p) =>
+              p.itemCode != null &&
+              p.itemCode!.toLowerCase().contains(filterItemCode.toLowerCase()))
+          .toList();
     }
 
     // Note: createdBy, properties, store, and supplier filters are not available in the GetProduct model
