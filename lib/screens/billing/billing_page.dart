@@ -387,7 +387,7 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
-  bool _isCheckoutModalOpen = false;
+
 
   @override
   void dispose() {
@@ -867,12 +867,14 @@ class BillingPageState extends State<BillingPage>
   bool _onBillingHardwareKey(KeyEvent event) {
     if (!mounted) return false;
     if (event is! KeyDownEvent) return false;
-    // Trace EVERY key event reaching the billing page so missing handlers are visible in logs.
+    // If any dialog/route is on top of this page, let it own the keyboard.
+    final route = ModalRoute.of(context);
+    final bool dialogIsOnTop = route != null && !route.isCurrent;
     debugPrint(
-        "⌨️ [BillingPage] HW raw key=${event.logicalKey.debugName} | modalOpen=$_isCheckoutModalOpen");
-    if (_isCheckoutModalOpen) {
+        "⌨️ [BillingPage] HW raw key=${event.logicalKey.debugName} | dialogOnTop=$dialogIsOnTop");
+    if (dialogIsOnTop) {
       debugPrint(
-          "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} IGNORED (checkout modal open)");
+          "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} IGNORED (dialog on top)");
       return false;
     }
     if (!_isBillingShortcutKey(event.logicalKey)) {
@@ -5428,7 +5430,6 @@ class BillingPageState extends State<BillingPage>
       return;
     }
 
-    _isCheckoutModalOpen = true;
     debugPrint(
         "⌨️ [BillingPage] Releasing focus before checkout modal | ${_focusDebugSummary()}");
     // Release global shortcut focus so modal text fields receive keyboard input reliably.
@@ -5786,7 +5787,6 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
-    _isCheckoutModalOpen = false;
     debugPrint(
         "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
     _restoreShortcutFocus('checkout modal closed');

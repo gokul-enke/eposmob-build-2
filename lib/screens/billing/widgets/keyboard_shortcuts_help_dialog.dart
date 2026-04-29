@@ -121,6 +121,24 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
   ];
 
+  static const List<_ShortcutItem> _addProductModalShortcuts = [
+    _ShortcutItem(
+      keyLabel: 'F4',
+      action: 'Close Modal',
+      description: 'Dismiss add product dialog',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F8',
+      action: 'Save & Create',
+      description: 'Save and keep modal open',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F9',
+      action: 'Save',
+      description: 'Save and close modal',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -202,6 +220,10 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
                     _buildSectionTitle('FINALIZE ORDER MODAL'),
                     const SizedBox(height: 12),
                     _buildShortcutsGrid(_finalizeModalShortcuts),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('ADD PRODUCT MODAL'),
+                    const SizedBox(height: 12),
+                    _buildShortcutsGrid(_addProductModalShortcuts),
                     const SizedBox(height: 8),
                   ],
                 ),
