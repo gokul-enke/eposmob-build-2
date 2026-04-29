@@ -802,25 +802,42 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _handleKeyPress(KeyEvent event) {
-    final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null && focusedContext.widget is EditableText) {
-      return;
-    }
+    if (event is! KeyDownEvent) return;
 
-    if (event is KeyDownEvent) {
-      try {
-        if (event.logicalKey == LogicalKeyboardKey.f6) {
-          _clearCart();
-        } else if (event.logicalKey == LogicalKeyboardKey.f7) {
-          _saveOrder();
-        } else if (event.logicalKey == LogicalKeyboardKey.f8) {
-          _createOrderAndPrint();
-        } else if (event.logicalKey == LogicalKeyboardKey.f9) {
-          _confirmOrder();
-        }
-      } catch (e) {
-        // debugPrint("Error handling key press: $e");
+    try {
+      // Always allow F11/F12 even when text fields are focused
+      if (event.logicalKey == LogicalKeyboardKey.f11) {
+        _focusTextField();
+        return;
       }
+      if (event.logicalKey == LogicalKeyboardKey.f12) {
+        setState(() {
+          _selectedSidebarTab = _selectedSidebarTab == 0 ? 1 : 0;
+        });
+        return;
+      }
+
+      // For other shortcuts, skip if a text field is focused
+      final focusedContext = FocusManager.instance.primaryFocus?.context;
+      if (focusedContext != null && focusedContext.widget is EditableText) {
+        return;
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.f1) {
+        _clearCart();
+      } else if (event.logicalKey == LogicalKeyboardKey.f2) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+      } else if (event.logicalKey == LogicalKeyboardKey.f6) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+      } else if (event.logicalKey == LogicalKeyboardKey.f7) {
+        _createNewOrder();
+      } else if (event.logicalKey == LogicalKeyboardKey.f8) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+      } else if (event.logicalKey == LogicalKeyboardKey.f9) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+      }
+    } catch (e) {
+      // debugPrint("Error handling key press: $e");
     }
   }
 
@@ -3845,6 +3862,7 @@ class BillingPageState extends State<BillingPage>
             onPressed: _clearCart,
             isLoading: isLoadingClearCart,
             isDisabled: disableActions && !isLoadingClearCart,
+            shortcutLabel: 'F1',
           ),
           _buildActionButton(
             text: 'billing.save_order'.tr,
@@ -3853,6 +3871,7 @@ class BillingPageState extends State<BillingPage>
                 _showCheckoutModal(actionMode: CheckoutActionMode.save),
             isLoading: isLoadingSaveOrder,
             isDisabled: disableActions && !isLoadingSaveOrder,
+            shortcutLabel: 'F8',
           ),
           if (_hasInternet) ...[
             _buildActionButton(
@@ -3862,6 +3881,7 @@ class BillingPageState extends State<BillingPage>
                   _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
               isLoading: isLoadingCreateOrder,
               isDisabled: disableActions && !isLoadingCreateOrder,
+              shortcutLabel: 'F6',
             ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
                     .appSettings
@@ -3874,6 +3894,7 @@ class BillingPageState extends State<BillingPage>
                     _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
                 isLoading: isLoadingConfirmOrder,
                 isDisabled: disableActions && !isLoadingConfirmOrder,
+                shortcutLabel: 'F2',
               ),
           ],
           if (!_hasInternet) ...[
@@ -3884,6 +3905,7 @@ class BillingPageState extends State<BillingPage>
                   _showCheckoutModal(actionMode: CheckoutActionMode.save),
               isLoading: isLoadingSaveOrderAndPrint,
               isDisabled: disableActions && !isLoadingSaveOrderAndPrint,
+              shortcutLabel: 'F9',
             ),
           ],
         ],
@@ -3897,6 +3919,7 @@ class BillingPageState extends State<BillingPage>
     required VoidCallback onPressed,
     required bool isLoading,
     bool isDisabled = false,
+    String? shortcutLabel,
   }) {
     return Expanded(
       child: Padding(
@@ -3918,13 +3941,38 @@ class BillingPageState extends State<BillingPage>
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : Text(
-                      text,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          text,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (shortcutLabel != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              shortcutLabel,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
             ),
           ),

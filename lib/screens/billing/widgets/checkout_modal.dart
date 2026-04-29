@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart'; // Re-enabled for .tr translations
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -649,56 +650,109 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _localFlatDiscount > 0 ||
         _localPercentageDiscount > 0;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: Colors.white,
-      elevation: 8,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Stack(
-        children: [
-          Container(
-            width: dialogWidth,
-            height: dialogHeight,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Header with Steps
-                _buildHeader(
-                    hasCustomer, hasDiscount, hasPayment, hasDelivery),
+    return Focus(
+      autofocus: true,
+      canRequestFocus: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-                // Content Area
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: _buildCurrentStepContent(),
+        if (event.logicalKey == LogicalKeyboardKey.escape) {
+          Navigator.of(context).pop();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f2) {
+          if (_canConfirmOrPrint && !_isConfirming) {
+            _handleConfirm();
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f3) {
+          _goToStep(0);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f4) {
+          if (widget.enableDelivery) _goToStep(1);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f5) {
+          _goToStep(3);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f6) {
+          if (_canPrint && !_isPrinting) {
+            _handlePrint();
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f8) {
+          if (_canConfirmOrPrint && !_isConfirming) {
+            _handleConfirm();
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f9) {
+          if (_canPrint && !_isPrinting) {
+            _handlePrint();
+          }
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.f10) {
+          _goToStep(2);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        elevation: 8,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Stack(
+          children: [
+            Container(
+              width: dialogWidth,
+              height: dialogHeight,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-              ],
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Header with Steps
+                  _buildHeader(
+                      hasCustomer, hasDiscount, hasPayment, hasDelivery),
+
+                  // Content Area
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildCurrentStepContent(),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (_isAddingCustomer)
-            Positioned.fill(
-              child: AbsorbPointer(
-                child: Container(
-                  color: Colors.white.withOpacity(0.6),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
+            if (_isAddingCustomer)
+              Positioned.fill(
+                child: AbsorbPointer(
+                  child: Container(
+                    color: Colors.white.withOpacity(0.6),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -967,26 +1021,254 @@ class _CheckoutModalState extends State<CheckoutModal> {
           ),
         ),
         _buildFooter(
-          onPrint: () async {
-            if (_isPrinting) return;
-            setState(() => _isPrinting = true);
-            try {
-              await widget.onConfirmAndPrint();
-            } finally {
-              if (mounted) setState(() => _isPrinting = false);
-            }
-          },
-          onConfirm: () async {
-            if (_isConfirming) return;
-            setState(() => _isConfirming = true);
-            try {
-              await widget.onConfirmOrder();
-            } finally {
-              if (mounted) setState(() => _isConfirming = false);
-            }
-          },
+          onPrint: _handlePrint,
+          onConfirm: _handleConfirm,
         ),
       ],
+    );
+  }
+
+  Widget _buildCustomerList() {
+    if (_filteredCustomers.isEmpty && _customerSearchQuery.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text('No customers found',
+                style: TextStyle(color: Colors.grey.shade600)),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 2.9,
+      ),
+      itemCount: _filteredCustomers.length,
+      itemBuilder: (context, index) {
+        final customer = _filteredCustomers[index];
+        final isSelected = _localSelectedCustomer?.id == customer.id;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _handleCustomerSelection(customer),
+            borderRadius: BorderRadius.circular(10),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF2563EB).withOpacity(0.1)
+                    : Colors.white,
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFF2563EB)
+                      : Colors.grey.shade200,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade300,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        _initialForName(customer.name),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customer.name ?? 'Unknown',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (customer.phone != null)
+                          Text(
+                            customer.phone!,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    const Icon(Icons.check_circle, color: Color(0xFF2563EB)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSelectedCustomerCard() {
+    if (_localSelectedCustomer == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person_outline,
+                  size: 28, color: Colors.grey),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'No Customer Selected',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  Text(
+                    'Select a customer to continue',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final balance = _localSelectedCustomer!.balance ?? 0.0;
+    final balanceColor =
+        balance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _goToStep(3),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2563EB).withOpacity(0.05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              // Avatar on left
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    _initialForName(_localSelectedCustomer!.name),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Info in middle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _localSelectedCustomer!.name ?? 'Unknown',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (_localSelectedCustomer!.phone != null)
+                      Text(
+                        _localSelectedCustomer!.phone!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Balance on right
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: balanceColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Balance: ${balance.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: balanceColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: const Color(0xFF2563EB).withOpacity(0.6),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1523,270 +1805,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ),
         _buildFooter(
           onBack: _previousStep,
-          onPrint: () async {
-            if (_isPrinting) return;
-            setState(() => _isPrinting = true);
-            try {
-              await widget.onConfirmAndPrint();
-            } finally {
-              if (mounted) setState(() => _isPrinting = false);
-            }
-          },
-          onConfirm: () async {
-            if (_isConfirming) return;
-            setState(() => _isConfirming = true);
-            try {
-              await widget.onConfirmOrder();
-            } finally {
-              if (mounted) setState(() => _isConfirming = false);
-            }
-          },
+          onPrint: _handlePrint,
+          onConfirm: _handleConfirm,
         ),
       ],
-    );
-  }
-
-  Widget _buildCustomerList() {
-    if (_filteredCustomers.isEmpty && _customerSearchQuery.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 48, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text('No customers found',
-                style: TextStyle(color: Colors.grey.shade600)),
-          ],
-        ),
-      );
-    }
-
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 2.9,
-      ),
-      itemCount: _filteredCustomers.length,
-      itemBuilder: (context, index) {
-        final customer = _filteredCustomers[index];
-        final isSelected = _localSelectedCustomer?.id == customer.id;
-
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _handleCustomerSelection(customer),
-            borderRadius: BorderRadius.circular(10),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF2563EB).withOpacity(0.1)
-                    : Colors.white,
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade200,
-                  width: isSelected ? 2 : 1,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF2563EB)
-                          : Colors.grey.shade300,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _initialForName(customer.name),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          customer.name ?? 'Unknown',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (customer.phone != null)
-                          Text(
-                            customer.phone!,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (isSelected)
-                    const Icon(Icons.check_circle, color: Color(0xFF2563EB)),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSelectedCustomerCard() {
-    if (_localSelectedCustomer == null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person_outline,
-                  size: 28, color: Colors.grey),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'No Customer Selected',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  Text(
-                    'Select a customer to continue',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final balance = _localSelectedCustomer!.balance ?? 0.0;
-    final balanceColor =
-        balance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _goToStep(3),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xFF2563EB).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
-          ),
-          child: Row(
-            children: [
-              // Avatar on left
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    _initialForName(_localSelectedCustomer!.name),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              // Info in middle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _localSelectedCustomer!.name ?? 'Unknown',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (_localSelectedCustomer!.phone != null)
-                      Text(
-                        _localSelectedCustomer!.phone!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Balance on right
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: balanceColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Balance: ${balance.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: balanceColor,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: const Color(0xFF2563EB).withOpacity(0.6),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -1930,24 +1952,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ),
         _buildFooter(
           onBack: _previousStep,
-          onPrint: () async {
-            if (_isPrinting) return;
-            setState(() => _isPrinting = true);
-            try {
-              await widget.onConfirmAndPrint();
-            } finally {
-              if (mounted) setState(() => _isPrinting = false);
-            }
-          },
-          onConfirm: () async {
-            if (_isConfirming) return;
-            setState(() => _isConfirming = true);
-            try {
-              await widget.onConfirmOrder();
-            } finally {
-              if (mounted) setState(() => _isConfirming = false);
-            }
-          },
+          onPrint: _handlePrint,
+          onConfirm: _handleConfirm,
         ),
       ],
     );
@@ -2063,27 +2069,31 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ),
         _buildFooter(
           onBack: _previousStep,
-          onPrint: () async {
-            if (_isPrinting) return;
-            setState(() => _isPrinting = true);
-            try {
-              await widget.onConfirmAndPrint();
-            } finally {
-              if (mounted) setState(() => _isPrinting = false);
-            }
-          },
-          onConfirm: () async {
-            if (_isConfirming) return;
-            setState(() => _isConfirming = true);
-            try {
-              await widget.onConfirmOrder();
-            } finally {
-              if (mounted) setState(() => _isConfirming = false);
-            }
-          },
+          onPrint: _handlePrint,
+          onConfirm: _handleConfirm,
         ),
       ],
     );
+  }
+
+  void _handleConfirm() async {
+    if (_isConfirming) return;
+    setState(() => _isConfirming = true);
+    try {
+      await widget.onConfirmOrder();
+    } finally {
+      if (mounted) setState(() => _isConfirming = false);
+    }
+  }
+
+  void _handlePrint() async {
+    if (_isPrinting) return;
+    setState(() => _isPrinting = true);
+    try {
+      await widget.onConfirmAndPrint();
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
+    }
   }
 
   Widget _buildSummaryRow(String label, double amount, Color color,
@@ -2200,6 +2210,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       child: CustomRoundButtonWithIconAdvanced(
                         title: widget.confirmButtonTitle,
                         isLoading: _isConfirming,
+                        shortcutLabel: 'F2',
                         fct: _canConfirmOrPrint
                             ? onConfirm
                             : () {
@@ -2238,6 +2249,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       child: CustomRoundButtonWithIconAdvanced(
                         title: widget.printButtonTitle,
                         isLoading: _isPrinting,
+                        shortcutLabel: 'F6',
                         fct: _canPrint
                             ? onPrint
                             : () {

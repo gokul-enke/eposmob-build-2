@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
@@ -43,6 +44,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   GetStoreModelData? storeSelected;
   GetSuppliersModelData? supplier;
   final TextEditingController supplierIdController = TextEditingController();
+  final TextEditingController itemCodeController = TextEditingController();
   GetProduct? selectedProduct;
 
   // Variables for selected filters
@@ -100,6 +102,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterProperties: selectedProperty,
         filterStore: storeController.text,
         filterSupplier: supplierIdController.text,
+        filterItemCode: itemCodeController.text,
         page: page,
       );
     } catch (error) {
@@ -133,6 +136,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterSupplier: supplierIdController.text.isNotEmpty
             ? supplierIdController.text
             : null,
+        filterItemCode: itemCodeController.text.isNotEmpty
+            ? itemCodeController.text
+            : null,
         page: page,
       );
     } catch (error) {
@@ -153,6 +159,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       hsnCodeController.clear();
       createdByController.clear();
       supplierIdController.clear();
+      itemCodeController.clear();
 
       // Reset dropdown selections
       selectedCategoryId = null;
@@ -534,7 +541,34 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ),
                         ),
                         */
-                        const Expanded(flex: 1, child: SizedBox()),
+                        // Item Code filter
+                        Consumer<AppSettingsProvider>(
+                          builder: (context, appSettingsProvider, child) {
+                            final itemCodeEnabled = appSettingsProvider
+                                    .appSettings?.itemCodeEnabled ??
+                                false;
+                            if (!itemCodeEnabled) {
+                              return const Expanded(flex: 1, child: SizedBox());
+                            }
+                            return Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  buildColumnWidgetForTextFields(
+                                    height: 45,
+                                    onchanged: (value) {
+                                      searchProducts(1);
+                                    },
+                                    controller: itemCodeController,
+                                    size: size,
+                                    hintText: 'Item Code',
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                         const SizedBox(width: 15),
 
                         // Supplier
