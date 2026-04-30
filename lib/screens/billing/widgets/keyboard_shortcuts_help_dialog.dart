@@ -145,7 +145,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 840, maxHeight: 720),
+        constraints: const BoxConstraints(maxWidth: 780, maxHeight: 580),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -162,7 +162,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 color: Color(0xFFF5F7FA),
                 borderRadius: BorderRadius.only(
@@ -209,22 +209,22 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
             // Body
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionTitle('BILLING PAGE (MAIN ORDER SCREEN)'),
-                    const SizedBox(height: 12),
-                    _buildShortcutsGrid(_billingShortcuts),
-                    const SizedBox(height: 24),
-                    _buildSectionTitle('FINALIZE ORDER MODAL'),
-                    const SizedBox(height: 12),
-                    _buildShortcutsGrid(_finalizeModalShortcuts),
-                    const SizedBox(height: 24),
-                    _buildSectionTitle('ADD PRODUCT MODAL'),
-                    const SizedBox(height: 12),
-                    _buildShortcutsGrid(_addProductModalShortcuts),
                     const SizedBox(height: 8),
+                    _buildShortcutsGrid(_billingShortcuts),
+                    const SizedBox(height: 16),
+                    _buildSectionTitle('FINALIZE ORDER MODAL'),
+                    const SizedBox(height: 8),
+                    _buildShortcutsGrid(_finalizeModalShortcuts),
+                    const SizedBox(height: 16),
+                    _buildSectionTitle('ADD PRODUCT MODAL'),
+                    const SizedBox(height: 8),
+                    _buildShortcutsGrid(_addProductModalShortcuts),
+                    const SizedBox(height: 4),
                   ],
                 ),
               ),
@@ -239,7 +239,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w700,
         color: Colors.grey.shade600,
         letterSpacing: 0.5,
@@ -265,9 +265,9 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 3.2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 4.2,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -280,31 +280,31 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
 
   Widget _buildShortcutCard(_ShortcutItem item) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(5),
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: Text(
               item.keyLabel,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: ColorManager.textColor,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,18 +315,18 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: ColorManager.textColor,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   item.description,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: Colors.grey.shade600,
                   ),
                 ),
