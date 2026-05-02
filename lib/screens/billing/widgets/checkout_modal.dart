@@ -316,8 +316,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _applyDefaultPaymentMethod();
       _requestCurrentStepFocus();
     });
-    HardwareKeyboard.instance.addHandler(_onHardwareKey);
-    debugPrint("⌨️ [CheckoutModal] Hardware keyboard handler registered");
   }
 
   @override
@@ -422,7 +420,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
   void dispose() {
     debugPrint(
         "⌨️ [CheckoutModal] dispose | step=$_currentStep | paymentVisited=$_hasOpenedPaymentModalOnce");
-    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _customerSearchController.dispose();
     _customerSearchFocusNode.dispose();
     _customerListFocusNode.dispose();
@@ -763,17 +760,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final dialogHeight =
       (screenSize.height * 0.92).clamp(520.0, 850.0).toDouble();
 
-    // Determine status for stepper/wizard using LOCAL state
-    final hasCustomer = _localSelectedCustomer != null;
-    final hasDelivery = _lDeliveryMethod.isNotEmpty; // Simple check
-    final hasPayment = _hasPaymentMethod();
-    final hasDiscount = _localIsCouponApplied ||
-        _localFlatDiscount > 0 ||
-        _localPercentageDiscount > 0;
-
     return Focus(
       autofocus: true,
       canRequestFocus: true,
+      onKeyEvent: (node, event) {
+        return _onHardwareKey(event)
+            ? KeyEventResult.handled
+            : KeyEventResult.ignored;
+      },
       child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
@@ -798,10 +792,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               ),
               child: Column(
                 children: [
-                  // Header with Steps
-                  _buildHeader(
-                      hasCustomer, hasDiscount, hasPayment, hasDelivery),
-
+                  _buildTitleHeader(),
                   // Content Area
                   Expanded(
                     child: AnimatedSwitcher(
@@ -825,6 +816,40 @@ class _CheckoutModalState extends State<CheckoutModal> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTitleHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: const Color(0xFFE2E8F0), width: 1.5),
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Text(
+            "Finalize Order",
+            style: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s20,
+              0.25,
+              Colors.black87,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+              tooltip: 'Close',
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1103,15 +1128,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   // Right: Summary only (no customer card)
                   Expanded(
                     flex: 2,
-                    child: _buildCompactSummary(),
+                    child: Column(
+                      children: [
+                        Expanded(child: _buildCompactSummary()),
+                        _buildFooter(
+                          onPrint: _handlePrint,
+                          onConfirm: _handleConfirm,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          _buildFooter(
-            onPrint: _handlePrint,
-            onConfirm: _handleConfirm,
           ),
         ],
       ),
@@ -2012,16 +2041,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 // Right: Summary
                 Expanded(
                   flex: 2,
-                  child: _buildCompactSummary(),
+                  child: Column(
+                    children: [
+                      Expanded(child: _buildCompactSummary()),
+                      _buildFooter(
+                        onPrint: _handlePrint,
+                        onConfirm: _handleConfirm,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-        _buildFooter(
-          onBack: _previousStep,
-          onPrint: _handlePrint,
-          onConfirm: _handleConfirm,
         ),
       ],
     ),
@@ -2162,16 +2194,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   // Right: Summary
                   Expanded(
                     flex: 2,
-                    child: _buildCompactSummary(),
+                    child: Column(
+                      children: [
+                        Expanded(child: _buildCompactSummary()),
+                        _buildFooter(
+                          onPrint: _handlePrint,
+                          onConfirm: _handleConfirm,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          _buildFooter(
-            onBack: _previousStep,
-            onPrint: _handlePrint,
-            onConfirm: _handleConfirm,
           ),
         ],
       ),
@@ -2282,16 +2317,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   // Right: Summary
                   Expanded(
                     flex: 2,
-                    child: _buildCompactSummary(),
+                    child: Column(
+                      children: [
+                        Expanded(child: _buildCompactSummary()),
+                        _buildFooter(
+                          onPrint: _handlePrint,
+                          onConfirm: _handleConfirm,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          _buildFooter(
-            onBack: _previousStep,
-            onPrint: _handlePrint,
-            onConfirm: _handleConfirm,
           ),
         ],
       ),
@@ -2407,23 +2445,31 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onConfirm,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
         children: [
-          // Left side: Spacing to align buttons with right panel (flex 3)
-          const Expanded(flex: 3, child: SizedBox.shrink()),
-
-          const SizedBox(width: 24), // Match content gap
-
-          // Right side: Action buttons aligned with the right panel (flex 2)
-          Expanded(
-            flex: 2,
-            child: Row(
-              children: [
+          if (onBack != null) ...[
+            Expanded(
+              child: CustomRoundButtonWithIconAdvanced(
+                title: 'Back',
+                fct: onBack,
+                size: MediaQuery.of(context).size,
+                icon: const Icon(Icons.arrow_back,
+                    color: Colors.white, size: 20),
+                height: 48,
+                width: double.infinity,
+                fontSize: FontSize.s14,
+                boxColor: const Color(0xFF64748B),
+                borderColor: const Color(0xFF64748B),
+                radius: 12,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
                 // Confirm button (optional)
                 if (onConfirm != null)
                   Expanded(
@@ -2520,9 +2566,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       radius: 12,
                     ),
                   ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -2733,6 +2776,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   Widget _buildClickableCheckItem(String title, String subtitle,
       bool isCompleted, IconData icon, int stepIndex) {
     final isCurrentStep = _currentStep == stepIndex;
+    final shortcutLabel = _shortcutLabelForStep(stepIndex);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -2829,17 +2873,56 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     ],
                   ),
                 ),
-                Icon(
-                  isCurrentStep ? Icons.arrow_forward_ios : Icons.chevron_right,
-                  color: isCurrentStep ? Colors.white : const Color(0xFFCBD5E1),
-                  size: isCurrentStep ? 14 : 20,
-                ),
+                if (shortcutLabel.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isCurrentStep
+                          ? Colors.white.withOpacity(0.18)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isCurrentStep
+                            ? Colors.white.withOpacity(0.35)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Text(
+                      shortcutLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: isCurrentStep
+                            ? Colors.white
+                            : const Color(0xFF2563EB),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  String _shortcutLabelForStep(int stepIndex) {
+    switch (stepIndex) {
+      case 0:
+        return 'F3';
+      case 1:
+        return 'F4';
+      case 2:
+        return 'F10';
+      case 3:
+        return 'F5';
+      default:
+        return '';
+    }
   }
 }
 
