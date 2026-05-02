@@ -15,7 +15,6 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/newcomponents/custom_round_button.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
@@ -366,7 +365,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
     if (oldWidget.availableCustomers != widget.availableCustomers) {
       final previousSelectedId = _localSelectedCustomer?.id;
-      _allCustomers = List<CustomerListModelData>.from(widget.availableCustomers);
+      _allCustomers =
+          List<CustomerListModelData>.from(widget.availableCustomers);
 
       if (_customerSearchQuery.isEmpty) {
         _filteredCustomers = List<CustomerListModelData>.from(_allCustomers);
@@ -376,7 +376,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
           final name = (customer.name ?? '').toLowerCase();
           final phone = (customer.phone ?? '').toLowerCase();
           final altPhone = (customer.altPhone ?? '').toLowerCase();
-          return name.contains(query) || phone.contains(query) || altPhone.contains(query);
+          return name.contains(query) ||
+              phone.contains(query) ||
+              altPhone.contains(query);
         }).toList();
       }
 
@@ -592,7 +594,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     DeliveryMethod? selectedMethod;
     if (_lDeliveryMethod.isNotEmpty || _lDeliveryMethodId.isNotEmpty) {
       for (final method in deliveryMethodsProvider.deliveryMethods) {
-        if ((_lDeliveryMethodId.isNotEmpty && method.id == _lDeliveryMethodId) ||
+        if ((_lDeliveryMethodId.isNotEmpty &&
+                method.id == _lDeliveryMethodId) ||
             method.name == _lDeliveryMethod) {
           selectedMethod = method;
           break;
@@ -611,7 +614,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_lDeliveryMethod.isNotEmpty &&
         (_selectedDeliveryCharge == null || _selectedDeliveryCharge! <= 0)) {
       for (final method in deliveryMethodsProvider.deliveryMethods) {
-        if (method.name == _lDeliveryMethod || method.id == _lDeliveryMethodId) {
+        if (method.name == _lDeliveryMethod ||
+            method.id == _lDeliveryMethodId) {
           resolvedCharge = method.basePrice ?? 0.0;
           break;
         }
@@ -759,9 +763,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final dialogWidth =
-      (screenSize.width * 0.94).clamp(320.0, 1300.0).toDouble();
+        (screenSize.width * 0.94).clamp(320.0, 1300.0).toDouble();
     final dialogHeight =
-      (screenSize.height * 0.92).clamp(520.0, 850.0).toDouble();
+        (screenSize.height * 0.92).clamp(520.0, 850.0).toDouble();
 
     return Focus(
       autofocus: true,
@@ -1049,9 +1053,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               onChanged: _filterCustomers,
                               decoration: InputDecoration(
                                 hintText: 'Search by name or phone number...',
-                                hintStyle: TextStyle(color: Colors.grey.shade500),
-                                prefixIcon:
-                                    Icon(Icons.search, color: Colors.grey.shade500),
+                                hintStyle:
+                                    TextStyle(color: Colors.grey.shade500),
+                                prefixIcon: Icon(Icons.search,
+                                    color: Colors.grey.shade500),
                                 suffixIcon: _customerSearchQuery.isNotEmpty
                                     ? IconButton(
                                         icon: Icon(Icons.clear,
@@ -1069,13 +1074,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        // Selected Customer Card (moved here from right panel)
-                        FocusTraversalOrder(
-                          order: const NumericFocusOrder(20),
-                          child: _buildSelectedCustomerCard(),
-                        ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
                         // List
                         Expanded(
                           child: FocusTraversalOrder(
@@ -1097,8 +1096,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                         height: 18,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation(Colors.grey),
+                                          valueColor: AlwaysStoppedAnimation(
+                                              Colors.grey),
                                         ),
                                       )
                                     : const Icon(Icons.person_add),
@@ -1106,13 +1105,16 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     ? 'Adding...'
                                     : 'Add New Customer'),
                                 style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   backgroundColor: const Color(0xFFECFDF3),
                                   foregroundColor: const Color(0xFF047857),
-                                  side: const BorderSide(color: Color(0xFF34D399)),
+                                  side: const BorderSide(
+                                      color: Color(0xFF34D399)),
                                 ),
-                                onPressed:
-                                    _isAddingCustomer ? null : _handleAddNewCustomer,
+                                onPressed: _isAddingCustomer
+                                    ? null
+                                    : _handleAddNewCustomer,
                               ),
                             ),
                           ),
@@ -1160,11 +1162,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
       );
     }
 
-    final clampedIndex = _filteredCustomers.isEmpty
+    final displayCustomers =
+        List<CustomerListModelData>.from(_filteredCustomers);
+    if (_localSelectedCustomer != null) {
+      displayCustomers.removeWhere((c) => c.id == _localSelectedCustomer!.id);
+      displayCustomers.insert(0, _localSelectedCustomer!);
+    }
+    final clampedIndex = displayCustomers.isEmpty
         ? 0
-        : _focusedCustomerIndex
-            .clamp(0, _filteredCustomers.length - 1)
-            .toInt();
+        : _focusedCustomerIndex.clamp(0, displayCustomers.length - 1).toInt();
     final showCustomerType = Provider.of<AppSettingsProvider>(context)
             .appSettings
             ?.companyB2BEnabled ??
@@ -1173,20 +1179,23 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return Focus(
       focusNode: _customerListFocusNode,
       onKeyEvent: (node, event) =>
-          _handleCustomerListKey(event, _filteredCustomers),
+          _handleCustomerListKey(event, displayCustomers),
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: _customerGridColumns,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 2.9,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+          childAspectRatio: 3.6,
         ),
-        itemCount: _filteredCustomers.length,
+        itemCount: displayCustomers.length,
         itemBuilder: (context, index) {
-          final customer = _filteredCustomers[index];
+          final customer = displayCustomers[index];
           final isSelected = _localSelectedCustomer?.id == customer.id;
           final isKeyboardFocused =
               _customerListFocusNode.hasFocus && index == clampedIndex;
+          final balance = customer.balance ?? 0.0;
+          final balanceColor =
+              balance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626);
 
           return Material(
             color: Colors.transparent,
@@ -1195,7 +1204,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               borderRadius: BorderRadius.circular(10),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF2563EB).withOpacity(0.1)
@@ -1210,59 +1219,95 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   ),
                   borderRadius: BorderRadius.circular(10),
                 ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF2563EB)
-                          : Colors.grey.shade300,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _initialForName(customer.name),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.white),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF2563EB)
+                            : Colors.grey.shade300,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _initialForName(customer.name),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          customer.name ?? 'Unknown',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (customer.phone != null)
-                          Text(
-                            customer.phone!,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  customer.name ?? 'Unknown',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (showCustomerType) ...[
+                                const SizedBox(width: 4),
+                                _buildCustomerTypeBadge(
+                                  customer.customerType,
+                                  compact: true,
+                                ),
+                              ],
+                            ],
                           ),
-                        if (showCustomerType)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: _buildCustomerTypeBadge(
-                              customer.customerType,
-                              compact: true,
+                          if (customer.phone != null)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    customer.phone!,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade600),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: balanceColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Text(
+                                    balance.toStringAsFixed(2),
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: balanceColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (isSelected)
-                    const Icon(Icons.check_circle, color: Color(0xFF2563EB)),
-                ],
-              ),
+                    if (isSelected)
+                      const Icon(Icons.check_circle, color: Color(0xFF2563EB)),
+                  ],
+                ),
               ),
             ),
           );
@@ -1309,162 +1354,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
           .toInt();
     });
     return KeyEventResult.handled;
-  }
-
-  Widget _buildSelectedCustomerCard() {
-    if (_localSelectedCustomer == null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person_outline,
-                  size: 28, color: Colors.grey),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'No Customer Selected',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  Text(
-                    'Select a customer to continue',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final balance = _localSelectedCustomer!.balance ?? 0.0;
-    final balanceColor =
-        balance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626);
-    final showCustomerType = Provider.of<AppSettingsProvider>(context)
-            .appSettings
-            ?.companyB2BEnabled ??
-        false;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _goToStep(3),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xFF2563EB).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
-          ),
-          child: Row(
-            children: [
-              // Avatar on left
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    _initialForName(_localSelectedCustomer!.name),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              // Info in middle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _localSelectedCustomer!.name ?? 'Unknown',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (_localSelectedCustomer!.phone != null)
-                      Text(
-                        _localSelectedCustomer!.phone!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    if (showCustomerType)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5),
-                        child: _buildCustomerTypeBadge(
-                          _localSelectedCustomer!.customerType,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Balance on right
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: balanceColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Balance: ${balance.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: balanceColor,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: const Color(0xFF2563EB).withOpacity(0.6),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildCustomerTypeBadge(String? customerType, {bool compact = false}) {
@@ -1515,489 +1404,356 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: SingleChildScrollView(
                       child: Consumer<DeliveryMethodsProvider>(
                         builder: (context, provider, child) {
-                      final appSettings =
-                        Provider.of<AppSettingsProvider>(context,
-                              listen: false)
-                            .appSettings;
-                        final isDeliveryChargeDataEnabled =
-                          appSettings?.freeDeliveryEnabled ??
-                            false;
-                      final currency = appSettings?.currency ?? 'SAR';
-                      final minimumAmount =
-                        double.tryParse(appSettings
-                              ?.freeDeliveryMinimumAmount
-                              .trim() ??
-                            '') ??
-                          0.0;
-                      final localProductProvider =
-                        Provider.of<LocalProductProvider>(context,
-                          listen: false);
-                      final netAmount =
-                        localProductProvider.priceSummary?.netTotal ??
-                          widget.cartTotal;
-                      final shouldApplyDeliveryCharge =
-                        isDeliveryChargeDataEnabled &&
-                          (minimumAmount <= 0
-                            ? true
-                            : netAmount < minimumAmount);
+                          final appSettings = Provider.of<AppSettingsProvider>(
+                                  context,
+                                  listen: false)
+                              .appSettings;
+                          final isDeliveryChargeDataEnabled =
+                              appSettings?.freeDeliveryEnabled ?? false;
+                          final currency = appSettings?.currency ?? 'SAR';
+                          final minimumAmount = double.tryParse(appSettings
+                                      ?.freeDeliveryMinimumAmount
+                                      .trim() ??
+                                  '') ??
+                              0.0;
+                          final localProductProvider =
+                              Provider.of<LocalProductProvider>(context,
+                                  listen: false);
+                          final netAmount =
+                              localProductProvider.priceSummary?.netTotal ??
+                                  widget.cartTotal;
+                          final shouldApplyDeliveryCharge =
+                              isDeliveryChargeDataEnabled &&
+                                  (minimumAmount <= 0
+                                      ? true
+                                      : netAmount < minimumAmount);
 
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'delivery.delivery_methods'.tr,
-                              style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                FontSize.s16,
-                                0.21,
-                                ColorManager.kPrimaryColor,
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'delivery.delivery_methods'.tr,
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s16,
+                                  0.21,
+                                  ColorManager.kPrimaryColor,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 20),
-                            // Arrow keys navigate between delivery method
-                            // tiles via Flutter's built-in focus traversal.
-                            // Tab/Shift+Tab also work via FocusTraversalOrder.
-                            Shortcuts(
-                              shortcuts: const <ShortcutActivator, Intent>{
-                                SingleActivator(LogicalKeyboardKey.arrowLeft):
-                                    PreviousFocusIntent(),
-                                SingleActivator(LogicalKeyboardKey.arrowRight):
-                                    NextFocusIntent(),
-                                SingleActivator(LogicalKeyboardKey.arrowUp):
-                                    PreviousFocusIntent(),
-                                SingleActivator(LogicalKeyboardKey.arrowDown):
-                                    NextFocusIntent(),
-                              },
-                              child: Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: provider.deliveryMethods.map((method) {
-                                final methodIndex =
-                                    provider.deliveryMethods.indexOf(method);
-                                final isSelected =
-                                    _lDeliveryMethod == method.name;
-                                final isFocused =
-                                    _focusedDeliveryMethodName == method.name;
-                                return FocusTraversalOrder(
-                                  order: NumericFocusOrder(10 + methodIndex.toDouble()),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: InkWell(
-                                      focusNode: methodIndex == 0
-                                          ? _deliveryMethodFocusNode
-                                          : null,
-                                      borderRadius: BorderRadius.circular(10),
-                                      onFocusChange: (focused) {
-                                        setState(() {
-                                          _focusedDeliveryMethodName =
-                                              focused ? method.name : null;
-                                        });
-                                      },
-                                      onTap: () {
-                                    setState(() {
-                                      _lDeliveryMethod = method.name;
-                                      _lDeliveryMethodId = method.id;
-                                      if (method.prices.isEmpty) {
-                                        _selectedDeliveryPriceId = null;
-                                        _selectedDeliveryCharge = 0.0;
-                                      } else {
-                                      final existingById = method.prices
-                                        .where((p) =>
-                                          p.id == _selectedDeliveryPriceId)
-                                        .toList();
-                                      if (existingById.isNotEmpty) {
-                                        _selectedDeliveryCharge =
-                                          existingById.first.price;
-                                        } else {
-                                        final existingByCharge =
-                                          _selectedDeliveryCharge == null
-                                            ? <DeliveryPrice>[]
-                                            : method.prices
-                                              .where((p) =>
-                                                (p.price -
-                                                    _selectedDeliveryCharge!)
-                                                  .abs() <
-                                                0.001)
-                                              .toList();
-
-                                        if (existingByCharge.isNotEmpty) {
-                                        _selectedDeliveryPriceId =
-                                          existingByCharge.first.id;
-                                        _selectedDeliveryCharge =
-                                          existingByCharge.first.price;
-                                        } else {
-                                        _selectedDeliveryPriceId =
-                                          method.prices.first.id;
-                                        _selectedDeliveryCharge =
-                                          method.prices.first.price;
-                                        }
-                                        }
-                                      }
-
-                                      if (!shouldApplyDeliveryCharge) {
-                                        _selectedDeliveryCharge = 0.0;
-                                      }
-                                    });
-                                    _handleDeliveryUpdate();
-                                  },
-                                      child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    width: 118,
-                                    height: 104,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 8, horizontal: 8),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? ColorManager.kPrimaryColor
-                                              .withOpacity(0.05)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: isFocused
-                                            ? Colors.orange
-                                            : isSelected
-                                                ? ColorManager.kPrimaryColor
-                                                : Colors.grey.shade200,
-                                        width:
-                                            isFocused ? 3 : (isSelected ? 2 : 1),
-                                      ),
-                                      boxShadow: isFocused
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.orange
-                                                    .withOpacity(0.35),
-                                                blurRadius: 8,
-                                                spreadRadius: 1,
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          method.name == "Store Takeaway"
-                                              ? Icons.store
-                                              : method.name == "Car Delivery"
-                                                  ? Icons.car_rental
-                                                  : method.name ==
-                                                          "Door Delivery"
-                                                      ? Icons.doorbell_outlined
-                                                      : Icons.local_shipping,
-                                          size: 22,
-                                          color: isSelected
-                                              ? ColorManager.kPrimaryColor
-                                              : Colors.grey.shade700,
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          method.name.tr,
-                                          textAlign: TextAlign.center,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: buildCustomStyle(
-                                            isSelected
-                                                ? FontWeightManager.semiBold
-                                                : FontWeightManager.medium,
-                                            FontSize.s11,
-                                            0.0,
-                                            isSelected
-                                                ? ColorManager.kPrimaryColor
-                                                : Colors.black87,
-                                          ),
-                                        ),
-                                        if (isDeliveryChargeDataEnabled) ...[
-                                          const SizedBox(height: 5),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF059669)
-                                                  .withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              method.prices.isNotEmpty &&
-                                                      shouldApplyDeliveryCharge
-                                                  ? (() {
-                                                      if (!isSelected) {
-                                                        return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
-                                                      }
-
-                                                      final selectedById =
-                                                          method.prices
-                                                              .where((p) =>
-                                                                  p.id ==
-                                                                  _selectedDeliveryPriceId)
-                                                              .toList();
-                                                      if (selectedById
-                                                          .isNotEmpty) {
-                                                        return '$currency ${selectedById.first.price.toStringAsFixed(2)}';
-                                                      }
-
-                                                      if (_selectedDeliveryCharge !=
-                                                          null) {
-                                                        return '$currency ${_selectedDeliveryCharge!.toStringAsFixed(2)}';
-                                                      }
-
-                                                      return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
-                                                    })()
-                                                  : 'free'.tr,
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.semiBold,
-                                                FontSize.s9,
-                                                0.0,
-                                                const Color(0xFF059669),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            ),
-                            if (_lDeliveryMethod.isNotEmpty &&
-                                isDeliveryChargeDataEnabled) ...[
-                              const SizedBox(height: 12),
-                              Builder(builder: (context) {
-                                DeliveryMethod? selectedMethod;
-                                for (final method in provider.deliveryMethods) {
-                                  if (method.name == _lDeliveryMethod) {
-                                    selectedMethod = method;
-                                    break;
-                                  }
-                                }
-
-                                final selectedDeliveryMethod = selectedMethod;
-
-                                if (selectedDeliveryMethod == null ||
-                                    selectedDeliveryMethod.prices.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-
-                                if (!shouldApplyDeliveryCharge) {
-                                  return Text(
-                                    minimumAmount > 0
-                                        ? 'Free delivery applied for orders above $currency ${minimumAmount.toStringAsFixed(2)}'
-                                        : 'free'.tr,
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s11,
-                                      0.12,
-                                      const Color(0xFF059669),
-                                    ),
-                                  );
-                                }
-
-                                final effectiveSelectedPriceId =
-                                    (() {
-                                  if (_selectedDeliveryPriceId != null) {
-                                    final exists =
-                                        selectedDeliveryMethod.prices.any(
-                                        (p) => p.id == _selectedDeliveryPriceId);
-                                    if (exists) return _selectedDeliveryPriceId!;
-                                  }
-
-                                  if (_selectedDeliveryCharge != null) {
-                                    for (final price
-                                        in selectedDeliveryMethod.prices) {
-                                      if ((price.price - _selectedDeliveryCharge!)
-                                              .abs() <
-                                          0.001) {
-                                        return price.id;
-                                      }
-                                    }
-                                  }
-
-                                  return selectedDeliveryMethod.prices.first.id;
-                                })();
-
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Delivery charges',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.12,
-                                        Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children:
-                                            selectedDeliveryMethod.prices
-                                              .map((price) {
-                                        final isPriceSelected =
-                                            price.id == effectiveSelectedPriceId;
-
-                                        return OutlinedButton(
-                                          onPressed: () {
+                              const SizedBox(height: 20),
+                              // Arrow keys navigate between delivery method
+                              // tiles via Flutter's built-in focus traversal.
+                              // Tab/Shift+Tab also work via FocusTraversalOrder.
+                              Shortcuts(
+                                shortcuts: const <ShortcutActivator, Intent>{
+                                  SingleActivator(LogicalKeyboardKey.arrowLeft):
+                                      PreviousFocusIntent(),
+                                  SingleActivator(
+                                          LogicalKeyboardKey.arrowRight):
+                                      NextFocusIntent(),
+                                  SingleActivator(LogicalKeyboardKey.arrowUp):
+                                      PreviousFocusIntent(),
+                                  SingleActivator(LogicalKeyboardKey.arrowDown):
+                                      NextFocusIntent(),
+                                },
+                                child: Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children:
+                                      provider.deliveryMethods.map((method) {
+                                    final methodIndex = provider.deliveryMethods
+                                        .indexOf(method);
+                                    final isSelected =
+                                        _lDeliveryMethod == method.name;
+                                    final isFocused =
+                                        _focusedDeliveryMethodName ==
+                                            method.name;
+                                    return FocusTraversalOrder(
+                                      order: NumericFocusOrder(
+                                          10 + methodIndex.toDouble()),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: InkWell(
+                                          focusNode: methodIndex == 0
+                                              ? _deliveryMethodFocusNode
+                                              : null,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          onFocusChange: (focused) {
                                             setState(() {
-                                              _selectedDeliveryPriceId =
-                                                  price.id;
-                                              _selectedDeliveryCharge =
-                                                  price.price;
+                                              _focusedDeliveryMethodName =
+                                                  focused ? method.name : null;
+                                            });
+                                          },
+                                          onTap: () {
+                                            setState(() {
+                                              _lDeliveryMethod = method.name;
+                                              _lDeliveryMethodId = method.id;
+                                              if (method.prices.isEmpty) {
+                                                _selectedDeliveryPriceId = null;
+                                                _selectedDeliveryCharge = 0.0;
+                                              } else {
+                                                final existingById = method
+                                                    .prices
+                                                    .where((p) =>
+                                                        p.id ==
+                                                        _selectedDeliveryPriceId)
+                                                    .toList();
+                                                if (existingById.isNotEmpty) {
+                                                  _selectedDeliveryCharge =
+                                                      existingById.first.price;
+                                                } else {
+                                                  final existingByCharge =
+                                                      _selectedDeliveryCharge ==
+                                                              null
+                                                          ? <DeliveryPrice>[]
+                                                          : method.prices
+                                                              .where((p) =>
+                                                                  (p.price -
+                                                                          _selectedDeliveryCharge!)
+                                                                      .abs() <
+                                                                  0.001)
+                                                              .toList();
+
+                                                  if (existingByCharge
+                                                      .isNotEmpty) {
+                                                    _selectedDeliveryPriceId =
+                                                        existingByCharge
+                                                            .first.id;
+                                                    _selectedDeliveryCharge =
+                                                        existingByCharge
+                                                            .first.price;
+                                                  } else {
+                                                    _selectedDeliveryPriceId =
+                                                        method.prices.first.id;
+                                                    _selectedDeliveryCharge =
+                                                        method
+                                                            .prices.first.price;
+                                                  }
+                                                }
+                                              }
+
+                                              if (!shouldApplyDeliveryCharge) {
+                                                _selectedDeliveryCharge = 0.0;
+                                              }
                                             });
                                             _handleDeliveryUpdate();
                                           },
-                                          style: OutlinedButton.styleFrom(
-                                            side: BorderSide(
-                                              color: isPriceSelected
-                                                  ? const Color(0xFF059669)
-                                                  : const Color(0xFF059669),
-                                              width: isPriceSelected ? 2 : 1.5,
-                                            ),
-                                            backgroundColor: isPriceSelected
-                                                ? const Color(0xFF059669)
-                                                : Colors.white,
-                                            foregroundColor: isPriceSelected
-                                                ? Colors.white
-                                                : const Color(0xFF059669),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 200),
+                                            width: 118,
+                                            height: 104,
                                             padding: const EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 10),
-                                            minimumSize: const Size(0, 44),
-                                            tapTargetSize:
-                                                MaterialTapTargetSize.shrinkWrap,
-                                            visualDensity:
-                                                const VisualDensity(
-                                                    horizontal: 0,
-                                                    vertical: 0),
-                                            shape: RoundedRectangleBorder(
+                                                vertical: 8, horizontal: 8),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? ColorManager.kPrimaryColor
+                                                      .withOpacity(0.05)
+                                                  : Colors.white,
                                               borderRadius:
-                                                  BorderRadius.circular(20),
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: isFocused
+                                                    ? Colors.orange
+                                                    : isSelected
+                                                        ? ColorManager
+                                                            .kPrimaryColor
+                                                        : Colors.grey.shade200,
+                                                width: isFocused
+                                                    ? 3
+                                                    : (isSelected ? 2 : 1),
+                                              ),
+                                              boxShadow: isFocused
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: Colors.orange
+                                                            .withOpacity(0.35),
+                                                        blurRadius: 8,
+                                                        spreadRadius: 1,
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  method.name ==
+                                                          "Store Takeaway"
+                                                      ? Icons.store
+                                                      : method.name ==
+                                                              "Car Delivery"
+                                                          ? Icons.car_rental
+                                                          : method.name ==
+                                                                  "Door Delivery"
+                                                              ? Icons
+                                                                  .doorbell_outlined
+                                                              : Icons
+                                                                  .local_shipping,
+                                                  size: 22,
+                                                  color: isSelected
+                                                      ? ColorManager
+                                                          .kPrimaryColor
+                                                      : Colors.grey.shade700,
+                                                ),
+                                                const SizedBox(height: 5),
+                                                Text(
+                                                  method.name.tr,
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: buildCustomStyle(
+                                                    isSelected
+                                                        ? FontWeightManager
+                                                            .semiBold
+                                                        : FontWeightManager
+                                                            .medium,
+                                                    FontSize.s11,
+                                                    0.0,
+                                                    isSelected
+                                                        ? ColorManager
+                                                            .kPrimaryColor
+                                                        : Colors.black87,
+                                                  ),
+                                                ),
+                                                if (isDeliveryChargeDataEnabled) ...[
+                                                  const SizedBox(height: 5),
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                              0xFF059669)
+                                                          .withOpacity(0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              10),
+                                                    ),
+                                                    child: Text(
+                                                      method.prices
+                                                                  .isNotEmpty &&
+                                                              shouldApplyDeliveryCharge
+                                                          ? (() {
+                                                              if (!isSelected) {
+                                                                return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
+                                                              }
+
+                                                              final selectedById = method
+                                                                  .prices
+                                                                  .where((p) =>
+                                                                      p.id ==
+                                                                      _selectedDeliveryPriceId)
+                                                                  .toList();
+                                                              if (selectedById
+                                                                  .isNotEmpty) {
+                                                                return '$currency ${selectedById.first.price.toStringAsFixed(2)}';
+                                                              }
+
+                                                              if (_selectedDeliveryCharge !=
+                                                                  null) {
+                                                                return '$currency ${_selectedDeliveryCharge!.toStringAsFixed(2)}';
+                                                              }
+
+                                                              return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
+                                                            })()
+                                                          : 'free'.tr,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .semiBold,
+                                                        FontSize.s9,
+                                                        0.0,
+                                                        const Color(0xFF059669),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ),
-                                          child: Text(
-                                            '$currency ${price.price.toStringAsFixed(2)}',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.bold,
-                                              FontSize.s12,
-                                              0.0,
-                                              isPriceSelected
-                                                  ? Colors.white
-                                                  : const Color(0xFF059669),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                );
-                              }),
-                            ],
-                            if (Provider.of<AppSettingsProvider>(context,
-                                  listen: false)
-                                .appSettings
-                                ?.askDeliveryDate ==
-                              true) ...[
-                              const SizedBox(height: 20),
-                              Text('billing.enter_car_number'.tr,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.12,
-                                      Colors.black)),
-                              CalendarPickerTableCell(
-                                initialDate: _lSelectedDeliveryDate,
-                                onDateSelected: (date) {
-                                  setState(() {
-                                    _lSelectedDeliveryDate = date;
-                                  });
-                                  _handleDeliveryUpdate();
-                                },
-                              ),
-                              const SizedBox(height: 10),
-                              Text('common.select'.tr,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.12,
-                                      Colors.black)),
-                              TimePickerTableCell(
-                                initialTime: _lSelectedDeliveryTime,
-                                onTimeSelected: (time) {
-                                  setState(() {
-                                    _lSelectedDeliveryTime = time;
-                                  });
-                                  _handleDeliveryUpdate();
-                                },
-                              ),
-                            ],
-                            const SizedBox(height: 30),
-                            if (_lDeliveryMethod == "Car Delivery") ...[
-                              FocusTraversalOrder(
-                                order: const NumericFocusOrder(60),
-                                child: buildColumnWidgetForTextFields(
-                                  controller: _lCarNumberController,
-                                  focusNode: _deliveryCarNumberFocusNode,
-                                  size: size,
-                                  height: 50,
-                                  hintText: 'Car Number:',
-                                  width: double.infinity,
-                                  margin: EdgeInsets.zero,
-                                  onTap: () {
-                                    Provider.of<KeyboardProvider>(context,
-                                            listen: false)
-                                        .show('text', _lCarNumberController,
-                                            replaceOnFirstInput: true);
-                                  },
-                                  onchanged: (_) => _handleDeliveryUpdate(),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                            ],
-                            FocusTraversalOrder(
-                              order: const NumericFocusOrder(70),
-                              child: buildColumnWidgetForTextFields(
-                                controller: _lCommentController,
-                                focusNode: _deliveryCommentFocusNode,
-                                size: size,
-                                height: 50,
-                                hintText: 'Comment:',
-                                width: double.infinity,
-                                margin: EdgeInsets.zero,
-                                onTap: () {
-                                  Provider.of<KeyboardProvider>(context,
-                                          listen: false)
-                                      .show('text', _lCommentController,
-                                          replaceOnFirstInput: true);
-                                },
-                                onchanged: (_) => _handleDeliveryUpdate(),
-                              ),
-                            ),
-                            if (_lDeliveryMethod == "Door Delivery") ...[
-                              const SizedBox(height: 10),
-                              Consumer<CustomerSelectionProvider>(
-                                builder: (context, customerProvider, child) {
-                                  if (!customerProvider.hasSelectedCustomer ||
-                                      customerProvider
-                                              .selectedCustomer!.addresses ==
-                                          null ||
-                                      customerProvider.selectedCustomer!
-                                          .addresses!.isEmpty) {
+                              if (_lDeliveryMethod.isNotEmpty &&
+                                  isDeliveryChargeDataEnabled) ...[
+                                const SizedBox(height: 12),
+                                Builder(builder: (context) {
+                                  DeliveryMethod? selectedMethod;
+                                  for (final method
+                                      in provider.deliveryMethods) {
+                                    if (method.name == _lDeliveryMethod) {
+                                      selectedMethod = method;
+                                      break;
+                                    }
+                                  }
+
+                                  final selectedDeliveryMethod = selectedMethod;
+
+                                  if (selectedDeliveryMethod == null ||
+                                      selectedDeliveryMethod.prices.isEmpty) {
                                     return const SizedBox.shrink();
                                   }
+
+                                  if (!shouldApplyDeliveryCharge) {
+                                    return Text(
+                                      minimumAmount > 0
+                                          ? 'Free delivery applied for orders above $currency ${minimumAmount.toStringAsFixed(2)}'
+                                          : 'free'.tr,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s11,
+                                        0.12,
+                                        const Color(0xFF059669),
+                                      ),
+                                    );
+                                  }
+
+                                  final effectiveSelectedPriceId = (() {
+                                    if (_selectedDeliveryPriceId != null) {
+                                      final exists = selectedDeliveryMethod
+                                          .prices
+                                          .any((p) =>
+                                              p.id == _selectedDeliveryPriceId);
+                                      if (exists)
+                                        return _selectedDeliveryPriceId!;
+                                    }
+
+                                    if (_selectedDeliveryCharge != null) {
+                                      for (final price
+                                          in selectedDeliveryMethod.prices) {
+                                        if ((price.price -
+                                                    _selectedDeliveryCharge!)
+                                                .abs() <
+                                            0.001) {
+                                          return price.id;
+                                        }
+                                      }
+                                    }
+
+                                    return selectedDeliveryMethod
+                                        .prices.first.id;
+                                  })();
+
                                   return Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Choose an address:',
+                                        'Delivery charges',
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -2009,105 +1765,281 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                       Wrap(
                                         spacing: 8,
                                         runSpacing: 8,
-                                        children: customerProvider
-                                            .selectedCustomer!.addresses!
-                                            .map((Address address) {
-                                          return Material(
-                                            color: Colors.transparent,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            child: InkWell(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              onTap: () {
+                                        children: selectedDeliveryMethod.prices
+                                            .map((price) {
+                                          final isPriceSelected = price.id ==
+                                              effectiveSelectedPriceId;
+
+                                          return OutlinedButton(
+                                            onPressed: () {
                                               setState(() {
-                                                String fullAddress =
-                                                    "${address.address}, ${address.city}";
-                                                _lAddressController.text =
-                                                    fullAddress;
+                                                _selectedDeliveryPriceId =
+                                                    price.id;
+                                                _selectedDeliveryCharge =
+                                                    price.price;
                                               });
                                               _handleDeliveryUpdate();
                                             },
-                                              child: Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                    color:
-                                                        Colors.grey.shade300),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                color: Colors.grey.shade50,
+                                            style: OutlinedButton.styleFrom(
+                                              side: BorderSide(
+                                                color: isPriceSelected
+                                                    ? const Color(0xFF059669)
+                                                    : const Color(0xFF059669),
+                                                width:
+                                                    isPriceSelected ? 2 : 1.5,
                                               ),
-                                              child: Text(
-                                                "${address.address}, ${address.city}",
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.regular,
-                                                  FontSize.s12,
-                                                  0.12,
-                                                  Colors.black87,
-                                                ),
+                                              backgroundColor: isPriceSelected
+                                                  ? const Color(0xFF059669)
+                                                  : Colors.white,
+                                              foregroundColor: isPriceSelected
+                                                  ? Colors.white
+                                                  : const Color(0xFF059669),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 10),
+                                              minimumSize: const Size(0, 44),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              visualDensity:
+                                                  const VisualDensity(
+                                                      horizontal: 0,
+                                                      vertical: 0),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
                                               ),
                                             ),
+                                            child: Text(
+                                              '$currency ${price.price.toStringAsFixed(2)}',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.bold,
+                                                FontSize.s12,
+                                                0.0,
+                                                isPriceSelected
+                                                    ? Colors.white
+                                                    : const Color(0xFF059669),
+                                              ),
                                             ),
                                           );
                                         }).toList(),
                                       ),
                                     ],
                                   );
-                                },
-                              ),
-                              const SizedBox(height: 10),
+                                }),
+                              ],
+                              if (Provider.of<AppSettingsProvider>(context,
+                                          listen: false)
+                                      .appSettings
+                                      ?.askDeliveryDate ==
+                                  true) ...[
+                                const SizedBox(height: 20),
+                                Text('billing.enter_car_number'.tr,
+                                    style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.12,
+                                        Colors.black)),
+                                CalendarPickerTableCell(
+                                  initialDate: _lSelectedDeliveryDate,
+                                  onDateSelected: (date) {
+                                    setState(() {
+                                      _lSelectedDeliveryDate = date;
+                                    });
+                                    _handleDeliveryUpdate();
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                Text('common.select'.tr,
+                                    style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.12,
+                                        Colors.black)),
+                                TimePickerTableCell(
+                                  initialTime: _lSelectedDeliveryTime,
+                                  onTimeSelected: (time) {
+                                    setState(() {
+                                      _lSelectedDeliveryTime = time;
+                                    });
+                                    _handleDeliveryUpdate();
+                                  },
+                                ),
+                              ],
+                              const SizedBox(height: 30),
+                              if (_lDeliveryMethod == "Car Delivery") ...[
+                                FocusTraversalOrder(
+                                  order: const NumericFocusOrder(60),
+                                  child: buildColumnWidgetForTextFields(
+                                    controller: _lCarNumberController,
+                                    focusNode: _deliveryCarNumberFocusNode,
+                                    size: size,
+                                    height: 50,
+                                    hintText: 'Car Number:',
+                                    width: double.infinity,
+                                    margin: EdgeInsets.zero,
+                                    onTap: () {
+                                      Provider.of<KeyboardProvider>(context,
+                                              listen: false)
+                                          .show('text', _lCarNumberController,
+                                              replaceOnFirstInput: true);
+                                    },
+                                    onchanged: (_) => _handleDeliveryUpdate(),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
                               FocusTraversalOrder(
-                                order: const NumericFocusOrder(90),
+                                order: const NumericFocusOrder(70),
                                 child: buildColumnWidgetForTextFields(
-                                  controller: _lAddressController,
-                                  focusNode: _deliveryAddressFocusNode,
+                                  controller: _lCommentController,
+                                  focusNode: _deliveryCommentFocusNode,
                                   size: size,
                                   height: 50,
-                                  hintText: 'Address:',
+                                  hintText: 'Comment:',
                                   width: double.infinity,
                                   margin: EdgeInsets.zero,
                                   onTap: () {
                                     Provider.of<KeyboardProvider>(context,
                                             listen: false)
-                                        .show('text', _lAddressController,
+                                        .show('text', _lCommentController,
                                             replaceOnFirstInput: true);
                                   },
                                   onchanged: (_) => _handleDeliveryUpdate(),
                                 ),
                               ),
+                              if (_lDeliveryMethod == "Door Delivery") ...[
+                                const SizedBox(height: 10),
+                                Consumer<CustomerSelectionProvider>(
+                                  builder: (context, customerProvider, child) {
+                                    if (!customerProvider.hasSelectedCustomer ||
+                                        customerProvider
+                                                .selectedCustomer!.addresses ==
+                                            null ||
+                                        customerProvider.selectedCustomer!
+                                            .addresses!.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Choose an address:',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.12,
+                                            Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: customerProvider
+                                              .selectedCustomer!.addresses!
+                                              .map((Address address) {
+                                            return Material(
+                                              color: Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                onTap: () {
+                                                  setState(() {
+                                                    String fullAddress =
+                                                        "${address.address}, ${address.city}";
+                                                    _lAddressController.text =
+                                                        fullAddress;
+                                                  });
+                                                  _handleDeliveryUpdate();
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.all(8),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                        color: Colors
+                                                            .grey.shade300),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    color: Colors.grey.shade50,
+                                                  ),
+                                                  child: Text(
+                                                    "${address.address}, ${address.city}",
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.regular,
+                                                      FontSize.s12,
+                                                      0.12,
+                                                      Colors.black87,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                FocusTraversalOrder(
+                                  order: const NumericFocusOrder(90),
+                                  child: buildColumnWidgetForTextFields(
+                                    controller: _lAddressController,
+                                    focusNode: _deliveryAddressFocusNode,
+                                    size: size,
+                                    height: 50,
+                                    hintText: 'Address:',
+                                    width: double.infinity,
+                                    margin: EdgeInsets.zero,
+                                    onTap: () {
+                                      Provider.of<KeyboardProvider>(context,
+                                              listen: false)
+                                          .show('text', _lAddressController,
+                                              replaceOnFirstInput: true);
+                                    },
+                                    onchanged: (_) => _handleDeliveryUpdate(),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 24),
-                const VerticalDivider(width: 1),
-                const SizedBox(width: 24),
-                // Right: Summary
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    children: [
-                      Expanded(child: _buildCompactSummary()),
-                      _buildFooter(
-                        onPrint: _handlePrint,
-                        onConfirm: _handleConfirm,
-                      ),
-                    ],
+                  const SizedBox(width: 24),
+                  const VerticalDivider(width: 1),
+                  const SizedBox(width: 24),
+                  // Right: Summary
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      children: [
+                        Expanded(child: _buildCompactSummary()),
+                        _buildFooter(
+                          onPrint: _handlePrint,
+                          onConfirm: _handleConfirm,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
   }
 
   // --- STEP 2: DISCOUNT ---
@@ -2159,17 +2091,21 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             _lIsUpiSelected ||
                             _lIsCodSelected;
 
-                        final int selectedCount =
-                            (_lIsCashSelected ? 1 : 0) +
-                                (_lIsCardSelected ? 1 : 0) +
-                                (_lIsUpiSelected ? 1 : 0) +
-                                (_lIsCodSelected ? 1 : 0);
+                        final int selectedCount = (_lIsCashSelected ? 1 : 0) +
+                            (_lIsCardSelected ? 1 : 0) +
+                            (_lIsUpiSelected ? 1 : 0) +
+                            (_lIsCodSelected ? 1 : 0);
 
-                        final double cashVal = double.tryParse(_lCashAmount) ?? 0.0;
-                        final double cardVal = double.tryParse(_lCardAmount) ?? 0.0;
-                        final double upiVal = double.tryParse(_lUpiAmount) ?? 0.0;
-                        final double codVal = double.tryParse(_lCodAmount) ?? 0.0;
-                        final double totalPaid = cashVal + cardVal + upiVal + codVal;
+                        final double cashVal =
+                            double.tryParse(_lCashAmount) ?? 0.0;
+                        final double cardVal =
+                            double.tryParse(_lCardAmount) ?? 0.0;
+                        final double upiVal =
+                            double.tryParse(_lUpiAmount) ?? 0.0;
+                        final double codVal =
+                            double.tryParse(_lCodAmount) ?? 0.0;
+                        final double totalPaid =
+                            cashVal + cardVal + upiVal + codVal;
 
                         // If nothing is selected, clear stale amounts so Payment tab auto-fill
                         // always uses the freshly discounted total.
@@ -2184,7 +2120,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         // remap it to the new discounted total.
                         if (selectedCount == 1 &&
                             (totalPaid - oldEffectiveTotal).abs() < 0.01) {
-                          final remappedAmount = newEffectiveTotal.toStringAsFixed(2);
+                          final remappedAmount =
+                              newEffectiveTotal.toStringAsFixed(2);
                           if (_lIsCashSelected) {
                             nextCash = remappedAmount;
                             nextCard = '';
@@ -2268,7 +2205,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final discountAmount = _localFlatDiscount +
         (widget.cartTotal * _localPercentageDiscount / 100);
     final effectiveTotal =
-      (widget.cartTotal - discountAmount) + _getEffectiveDeliveryCharge();
+        (widget.cartTotal - discountAmount) + _getEffectiveDeliveryCharge();
 
     final bool anyMethodSelected = _lIsCashSelected ||
         _lIsCardSelected ||
@@ -2334,7 +2271,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       initialDebitAmount: _lDebitAmount,
                       initialTransactionNumber: _lTransactionNumber,
                       cartTotal: effectiveTotal,
-                      customerPrevBalance: _localSelectedCustomer?.balance ?? 0.0,
+                      customerPrevBalance:
+                          _localSelectedCustomer?.balance ?? 0.0,
                       isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
                               context,
                               listen: false)
@@ -2351,8 +2289,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           cardMethodId,
                           upiMethodId,
                           codMethodId}) {
-                        _handlePaymentUpdate(isCash, isCard, isUpi, isCod,
-                            isDebit, cash, card, upi, cod, debit, trans, toCredit,
+                        _handlePaymentUpdate(
+                            isCash,
+                            isCard,
+                            isUpi,
+                            isCod,
+                            isDebit,
+                            cash,
+                            card,
+                            upi,
+                            cod,
+                            debit,
+                            trans,
+                            toCredit,
                             cashMethodId: cashMethodId,
                             cardMethodId: cardMethodId,
                             upiMethodId: upiMethodId,
@@ -2438,7 +2387,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         'SAR';
 
     final effectiveDeliveryCharge = _getEffectiveDeliveryCharge();
-    
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -2448,8 +2397,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               fontSize: 14,
               color: Colors.black87,
             )),
-        Text(
-            '$currency ${effectiveDeliveryCharge.toStringAsFixed(2)}',
+        Text('$currency ${effectiveDeliveryCharge.toStringAsFixed(2)}',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -2508,8 +2456,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 title: 'Back',
                 fct: onBack,
                 size: MediaQuery.of(context).size,
-                icon: const Icon(Icons.arrow_back,
-                    color: Colors.white, size: 20),
+                icon:
+                    const Icon(Icons.arrow_back, color: Colors.white, size: 20),
                 height: 48,
                 width: double.infinity,
                 fontSize: FontSize.s14,
@@ -2520,102 +2468,100 @@ class _CheckoutModalState extends State<CheckoutModal> {
             ),
             const SizedBox(width: 12),
           ],
-                // Confirm button (optional)
-                if (onConfirm != null)
-                  Expanded(
-                    child: Opacity(
-                      opacity: _canConfirmOrPrint ? 1.0 : 0.5,
-                      child: CustomRoundButtonWithIconAdvanced(
-                        title: widget.confirmButtonTitle,
-                        isLoading: _isConfirming,
-                        shortcutLabel: 'F2',
-                        fct: _canConfirmOrPrint
-                            ? onConfirm
-                            : () {
-                                // Auto-navigate to payment tab and show feedback
-                                _goToStep(3);
-                                showScaffoldError(
-                                  context: context,
-                                  message: widget.requireCheckoutCompletion
-                                      ? 'Please configure payment before confirm'
-                                      : 'Unable to proceed',
-                                );
-                              },
-                        size: MediaQuery.of(context).size,
-                        icon: const Icon(Icons.check_circle,
-                            color: Colors.white, size: 20),
-                        height: 48,
-                        width: double.infinity,
-                        fontSize: FontSize.s14,
-                        boxColor: _canConfirmOrPrint
-                            ? const Color(0xFF2563EB)
-                            : Colors.grey.shade400,
-                        borderColor: _canConfirmOrPrint
-                            ? const Color(0xFF2563EB)
-                            : Colors.grey.shade400,
-                        radius: 12,
-                      ),
-                    ),
-                  ),
-                if (onConfirm != null && onPrint != null)
-                  const SizedBox(width: 12),
-                // Print Bill button (optional)
-                if (onPrint != null)
-                  Expanded(
-                    child: Opacity(
-                      opacity: _canPrint ? 1.0 : 0.5,
-                      child: CustomRoundButtonWithIconAdvanced(
-                        title: widget.printButtonTitle,
-                        isLoading: _isPrinting,
-                        shortcutLabel: 'F6',
-                        fct: _canPrint
-                            ? onPrint
-                            : () {
-                                // Auto-navigate to payment tab and show feedback
-                                _goToStep(3);
-                                showScaffoldError(
-                                  context: context,
-                                  message: 'Please configure payment before printing',
-                                );
-                              },
-                        size: MediaQuery.of(context).size,
-                        icon: const Icon(Icons.print,
-                            color: Colors.white, size: 20),
-                        height: 48,
-                        width: double.infinity,
-                        fontSize: FontSize.s14,
-                        boxColor: _canPrint
-                            ? const Color(0xFF059669)
-                            : Colors.grey.shade400,
-                        borderColor: _canPrint
-                            ? const Color(0xFF059669)
-                            : Colors.grey.shade400,
-                        textColor: Colors.white,
-                        radius: 12,
-                      ),
-                    ),
-                  ),
-                // Next button (optional)
-                if (onNext != null)
-                  Expanded(
-                    child: CustomRoundButtonWithIconAdvanced(
-                      title: nextLabel,
-                      fct: isNextEnabled ? onNext : () {},
-                      size: MediaQuery.of(context).size,
-                      icon: const Icon(Icons.arrow_forward,
-                          color: Colors.white, size: 20),
-                      height: 48,
-                      width: double.infinity,
-                      fontSize: FontSize.s14,
-                      boxColor: isNextEnabled
-                          ? const Color(0xFF2563EB)
-                          : Colors.grey.shade400,
-                      borderColor: isNextEnabled
-                          ? const Color(0xFF2563EB)
-                          : Colors.grey.shade400,
-                      radius: 12,
-                    ),
-                  ),
+          // Confirm button (optional)
+          if (onConfirm != null)
+            Expanded(
+              child: Opacity(
+                opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                child: CustomRoundButtonWithIconAdvanced(
+                  title: widget.confirmButtonTitle,
+                  isLoading: _isConfirming,
+                  shortcutLabel: 'F2',
+                  fct: _canConfirmOrPrint
+                      ? onConfirm
+                      : () {
+                          // Auto-navigate to payment tab and show feedback
+                          _goToStep(3);
+                          showScaffoldError(
+                            context: context,
+                            message: widget.requireCheckoutCompletion
+                                ? 'Please configure payment before confirm'
+                                : 'Unable to proceed',
+                          );
+                        },
+                  size: MediaQuery.of(context).size,
+                  icon: const Icon(Icons.check_circle,
+                      color: Colors.white, size: 20),
+                  height: 48,
+                  width: double.infinity,
+                  fontSize: FontSize.s14,
+                  boxColor: _canConfirmOrPrint
+                      ? const Color(0xFF2563EB)
+                      : Colors.grey.shade400,
+                  borderColor: _canConfirmOrPrint
+                      ? const Color(0xFF2563EB)
+                      : Colors.grey.shade400,
+                  radius: 12,
+                ),
+              ),
+            ),
+          if (onConfirm != null && onPrint != null) const SizedBox(width: 12),
+          // Print Bill button (optional)
+          if (onPrint != null)
+            Expanded(
+              child: Opacity(
+                opacity: _canPrint ? 1.0 : 0.5,
+                child: CustomRoundButtonWithIconAdvanced(
+                  title: widget.printButtonTitle,
+                  isLoading: _isPrinting,
+                  shortcutLabel: 'F6',
+                  fct: _canPrint
+                      ? onPrint
+                      : () {
+                          // Auto-navigate to payment tab and show feedback
+                          _goToStep(3);
+                          showScaffoldError(
+                            context: context,
+                            message: 'Please configure payment before printing',
+                          );
+                        },
+                  size: MediaQuery.of(context).size,
+                  icon: const Icon(Icons.print, color: Colors.white, size: 20),
+                  height: 48,
+                  width: double.infinity,
+                  fontSize: FontSize.s14,
+                  boxColor: _canPrint
+                      ? const Color(0xFF059669)
+                      : Colors.grey.shade400,
+                  borderColor: _canPrint
+                      ? const Color(0xFF059669)
+                      : Colors.grey.shade400,
+                  textColor: Colors.white,
+                  radius: 12,
+                ),
+              ),
+            ),
+          // Next button (optional)
+          if (onNext != null)
+            Expanded(
+              child: CustomRoundButtonWithIconAdvanced(
+                title: nextLabel,
+                fct: isNextEnabled ? onNext : () {},
+                size: MediaQuery.of(context).size,
+                icon: const Icon(Icons.arrow_forward,
+                    color: Colors.white, size: 20),
+                height: 48,
+                width: double.infinity,
+                fontSize: FontSize.s14,
+                boxColor: isNextEnabled
+                    ? const Color(0xFF2563EB)
+                    : Colors.grey.shade400,
+                borderColor: isNextEnabled
+                    ? const Color(0xFF2563EB)
+                    : Colors.grey.shade400,
+                radius: 12,
+              ),
+            ),
         ],
       ),
     );
@@ -2639,7 +2585,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ? AmountHelper.roundOffAmount(priceSummary.netTotal)
                 : priceSummary.netTotal;
         final effectiveTotal =
-          baseEffectiveTotal + _getEffectiveDeliveryCharge();
+            baseEffectiveTotal + _getEffectiveDeliveryCharge();
 
         final totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
             (double.tryParse(_lCardAmount) ?? 0) +
@@ -2688,6 +2634,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       hasCustomer,
                       Icons.person_outline,
                       0,
+                      customer: _localSelectedCustomer,
                     ),
                   ),
                   if (widget.enableDelivery)
@@ -2775,8 +2722,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         _buildSummaryRow(
                             'Tax', taxAmount, const Color(0xFF64748B),
                             labelColor: const Color(0xFF64748B)),
-                        if (hasDelivery &&
-                            _isfreeDeliveryMinimumAmount()) ...[
+                        if (hasDelivery && _isfreeDeliveryMinimumAmount()) ...[
                           const SizedBox(height: 10),
                           _buildDeliveryChargeRow(),
                         ],
@@ -2824,9 +2770,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Clickable checklist item that navigates to the corresponding step
   Widget _buildClickableCheckItem(String title, String subtitle,
-      bool isCompleted, IconData icon, int stepIndex) {
+      bool isCompleted, IconData icon, int stepIndex,
+      {CustomerListModelData? customer}) {
     final isCurrentStep = _currentStep == stepIndex;
     final shortcutLabel = _shortcutLabelForStep(stepIndex);
+    final showCustomerType = Provider.of<AppSettingsProvider>(context)
+            .appSettings
+            ?.companyB2BEnabled ??
+        false;
+    final customerBalance = customer?.balance ?? 0.0;
+    final customerBalanceColor = customerBalance >= 0
+        ? const Color(0xFF059669)
+        : const Color(0xFFDC2626);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -2894,7 +2849,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        customer != null ? subtitle : title,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
@@ -2905,21 +2860,61 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isCurrentStep
-                              ? Colors.white.withOpacity(0.85)
-                              : isCompleted
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFF64748B),
-                          fontWeight:
-                              isCurrentStep ? FontWeight.w600 : FontWeight.w500,
+                      if (customer == null)
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isCurrentStep
+                                ? Colors.white.withOpacity(0.85)
+                                : isCompleted
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFF64748B),
+                            fontWeight: isCurrentStep
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      if (customer != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            if (showCustomerType) ...[
+                              _buildCustomerTypeBadge(
+                                customer.customerType,
+                                compact: true,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: isCurrentStep
+                                      ? Colors.white24
+                                      : customerBalanceColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Bal: ${customerBalance.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: isCurrentStep
+                                        ? Colors.white
+                                        : customerBalanceColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
