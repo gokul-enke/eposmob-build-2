@@ -19,6 +19,8 @@ class CompactQuantityControlLocal extends StatefulWidget {
   final Function()? onQuantityChanged;
   final Stock? selectedStock;
   final LocalCartItem cartItem;
+  final int editRequestId;
+  final String? editRequestKey;
 
   const CompactQuantityControlLocal({
     Key? key,
@@ -32,6 +34,8 @@ class CompactQuantityControlLocal extends StatefulWidget {
     this.cartItemId,
     this.onQuantityChanged,
     this.selectedStock,
+    this.editRequestId = 0,
+    this.editRequestKey,
   }) : super(key: key);
 
   @override
@@ -80,6 +84,30 @@ class _CompactQuantityControlLocalState
     });
   }
 
+  void _beginEditing() {
+    _focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_controller.text.isNotEmpty && _focusNode.hasFocus) {
+        _controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _controller.text.length,
+        );
+      }
+    });
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      _controller,
+      replaceOnFirstInput: true,
+    );
+  }
+
+  bool _shouldHandleEditRequest(CompactQuantityControlLocal oldWidget) {
+    return widget.editRequestId != oldWidget.editRequestId &&
+        widget.editRequestKey != null &&
+        widget.editRequestKey == _cartIdentityKey(widget.cartItem);
+  }
+
   @override
   void didUpdateWidget(CompactQuantityControlLocal oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -105,6 +133,14 @@ class _CompactQuantityControlLocalState
         _focusNode.unfocus();
       }
       return;
+    }
+
+    if (_shouldHandleEditRequest(oldWidget)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _beginEditing();
+        }
+      });
     }
 
     // Check if the quantity prop has changed
@@ -270,22 +306,7 @@ class _CompactQuantityControlLocalState
               contentPadding: EdgeInsets.symmetric(vertical: 3),
             ),
             onTap: () {
-              // Use a post-frame callback to ensure text selection happens after the tap is processed
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (_controller.text.isNotEmpty && _focusNode.hasFocus) {
-                  _controller.selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: _controller.text.length,
-                  );
-                }
-              });
-
-              // Show custom numeric virtual keyboard
-              Provider.of<KeyboardProvider>(context, listen: false).show(
-                'number',
-                _controller,
-                replaceOnFirstInput: true,
-              );
+              _beginEditing();
             },
             onSubmitted: (value) {
               num? newQuantity = num.tryParse(value);

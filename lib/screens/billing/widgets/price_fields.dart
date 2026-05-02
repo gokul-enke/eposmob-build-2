@@ -8,11 +8,15 @@ import 'package:provider/provider.dart';
 class PriceTextField extends StatefulWidget {
   final dynamic item;
   final dynamic localProductProvider;
+  final int editRequestId;
+  final String? editRequestKey;
 
   const PriceTextField({
     Key? key,
     required this.item,
     required this.localProductProvider,
+    this.editRequestId = 0,
+    this.editRequestKey,
   }) : super(key: key);
 
   @override
@@ -55,12 +59,48 @@ class _PriceTextFieldState extends State<PriceTextField> {
     controller.addListener(_handleTextChanged);
   }
 
+  void _beginEditing() {
+    focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (controller.text.isNotEmpty && focusNode.hasFocus) {
+        controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: controller.text.length,
+        );
+      }
+    });
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      controller,
+      replaceOnFirstInput: true,
+    );
+  }
+
+  String _cartIdentityKey(dynamic item) {
+    final groupKey = item.stockGroupIds.join('_');
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+  }
+
+  bool _shouldHandleEditRequest(PriceTextField oldWidget) {
+    return widget.editRequestId != oldWidget.editRequestId &&
+        widget.editRequestKey != null &&
+        widget.editRequestKey == _cartIdentityKey(widget.item);
+  }
+
   @override
   void didUpdateWidget(PriceTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Only refresh controller text if the field is NOT focused
     if (!focusNode.hasFocus && oldWidget.item.price != widget.item.price) {
       controller.text = _displayPrice().toString();
+    }
+    if (_shouldHandleEditRequest(oldWidget)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _beginEditing();
+        }
+      });
     }
   }
 
@@ -117,20 +157,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
             ),
           ),
           onTap: () {
-            // Use a post-frame callback to ensure text selection happens after the tap is processed
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (controller.text.isNotEmpty && focusNode.hasFocus) {
-                controller.selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: controller.text.length,
-                );
-              }
-            });
-            Provider.of<KeyboardProvider>(context, listen: false).show(
-              'number',
-              controller,
-              replaceOnFirstInput: true,
-            );
+            _beginEditing();
           },
           onChanged: (newPrice) {
             // Validate and update immediately on change

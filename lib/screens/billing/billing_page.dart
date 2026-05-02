@@ -212,6 +212,11 @@ class BillingPageState extends State<BillingPage>
   // Cart table keyboard navigation state
   final FocusNode _cartTableFocusNode = FocusNode();
   int? _cartTableFocusedRowIndex;
+  int? _cartTableFocusedCellIndex;
+  int _cartQuantityEditRequestId = 0;
+  int _cartPriceEditRequestId = 0;
+  String? _cartQuantityEditRequestKey;
+  String? _cartPriceEditRequestKey;
 
   StreamSubscription<String>? _barcodeSubscription;
 
@@ -938,6 +943,9 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       if (_cartTableFocusNode.hasFocus && _cartTableFocusedRowIndex == null) {
         _cartTableFocusedRowIndex = 0;
+      }
+      if (!_cartTableFocusNode.hasFocus) {
+        _cartTableFocusedCellIndex = null;
       }
     });
   }
@@ -2800,10 +2808,10 @@ class BillingPageState extends State<BillingPage>
                     child: FocusTraversalOrder(
                       order:
                           const NumericFocusOrder(BillingFocusOrders.cartTable),
-                      child: KeyboardListener(
+                      child: Focus(
                         focusNode: _cartTableFocusNode,
-                        onKeyEvent: (KeyEvent event) {
-                          _handleCartTableKey(
+                        onKeyEvent: (FocusNode node, KeyEvent event) {
+                          return _handleCartTableKey(
                               event, cartItems, localProductProvider);
                         },
                         // Cart cells (qty/price/mrp/tax/delete) remain
@@ -2830,10 +2838,15 @@ class BillingPageState extends State<BillingPage>
                                 itemCount: cartItems.length,
                                 itemBuilder: (context, index) {
                                   final item = cartItems[index];
+                                  final bool isFocusedRow =
+                                      isCartTableFocused &&
+                                          _cartTableFocusedRowIndex == index;
                                   return Container(
-                                    color: index % 2 == 0
-                                        ? Colors.white
-                                        : Colors.grey.shade50,
+                                    color: isFocusedRow
+                                        ? Colors.orange.withOpacity(0.06)
+                                        : index % 2 == 0
+                                            ? Colors.white
+                                            : Colors.grey.shade50,
                                     child: Row(
                                       children: [
                                         // Index Number
@@ -2859,58 +2872,68 @@ class BillingPageState extends State<BillingPage>
 
                                         // Item Name
                                         _buildContentCell(
-                                          GestureDetector(
-                                            behavior: HitTestBehavior.opaque,
-                                            onTap: () =>
-                                                _showProductDetailsDialog(item),
-                                            child: Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
-                                              children: [
-                                                Expanded(
-                                                  child: Padding(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(vertical: 2),
-                                                    child: Text(
-                                                      item.product
-                                                              .productName ??
-                                                          'general.unknown'.tr,
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .regular,
-                                                        fontProvider
-                                                            .billingTableItemSize,
-                                                        0.21,
-                                                        ColorManager.textColor,
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 0,
+                                            child: GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onTap: () =>
+                                                  _showProductDetailsDialog(
+                                                      item),
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                children: [
+                                                  Expanded(
+                                                    child: Padding(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          vertical: 2),
+                                                      child: Text(
+                                                        item.product
+                                                                .productName ??
+                                                            'general.unknown'
+                                                                .tr,
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .regular,
+                                                          fontProvider
+                                                              .billingTableItemSize,
+                                                          0.21,
+                                                          ColorManager
+                                                              .textColor,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                       ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Tooltip(
-                                                  message:
-                                                      'billing.view_details'.tr,
-                                                  waitDuration: const Duration(
-                                                      milliseconds: 400),
-                                                  child: InkWell(
-                                                    onTap: () =>
-                                                        _showProductDetailsDialog(
-                                                            item),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            16),
-                                                    child: const Icon(
-                                                      Icons.info_outline,
-                                                      size: 16,
-                                                      color: ColorManager
-                                                          .kPrimaryColor,
+                                                  const SizedBox(width: 6),
+                                                  Tooltip(
+                                                    message:
+                                                        'billing.view_details'
+                                                            .tr,
+                                                    waitDuration:
+                                                        const Duration(
+                                                            milliseconds: 400),
+                                                    child: InkWell(
+                                                      onTap: () =>
+                                                          _showProductDetailsDialog(
+                                                              item),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16),
+                                                      child: const Icon(
+                                                        Icons.info_outline,
+                                                        size: 16,
+                                                        color: ColorManager
+                                                            .kPrimaryColor,
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
                                           flex: 3,
@@ -2964,27 +2987,36 @@ class BillingPageState extends State<BillingPage>
                                         ),
                                         // Qty
                                         _buildContentCell(
-                                          Center(
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 2),
-                                              child:
-                                                  CompactQuantityControlLocal(
-                                                key: ValueKey(
-                                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 1,
+                                            child: Center(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 2),
+                                                child:
+                                                    CompactQuantityControlLocal(
+                                                  key: ValueKey(
+                                                    'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
+                                                  ),
+                                                  productId:
+                                                      item.product.productId!,
+                                                  quantity:
+                                                      item.quantity.toDouble(),
+                                                  unitPrice:
+                                                      item.price.toString(),
+                                                  productUnit:
+                                                      item.product.unit,
+                                                  product: item.product,
+                                                  cartItem: item,
+                                                  selectedStock:
+                                                      item.selectedStock,
+                                                  editRequestId:
+                                                      _cartQuantityEditRequestId,
+                                                  editRequestKey:
+                                                      _cartQuantityEditRequestKey,
                                                 ),
-                                                productId:
-                                                    item.product.productId!,
-                                                quantity:
-                                                    item.quantity.toDouble(),
-                                                unitPrice:
-                                                    item.price.toString(),
-                                                productUnit: item.product.unit,
-                                                product: item.product,
-                                                cartItem: item,
-                                                selectedStock:
-                                                    item.selectedStock,
                                               ),
                                             ),
                                           ),
@@ -3037,18 +3069,27 @@ class BillingPageState extends State<BillingPage>
 
                                         // Price
                                         _buildContentCell(
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 2),
-                                            child: SizedBox(
-                                              width: 70,
-                                              child: PriceTextField(
-                                                key: ValueKey(
-                                                  'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 2,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 70,
+                                                child: PriceTextField(
+                                                  key: ValueKey(
+                                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                  ),
+                                                  item: item,
+                                                  localProductProvider:
+                                                      localProductProvider,
+                                                  editRequestId:
+                                                      _cartPriceEditRequestId,
+                                                  editRequestKey:
+                                                      _cartPriceEditRequestKey,
                                                 ),
-                                                item: item,
-                                                localProductProvider:
-                                                    localProductProvider,
                                               ),
                                             ),
                                           ),
@@ -3121,29 +3162,34 @@ class BillingPageState extends State<BillingPage>
 
                                         // Actions
                                         _buildContentCell(
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 2),
-                                            child: IconButton(
-                                              icon: WebsafeSvg.asset(
-                                                ImageAssets.oderlistCloseIcon,
-                                                width: 15,
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 3,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: IconButton(
+                                                icon: WebsafeSvg.asset(
+                                                  ImageAssets.oderlistCloseIcon,
+                                                  width: 15,
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                onPressed: () {
+                                                  localProductProvider
+                                                      .removeFromCart(
+                                                    item.product.productId!,
+                                                    item.selectedStock,
+                                                    stockGroupIds:
+                                                        item.stockGroupIds,
+                                                    saleUnitId: item.saleUnitId,
+                                                  );
+                                                },
                                               ),
-                                              padding: EdgeInsets.zero,
-                                              constraints:
-                                                  const BoxConstraints(),
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                              onPressed: () {
-                                                localProductProvider
-                                                    .removeFromCart(
-                                                  item.product.productId!,
-                                                  item.selectedStock,
-                                                  stockGroupIds:
-                                                      item.stockGroupIds,
-                                                  saleUnitId: item.saleUnitId,
-                                                );
-                                              },
                                             ),
                                           ),
                                           flex: 1,
@@ -3173,15 +3219,24 @@ class BillingPageState extends State<BillingPage>
     debugPrint("⌨️ [BillingPage] Focusing cart table");
     setState(() {
       _cartTableFocusedRowIndex = 0;
+      _cartTableFocusedCellIndex = null;
     });
     _cartTableFocusNode.requestFocus();
   }
 
-  void _handleCartTableKey(KeyEvent event, List<LocalCartItem> cartItems,
+  KeyEventResult _handleCartTableKey(
+      KeyEvent event,
+      List<LocalCartItem> cartItems,
       LocalProductProvider localProductProvider) {
-    if (event is! KeyDownEvent || cartItems.isEmpty) return;
+    if (event is! KeyDownEvent || cartItems.isEmpty) {
+      return KeyEventResult.ignored;
+    }
 
     final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.tab) {
+      return _handleCartTableTabKey(cartItems.length);
+    }
+
     if (key == LogicalKeyboardKey.arrowDown) {
       setState(() {
         if (_cartTableFocusedRowIndex == null) {
@@ -3190,7 +3245,7 @@ class BillingPageState extends State<BillingPage>
           _cartTableFocusedRowIndex = _cartTableFocusedRowIndex! + 1;
         }
       });
-      return;
+      return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowUp) {
@@ -3201,7 +3256,23 @@ class BillingPageState extends State<BillingPage>
           _cartTableFocusedRowIndex = _cartTableFocusedRowIndex! - 1;
         }
       });
-      return;
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        _cartTableFocusedCellIndex =
+            ((_cartTableFocusedCellIndex ?? -1) + 1).clamp(0, 3).toInt();
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        _cartTableFocusedCellIndex =
+            ((_cartTableFocusedCellIndex ?? 0) - 1).clamp(0, 3).toInt();
+      });
+      return KeyEventResult.handled;
     }
 
     final focusedIndex =
@@ -3209,14 +3280,29 @@ class BillingPageState extends State<BillingPage>
     final item = cartItems[focusedIndex];
 
     if (key == LogicalKeyboardKey.enter) {
-      _showProductDetailsDialog(item);
-      return;
+      if (_cartTableFocusedCellIndex == 0) {
+        _showProductDetailsDialog(item);
+      } else if (_cartTableFocusedCellIndex == 1) {
+        setState(() {
+          _cartQuantityEditRequestKey = _cartIdentityKey(item);
+          _cartQuantityEditRequestId++;
+        });
+      } else if (_cartTableFocusedCellIndex == 2) {
+        setState(() {
+          _cartPriceEditRequestKey = _cartIdentityKey(item);
+          _cartPriceEditRequestId++;
+        });
+      } else if (_cartTableFocusedCellIndex == 3) {
+        _removeCartItemFromKeyboard(
+            item, localProductProvider, cartItems.length);
+      }
+      return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.delete ||
         key == LogicalKeyboardKey.backspace) {
       _removeCartItemFromKeyboard(item, localProductProvider, cartItems.length);
-      return;
+      return KeyEventResult.handled;
     }
 
     final character = event.character;
@@ -3229,12 +3315,67 @@ class BillingPageState extends State<BillingPage>
 
     if (isIncreaseKey) {
       unawaited(_adjustCartItemQuantityFromKeyboard(item, 1));
-      return;
+      return KeyEventResult.handled;
     }
 
     if (isDecreaseKey) {
       unawaited(_adjustCartItemQuantityFromKeyboard(item, -1));
+      return KeyEventResult.handled;
     }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleCartTableTabKey(int cartLength) {
+    const int lastCellIndex = 3;
+    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final rowIndex = (_cartTableFocusedRowIndex ?? 0).clamp(0, cartLength - 1);
+    final cellIndex = _cartTableFocusedCellIndex;
+
+    if (isShiftPressed) {
+      if (cellIndex == null) {
+        return KeyEventResult.ignored;
+      }
+      setState(() {
+        if (cellIndex > 0) {
+          _cartTableFocusedCellIndex = cellIndex - 1;
+        } else if (rowIndex > 0) {
+          _cartTableFocusedRowIndex = rowIndex - 1;
+          _cartTableFocusedCellIndex = lastCellIndex;
+        } else {
+          _cartTableFocusedCellIndex = null;
+        }
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (cellIndex == null) {
+      setState(() {
+        _cartTableFocusedRowIndex = rowIndex;
+        _cartTableFocusedCellIndex = 0;
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (cellIndex < lastCellIndex) {
+      setState(() {
+        _cartTableFocusedCellIndex = cellIndex + 1;
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (rowIndex < cartLength - 1) {
+      setState(() {
+        _cartTableFocusedRowIndex = rowIndex + 1;
+        _cartTableFocusedCellIndex = 0;
+      });
+      return KeyEventResult.handled;
+    }
+
+    setState(() {
+      _cartTableFocusedCellIndex = null;
+    });
+    return KeyEventResult.ignored;
   }
 
   void _removeCartItemFromKeyboard(LocalCartItem item,
@@ -3304,6 +3445,37 @@ class BillingPageState extends State<BillingPage>
         child: child,
       ),
     );
+  }
+
+  Widget _buildCartKeyboardCell({
+    required int rowIndex,
+    required int cellIndex,
+    required Widget child,
+  }) {
+    final focusHighlightEnabled =
+        context.watch<KeyboardFocusHighlightProvider>().enabled;
+    final isFocused = focusHighlightEnabled &&
+        _cartTableFocusNode.hasFocus &&
+        _cartTableFocusedRowIndex == rowIndex &&
+        _cartTableFocusedCellIndex == cellIndex;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isFocused ? Colors.orange : Colors.transparent,
+          width: isFocused ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(5),
+        color: isFocused ? Colors.orange.withOpacity(0.10) : Colors.transparent,
+      ),
+      child: child,
+    );
+  }
+
+  String _cartIdentityKey(LocalCartItem item) {
+    final groupKey = item.stockGroupIds.join('_');
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
   }
 
   // Show product details dialog for the given cart item using reusable widget
