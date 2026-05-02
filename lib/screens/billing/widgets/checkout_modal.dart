@@ -316,6 +316,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _applyDefaultPaymentMethod();
       _requestCurrentStepFocus();
     });
+    HardwareKeyboard.instance.addHandler(_onHardwareKey);
+    debugPrint("⌨️ [CheckoutModal] Hardware keyboard handler registered");
   }
 
   @override
@@ -420,6 +422,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   void dispose() {
     debugPrint(
         "⌨️ [CheckoutModal] dispose | step=$_currentStep | paymentVisited=$_hasOpenedPaymentModalOnce");
+    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _customerSearchController.dispose();
     _customerSearchFocusNode.dispose();
     _customerListFocusNode.dispose();
@@ -763,11 +766,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return Focus(
       autofocus: true,
       canRequestFocus: true,
-      onKeyEvent: (node, event) {
-        return _onHardwareKey(event)
-            ? KeyEventResult.handled
-            : KeyEventResult.ignored;
-      },
       child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
