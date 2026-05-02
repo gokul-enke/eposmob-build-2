@@ -12,7 +12,14 @@ import 'package:provider/provider.dart';
 
 class HorizontalProductViewLocal extends StatefulWidget {
   final int? cartId;
-  const HorizontalProductViewLocal({super.key, this.cartId});
+  final bool autofocus;
+  final int focusRequestId;
+  const HorizontalProductViewLocal({
+    super.key,
+    this.cartId,
+    this.autofocus = false,
+    this.focusRequestId = 0,
+  });
 
   @override
   State<HorizontalProductViewLocal> createState() =>
@@ -22,7 +29,9 @@ class HorizontalProductViewLocal extends StatefulWidget {
 class _HorizontalProductViewLocalState
     extends State<HorizontalProductViewLocal> {
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _gridFocusNode = FocusNode();
   bool _isDragging = false;
+  int _focusedProductIndex = 0;
 
   // Define your custom prices array
   final List<double> customPrices = [
@@ -43,14 +52,39 @@ class _HorizontalProductViewLocalState
   @override
   void initState() {
     super.initState();
+    _gridFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchProducts();
+      _requestGridFocusIfNeeded();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant HorizontalProductViewLocal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autofocus &&
+        widget.focusRequestId != oldWidget.focusRequestId) {
+      _requestGridFocusIfNeeded();
+    }
+  }
+
+  void _requestGridFocusIfNeeded() {
+    if (!widget.autofocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _gridFocusNode.requestFocus();
+      }
     });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _gridFocusNode.dispose();
     super.dispose();
   }
 
@@ -112,6 +146,43 @@ class _HorizontalProductViewLocalState
     }
   }
 
+  KeyEventResult _handleGridKey(KeyEvent event, List<GetProduct> products) {
+    if (event is! KeyDownEvent || products.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      final index = _focusedProductIndex.clamp(0, products.length - 1).toInt();
+      _handleProductSelection(products[index]);
+      return KeyEventResult.handled;
+    }
+
+    int? delta;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      delta = 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      delta = -1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      delta = 3;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      delta = -3;
+    }
+
+    if (delta == null) {
+      return KeyEventResult.ignored;
+    }
+
+    setState(() {
+      _focusedProductIndex = (_focusedProductIndex + delta!)
+          .clamp(0, products.length - 1)
+          .toInt();
+    });
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<GridSelectionProvider>(
@@ -121,6 +192,9 @@ class _HorizontalProductViewLocalState
         if (products.isEmpty) {
           return Container();
         }
+
+        final focusedIndex =
+            _focusedProductIndex.clamp(0, products.length - 1).toInt();
 
         return Container(
           height: 300, // Fixed height for grid
@@ -134,24 +208,29 @@ class _HorizontalProductViewLocalState
                 PointerDeviceKind.trackpad,
               },
             ),
-            child: GridView.builder(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, // 3 cards per row like sidebar
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 0.8, // Same as sidebar
+            child: Focus(
+              focusNode: _gridFocusNode,
+              autofocus: widget.autofocus,
+              onKeyEvent: (node, event) => _handleGridKey(event, products),
+              child: GridView.builder(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, // 3 cards per row like sidebar
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 0.8, // Same as sidebar
+                ),
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  return ProductCardWidget(
+                    product: product,
+                    onTap: () => _handleProductSelection(product),
+                    isSelected: _gridFocusNode.hasFocus && index == focusedIndex,
+                  );
+                },
               ),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return ProductCardWidget(
-                  product: product,
-                  onTap: () => _handleProductSelection(product),
-                  isSelected: false, // You can add selection logic if needed
-                );
-              },
             ),
           ),
         );

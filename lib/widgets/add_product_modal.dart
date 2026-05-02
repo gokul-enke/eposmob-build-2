@@ -1215,6 +1215,12 @@ class _AddProductWithBarcodeModalState
       canRequestFocus: false,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.escape) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            Navigator.pop(context, null);
+          }
+          return KeyEventResult.handled;
+        }
         if (event.logicalKey == LogicalKeyboardKey.f4) {
           if (!isLoading && !isSaveAndCreateLoading) {
             Navigator.pop(context, null);

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 import '../resources/color_manager.dart';
@@ -170,7 +172,7 @@ class CustomRoundButtonWithIcon extends StatelessWidget {
   }
 }
 
-class CustomRoundButton extends StatelessWidget {
+class CustomRoundButton extends StatefulWidget {
   final String title;
   final Function fct;
   final double fontSize;
@@ -182,7 +184,7 @@ class CustomRoundButton extends StatelessWidget {
   final double? radius;
   final bool isLoading;
   const CustomRoundButton({
-    Key? key,
+    super.key,
     required this.title,
     required this.fct,
     required this.height,
@@ -193,25 +195,69 @@ class CustomRoundButton extends StatelessWidget {
     this.radius,
     this.borderColor,
     this.isLoading = false,
-  }) : super(key: key);
+  });
+
+  @override
+  State<CustomRoundButton> createState() => _CustomRoundButtonState();
+}
+
+class _CustomRoundButtonState extends State<CustomRoundButton> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
+    bool focusHighlightEnabled = true;
+    try {
+      focusHighlightEnabled =
+          Provider.of<KeyboardFocusHighlightProvider>(context).enabled;
+    } on ProviderNotFoundException {
+      focusHighlightEnabled = true;
+    }
+    final bool isFocused = focusHighlightEnabled && _focusNode.hasFocus;
+    final double radius = widget.radius ?? 5;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      width: widget.width,
+      height: widget.height,
       decoration: BoxDecoration(
-        border: Border.all(color: borderColor ?? ColorManager.kPrimaryColor),
-        color: boxColor ?? ColorManager.kPrimaryColor,
-        borderRadius: BorderRadius.circular(radius ?? 5),
+        border: Border.all(
+          color: isFocused
+              ? ColorManager.kPrimaryColor
+              : widget.borderColor ?? ColorManager.kPrimaryColor,
+          width: isFocused ? 3 : 1,
+        ),
+        color: widget.boxColor ?? ColorManager.kPrimaryColor,
+        borderRadius: BorderRadius.circular(radius),
       ),
       child: MaterialButton(
-        onPressed: isLoading
+        focusNode: _focusNode,
+        focusColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        onPressed: widget.isLoading
             ? null
             : () {
-                fct();
+                widget.fct();
               },
-        child: isLoading
+        child: widget.isLoading
             ? const SizedBox(
                 height: 20,
                 width: 20,
@@ -220,12 +266,12 @@ class CustomRoundButton extends StatelessWidget {
                 ),
               )
             : Text(
-                title,
+                widget.title,
                 style: TextStyle(
                     fontFamily: FontConstants.fontFamily,
-                    fontSize: fontSize,
+                    fontSize: widget.fontSize,
                     fontWeight: FontWeightManager.semiBold,
-                    color: textColor ?? Colors.white),
+                    color: widget.textColor ?? Colors.white),
               ),
       ),
     );

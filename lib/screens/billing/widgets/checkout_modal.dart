@@ -177,6 +177,16 @@ class _CheckoutModalState extends State<CheckoutModal> {
   List<CustomerListModelData> _filteredCustomers = [];
   final TextEditingController _customerSearchController =
       TextEditingController();
+  final FocusNode _customerSearchFocusNode = FocusNode();
+  final FocusNode _customerListFocusNode = FocusNode();
+  int _focusedCustomerIndex = 0;
+  // Customer grid uses 3 columns — kept in sync with the GridView delegate
+  // below so arrow-key navigation maps cleanly to visual rows.
+  static const int _customerGridColumns = 3;
+  final FocusNode _deliveryMethodFocusNode = FocusNode();
+  final FocusNode _deliveryCarNumberFocusNode = FocusNode();
+  final FocusNode _deliveryCommentFocusNode = FocusNode();
+  final FocusNode _deliveryAddressFocusNode = FocusNode();
 
   // Local State to handle Optimistic Updates (Fixes "Not selecting" issues)
   CustomerListModelData? _localSelectedCustomer;
@@ -195,6 +205,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   late TextEditingController _lAddressController;
   DateTime? _lSelectedDeliveryDate;
   TimeOfDay? _lSelectedDeliveryTime;
+
+  /// Name of the delivery-method tile that currently has keyboard focus,
+  /// or null when none. Drives the orange focus ring on each tile.
+  String? _focusedDeliveryMethodName;
 
   // Local Payment State
   late bool _lIsCashSelected;
@@ -300,6 +314,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyDefaultPaymentMethod();
+      _requestCurrentStepFocus();
     });
     HardwareKeyboard.instance.addHandler(_onHardwareKey);
     debugPrint("⌨️ [CheckoutModal] Hardware keyboard handler registered");
@@ -340,6 +355,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         setState(() {
           _currentStep = 3;
         });
+        _requestCurrentStepFocus();
       });
     }
   }
@@ -408,10 +424,32 @@ class _CheckoutModalState extends State<CheckoutModal> {
         "⌨️ [CheckoutModal] dispose | step=$_currentStep | paymentVisited=$_hasOpenedPaymentModalOnce");
     HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _customerSearchController.dispose();
+    _customerSearchFocusNode.dispose();
+    _customerListFocusNode.dispose();
+    _deliveryMethodFocusNode.dispose();
+    _deliveryCarNumberFocusNode.dispose();
+    _deliveryCommentFocusNode.dispose();
+    _deliveryAddressFocusNode.dispose();
     _lCarNumberController.dispose();
     _lCommentController.dispose();
     _lAddressController.dispose();
     super.dispose();
+  }
+
+  void _requestCurrentStepFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isAddingCustomer) return;
+      switch (_currentStep) {
+        case 0:
+          _customerSearchFocusNode.requestFocus();
+          break;
+        case 1:
+          if (widget.enableDelivery) {
+            _deliveryMethodFocusNode.requestFocus();
+          }
+          break;
+      }
+    });
   }
 
   bool _onHardwareKey(KeyEvent event) {
@@ -484,6 +522,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       setState(() {
         _currentStep = next;
       });
+      _requestCurrentStepFocus();
     }
   }
 
@@ -496,6 +535,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       setState(() {
         _currentStep = prev;
       });
+      _requestCurrentStepFocus();
     }
   }
 
@@ -506,6 +546,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       setState(() {
         _currentStep = step;
       });
+      _requestCurrentStepFocus();
     }
   }
 
@@ -955,107 +996,125 @@ class _CheckoutModalState extends State<CheckoutModal> {
   Widget _buildCustomerStep() {
     final hasInternet = context.watch<BillingProvider>().hasInternet;
 
-    return Column(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left: Search, Selected Customer, and List
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    children: [
-                      // Search Bar
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: TextField(
-                          controller: _customerSearchController,
-                          onChanged: _filterCustomers,
-                          decoration: InputDecoration(
-                            hintText: 'Search by name or phone number...',
-                            hintStyle: TextStyle(color: Colors.grey.shade500),
-                            prefixIcon:
-                                Icon(Icons.search, color: Colors.grey.shade500),
-                            suffixIcon: _customerSearchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: Icon(Icons.clear,
-                                        color: Colors.grey.shade500),
-                                    onPressed: () {
-                                      _customerSearchController.clear();
-                                      _filterCustomers('');
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Selected Customer Card (moved here from right panel)
-                      _buildSelectedCustomerCard(),
-                      const SizedBox(height: 16),
-                      // List
-                      Expanded(child: _buildCustomerList()),
-                      if (hasInternet) ...[
-                        const SizedBox(height: 16),
-                        // Add Customer Button (online only)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            icon: _isAddingCustomer
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor:
-                                          AlwaysStoppedAnimation(Colors.grey),
-                                    ),
-                                  )
-                                : const Icon(Icons.person_add),
-                            label: Text(_isAddingCustomer
-                                ? 'Adding...'
-                                : 'Add New Customer'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: const Color(0xFFECFDF3),
-                              foregroundColor: const Color(0xFF047857),
-                              side: const BorderSide(color: Color(0xFF34D399)),
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left: Search, Selected Customer, and List
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      children: [
+                        // Search Bar
+                        FocusTraversalOrder(
+                          order: const NumericFocusOrder(10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
                             ),
-                            onPressed:
-                                _isAddingCustomer ? null : _handleAddNewCustomer,
+                            child: TextField(
+                              controller: _customerSearchController,
+                              focusNode: _customerSearchFocusNode,
+                              onChanged: _filterCustomers,
+                              decoration: InputDecoration(
+                                hintText: 'Search by name or phone number...',
+                                hintStyle: TextStyle(color: Colors.grey.shade500),
+                                prefixIcon:
+                                    Icon(Icons.search, color: Colors.grey.shade500),
+                                suffixIcon: _customerSearchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: Icon(Icons.clear,
+                                            color: Colors.grey.shade500),
+                                        onPressed: () {
+                                          _customerSearchController.clear();
+                                          _filterCustomers('');
+                                        },
+                                      )
+                                    : null,
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                              ),
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        // Selected Customer Card (moved here from right panel)
+                        FocusTraversalOrder(
+                          order: const NumericFocusOrder(20),
+                          child: _buildSelectedCustomerCard(),
+                        ),
+                        const SizedBox(height: 16),
+                        // List
+                        Expanded(
+                          child: FocusTraversalOrder(
+                            order: const NumericFocusOrder(30),
+                            child: _buildCustomerList(),
+                          ),
+                        ),
+                        if (hasInternet) ...[
+                          const SizedBox(height: 16),
+                          // Add Customer Button (online only)
+                          FocusTraversalOrder(
+                            order: const NumericFocusOrder(40),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: _isAddingCustomer
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation(Colors.grey),
+                                        ),
+                                      )
+                                    : const Icon(Icons.person_add),
+                                label: Text(_isAddingCustomer
+                                    ? 'Adding...'
+                                    : 'Add New Customer'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: const Color(0xFFECFDF3),
+                                  foregroundColor: const Color(0xFF047857),
+                                  side: const BorderSide(color: Color(0xFF34D399)),
+                                ),
+                                onPressed:
+                                    _isAddingCustomer ? null : _handleAddNewCustomer,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 24),
-                const VerticalDivider(width: 1),
-                const SizedBox(width: 24),
-                // Right: Summary only (no customer card)
-                Expanded(
-                  flex: 2,
-                  child: _buildCompactSummary(),
-                ),
-              ],
+                  const SizedBox(width: 24),
+                  const VerticalDivider(width: 1),
+                  const SizedBox(width: 24),
+                  // Right: Summary only (no customer card)
+                  Expanded(
+                    flex: 2,
+                    child: _buildCompactSummary(),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        _buildFooter(
-          onPrint: _handlePrint,
-          onConfirm: _handleConfirm,
-        ),
-      ],
+          _buildFooter(
+            onPrint: _handlePrint,
+            onConfirm: _handleConfirm,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1074,38 +1133,52 @@ class _CheckoutModalState extends State<CheckoutModal> {
       );
     }
 
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 2.9,
-      ),
-      itemCount: _filteredCustomers.length,
-      itemBuilder: (context, index) {
-        final customer = _filteredCustomers[index];
-        final isSelected = _localSelectedCustomer?.id == customer.id;
+    final clampedIndex = _filteredCustomers.isEmpty
+        ? 0
+        : _focusedCustomerIndex
+            .clamp(0, _filteredCustomers.length - 1)
+            .toInt();
 
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _handleCustomerSelection(customer),
-            borderRadius: BorderRadius.circular(10),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF2563EB).withOpacity(0.1)
-                    : Colors.white,
-                border: Border.all(
+    return Focus(
+      focusNode: _customerListFocusNode,
+      onKeyEvent: (node, event) =>
+          _handleCustomerListKey(event, _filteredCustomers),
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _customerGridColumns,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 2.9,
+        ),
+        itemCount: _filteredCustomers.length,
+        itemBuilder: (context, index) {
+          final customer = _filteredCustomers[index];
+          final isSelected = _localSelectedCustomer?.id == customer.id;
+          final isKeyboardFocused =
+              _customerListFocusNode.hasFocus && index == clampedIndex;
+
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _handleCustomerSelection(customer),
+              borderRadius: BorderRadius.circular(10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade200,
-                  width: isSelected ? 2 : 1,
+                      ? const Color(0xFF2563EB).withOpacity(0.1)
+                      : Colors.white,
+                  border: Border.all(
+                    color: isKeyboardFocused
+                        ? const Color(0xFFF59E0B)
+                        : (isSelected
+                            ? const Color(0xFF2563EB)
+                            : Colors.grey.shade200),
+                    width: (isKeyboardFocused || isSelected) ? 2 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                borderRadius: BorderRadius.circular(10),
-              ),
               child: Row(
                 children: [
                   Container(
@@ -1151,11 +1224,52 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     const Icon(Icons.check_circle, color: Color(0xFF2563EB)),
                 ],
               ),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
+  }
+
+  /// Handles arrow keys + Enter/Space inside the customer grid. Mirrors the
+  /// pattern used by `HorizontalSavedOrdersView._handleOrdersGridKey`.
+  KeyEventResult _handleCustomerListKey(
+      KeyEvent event, List<CustomerListModelData> customers) {
+    if (event is! KeyDownEvent || customers.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      final index =
+          _focusedCustomerIndex.clamp(0, customers.length - 1).toInt();
+      _handleCustomerSelection(customers[index]);
+      return KeyEventResult.handled;
+    }
+
+    int? delta;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      delta = 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      delta = -1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      delta = _customerGridColumns;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      delta = -_customerGridColumns;
+    }
+
+    if (delta == null) return KeyEventResult.ignored;
+
+    setState(() {
+      _focusedCustomerIndex = (_focusedCustomerIndex + delta!)
+          .clamp(0, customers.length - 1)
+          .toInt();
+    });
+    return KeyEventResult.handled;
   }
 
   Widget _buildSelectedCustomerCard() {
@@ -1306,20 +1420,22 @@ class _CheckoutModalState extends State<CheckoutModal> {
   // --- STEP 1.5: DELIVERY ---
   Widget _buildDeliveryStep() {
     Size size = MediaQuery.of(context).size;
-    return Column(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left: Delivery Options
-                Expanded(
-                  flex: 3,
-                  child: SingleChildScrollView(
-                    child: Consumer<DeliveryMethodsProvider>(
-                      builder: (context, provider, child) {
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left: Delivery Options
+                  Expanded(
+                    flex: 3,
+                    child: SingleChildScrollView(
+                      child: Consumer<DeliveryMethodsProvider>(
+                        builder: (context, provider, child) {
                       final appSettings =
                         Provider.of<AppSettingsProvider>(context,
                               listen: false)
@@ -1360,14 +1476,47 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            Wrap(
+                            // Arrow keys navigate between delivery method
+                            // tiles via Flutter's built-in focus traversal.
+                            // Tab/Shift+Tab also work via FocusTraversalOrder.
+                            Shortcuts(
+                              shortcuts: const <ShortcutActivator, Intent>{
+                                SingleActivator(LogicalKeyboardKey.arrowLeft):
+                                    PreviousFocusIntent(),
+                                SingleActivator(LogicalKeyboardKey.arrowRight):
+                                    NextFocusIntent(),
+                                SingleActivator(LogicalKeyboardKey.arrowUp):
+                                    PreviousFocusIntent(),
+                                SingleActivator(LogicalKeyboardKey.arrowDown):
+                                    NextFocusIntent(),
+                              },
+                              child: Wrap(
                               spacing: 12,
                               runSpacing: 12,
                               children: provider.deliveryMethods.map((method) {
+                                final methodIndex =
+                                    provider.deliveryMethods.indexOf(method);
                                 final isSelected =
                                     _lDeliveryMethod == method.name;
-                                return GestureDetector(
-                                  onTap: () {
+                                final isFocused =
+                                    _focusedDeliveryMethodName == method.name;
+                                return FocusTraversalOrder(
+                                  order: NumericFocusOrder(10 + methodIndex.toDouble()),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: InkWell(
+                                      focusNode: methodIndex == 0
+                                          ? _deliveryMethodFocusNode
+                                          : null,
+                                      borderRadius: BorderRadius.circular(10),
+                                      onFocusChange: (focused) {
+                                        setState(() {
+                                          _focusedDeliveryMethodName =
+                                              focused ? method.name : null;
+                                        });
+                                      },
+                                      onTap: () {
                                     setState(() {
                                       _lDeliveryMethod = method.name;
                                       _lDeliveryMethodId = method.id;
@@ -1414,7 +1563,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     });
                                     _handleDeliveryUpdate();
                                   },
-                                  child: AnimatedContainer(
+                                      child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     width: 118,
                                     height: 104,
@@ -1427,11 +1576,24 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                           : Colors.white,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: isSelected
-                                            ? ColorManager.kPrimaryColor
-                                            : Colors.grey.shade200,
-                                        width: isSelected ? 2 : 1,
+                                        color: isFocused
+                                            ? Colors.orange
+                                            : isSelected
+                                                ? ColorManager.kPrimaryColor
+                                                : Colors.grey.shade200,
+                                        width:
+                                            isFocused ? 3 : (isSelected ? 2 : 1),
                                       ),
+                                      boxShadow: isFocused
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.orange
+                                                    .withOpacity(0.35),
+                                                blurRadius: 8,
+                                                spreadRadius: 1,
+                                              ),
+                                            ]
+                                          : null,
                                     ),
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1520,8 +1682,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                       ],
                                     ),
                                   ),
+                                    ),
+                                  ),
                                 );
                               }).toList(),
+                            ),
                             ),
                             if (_lDeliveryMethod.isNotEmpty &&
                                 isDeliveryChargeDataEnabled) ...[
@@ -1696,37 +1861,45 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ],
                             const SizedBox(height: 30),
                             if (_lDeliveryMethod == "Car Delivery") ...[
-                              buildColumnWidgetForTextFields(
-                                controller: _lCarNumberController,
+                              FocusTraversalOrder(
+                                order: const NumericFocusOrder(60),
+                                child: buildColumnWidgetForTextFields(
+                                  controller: _lCarNumberController,
+                                  focusNode: _deliveryCarNumberFocusNode,
+                                  size: size,
+                                  height: 50,
+                                  hintText: 'Car Number:',
+                                  width: double.infinity,
+                                  margin: EdgeInsets.zero,
+                                  onTap: () {
+                                    Provider.of<KeyboardProvider>(context,
+                                            listen: false)
+                                        .show('text', _lCarNumberController,
+                                            replaceOnFirstInput: true);
+                                  },
+                                  onchanged: (_) => _handleDeliveryUpdate(),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(70),
+                              child: buildColumnWidgetForTextFields(
+                                controller: _lCommentController,
+                                focusNode: _deliveryCommentFocusNode,
                                 size: size,
                                 height: 50,
-                                hintText: 'Car Number:',
+                                hintText: 'Comment:',
                                 width: double.infinity,
                                 margin: EdgeInsets.zero,
                                 onTap: () {
                                   Provider.of<KeyboardProvider>(context,
                                           listen: false)
-                                      .show('text', _lCarNumberController,
+                                      .show('text', _lCommentController,
                                           replaceOnFirstInput: true);
                                 },
                                 onchanged: (_) => _handleDeliveryUpdate(),
                               ),
-                              const SizedBox(height: 10),
-                            ],
-                            buildColumnWidgetForTextFields(
-                              controller: _lCommentController,
-                              size: size,
-                              height: 50,
-                              hintText: 'Comment:',
-                              width: double.infinity,
-                              margin: EdgeInsets.zero,
-                              onTap: () {
-                                Provider.of<KeyboardProvider>(context,
-                                        listen: false)
-                                    .show('text', _lCommentController,
-                                        replaceOnFirstInput: true);
-                              },
-                              onchanged: (_) => _handleDeliveryUpdate(),
                             ),
                             if (_lDeliveryMethod == "Door Delivery") ...[
                               const SizedBox(height: 10),
@@ -1760,8 +1933,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                         children: customerProvider
                                             .selectedCustomer!.addresses!
                                             .map((Address address) {
-                                          return GestureDetector(
-                                            onTap: () {
+                                          return Material(
+                                            color: Colors.transparent,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              onTap: () {
                                               setState(() {
                                                 String fullAddress =
                                                     "${address.address}, ${address.city}";
@@ -1770,7 +1949,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               });
                                               _handleDeliveryUpdate();
                                             },
-                                            child: Container(
+                                              child: Container(
                                               padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 border: Border.all(
@@ -1792,6 +1971,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                                 ),
                                               ),
                                             ),
+                                            ),
                                           );
                                         }).toList(),
                                       ),
@@ -1800,20 +1980,24 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 },
                               ),
                               const SizedBox(height: 10),
-                              buildColumnWidgetForTextFields(
-                                controller: _lAddressController,
-                                size: size,
-                                height: 50,
-                                hintText: 'Address:',
-                                width: double.infinity,
-                                margin: EdgeInsets.zero,
-                                onTap: () {
-                                  Provider.of<KeyboardProvider>(context,
-                                          listen: false)
-                                      .show('text', _lAddressController,
-                                          replaceOnFirstInput: true);
-                                },
-                                onchanged: (_) => _handleDeliveryUpdate(),
+                              FocusTraversalOrder(
+                                order: const NumericFocusOrder(90),
+                                child: buildColumnWidgetForTextFields(
+                                  controller: _lAddressController,
+                                  focusNode: _deliveryAddressFocusNode,
+                                  size: size,
+                                  height: 50,
+                                  hintText: 'Address:',
+                                  width: double.infinity,
+                                  margin: EdgeInsets.zero,
+                                  onTap: () {
+                                    Provider.of<KeyboardProvider>(context,
+                                            listen: false)
+                                        .show('text', _lAddressController,
+                                            replaceOnFirstInput: true);
+                                  },
+                                  onchanged: (_) => _handleDeliveryUpdate(),
+                                ),
                               ),
                             ],
                           ],
@@ -1840,153 +2024,157 @@ class _CheckoutModalState extends State<CheckoutModal> {
           onConfirm: _handleConfirm,
         ),
       ],
-    );
+    ),
+  );
   }
 
   // --- STEP 2: DISCOUNT ---
   Widget _buildDiscountStep() {
-    return Column(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left: Discount Options
-                Expanded(
-                  flex: 3,
-                  child: RestaurantCouponModalWrapper(
-                    orderSubTotal: widget.cartTotal,
-                    initialCouponCode: _localCouponCode,
-                    initialFlatDiscount: _localFlatDiscount,
-                    initialPercentageDiscount: _localPercentageDiscount,
-                    isCouponApplied: _localIsCouponApplied,
-                    showAsDialog: false,
-                    showSkipButton: true,
-                    onSkip: () => _goToStep(3),
-                    showShadow: false,
-                    fullWidth: true,
-                    onCouponAction: (code, applied,
-                        {flatDiscount, percentageDiscount}) {
-                      final newFlatDiscount = flatDiscount ?? 0.0;
-                      final newPercentageDiscount = percentageDiscount ?? 0.0;
-                      final oldDiscountAmount = _localFlatDiscount +
-                          (widget.cartTotal * _localPercentageDiscount / 100);
-                      final oldEffectiveTotal =
-                          widget.cartTotal - oldDiscountAmount;
-                      final newDiscountAmount = newFlatDiscount +
-                          (widget.cartTotal * newPercentageDiscount / 100);
-                      final newEffectiveTotal =
-                          widget.cartTotal - newDiscountAmount;
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left: Discount Options
+                  Expanded(
+                    flex: 3,
+                    child: RestaurantCouponModalWrapper(
+                      orderSubTotal: widget.cartTotal,
+                      initialCouponCode: _localCouponCode,
+                      initialFlatDiscount: _localFlatDiscount,
+                      initialPercentageDiscount: _localPercentageDiscount,
+                      isCouponApplied: _localIsCouponApplied,
+                      showAsDialog: false,
+                      showSkipButton: true,
+                      onSkip: () => _goToStep(3),
+                      showShadow: false,
+                      fullWidth: true,
+                      onCouponAction: (code, applied,
+                          {flatDiscount, percentageDiscount}) {
+                        final newFlatDiscount = flatDiscount ?? 0.0;
+                        final newPercentageDiscount = percentageDiscount ?? 0.0;
+                        final oldDiscountAmount = _localFlatDiscount +
+                            (widget.cartTotal * _localPercentageDiscount / 100);
+                        final oldEffectiveTotal =
+                            widget.cartTotal - oldDiscountAmount;
+                        final newDiscountAmount = newFlatDiscount +
+                            (widget.cartTotal * newPercentageDiscount / 100);
+                        final newEffectiveTotal =
+                            widget.cartTotal - newDiscountAmount;
 
-                      String nextCash = _lCashAmount;
-                      String nextCard = _lCardAmount;
-                      String nextUpi = _lUpiAmount;
-                      String nextCod = _lCodAmount;
+                        String nextCash = _lCashAmount;
+                        String nextCard = _lCardAmount;
+                        String nextUpi = _lUpiAmount;
+                        String nextCod = _lCodAmount;
 
-                      final bool anySelected = _lIsCashSelected ||
-                          _lIsCardSelected ||
-                          _lIsUpiSelected ||
-                          _lIsCodSelected;
+                        final bool anySelected = _lIsCashSelected ||
+                            _lIsCardSelected ||
+                            _lIsUpiSelected ||
+                            _lIsCodSelected;
 
-                      final int selectedCount =
-                          (_lIsCashSelected ? 1 : 0) +
-                              (_lIsCardSelected ? 1 : 0) +
-                              (_lIsUpiSelected ? 1 : 0) +
-                              (_lIsCodSelected ? 1 : 0);
+                        final int selectedCount =
+                            (_lIsCashSelected ? 1 : 0) +
+                                (_lIsCardSelected ? 1 : 0) +
+                                (_lIsUpiSelected ? 1 : 0) +
+                                (_lIsCodSelected ? 1 : 0);
 
-                      final double cashVal = double.tryParse(_lCashAmount) ?? 0.0;
-                      final double cardVal = double.tryParse(_lCardAmount) ?? 0.0;
-                      final double upiVal = double.tryParse(_lUpiAmount) ?? 0.0;
-                      final double codVal = double.tryParse(_lCodAmount) ?? 0.0;
-                      final double totalPaid = cashVal + cardVal + upiVal + codVal;
+                        final double cashVal = double.tryParse(_lCashAmount) ?? 0.0;
+                        final double cardVal = double.tryParse(_lCardAmount) ?? 0.0;
+                        final double upiVal = double.tryParse(_lUpiAmount) ?? 0.0;
+                        final double codVal = double.tryParse(_lCodAmount) ?? 0.0;
+                        final double totalPaid = cashVal + cardVal + upiVal + codVal;
 
-                      // If nothing is selected, clear stale amounts so Payment tab auto-fill
-                      // always uses the freshly discounted total.
-                      if (!anySelected) {
-                        nextCash = '';
-                        nextCard = '';
-                        nextUpi = '';
-                        nextCod = '';
-                      }
-
-                      // If exactly one method is selected and it matched old effective total,
-                      // remap it to the new discounted total.
-                      if (selectedCount == 1 &&
-                          (totalPaid - oldEffectiveTotal).abs() < 0.01) {
-                        final remappedAmount = newEffectiveTotal.toStringAsFixed(2);
-                        if (_lIsCashSelected) {
-                          nextCash = remappedAmount;
-                          nextCard = '';
-                          nextUpi = '';
-                          nextCod = '';
-                        } else if (_lIsCardSelected) {
-                          nextCash = '';
-                          nextCard = remappedAmount;
-                          nextUpi = '';
-                          nextCod = '';
-                        } else if (_lIsUpiSelected) {
-                          nextCash = '';
-                          nextCard = '';
-                          nextUpi = remappedAmount;
-                          nextCod = '';
-                        } else if (_lIsCodSelected) {
+                        // If nothing is selected, clear stale amounts so Payment tab auto-fill
+                        // always uses the freshly discounted total.
+                        if (!anySelected) {
                           nextCash = '';
                           nextCard = '';
                           nextUpi = '';
-                          nextCod = remappedAmount;
+                          nextCod = '';
                         }
-                      }
 
-                      _handleDiscountUpdate(code, applied, newFlatDiscount,
-                          newPercentageDiscount);
+                        // If exactly one method is selected and it matched old effective total,
+                        // remap it to the new discounted total.
+                        if (selectedCount == 1 &&
+                            (totalPaid - oldEffectiveTotal).abs() < 0.01) {
+                          final remappedAmount = newEffectiveTotal.toStringAsFixed(2);
+                          if (_lIsCashSelected) {
+                            nextCash = remappedAmount;
+                            nextCard = '';
+                            nextUpi = '';
+                            nextCod = '';
+                          } else if (_lIsCardSelected) {
+                            nextCash = '';
+                            nextCard = remappedAmount;
+                            nextUpi = '';
+                            nextCod = '';
+                          } else if (_lIsUpiSelected) {
+                            nextCash = '';
+                            nextCard = '';
+                            nextUpi = remappedAmount;
+                            nextCod = '';
+                          } else if (_lIsCodSelected) {
+                            nextCash = '';
+                            nextCard = '';
+                            nextUpi = '';
+                            nextCod = remappedAmount;
+                          }
+                        }
 
-                      if (nextCash != _lCashAmount ||
-                          nextCard != _lCardAmount ||
-                          nextUpi != _lUpiAmount ||
-                          nextCod != _lCodAmount) {
-                        _handlePaymentUpdate(
-                            _lIsCashSelected,
-                            _lIsCardSelected,
-                            _lIsUpiSelected,
-                            _lIsCodSelected,
-                            _lIsDebitSelected,
-                            nextCash,
-                            nextCard,
-                            nextUpi,
-                            nextCod,
-                            _lDebitAmount,
-                            _lTransactionNumber,
-                            _lToCustomerCreditEnabled,
-                            cashMethodId: widget.cashMethodId,
-                            cardMethodId: widget.cardMethodId,
-                            upiMethodId: widget.upiMethodId,
-                            codMethodId: widget.codMethodId);
-                      }
+                        _handleDiscountUpdate(code, applied, newFlatDiscount,
+                            newPercentageDiscount);
 
-                      _nextStep();
-                    },
+                        if (nextCash != _lCashAmount ||
+                            nextCard != _lCardAmount ||
+                            nextUpi != _lUpiAmount ||
+                            nextCod != _lCodAmount) {
+                          _handlePaymentUpdate(
+                              _lIsCashSelected,
+                              _lIsCardSelected,
+                              _lIsUpiSelected,
+                              _lIsCodSelected,
+                              _lIsDebitSelected,
+                              nextCash,
+                              nextCard,
+                              nextUpi,
+                              nextCod,
+                              _lDebitAmount,
+                              _lTransactionNumber,
+                              _lToCustomerCreditEnabled,
+                              cashMethodId: widget.cashMethodId,
+                              cardMethodId: widget.cardMethodId,
+                              upiMethodId: widget.upiMethodId,
+                              codMethodId: widget.codMethodId);
+                        }
+
+                        _nextStep();
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 24),
-                const VerticalDivider(width: 1),
-                const SizedBox(width: 24),
-                // Right: Summary
-                Expanded(
-                  flex: 2,
-                  child: _buildCompactSummary(),
-                ),
-              ],
+                  const SizedBox(width: 24),
+                  const VerticalDivider(width: 1),
+                  const SizedBox(width: 24),
+                  // Right: Summary
+                  Expanded(
+                    flex: 2,
+                    child: _buildCompactSummary(),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        _buildFooter(
-          onBack: _previousStep,
-          onPrint: _handlePrint,
-          onConfirm: _handleConfirm,
-        ),
-      ],
+          _buildFooter(
+            onBack: _previousStep,
+            onPrint: _handlePrint,
+            onConfirm: _handleConfirm,
+          ),
+        ],
+      ),
     );
   }
 
@@ -2023,87 +2211,90 @@ class _CheckoutModalState extends State<CheckoutModal> {
         !shouldAutoFillCard &&
         !shouldAutoFillUpi;
 
-    return Column(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left: Payment Options
-                Expanded(
-                  flex: 3,
-                  child: PaymentMethodModal(
-                    initialIsCashSelected:
-                        shouldAutoFillCash ? true : _lIsCashSelected,
-                    initialIsCardSelected:
-                        shouldAutoFillCard ? true : _lIsCardSelected,
-                    initialIsUpiSelected:
-                        shouldAutoFillUpi ? true : _lIsUpiSelected,
-                    initialIsCodSelected:
-                        shouldAutoFillCod ? true : _lIsCodSelected,
-                    initialIsDebitSelected: _lIsDebitSelected,
-                    initialCashAmount: shouldAutoFillCash
-                        ? effectiveTotal.toStringAsFixed(2)
-                        : _lCashAmount,
-                    initialCardAmount: shouldAutoFillCard
-                        ? effectiveTotal.toStringAsFixed(2)
-                        : _lCardAmount,
-                    initialUpiAmount: shouldAutoFillUpi
-                        ? effectiveTotal.toStringAsFixed(2)
-                        : _lUpiAmount,
-                    initialCodAmount: shouldAutoFillCod
-                        ? effectiveTotal.toStringAsFixed(2)
-                        : _lCodAmount,
-                    initialDebitAmount: _lDebitAmount,
-                    initialTransactionNumber: _lTransactionNumber,
-                    cartTotal: effectiveTotal,
-                    customerPrevBalance: _localSelectedCustomer?.balance ?? 0.0,
-                    isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                            context,
-                            listen: false)
-                        .isDefaultCustomer,
-                    customButtonTitle: "Confirm Payment Selection",
-                    closeOnApply: false,
-                    showConfirmButton: false,
-                    showAsDialog: false,
-                    showShadow: false,
-                    fullWidth: true,
-                    onPaymentMethodSelected: (isCash, isCard, isUpi, isCod,
-                        isDebit, cash, card, upi, cod, debit, trans, toCredit,
-                        {cashMethodId,
-                        cardMethodId,
-                        upiMethodId,
-                        codMethodId}) {
-                      _handlePaymentUpdate(isCash, isCard, isUpi, isCod,
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left: Payment Options
+                  Expanded(
+                    flex: 3,
+                    child: PaymentMethodModal(
+                      initialIsCashSelected:
+                          shouldAutoFillCash ? true : _lIsCashSelected,
+                      initialIsCardSelected:
+                          shouldAutoFillCard ? true : _lIsCardSelected,
+                      initialIsUpiSelected:
+                          shouldAutoFillUpi ? true : _lIsUpiSelected,
+                      initialIsCodSelected:
+                          shouldAutoFillCod ? true : _lIsCodSelected,
+                      initialIsDebitSelected: _lIsDebitSelected,
+                      initialCashAmount: shouldAutoFillCash
+                          ? effectiveTotal.toStringAsFixed(2)
+                          : _lCashAmount,
+                      initialCardAmount: shouldAutoFillCard
+                          ? effectiveTotal.toStringAsFixed(2)
+                          : _lCardAmount,
+                      initialUpiAmount: shouldAutoFillUpi
+                          ? effectiveTotal.toStringAsFixed(2)
+                          : _lUpiAmount,
+                      initialCodAmount: shouldAutoFillCod
+                          ? effectiveTotal.toStringAsFixed(2)
+                          : _lCodAmount,
+                      initialDebitAmount: _lDebitAmount,
+                      initialTransactionNumber: _lTransactionNumber,
+                      cartTotal: effectiveTotal,
+                      customerPrevBalance: _localSelectedCustomer?.balance ?? 0.0,
+                      isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
+                              context,
+                              listen: false)
+                          .isDefaultCustomer,
+                      customButtonTitle: "Confirm Payment Selection",
+                      closeOnApply: false,
+                      showConfirmButton: false,
+                      showAsDialog: false,
+                      showShadow: false,
+                      fullWidth: true,
+                      onPaymentMethodSelected: (isCash, isCard, isUpi, isCod,
                           isDebit, cash, card, upi, cod, debit, trans, toCredit,
-                          cashMethodId: cashMethodId,
-                          cardMethodId: cardMethodId,
-                          upiMethodId: upiMethodId,
-                          codMethodId: codMethodId);
-                      _nextStep();
-                    },
+                          {cashMethodId,
+                          cardMethodId,
+                          upiMethodId,
+                          codMethodId}) {
+                        _handlePaymentUpdate(isCash, isCard, isUpi, isCod,
+                            isDebit, cash, card, upi, cod, debit, trans, toCredit,
+                            cashMethodId: cashMethodId,
+                            cardMethodId: cardMethodId,
+                            upiMethodId: upiMethodId,
+                            codMethodId: codMethodId);
+                        _nextStep();
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 24),
-                const VerticalDivider(width: 1),
-                const SizedBox(width: 24),
-                // Right: Summary
-                Expanded(
-                  flex: 2,
-                  child: _buildCompactSummary(),
-                ),
-              ],
+                  const SizedBox(width: 24),
+                  const VerticalDivider(width: 1),
+                  const SizedBox(width: 24),
+                  // Right: Summary
+                  Expanded(
+                    flex: 2,
+                    child: _buildCompactSummary(),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        _buildFooter(
-          onBack: _previousStep,
-          onPrint: _handlePrint,
-          onConfirm: _handleConfirm,
-        ),
-      ],
+          _buildFooter(
+            onBack: _previousStep,
+            onPrint: _handlePrint,
+            onConfirm: _handleConfirm,
+          ),
+        ],
+      ),
     );
   }
 

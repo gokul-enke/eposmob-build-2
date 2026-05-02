@@ -31,10 +31,10 @@ class ProductAutocomplete extends StatefulWidget {
   });
 
   @override
-  State<ProductAutocomplete> createState() => _ProductAutocompleteState();
+  State<ProductAutocomplete> createState() => ProductAutocompleteState();
 }
 
-class _ProductAutocompleteState extends State<ProductAutocomplete> {
+class ProductAutocompleteState extends State<ProductAutocomplete> {
   // Track the highlighted index
   int? _highlightedOptionIndex;
   final FocusNode _textFieldFocus = FocusNode();
@@ -46,6 +46,14 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
 
   // Tracks previous controller text to differentiate text changes from selection changes
   String _previousControllerText = '';
+
+  // Expose the autocomplete field's FocusNode for external focus requests
+  FocusNode? _fieldFocusNode;
+
+  void requestFieldFocus() {
+    debugPrint("⌨️ [ProductAutocomplete] requestFieldFocus called | hasFieldNode=${_fieldFocusNode != null}");
+    _fieldFocusNode?.requestFocus();
+  }
 
   @override
   void dispose() {
@@ -173,6 +181,9 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
         },
         fieldViewBuilder:
             (context, textEditingController, focusNode, onFieldSubmitted) {
+          // Capture the Autocomplete-managed focus node so parent can request focus
+          _fieldFocusNode = focusNode;
+
           final keyboardProvider =
               Provider.of<KeyboardProvider>(context, listen: false);
           final bool suppressSystemKeyboard =

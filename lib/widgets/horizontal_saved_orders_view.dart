@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -18,12 +19,16 @@ class HorizontalSavedOrdersView extends StatefulWidget {
   final Function(String) onOrderSelected;
   final Future<void> Function()? onNewOrderPressed;
   final bool isBusy;
+  final bool autofocus;
+  final int focusRequestId;
 
   const HorizontalSavedOrdersView({
     Key? key,
     required this.onOrderSelected,
     this.onNewOrderPressed,
     this.isBusy = false,
+    this.autofocus = false,
+    this.focusRequestId = 0,
   }) : super(key: key);
 
   @override
@@ -33,11 +38,85 @@ class HorizontalSavedOrdersView extends StatefulWidget {
 
 class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _ordersGridFocusNode = FocusNode();
+  int _focusedOrderIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordersGridFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestGridFocusIfNeeded();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant HorizontalSavedOrdersView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autofocus &&
+        widget.focusRequestId != oldWidget.focusRequestId) {
+      _requestGridFocusIfNeeded();
+    }
+  }
+
+  void _requestGridFocusIfNeeded() {
+    if (!widget.autofocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _ordersGridFocusNode.requestFocus();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _ordersGridFocusNode.dispose();
     super.dispose();
+  }
+
+  KeyEventResult _handleOrdersGridKey(
+      KeyEvent event, List<SavedOrder> savedOrders) {
+    if (event is! KeyDownEvent || savedOrders.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      final index = _focusedOrderIndex.clamp(0, savedOrders.length - 1).toInt();
+      if (!widget.isBusy) {
+        widget.onOrderSelected(savedOrders[index].id);
+      }
+      return KeyEventResult.handled;
+    }
+
+    int? delta;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      delta = 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      delta = -1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      delta = 2;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      delta = -2;
+    }
+
+    if (delta == null) {
+      return KeyEventResult.ignored;
+    }
+
+    setState(() {
+      _focusedOrderIndex = (_focusedOrderIndex + delta!)
+          .clamp(0, savedOrders.length - 1)
+          .toInt();
+    });
+    return KeyEventResult.handled;
   }
 
   @override
@@ -61,22 +140,37 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                             PointerDeviceKind.touch,
                           },
                         ),
-                        child: GridView.builder(
-                          controller: _scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 250, // Maximum card width
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 1.5, // Width/height ratio
+                        child: Focus(
+                          focusNode: _ordersGridFocusNode,
+                          autofocus: widget.autofocus,
+                          onKeyEvent: (node, event) =>
+                              _handleOrdersGridKey(event, provider.savedOrders),
+                          child: GridView.builder(
+                            controller: _scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 250, // Maximum card width
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 1.5, // Width/height ratio
+                            ),
+                            itemCount: provider.savedOrders.length,
+                            itemBuilder: (context, index) {
+                              final order = provider.savedOrders[index];
+                              final focusedIndex = _focusedOrderIndex
+                                  .clamp(0, provider.savedOrders.length - 1)
+                                  .toInt();
+                              return _buildSavedOrderCard(
+                                context,
+                                provider,
+                                order,
+                                isKeyboardFocused:
+                                    _ordersGridFocusNode.hasFocus &&
+                                        index == focusedIndex,
+                              );
+                            },
                           ),
-                          itemCount: provider.savedOrders.length,
-                          itemBuilder: (context, index) {
-                            final order = provider.savedOrders[index];
-                            return _buildSavedOrderCard(
-                                context, provider, order);
-                          },
                         ),
                       ),
               ),
@@ -224,8 +318,9 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     );
   }
 
-  Widget _buildSavedOrderCard(
-      BuildContext context, LocalProductProvider provider, SavedOrder order) {
+  Widget _buildSavedOrderCard(BuildContext context,
+      LocalProductProvider provider, SavedOrder order,
+      {bool isKeyboardFocused = false}) {
     String date = DateHelper.formatToISODateOnlyFromISO(order.createdAt);
     String time = DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
@@ -243,7 +338,9 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
       child: BuildBoxShadowContainer(
         circleRadius: 8,
         color: isSelected ? Colors.white : Colors.white,
-        border: isSelected
+        border: isKeyboardFocused
+            ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+            : isSelected
             ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
             : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
         child: InkWell(

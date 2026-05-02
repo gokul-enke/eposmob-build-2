@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -49,6 +50,11 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
   late TextEditingController addressController;
   DateTime? selectedDeliveryDate;
   TimeOfDay? selectedDeliveryTime;
+
+  /// Name of the delivery-method tile that currently has keyboard focus,
+  /// or `null` when no tile is focused. Used to render a visible focus
+  /// ring around whichever tile the Tab cursor is on.
+  String? _focusedMethodName;
 
   @override
   void initState() {
@@ -130,13 +136,40 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Wrap(
+                // Arrow keys move focus between delivery method tiles via
+                // Flutter's built-in focus traversal. Tiles are InkWell-based
+                // so Enter/Space toggles selection.
+                Shortcuts(
+                  shortcuts: const <ShortcutActivator, Intent>{
+                    SingleActivator(LogicalKeyboardKey.arrowLeft):
+                        PreviousFocusIntent(),
+                    SingleActivator(LogicalKeyboardKey.arrowRight):
+                        NextFocusIntent(),
+                    SingleActivator(LogicalKeyboardKey.arrowUp):
+                        PreviousFocusIntent(),
+                    SingleActivator(LogicalKeyboardKey.arrowDown):
+                        NextFocusIntent(),
+                  },
+                  child: Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: provider.deliveryMethods.map((method) {
                     final isSelected = deliveryMethod == method.name;
-                    return GestureDetector(
-                      onTap: () {
+                    final isFocused = _focusedMethodName == method.name;
+                    final methodIndex =
+                        provider.deliveryMethods.indexOf(method);
+                    return Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        autofocus: methodIndex == 0,
+                        borderRadius: BorderRadius.circular(10),
+                        onFocusChange: (focused) {
+                          setState(() {
+                            _focusedMethodName = focused ? method.name : null;
+                          });
+                        },
+                        onTap: () {
                         setState(() {
                           deliveryMethod = method.name;
                           deliveryMethodId = method.id;
@@ -153,11 +186,22 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                               : Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isSelected
-                                ? ColorManager.kPrimaryColor
-                                : Colors.grey.shade200,
-                            width: isSelected ? 2 : 1,
+                            color: isFocused
+                                ? Colors.orange
+                                : isSelected
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.grey.shade200,
+                            width: isFocused ? 3 : (isSelected ? 2 : 1),
                           ),
+                          boxShadow: isFocused
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.orange.withOpacity(0.35),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -189,8 +233,10 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                           ],
                         ),
                       ),
+                      ),
                     );
                   }).toList(),
+                ),
                 ),
                 if (Provider.of<AppSettingsProvider>(context, listen: false)
                     .appSettings!
@@ -282,8 +328,12 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                             children: customerProvider
                                 .selectedCustomer!.addresses!
                                 .map((Address address) {
-                              return GestureDetector(
-                                onTap: () {
+                              return Material(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: () {
                                   setState(() {
                                     String fullAddress =
                                         "${address.address}, ${address.city}";
@@ -309,6 +359,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                                       Colors.black87,
                                     ),
                                   ),
+                                ),
                                 ),
                               );
                             }).toList(),

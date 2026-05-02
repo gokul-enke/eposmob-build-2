@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
 
 class _ShortcutItem {
   final String keyLabel;
@@ -24,6 +27,30 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       builder: (_) => const KeyboardShortcutsHelpDialog(),
     );
   }
+
+  /// Global keyboard shortcuts that work anywhere on the billing page.
+  static const List<_ShortcutItem> _globalShortcuts = [
+    _ShortcutItem(
+      keyLabel: 'Ctrl + H',
+      action: 'Open this Help',
+      description: 'Show or hide the keyboard shortcuts dialog',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + K',
+      action: 'Toggle Virtual Keyboard',
+      description: 'Show/hide the on-screen keyboard panel',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + D',
+      action: 'Open Cash Drawer',
+      description: 'Trigger printer to open the cash drawer',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + S',
+      action: 'Sync Data',
+      description: 'Run a full data sync (requires internet)',
+    ),
+  ];
 
   static const List<_ShortcutItem> _billingShortcuts = [
     _ShortcutItem(
@@ -63,13 +90,43 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
     _ShortcutItem(
       keyLabel: 'F11',
-      action: 'Focus search / barcode field',
-      description: 'Jump cursor to search product',
+      action: 'Focus Search Product field',
+      description: 'Jump cursor to product search for fast item entry',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Shift + F11',
+      action: 'Focus Barcode field',
+      description: 'Jump cursor to barcode input when barcode sales is enabled',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Insert',
+      action: 'Focus Search Product field',
+      description: 'Alternative shortcut for product search',
     ),
     _ShortcutItem(
       keyLabel: 'F12',
-      action: 'Switch Products ↔ Orders panel',
-      description: 'Toggle right panel tabs',
+      action: 'Activate sidebar keyboard mode',
+      description: 'Switch focus to right panel (Tab to cycle, Esc to exit)',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Tab',
+      action: 'Navigate fields',
+      description: 'Move focus forward through input fields and buttons',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Shift + Tab',
+      action: 'Navigate fields (reverse)',
+      description: 'Move focus backward through input fields and buttons',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Arrow Keys',
+      action: 'Navigate lists',
+      description: 'Move up/down in cart, customer, or product lists',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Esc',
+      action: 'Return to product entry',
+      description: 'Exit sidebar mode or refocus Search Product field',
     ),
   ];
 
@@ -115,6 +172,16 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Save + print from modal',
     ),
     _ShortcutItem(
+      keyLabel: 'Arrow Keys',
+      action: 'Navigate customer / delivery tiles',
+      description: 'Move focus across customer grid or delivery methods',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Enter / Space',
+      action: 'Select highlighted item',
+      description: 'Pick a customer, delivery method, or toggle payment',
+    ),
+    _ShortcutItem(
       keyLabel: 'Esc',
       action: 'Close modal',
       description: 'Dismiss finalize dialog',
@@ -141,7 +208,20 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    // Wrap in Focus to capture Esc and dismiss the dialog. autofocus ensures
+    // the listener is active immediately after the help opens (e.g. via
+    // Ctrl+H on the billing page or the toolbar icon).
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          Navigator.of(context).pop();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
       child: Container(
@@ -213,6 +293,12 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildSectionTitle('GLOBAL ACTIONS'),
+                    const SizedBox(height: 8),
+                    _buildFocusHighlightSetting(context),
+                    const SizedBox(height: 12),
+                    _buildShortcutsGrid(_globalShortcuts),
+                    const SizedBox(height: 16),
                     _buildSectionTitle('BILLING PAGE (MAIN ORDER SCREEN)'),
                     const SizedBox(height: 8),
                     _buildShortcutsGrid(_billingShortcuts),
@@ -232,6 +318,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -243,6 +330,64 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
         fontWeight: FontWeight.w700,
         color: Colors.grey.shade600,
         letterSpacing: 0.5,
+      ),
+    );
+  }
+
+  Widget _buildFocusHighlightSetting(BuildContext context) {
+    KeyboardFocusHighlightProvider? provider;
+    bool enabled = true;
+    try {
+      provider = Provider.of<KeyboardFocusHighlightProvider>(context);
+      enabled = provider.enabled;
+    } on ProviderNotFoundException {
+      provider = null;
+      enabled = true;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.center_focus_strong,
+            color: ColorManager.kPrimaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Keyboard focus outline',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: ColorManager.textColor,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Show blue outline on focused fields, buttons, and cart table',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            activeThumbColor: ColorManager.kPrimaryColor,
+            onChanged: provider?.setEnabled,
+          ),
+        ],
       ),
     );
   }
