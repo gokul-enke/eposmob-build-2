@@ -177,6 +177,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   final TextEditingController _customerSearchController =
       TextEditingController();
   final FocusNode _customerSearchFocusNode = FocusNode();
+  final FocusNode _customerSearchClearFocusNode =
+      FocusNode(skipTraversal: true);
   final FocusNode _customerListFocusNode = FocusNode();
   int _focusedCustomerIndex = 0;
   // Customer grid uses 3 columns — kept in sync with the GridView delegate
@@ -427,6 +429,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _customerSearchController.dispose();
     _customerSearchFocusNode.dispose();
+    _customerSearchClearFocusNode.dispose();
     _customerListFocusNode.dispose();
     _deliveryMethodFocusNode.dispose();
     _deliveryCarNumberFocusNode.dispose();
@@ -653,6 +656,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   void _filterCustomers(String query) {
     setState(() {
       _customerSearchQuery = query.toLowerCase();
+      _focusedCustomerIndex = 0;
       if (_customerSearchQuery.isEmpty) {
         _filteredCustomers = List<CustomerListModelData>.from(_allCustomers);
       } else {
@@ -1059,6 +1063,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     color: Colors.grey.shade500),
                                 suffixIcon: _customerSearchQuery.isNotEmpty
                                     ? IconButton(
+                                        focusNode:
+                                            _customerSearchClearFocusNode,
                                         icon: Icon(Icons.clear,
                                             color: Colors.grey.shade500),
                                         onPressed: () {
@@ -1178,6 +1184,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
     return Focus(
       focusNode: _customerListFocusNode,
+      onFocusChange: (focused) {
+        if (focused) {
+          setState(() {
+            _focusedCustomerIndex = 0;
+          });
+        }
+      },
       onKeyEvent: (node, event) =>
           _handleCustomerListKey(event, displayCustomers),
       child: GridView.builder(
@@ -1327,6 +1340,27 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
 
     final key = event.logicalKey;
+
+    if (key == LogicalKeyboardKey.tab) {
+      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+      final currentIndex =
+          _focusedCustomerIndex.clamp(0, customers.length - 1).toInt();
+
+      if (isShiftPressed) {
+        if (currentIndex == 0) return KeyEventResult.ignored;
+        setState(() {
+          _focusedCustomerIndex = currentIndex - 1;
+        });
+      } else {
+        if (currentIndex >= customers.length - 1) {
+          return KeyEventResult.ignored;
+        }
+        setState(() {
+          _focusedCustomerIndex = currentIndex + 1;
+        });
+      }
+      return KeyEventResult.handled;
+    }
 
     if (key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter ||
