@@ -284,7 +284,8 @@ class BillingPageState extends State<BillingPage>
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
     HardwareKeyboard.instance.addHandler(_onBillingHardwareKey);
-    debugPrint("⌨️ [BillingPage] HardwareKeyboard handler registered in initState");
+    debugPrint(
+        "⌨️ [BillingPage] HardwareKeyboard handler registered in initState");
 
     // Debug logging for AppSettings
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -404,8 +405,6 @@ class BillingPageState extends State<BillingPage>
       }
     });
   }
-
-
 
   @override
   void dispose() {
@@ -877,15 +876,14 @@ class BillingPageState extends State<BillingPage>
         "⌨️ [BillingPage] Restoring shortcut focus ($reason) | before: ${_focusDebugSummary()}");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final barcodeSales = Provider.of<AppSettingsProvider>(context,
-                  listen: false)
-              .appSettings
-              ?.barcodeSales ??
-          false;
+      final barcodeSales =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.barcodeSales ??
+              false;
       if (barcodeSales) {
         FocusScope.of(context).requestFocus(_barcodeNode);
-        debugPrint(
-            "⌨️ [BillingPage] Requested barcode focus after $reason");
+        debugPrint("⌨️ [BillingPage] Requested barcode focus after $reason");
       } else {
         _focusNode.requestFocus();
         debugPrint(
@@ -987,13 +985,15 @@ class BillingPageState extends State<BillingPage>
       // Handle Esc to exit sidebar keyboard mode
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (_isSidebarKeyboardActive) {
-          debugPrint("⌨️ [BillingPage] Handling Esc -> exit sidebar keyboard mode");
+          debugPrint(
+              "⌨️ [BillingPage] Handling Esc -> exit sidebar keyboard mode");
           setState(() {
             _isSidebarKeyboardActive = false;
           });
           _focusNode.requestFocus();
         } else {
-          debugPrint("⌨️ [BillingPage] Handling Esc -> focus Search Product field");
+          debugPrint(
+              "⌨️ [BillingPage] Handling Esc -> focus Search Product field");
           _focusSearchProductField();
         }
         return;
@@ -1002,21 +1002,25 @@ class BillingPageState extends State<BillingPage>
       // Always allow F11/Insert/F12 even when text fields are focused
       if (event.logicalKey == LogicalKeyboardKey.f11) {
         if (HardwareKeyboard.instance.isShiftPressed) {
-          debugPrint("⌨️ [BillingPage] Handling Shift+F11 -> focus barcode field");
+          debugPrint(
+              "⌨️ [BillingPage] Handling Shift+F11 -> focus barcode field");
           _focusBarcodeField();
         } else {
-          debugPrint("⌨️ [BillingPage] Handling F11 -> focus Search Product field");
+          debugPrint(
+              "⌨️ [BillingPage] Handling F11 -> focus Search Product field");
           _focusSearchProductField();
         }
         return;
       }
       if (event.logicalKey == LogicalKeyboardKey.insert) {
-        debugPrint("⌨️ [BillingPage] Handling Insert -> focus Search Product field");
+        debugPrint(
+            "⌨️ [BillingPage] Handling Insert -> focus Search Product field");
         _focusSearchProductField();
         return;
       }
       if (event.logicalKey == LogicalKeyboardKey.f12) {
-        debugPrint("⌨️ [BillingPage] Handling F12 -> activate sidebar keyboard mode");
+        debugPrint(
+            "⌨️ [BillingPage] Handling F12 -> activate sidebar keyboard mode");
         setState(() {
           _isSidebarKeyboardActive = true;
           _selectedSidebarTab = _selectedSidebarTab == 0 ? 1 : 0;
@@ -1036,7 +1040,8 @@ class BillingPageState extends State<BillingPage>
           return;
         }
         if (event.logicalKey == LogicalKeyboardKey.keyK) {
-          debugPrint("⌨️ [BillingPage] Handling Ctrl+K -> toggle virtual keyboard");
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+K -> toggle virtual keyboard");
           _toggleVirtualKeyboardFromShortcut();
           return;
         }
@@ -2123,28 +2128,58 @@ class BillingPageState extends State<BillingPage>
   Widget _buildHeader() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: true);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: true);
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: true).appSettings;
     final bool isEditingOrder = localProductProvider.currentOrder != null;
+    final currentOrder = localProductProvider.currentOrder;
+    final selectedHeaderCustomer =
+        customerSelectionProvider.selectedCustomer ?? selectedCustomer;
+    final fallbackCustomerName = selectedHeaderCustomer?.name ??
+        currentOrder?.customerName ??
+        currentOrder?.customerPhone;
+    final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Text(
-              isEditingOrder
-                  ? '${'billing.edit_order'.tr} - '
-                  : '${'billing.new_order'.tr} - ',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                  0.30, ColorManager.textColor),
-            ),
-            Text(
-              isEditingOrder
-                  ? '#${localProductProvider.currentOrder!.orderNumber}'
-                  : '#00000',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                  0.30, ColorManager.textColor),
-            ),
-          ],
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isEditingOrder
+                        ? '${'billing.edit_order'.tr} - '
+                        : '${'billing.new_order'.tr} - ',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
+                  ),
+                  Text(
+                    isEditingOrder
+                        ? '#${localProductProvider.currentOrder!.orderNumber}'
+                        : '#00000',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
+                  ),
+                ],
+              ),
+              if (fallbackCustomerName != null &&
+                  fallbackCustomerName.trim().isNotEmpty)
+                _buildHeaderCustomerDetails(
+                  name: fallbackCustomerName,
+                  balance: selectedHeaderCustomer?.balance,
+                  customerType: showCustomerType
+                      ? selectedHeaderCustomer?.customerType
+                      : null,
+                ),
+            ],
+          ),
         ),
         // Header toolbar icons are intentionally excluded from keyboard
         // traversal — they have dedicated shortcuts (Ctrl+H, Ctrl+K, Ctrl+D,
@@ -2152,98 +2187,181 @@ class BillingPageState extends State<BillingPage>
         ExcludeFocus(
           excluding: true,
           child: Row(
-          children: [
-            // Live Clock
-            const LiveClock(),
-            const SizedBox(width: 12),
-            // Keyboard shortcuts help button
-            IconButton(
-              icon: Icon(
-                Icons.help_outline,
+            children: [
+              // Live Clock
+              const LiveClock(),
+              const SizedBox(width: 12),
+              // Keyboard shortcuts help button
+              IconButton(
+                icon: Icon(
+                  Icons.help_outline,
+                  color: Colors.grey.shade600,
+                ),
+                tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+                onPressed: () {
+                  KeyboardShortcutsHelpDialog.show(context);
+                },
+              ),
+              // Keyboard toggle button
+              IconButton(
+                icon: Icon(
+                  Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                      ? Icons.keyboard_hide
+                      : Icons.keyboard,
+                  color:
+                      Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                          ? ColorManager.kPrimaryColor
+                          : Colors.grey.shade600,
+                ),
+                tooltip:
+                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                        ? 'billing.keyboard_hide'.tr
+                        : 'billing.keyboard_show'.tr,
+                onPressed: () {
+                  final keyboardProvider =
+                      Provider.of<KeyboardProvider>(context, listen: false);
+                  if (keyboardProvider.showKeyboardFeature) {
+                    keyboardProvider.featureOff();
+                    keyboardProvider.clear();
+                  } else {
+                    keyboardProvider.featureOn(); // or set type as needed
+                  }
+                },
+              ),
+              // Font size toggle button
+              Consumer<AppFontProvider>(
+                builder: (context, fontProvider, child) {
+                  return IconButton(
+                    icon: Icon(
+                      Icons.text_fields,
+                      color: fontProvider.fontSizeLevel > 0
+                          ? ColorManager.kPrimaryColor
+                          : Colors.grey.shade600,
+                    ),
+                    tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                    onPressed: () {
+                      fontProvider.cycleFontSize();
+                    },
+                  );
+                },
+              ),
+              OpenCashDrawerButton(
                 color: Colors.grey.shade600,
               ),
-              tooltip: 'Keyboard Shortcuts (Ctrl+H)',
-              onPressed: () {
-                KeyboardShortcutsHelpDialog.show(context);
-              },
-            ),
-            // Keyboard toggle button
-            IconButton(
-              icon: Icon(
-                Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                    ? Icons.keyboard_hide
-                    : Icons.keyboard,
-                color:
-                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                        ? ColorManager.kPrimaryColor
-                        : Colors.grey.shade600,
+              // Sync button next to keyboard icon
+              const SyncButton(
+                showTooltip: true,
+                showText: false,
               ),
-              tooltip:
-                  Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                      ? 'billing.keyboard_hide'.tr
-                      : 'billing.keyboard_show'.tr,
-              onPressed: () {
-                final keyboardProvider =
-                    Provider.of<KeyboardProvider>(context, listen: false);
-                if (keyboardProvider.showKeyboardFeature) {
-                  keyboardProvider.featureOff();
-                  keyboardProvider.clear();
-                } else {
-                  keyboardProvider.featureOn(); // or set type as needed
-                }
-              },
-            ),
-            // Font size toggle button
-            Consumer<AppFontProvider>(
-              builder: (context, fontProvider, child) {
-                return IconButton(
-                  icon: Icon(
-                    Icons.text_fields,
-                    color: fontProvider.fontSizeLevel > 0
-                        ? ColorManager.kPrimaryColor
-                        : Colors.grey.shade600,
-                  ),
-                  tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
-                  onPressed: () {
-                    fontProvider.cycleFontSize();
+              // Connectivity indicator
+              const SizedBox(width: 0),
+              _buildConnectivityIndicator(),
+              // Show toggle button next to order number when sidebar is hidden
+              if (!_isSidebarVisible) ...[
+                const SizedBox(width: 12),
+                CustomRoundButton(
+                  title: "☰",
+                  fct: () {
+                    setState(() {
+                      _isSidebarVisible = !_isSidebarVisible;
+                    });
                   },
-                );
-              },
-            ),
-            OpenCashDrawerButton(
-              color: Colors.grey.shade600,
-            ),
-            // Sync button next to keyboard icon
-            const SyncButton(
-              showTooltip: true,
-              showText: false,
-            ),
-            // Connectivity indicator
-            const SizedBox(width: 0),
-            _buildConnectivityIndicator(),
-            // Show toggle button next to order number when sidebar is hidden
-            if (!_isSidebarVisible) ...[
-              const SizedBox(width: 12),
-              CustomRoundButton(
-                title: "☰",
-                fct: () {
-                  setState(() {
-                    _isSidebarVisible = !_isSidebarVisible;
-                  });
-                },
-                fontSize: 16,
-                height: 32,
-                width: 32,
-                boxColor: ColorManager.kPrimaryColor,
-                borderColor: ColorManager.kPrimaryColor,
-                textColor: Colors.white,
-                radius: 8,
-              ),
+                  fontSize: 16,
+                  height: 32,
+                  width: 32,
+                  boxColor: ColorManager.kPrimaryColor,
+                  borderColor: ColorManager.kPrimaryColor,
+                  textColor: Colors.white,
+                  radius: 8,
+                ),
+              ],
             ],
-          ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeaderCustomerDetails({
+    required String? name,
+    required double? balance,
+    required String? customerType,
+  }) {
+    final String displayName =
+        (name == null || name.trim().isEmpty) ? 'Customer' : name.trim();
+    final String displayBalance = (balance ?? 0).toStringAsFixed(2);
+    final String? displayCustomerType = customerType?.trim().isEmpty == true
+        ? null
+        : customerType?.trim().toUpperCase();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: ColorManager.kPrimaryColor.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.person_outline,
+            size: 16,
+            color: ColorManager.kPrimaryColor,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            displayName,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Balance: $displayBalance',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              Colors.grey.shade700,
+            ),
+          ),
+          if (displayCustomerType != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: displayCustomerType == 'B2B'
+                    ? Colors.green.shade50
+                    : Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: displayCustomerType == 'B2B'
+                      ? Colors.green.shade300
+                      : Colors.blue.shade300,
+                ),
+              ),
+              child: Text(
+                displayCustomerType,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.15,
+                  displayCustomerType == 'B2B'
+                      ? Colors.green.shade700
+                      : Colors.blue.shade700,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -2306,7 +2424,8 @@ class BillingPageState extends State<BillingPage>
                 children: [
                   appSettingsProvider.appSettings!.barcodeSales
                       ? FocusTraversalOrder(
-                          order: const NumericFocusOrder(BillingFocusOrders.barcode),
+                          order: const NumericFocusOrder(
+                              BillingFocusOrders.barcode),
                           child: Expanded(
                             flex: 2,
                             child: Padding(
@@ -2348,7 +2467,8 @@ class BillingPageState extends State<BillingPage>
                           ),
                         )
                       : FocusTraversalOrder(
-                          order: const NumericFocusOrder(BillingFocusOrders.searchProduct),
+                          order: const NumericFocusOrder(
+                              BillingFocusOrders.searchProduct),
                           child: Expanded(
                             flex: 4,
                             child: Column(
@@ -2357,7 +2477,8 @@ class BillingPageState extends State<BillingPage>
                               children: [
                                 ProductAutocomplete(
                                   key: _productAutocompleteKey,
-                                  autocompleteProductKey: _autocompleteProductKey,
+                                  autocompleteProductKey:
+                                      _autocompleteProductKey,
                                   autofocus: !appSettingsProvider
                                       .appSettings!.barcodeSales,
                                   suppressSystemKeyboardOnAndroid: true,
@@ -2398,7 +2519,8 @@ class BillingPageState extends State<BillingPage>
                           useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                           keyboardType: TextInputType.number,
                           onTap: () {
-                            Provider.of<KeyboardProvider>(context, listen: false)
+                            Provider.of<KeyboardProvider>(context,
+                                    listen: false)
                                 .show(
                               'number',
                               quantityController,
@@ -2410,7 +2532,8 @@ class BillingPageState extends State<BillingPage>
                     ),
                   ),
                   FocusTraversalOrder(
-                    order: const NumericFocusOrder(BillingFocusOrders.unitPrice),
+                    order:
+                        const NumericFocusOrder(BillingFocusOrders.unitPrice),
                     child: Expanded(
                       flex: 2,
                       child: Padding(
@@ -2424,7 +2547,8 @@ class BillingPageState extends State<BillingPage>
                           useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                           keyboardType: TextInputType.number,
                           onTap: () {
-                            Provider.of<KeyboardProvider>(context, listen: false)
+                            Provider.of<KeyboardProvider>(context,
+                                    listen: false)
                                 .show(
                               'number',
                               unitPriceController,
@@ -2456,7 +2580,8 @@ class BillingPageState extends State<BillingPage>
                                   });
                                   try {
                                     final localProductProvider =
-                                        Provider.of<LocalProductProvider>(context,
+                                        Provider.of<LocalProductProvider>(
+                                            context,
                                             listen: false);
 
                                     final selectedProduct =
@@ -2473,10 +2598,10 @@ class BillingPageState extends State<BillingPage>
                                         context: context,
                                         product: selectedProduct,
                                         quantity: customQuantity,
-                                        customPrice:
-                                            customPrice != null && customPrice > 0
-                                                ? customPrice
-                                                : null,
+                                        customPrice: customPrice != null &&
+                                                customPrice > 0
+                                            ? customPrice
+                                            : null,
                                       );
 
                                       // Clear input fields
@@ -2491,7 +2616,8 @@ class BillingPageState extends State<BillingPage>
                                     } else {
                                       showScaffoldError(
                                         context: context,
-                                        message: "billing.no_product_selected".tr,
+                                        message:
+                                            "billing.no_product_selected".tr,
                                       );
                                     }
                                   } catch (e) {
@@ -2518,7 +2644,8 @@ class BillingPageState extends State<BillingPage>
                     ),
                   ),
                   FocusTraversalOrder(
-                    order: const NumericFocusOrder(BillingFocusOrders.clearEntry),
+                    order:
+                        const NumericFocusOrder(BillingFocusOrders.clearEntry),
                     child: Expanded(
                       flex: 1,
                       child: Column(
@@ -2574,7 +2701,8 @@ class BillingPageState extends State<BillingPage>
                                 child: Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Center(
                                         child: WebsafeSvg.asset(
@@ -2625,9 +2753,8 @@ class BillingPageState extends State<BillingPage>
               width: constraints.maxWidth,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: isCartTableFocused
-                      ? Colors.orange
-                      : Colors.transparent,
+                  color:
+                      isCartTableFocused ? Colors.orange : Colors.transparent,
                   width: isCartTableFocused ? 3 : 1,
                 ),
                 borderRadius: BorderRadius.circular(6),
@@ -2671,7 +2798,8 @@ class BillingPageState extends State<BillingPage>
                   // Scrollable content
                   Expanded(
                     child: FocusTraversalOrder(
-                      order: const NumericFocusOrder(BillingFocusOrders.cartTable),
+                      order:
+                          const NumericFocusOrder(BillingFocusOrders.cartTable),
                       child: KeyboardListener(
                         focusNode: _cartTableFocusNode,
                         onKeyEvent: (KeyEvent event) {
@@ -2686,65 +2814,119 @@ class BillingPageState extends State<BillingPage>
                           descendantsAreTraversable: false,
                           canRequestFocus: false,
                           child: MouseRegion(
-                          cursor: SystemMouseCursors.grab,
-                          child: ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(context).copyWith(
-                              dragDevices: {
-                                PointerDeviceKind.mouse,
-                                PointerDeviceKind.touch,
-                                PointerDeviceKind.stylus,
-                                PointerDeviceKind.trackpad,
-                              },
-                            ),
-                            child: ListView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: cartItems.length,
-                              itemBuilder: (context, index) {
-                                final item = cartItems[index];
-                                return Container(
-                                  color: index % 2 == 0
-                                      ? Colors.white
-                                      : Colors.grey.shade50,
-                                  child: Row(
-                                    children: [
-                                  // Index Number
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          fontProvider.billingTableItemSize,
-                                          0.21,
-                                          ColorManager.textColor,
+                            cursor: SystemMouseCursors.grab,
+                            child: ScrollConfiguration(
+                              behavior:
+                                  ScrollConfiguration.of(context).copyWith(
+                                dragDevices: {
+                                  PointerDeviceKind.mouse,
+                                  PointerDeviceKind.touch,
+                                  PointerDeviceKind.stylus,
+                                  PointerDeviceKind.trackpad,
+                                },
+                              ),
+                              child: ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: cartItems.length,
+                                itemBuilder: (context, index) {
+                                  final item = cartItems[index];
+                                  return Container(
+                                    color: index % 2 == 0
+                                        ? Colors.white
+                                        : Colors.grey.shade50,
+                                    child: Row(
+                                      children: [
+                                        // Index Number
+                                        _buildContentCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 2),
+                                            child: Text(
+                                              '${index + 1}',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.regular,
+                                                fontProvider
+                                                    .billingTableItemSize,
+                                                0.21,
+                                                ColorManager.textColor,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.center,
                                         ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.center,
-                                  ),
 
-                                  // Item Name
-                                  _buildContentCell(
-                                    GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () =>
-                                          _showProductDetailsDialog(item),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Expanded(
-                                            child: Padding(
+                                        // Item Name
+                                        _buildContentCell(
+                                          GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: () =>
+                                                _showProductDetailsDialog(item),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(vertical: 2),
+                                                    child: Text(
+                                                      item.product
+                                                              .productName ??
+                                                          'general.unknown'.tr,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .regular,
+                                                        fontProvider
+                                                            .billingTableItemSize,
+                                                        0.21,
+                                                        ColorManager.textColor,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Tooltip(
+                                                  message:
+                                                      'billing.view_details'.tr,
+                                                  waitDuration: const Duration(
+                                                      milliseconds: 400),
+                                                  child: InkWell(
+                                                    onTap: () =>
+                                                        _showProductDetailsDialog(
+                                                            item),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16),
+                                                    child: const Icon(
+                                                      Icons.info_outline,
+                                                      size: 16,
+                                                      color: ColorManager
+                                                          .kPrimaryColor,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          flex: 3,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+
+                                        // Item Code
+                                        if (appSettings?.itemCodeEnabled ==
+                                            true)
+                                          _buildContentCell(
+                                            Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                       vertical: 2),
                                               child: Text(
-                                                item.product.productName ??
-                                                    'general.unknown'.tr,
+                                                item.product.itemCode ?? '-',
                                                 style: buildCustomStyle(
                                                   FontWeightManager.regular,
                                                   fontProvider
@@ -2756,266 +2938,236 @@ class BillingPageState extends State<BillingPage>
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
                                           ),
-                                          const SizedBox(width: 6),
-                                          Tooltip(
-                                            message: 'billing.view_details'.tr,
-                                            waitDuration: const Duration(
-                                                milliseconds: 400),
-                                            child: InkWell(
-                                              onTap: () =>
-                                                  _showProductDetailsDialog(
-                                                      item),
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              child: const Icon(
-                                                Icons.info_outline,
-                                                size: 16,
-                                                color:
-                                                    ColorManager.kPrimaryColor,
+
+                                        // Unit
+                                        _buildContentCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 2),
+                                            child: Text(
+                                              item.displayUnitName,
+                                              style: buildCustomStyle(
+                                                FontWeightManager.regular,
+                                                fontProvider
+                                                    .billingTableItemSize,
+                                                0.21,
+                                                ColorManager.textColor,
+                                              ),
+                                              textAlign: TextAlign.left,
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                        // Qty
+                                        _buildContentCell(
+                                          Center(
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child:
+                                                  CompactQuantityControlLocal(
+                                                key: ValueKey(
+                                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
+                                                ),
+                                                productId:
+                                                    item.product.productId!,
+                                                quantity:
+                                                    item.quantity.toDouble(),
+                                                unitPrice:
+                                                    item.price.toString(),
+                                                productUnit: item.product.unit,
+                                                product: item.product,
+                                                cartItem: item,
+                                                selectedStock:
+                                                    item.selectedStock,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    flex: 3,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Item Code
-                                  if (appSettings?.itemCodeEnabled == true)
-                                    _buildContentCell(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: Text(
-                                          item.product.itemCode ?? '-',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.regular,
-                                            fontProvider.billingTableItemSize,
-                                            0.21,
-                                            ColorManager.textColor,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                          flex: 2,
+                                          alignment: Alignment.center,
                                         ),
-                                      ),
-                                      flex: 1,
-                                      alignment: Alignment.centerLeft,
-                                    ),
 
-                                  // Unit
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Text(
-                                        item.displayUnitName,
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          fontProvider.billingTableItemSize,
-                                          0.21,
-                                          ColorManager.textColor,
-                                        ),
-                                        textAlign: TextAlign.left,
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-                                  // Qty
-                                  _buildContentCell(
-                                    Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: CompactQuantityControlLocal(
-                                          key: ValueKey(
-                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
-                                          ),
-                                          productId: item.product.productId!,
-                                          quantity: item.quantity.toDouble(),
-                                          unitPrice: item.price.toString(),
-                                          productUnit: item.product.unit,
-                                          product: item.product,
-                                          cartItem: item,
-                                          selectedStock: item.selectedStock,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 2,
-                                    alignment: Alignment.center,
-                                  ),
-
-                                  // Tax Rate %
-                                  if (appSettings?.showTaxRatePos == true)
-                                    _buildContentCell(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: SizedBox(
-                                          width: 60,
-                                          child: TaxTextField(
-                                            item: item,
-                                            localProductProvider:
-                                                localProductProvider,
-                                          ),
-                                        ),
-                                      ),
-                                      flex: 1,
-                                      alignment: Alignment.centerLeft,
-                                    ),
-
-                                  // MRP
-                                  if (appSettings?.showMrpPos == true)
-                                    _buildContentCell(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: SizedBox(
-                                          width: 70,
-                                          child: MrpTextField(
-                                            key: ValueKey(
-                                              'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
-                                            ),
-                                            item: item,
-                                            localProductProvider:
-                                                localProductProvider,
-                                          ),
-                                        ),
-                                      ),
-                                      flex: 1,
-                                      alignment: Alignment.centerLeft,
-                                    ),
-
-                                  // Price
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: PriceTextField(
-                                          key: ValueKey(
-                                            'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
-                                          ),
-                                          item: item,
-                                          localProductProvider:
-                                              localProductProvider,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Tax Amount
-                                  if (appSettings?.showTaxPos == true)
-                                    _buildContentCell(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: SizedBox(
-                                          width: 60,
-                                          child: Builder(
-                                            builder: (context) {
-                                              // Calculate tax amount: (price * quantity * taxRate) / (100 + taxRate)
-                                              final double itemTotal =
-                                                  (item.price ?? 0.0) *
-                                                      item.quantity;
-                                              final double taxRate =
-                                                  item.taxRate ?? 0.0;
-                                              final double taxAmount =
-                                                  taxRate > 0
-                                                      ? (itemTotal *
-                                                          taxRate /
-                                                          (100 + taxRate))
-                                                      : 0.0;
-                                              return Text(
-                                                AmountHelper.formatAmount(
-                                                    taxAmount),
-                                                style: TextStyle(
-                                                  fontSize: fontProvider
-                                                      .billingTableItemSize,
-                                                  color: Colors.black,
+                                        // Tax Rate %
+                                        if (appSettings?.showTaxRatePos == true)
+                                          _buildContentCell(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 60,
+                                                child: TaxTextField(
+                                                  item: item,
+                                                  localProductProvider:
+                                                      localProductProvider,
                                                 ),
-                                                textAlign: TextAlign.left,
-                                              );
-                                            },
+                                              ),
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
                                           ),
-                                        ),
-                                      ),
-                                      flex: 1,
-                                      alignment: Alignment.centerLeft,
-                                    ),
 
-                                  // Total
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: Text(
-                                          AmountHelper.formatAmount(
-                                              (item.price! * item.quantity)),
-                                          style: TextStyle(
-                                              fontSize: fontProvider
-                                                  .billingTableItemSize),
-                                          textAlign: TextAlign.left,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
+                                        // MRP
+                                        if (appSettings?.showMrpPos == true)
+                                          _buildContentCell(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 70,
+                                                child: MrpTextField(
+                                                  key: ValueKey(
+                                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                  ),
+                                                  item: item,
+                                                  localProductProvider:
+                                                      localProductProvider,
+                                                ),
+                                              ),
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
+                                          ),
 
-                                  // Actions
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: IconButton(
-                                        icon: WebsafeSvg.asset(
-                                          ImageAssets.oderlistCloseIcon,
-                                          width: 15,
+                                        // Price
+                                        _buildContentCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 2),
+                                            child: SizedBox(
+                                              width: 70,
+                                              child: PriceTextField(
+                                                key: ValueKey(
+                                                  'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                ),
+                                                item: item,
+                                                localProductProvider:
+                                                    localProductProvider,
+                                              ),
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
                                         ),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        visualDensity: VisualDensity.compact,
-                                        onPressed: () {
-                                          localProductProvider.removeFromCart(
-                                            item.product.productId!,
-                                            item.selectedStock,
-                                            stockGroupIds: item.stockGroupIds,
-                                            saleUnitId: item.saleUnitId,
-                                          );
-                                        },
-                                      ),
+
+                                        // Tax Amount
+                                        if (appSettings?.showTaxPos == true)
+                                          _buildContentCell(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 60,
+                                                child: Builder(
+                                                  builder: (context) {
+                                                    // Calculate tax amount: (price * quantity * taxRate) / (100 + taxRate)
+                                                    final double itemTotal =
+                                                        (item.price ?? 0.0) *
+                                                            item.quantity;
+                                                    final double taxRate =
+                                                        item.taxRate ?? 0.0;
+                                                    final double taxAmount =
+                                                        taxRate > 0
+                                                            ? (itemTotal *
+                                                                taxRate /
+                                                                (100 + taxRate))
+                                                            : 0.0;
+                                                    return Text(
+                                                      AmountHelper.formatAmount(
+                                                          taxAmount),
+                                                      style: TextStyle(
+                                                        fontSize: fontProvider
+                                                            .billingTableItemSize,
+                                                        color: Colors.black,
+                                                      ),
+                                                      textAlign: TextAlign.left,
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
+                                          ),
+
+                                        // Total
+                                        _buildContentCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 2),
+                                            child: SizedBox(
+                                              width: 70,
+                                              child: Text(
+                                                AmountHelper.formatAmount(
+                                                    (item.price! *
+                                                        item.quantity)),
+                                                style: TextStyle(
+                                                    fontSize: fontProvider
+                                                        .billingTableItemSize),
+                                                textAlign: TextAlign.left,
+                                              ),
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+
+                                        // Actions
+                                        _buildContentCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 2),
+                                            child: IconButton(
+                                              icon: WebsafeSvg.asset(
+                                                ImageAssets.oderlistCloseIcon,
+                                                width: 15,
+                                              ),
+                                              padding: EdgeInsets.zero,
+                                              constraints:
+                                                  const BoxConstraints(),
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              onPressed: () {
+                                                localProductProvider
+                                                    .removeFromCart(
+                                                  item.product.productId!,
+                                                  item.selectedStock,
+                                                  stockGroupIds:
+                                                      item.stockGroupIds,
+                                                  saleUnitId: item.saleUnitId,
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                      ],
                                     ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
-                            );
-                          },
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
-  },
-);
-}
+  }
 
   void _focusCartTable() {
     debugPrint("⌨️ [BillingPage] Focusing cart table");
@@ -3052,9 +3204,8 @@ class BillingPageState extends State<BillingPage>
       return;
     }
 
-    final focusedIndex = (_cartTableFocusedRowIndex ?? 0)
-        .clamp(0, cartItems.length - 1)
-        .toInt();
+    final focusedIndex =
+        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
     final item = cartItems[focusedIndex];
 
     if (key == LogicalKeyboardKey.enter) {
@@ -3062,7 +3213,8 @@ class BillingPageState extends State<BillingPage>
       return;
     }
 
-    if (key == LogicalKeyboardKey.delete || key == LogicalKeyboardKey.backspace) {
+    if (key == LogicalKeyboardKey.delete ||
+        key == LogicalKeyboardKey.backspace) {
       _removeCartItemFromKeyboard(item, localProductProvider, cartItems.length);
       return;
     }
@@ -4448,12 +4600,13 @@ class BillingPageState extends State<BillingPage>
             ),
             if (_hasInternet) ...[
               FocusTraversalOrder(
-                order: const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
+                order:
+                    const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
                 child: _buildActionButton(
                   text: 'billing.confirm_and_print'.tr,
                   color: ColorManager.kButtonBlue,
-                  onPressed: () =>
-                      _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
+                  onPressed: () => _showCheckoutModal(
+                      actionMode: CheckoutActionMode.confirm),
                   isLoading: isLoadingCreateOrder,
                   isDisabled: disableActions && !isLoadingCreateOrder,
                   shortcutLabel: 'F6',
@@ -4464,12 +4617,13 @@ class BillingPageState extends State<BillingPage>
                       ?.showConfirmOrderButton ??
                   true)
                 FocusTraversalOrder(
-                  order: const NumericFocusOrder(BillingFocusOrders.confirmOrder),
+                  order:
+                      const NumericFocusOrder(BillingFocusOrders.confirmOrder),
                   child: _buildActionButton(
                     text: 'billing.confirm_order'.tr,
                     color: ColorManager.kButtonGreen,
-                    onPressed: () =>
-                        _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
+                    onPressed: () => _showCheckoutModal(
+                        actionMode: CheckoutActionMode.confirm),
                     isLoading: isLoadingConfirmOrder,
                     isDisabled: disableActions && !isLoadingConfirmOrder,
                     shortcutLabel: 'F2',
@@ -4514,56 +4668,57 @@ class BillingPageState extends State<BillingPage>
             onTap: (isLoading || isDisabled) ? null : onPressed,
             borderRadius: BorderRadius.circular(10.0),
             child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10.0),
-              color: isDisabled ? color.withOpacity(0.55) : color,
-            ),
-            child: Center(
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          text,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.white,
-                          ),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.0),
+                color: isDisabled ? color.withOpacity(0.55) : color,
+              ),
+              child: Center(
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
-                        if (shortcutLabel != null) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(3),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            text,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.white,
                             ),
-                            child: Text(
-                              shortcutLabel,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
+                          ),
+                          if (shortcutLabel != null) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                shortcutLabel,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
+                      ),
+              ),
             ),
           ),
-        ),
         ),
       ),
     );

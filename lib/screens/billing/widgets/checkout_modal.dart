@@ -1165,6 +1165,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         : _focusedCustomerIndex
             .clamp(0, _filteredCustomers.length - 1)
             .toInt();
+    final showCustomerType = Provider.of<AppSettingsProvider>(context)
+            .appSettings
+            ?.companyB2BEnabled ??
+        false;
 
     return Focus(
       focusNode: _customerListFocusNode,
@@ -1243,6 +1247,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 fontSize: 12, color: Colors.grey.shade600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        if (showCustomerType)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: _buildCustomerTypeBadge(
+                              customer.customerType,
+                              compact: true,
+                            ),
                           ),
                       ],
                     ),
@@ -1349,6 +1361,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final balance = _localSelectedCustomer!.balance ?? 0.0;
     final balanceColor =
         balance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626);
+    final showCustomerType = Provider.of<AppSettingsProvider>(context)
+            .appSettings
+            ?.companyB2BEnabled ??
+        false;
 
     return Material(
       color: Colors.transparent,
@@ -1410,6 +1426,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    if (showCustomerType)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: _buildCustomerTypeBadge(
+                          _localSelectedCustomer!.customerType,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1439,6 +1462,35 @@ class _CheckoutModalState extends State<CheckoutModal> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerTypeBadge(String? customerType, {bool compact = false}) {
+    final type = (customerType == null || customerType.trim().isEmpty)
+        ? 'B2C'
+        : customerType.trim().toUpperCase();
+    final isB2B = type == 'B2B';
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 6 : 8,
+        vertical: compact ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        color: isB2B ? Colors.green.shade50 : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isB2B ? Colors.green.shade300 : Colors.blue.shade300,
+        ),
+      ),
+      child: Text(
+        type,
+        style: TextStyle(
+          fontSize: compact ? 10 : 11,
+          fontWeight: FontWeight.w600,
+          color: isB2B ? Colors.green.shade700 : Colors.blue.shade700,
         ),
       ),
     );

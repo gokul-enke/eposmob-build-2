@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -19,32 +21,61 @@ class HeaderBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localProductProvider = Provider.of<LocalProductProvider>(context, listen: true);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: true);
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: true).appSettings;
     final bool isEditingOrder = localProductProvider.currentOrder != null;
+    final currentOrder = localProductProvider.currentOrder;
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    final fallbackCustomerName =
+        selectedCustomer?.name ?? currentOrder?.customerName ?? currentOrder?.customerPhone;
+    final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Text(
-              isEditingOrder ? 'Edit Order - ' : 'New Order - ',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s20,
-                0.30,
-                ColorManager.textColor,
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isEditingOrder ? 'Edit Order - ' : 'New Order - ',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s20,
+                      0.30,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                  Text(
+                    isEditingOrder
+                        ? '#${localProductProvider.currentOrder!.orderNumber}'
+                        : '#00000',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s20,
+                      0.30,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            Text(
-              isEditingOrder ? '#${localProductProvider.currentOrder!.orderNumber}' : '#00000',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s20,
-                0.30,
-                ColorManager.textColor,
-              ),
-            ),
-          ],
+              if (fallbackCustomerName != null &&
+                  fallbackCustomerName.trim().isNotEmpty)
+                _SelectedCustomerDetails(
+                  name: fallbackCustomerName,
+                  balance: selectedCustomer?.balance,
+                  customerType:
+                      showCustomerType ? selectedCustomer?.customerType : null,
+                ),
+            ],
+          ),
         ),
         Row(
           children: [
@@ -103,6 +134,98 @@ class HeaderBar extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _SelectedCustomerDetails extends StatelessWidget {
+  final String? name;
+  final double? balance;
+  final String? customerType;
+
+  const _SelectedCustomerDetails({
+    required this.name,
+    required this.balance,
+    required this.customerType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String displayName =
+        (name == null || name!.trim().isEmpty) ? 'Customer' : name!.trim();
+    final String displayBalance = (balance ?? 0).toStringAsFixed(2);
+    final String? displayCustomerType = customerType?.trim().isEmpty == true
+        ? null
+        : customerType?.trim().toUpperCase();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: ColorManager.kPrimaryColor.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.person_outline,
+            size: 16,
+            color: ColorManager.kPrimaryColor,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            displayName,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Balance: $displayBalance',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              Colors.grey.shade700,
+            ),
+          ),
+          if (displayCustomerType != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: displayCustomerType == 'B2B'
+                    ? Colors.green.shade50
+                    : Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: displayCustomerType == 'B2B'
+                      ? Colors.green.shade300
+                      : Colors.blue.shade300,
+                ),
+              ),
+              child: Text(
+                displayCustomerType,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.15,
+                  displayCustomerType == 'B2B'
+                      ? Colors.green.shade700
+                      : Colors.blue.shade700,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

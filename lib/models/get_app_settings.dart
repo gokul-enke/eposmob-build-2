@@ -27,6 +27,7 @@ class AppSettings {
   final bool freeDeliveryEnabled;
   final String freeDeliveryMinimumAmount;
   final bool itemCodeEnabled;
+  final bool companyB2BEnabled;
 
   AppSettings({
     required this.barcodeSales,
@@ -55,6 +56,7 @@ class AppSettings {
     required this.freeDeliveryEnabled,
     required this.freeDeliveryMinimumAmount,
     required this.itemCodeEnabled,
+    required this.companyB2BEnabled,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -136,6 +138,7 @@ class AppSettings {
       freeDeliveryMinimumAmount:
           settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['value'] ?? "",
       itemCodeEnabled: settingsMap['ITEM_CODE_ENABLED']?['status'] ?? false,
+      companyB2BEnabled: settingsMap['B2B']?['status'] ?? false,
     );
   }
 
@@ -285,6 +288,12 @@ class AppSettings {
           "code": "ITEM_CODE_ENABLED",
           "value": "",
           "status": itemCodeEnabled.toString(),
+        },
+        {
+          "name": "B2B",
+          "code": "B2B",
+          "value": "",
+          "status": companyB2BEnabled.toString(),
         },
       ],
     };
