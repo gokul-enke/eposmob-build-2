@@ -54,7 +54,8 @@ class PaymentMethodModal extends StatefulWidget {
       onAfterApply; // Optional callback to execute after applying payment methods
   final String? customButtonTitle; // Optional custom button title
   final bool closeOnApply; // Optional flag to control modal closing behavior
-  final bool isDefaultCustomer; // Flag to hide previous balance for default customer
+  final bool
+      isDefaultCustomer; // Flag to hide previous balance for default customer
   final bool showConfirmButton; // Flag to show/hide the confirm button
   final bool showAsDialog;
   final bool showShadow;
@@ -85,7 +86,6 @@ class PaymentMethodModal extends StatefulWidget {
     this.showShadow = true,
     this.fullWidth = false,
   }) : super(key: key);
-
 
   @override
   State<PaymentMethodModal> createState() => _PaymentMethodModalState();
@@ -232,15 +232,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     // Listen for text changes to capture virtual keyboard input
     _cashAmountListener =
-      () => _handleAmountControllerChange('cash', cashAmountController);
+        () => _handleAmountControllerChange('cash', cashAmountController);
     _cardAmountListener =
-      () => _handleAmountControllerChange('card', cardAmountController);
+        () => _handleAmountControllerChange('card', cardAmountController);
     _upiAmountListener =
-      () => _handleAmountControllerChange('upi', upiAmountController);
+        () => _handleAmountControllerChange('upi', upiAmountController);
     _codAmountListener =
-      () => _handleAmountControllerChange('cod', codAmountController);
+        () => _handleAmountControllerChange('cod', codAmountController);
     _toCustomerCreditListener = () => _handleAmountControllerChange(
-      'toCustomerCredit', toCustomerCreditController);
+        'toCustomerCredit', toCustomerCreditController);
 
     cashAmountController.addListener(_cashAmountListener);
     cardAmountController.addListener(_cardAmountListener);
@@ -259,23 +259,57 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _calculateBalance());
     }
 
-    // Auto-focus cash field if it was auto-filled and cash is selected
-    if (widget.initialIsCashSelected && cashAmountController.text.isNotEmpty) {
-      // Check if this looks like an auto-filled amount (cart total)
-      final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-      if (cashAmount > 0 && cashAmount == widget.cartTotal) {
-        // This appears to be auto-filled, focus and select the text
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            cashAmountFocusNode.requestFocus();
-            cashAmountController.selection = TextSelection(
-              baseOffset: 0,
-              extentOffset: cashAmountController.text.length,
-            );
-          }
-        });
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusInitialSelectedPaymentAmount();
+    });
+  }
+
+  void _focusInitialSelectedPaymentAmount() {
+    if (!mounted) return;
+
+    TextEditingController? controller;
+    FocusNode? focusNode;
+
+    if (isCashSelected && cashAmountController.text.isNotEmpty) {
+      controller = cashAmountController;
+      focusNode = cashAmountFocusNode;
+    } else if (isCardSelected && cardAmountController.text.isNotEmpty) {
+      controller = cardAmountController;
+      focusNode = cardAmountFocusNode;
+    } else if (isUpiSelected && upiAmountController.text.isNotEmpty) {
+      controller = upiAmountController;
+      focusNode = upiAmountFocusNode;
+    } else if (isCodSelected && codAmountController.text.isNotEmpty) {
+      controller = codAmountController;
+      focusNode = codAmountFocusNode;
+    } else if (isCashSelected) {
+      controller = cashAmountController;
+      focusNode = cashAmountFocusNode;
+    } else if (isCardSelected) {
+      controller = cardAmountController;
+      focusNode = cardAmountFocusNode;
+    } else if (isUpiSelected) {
+      controller = upiAmountController;
+      focusNode = upiAmountFocusNode;
+    } else if (isCodSelected) {
+      controller = codAmountController;
+      focusNode = codAmountFocusNode;
     }
+
+    if (controller == null || focusNode == null) return;
+
+    focusNode.requestFocus();
+    if (controller.text.isNotEmpty) {
+      controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: controller.text.length,
+      );
+    }
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      controller,
+      replaceOnFirstInput: true,
+    );
   }
 
   void _notifyChanges() {
@@ -284,16 +318,16 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
     _debounceTimer?.cancel();
     final double creditAmount =
-      double.tryParse(creditAmountController.text) ?? 0.0;
+        double.tryParse(creditAmountController.text) ?? 0.0;
     final double mappedCredit =
         double.tryParse(toCustomerCreditController.text) ?? 0.0;
     final bool mappedIsDebitSelected =
-      (toCustomerCreditEnabled && mappedCredit > 0) ||
-        (isCreditSelected && creditAmount > 0);
+        (toCustomerCreditEnabled && mappedCredit > 0) ||
+            (isCreditSelected && creditAmount > 0);
     final String mappedDebitAmount = mappedIsDebitSelected
-      ? (isCreditSelected && creditAmount > 0
-        ? creditAmount.toStringAsFixed(2)
-        : mappedCredit.toStringAsFixed(2))
+        ? (isCreditSelected && creditAmount > 0
+            ? creditAmount.toStringAsFixed(2)
+            : mappedCredit.toStringAsFixed(2))
         : '';
 
     widget.onPaymentMethodSelected(
@@ -849,7 +883,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       }
     });
 
-    if (label == 'cash' || label == 'card' || label == 'upi' || label == 'cod') {
+    if (label == 'cash' ||
+        label == 'card' ||
+        label == 'upi' ||
+        label == 'cod') {
       _syncCreditAmountWithRemaining();
     }
 
@@ -1051,9 +1088,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                   size: size,
                                   width: double.infinity,
                                   height: size.height * .06,
-                                  hintText: 'Enter transaction reference number',
+                                  hintText:
+                                      'Enter transaction reference number',
                                   onTap: () {
-                                    Provider.of<KeyboardProvider>(context, listen: false).show(
+                                    Provider.of<KeyboardProvider>(context,
+                                            listen: false)
+                                        .show(
                                       'number',
                                       transactionNumberController,
                                       replaceOnFirstInput: true,
@@ -1080,7 +1120,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     children: [
                       // Extended Summary
                       BuildPaymentRow(
-                        amount: '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
+                        amount:
+                            '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
                         title: 'billing.total_paid'.tr,
                         secondRowTextStyle: buildCustomStyle(
                           FontWeightManager.semiBold,
@@ -1098,7 +1139,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       ),
 
                       BuildPaymentRow(
-                        amount: '$currency ${widget.cartTotal.toStringAsFixed(2)}',
+                        amount:
+                            '$currency ${widget.cartTotal.toStringAsFixed(2)}',
                         title: 'billing.purchase_total'.tr,
                         secondRowTextStyle: buildCustomStyle(
                           FontWeightManager.medium,
@@ -1118,7 +1160,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       // Only show customer previous balance if NOT default customer
                       if (!widget.isDefaultCustomer)
                         BuildPaymentRow(
-                          amount: _formatSignedWithCurrency(widget.customerPrevBalance),
+                          amount: _formatSignedWithCurrency(
+                              widget.customerPrevBalance),
                           title: 'billing.customer_prev_balance'.tr,
                           secondRowTextStyle: buildCustomStyle(
                             FontWeightManager.medium,
@@ -1165,7 +1208,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               activeColor: ColorManager.kPrimaryColor,
                               onChanged: (value) {
                                 setState(() {
-                                  debugPrint('=== TOGGLE TO CUSTOMER CREDIT ===');
+                                  debugPrint(
+                                      '=== TOGGLE TO CUSTOMER CREDIT ===');
                                   debugPrint('Toggle value changed to: $value');
 
                                   toCustomerCreditEnabled = value;
@@ -1174,17 +1218,24 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                         '📈 TOGGLE ON - Enabling customer credit functionality');
 
                                     // Calculate current state
-                                    final currentBaseBalance = _computeBaseBalance();
-                                    final cashAmount =
-                                        double.tryParse(cashAmountController.text) ?? 0.0;
-                                    final cardAmount =
-                                        double.tryParse(cardAmountController.text) ?? 0.0;
-                                    final upiAmount =
-                                        double.tryParse(upiAmountController.text) ?? 0.0;
-                                    final codAmount =
-                                        double.tryParse(codAmountController.text) ?? 0.0;
-                                    final totalCollected =
-                                        cashAmount + cardAmount + upiAmount + codAmount;
+                                    final currentBaseBalance =
+                                        _computeBaseBalance();
+                                    final cashAmount = double.tryParse(
+                                            cashAmountController.text) ??
+                                        0.0;
+                                    final cardAmount = double.tryParse(
+                                            cardAmountController.text) ??
+                                        0.0;
+                                    final upiAmount = double.tryParse(
+                                            upiAmountController.text) ??
+                                        0.0;
+                                    final codAmount = double.tryParse(
+                                            codAmountController.text) ??
+                                        0.0;
+                                    final totalCollected = cashAmount +
+                                        cardAmount +
+                                        upiAmount +
+                                        codAmount;
 
                                     // Auto-fill logic with debt settlement priority
                                     final transactionExcess =
@@ -1195,7 +1246,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
                                       if (widget.customerPrevBalance < 0) {
                                         // Customer owes money - prioritize debt settlement
-                                        final customerDebt = widget.customerPrevBalance.abs();
+                                        final customerDebt =
+                                            widget.customerPrevBalance.abs();
                                         if (customerDebt <= transactionExcess) {
                                           prefillAmount = customerDebt;
                                         } else {
@@ -1241,7 +1293,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                             hintText: 'Enter amount to add as customer credit',
                             focusNode: toCustomerCreditFocusNode,
                             onTap: () {
-                              Provider.of<KeyboardProvider>(context, listen: false).show(
+                              Provider.of<KeyboardProvider>(context,
+                                      listen: false)
+                                  .show(
                                 'number',
                                 toCustomerCreditController,
                                 replaceOnFirstInput: true,
@@ -1293,7 +1347,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               Navigator.of(context).pop();
                             } else {
                               if (widget.onAfterApply != null) {
-                                Future.delayed(const Duration(milliseconds: 100), () {
+                                Future.delayed(
+                                    const Duration(milliseconds: 100), () {
                                   widget.onAfterApply!();
                                 });
                               }
@@ -1308,9 +1363,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           height: 45,
                           width: double.infinity,
                           isLoading: _isApplying,
-                            boxColor:
-                              _isApplying ? Colors.grey.shade400 : null,
-                            borderColor:
+                          boxColor: _isApplying ? Colors.grey.shade400 : null,
+                          borderColor:
                               _isApplying ? Colors.grey.shade400 : null,
                         ),
                     ],
@@ -1360,41 +1414,41 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               });
             },
             child: BuildBoxShadowContainer(
-            border: isFocused
-                ? Border.all(color: Colors.orange, width: 3)
-                : isSelected
-                    ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-                    : Border.all(color: Colors.grey.shade300),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            blurRadius: isFocused ? 8 : 4,
-            circleRadius: 5,
-            height: size.height * .06, // Match text field height
-            width: 100, // Fixed width for alignment
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                WebsafeSvg.asset(
-                  icon,
-                  width: 14,
-                  height: 14,
-                  colorFilter: ColorFilter.mode(
-                      isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                      BlendMode.srcIn),
-                  fit: BoxFit.none,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s11,
-                    0.12,
-                    isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+              border: isFocused
+                  ? Border.all(color: Colors.orange, width: 3)
+                  : isSelected
+                      ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                      : Border.all(color: Colors.grey.shade300),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              blurRadius: isFocused ? 8 : 4,
+              circleRadius: 5,
+              height: size.height * .06, // Match text field height
+              width: 100, // Fixed width for alignment
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  WebsafeSvg.asset(
+                    icon,
+                    width: 14,
+                    height: 14,
+                    colorFilter: ColorFilter.mode(
+                        isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                        BlendMode.srcIn),
+                    fit: BoxFit.none,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11,
+                      0.12,
+                      isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           ),
         ),
 
