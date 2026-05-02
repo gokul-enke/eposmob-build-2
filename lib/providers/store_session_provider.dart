@@ -66,6 +66,7 @@ class StoreSessionProvider extends ChangeNotifier {
         previousActiveStoreId != selectedStoreId;
 
     await sharedPrefProvider.saveActiveStoreId(store.storeId ?? 0);
+    await sharedPrefProvider.saveActiveStoreDetails(store.toJson());
     _activeStore = store;
     _setStatus('Preparing environment for ${store.storeName ?? "store"}...');
 

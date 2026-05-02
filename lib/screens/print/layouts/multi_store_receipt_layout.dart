@@ -44,7 +44,7 @@ import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 /// - Bilingual table headers with value-only labels elsewhere
 /// - Streamlined totals section with clear hierarchy
 /// - Minimal, elegant footer
-class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
+class MultiStoreReceiptLayout implements ReceiptLayout {
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Standard theme spacing constants
@@ -53,15 +53,15 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
   static const double _headerGap = 0.0;
 
   @override
-  String get layoutId => 'arabic_english_3_table_headers';
+  String get layoutId => 'multi_store_table_headers';
 
   @override
-  String get displayName => 'Arabic & English 3 Table Headers';
+  String get displayName => 'Multi Store Table Headers';
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
     debugPrint(
-        "===== ARABIC AND ENGLISH 3 HEADERS ONLY LAYOUT: THERMAL PRINTING ====");
+        "===== MULTI STORE TABLE HEADERS LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
     final selectedPrinter = params.selectedPrinter;
@@ -74,6 +74,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
+    final paymentGatewaysProvider =
+        Provider.of<PaymentGatewaysProvider>(context, listen: false);
 
     try {
       debugPrint("Connecting to printer...");
@@ -90,6 +92,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       // Setup print parameters
       final double printWidth = params.printWidth;
       final double baseFontSize = params.baseFontSize;
+      final activeStoreDetails = await _loadActiveStoreDetails();
 
       // Build receipt rows
       List<ReceiptRow> part1Rows = [];
@@ -129,7 +132,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
       // ========== HEADER SECTION (Modern & Clean) ==========
       _buildHeaderSection(
-          part1Rows, params, displayConfig, appSettings, isEnglish);
+          part1Rows, params, displayConfig, appSettings, isEnglish,
+          activeStoreDetails: activeStoreDetails);
 
       // ========== CUSTOMER SECTION ==========
       _buildCustomerSection(part1Rows, params, displayConfig, isEnglish);
@@ -142,7 +146,10 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
           sarSymbol, appSettings?.currency ?? 'INR');
 
       // ========== FOOTER SECTION (Part 2) ==========
-      _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);
+      _buildFooterSection(part2Rows, params, displayConfig, isEnglish,
+          appSettings: appSettings,
+          paymentGatewaysProvider: paymentGatewaysProvider,
+          activeStoreDetails: activeStoreDetails);
 
       // ========== RENDER IMAGES ==========
       debugPrint("Rendering Arabic and English receipt images...");
@@ -239,7 +246,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
   @override
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
     debugPrint(
-        "[ArabicAndEnglish3ReceiptLayout] buildPdf - delegating to StandardPrinter");
+        "[MultiStoreReceiptLayout] buildPdf - delegating to StandardPrinter");
     return pw.Document();
   }
 
@@ -255,8 +262,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
     dynamic appSettings,
-    bool isEnglish,
-  ) {
+    bool isEnglish, {
+    Map<String, dynamic>? activeStoreDetails,
+  }) {
     final billDocumentConfig = params.billDocumentConfig;
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
@@ -282,10 +290,14 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeNameText = _getOptionText(
-        displayConfig,
-        'showStoreName',
-        defaultValue: 'STORE NAME',
+      final storeNameText = _storeText(
+        activeStoreDetails,
+        ['store_name', 'storeName', 'name'],
+        fallback: _getOptionText(
+          displayConfig,
+          'showStoreName',
+          defaultValue: 'STORE NAME',
+        ),
       );
 
       // Dynamic scaling based on name length
@@ -321,7 +333,11 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final addressText = _getOptionText(displayConfig, 'showStoreAddress');
+      final addressText = _storeText(
+        activeStoreDetails,
+        ['location', 'address', 'store_address', 'storeAddress'],
+        fallback: _getOptionText(displayConfig, 'showStoreAddress'),
+      );
 
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText, scale: 0.85, isBold: true, verticalPadding: 0, verticalOffset: 0));
@@ -374,10 +390,14 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephoneText = _getOptionText(
-        displayConfig,
-        'showTel',
-        fallback: appSettings?.customerCarePhone,
+      final telephoneText = _storeText(
+        activeStoreDetails,
+        ['phone', 'store_phone', 'storePhone'],
+        fallback: _getOptionText(
+          displayConfig,
+          'showTel',
+          fallback: appSettings?.customerCarePhone,
+        ),
       );
 
       if (telephoneText.isNotEmpty) {
@@ -386,10 +406,14 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final emailText = _getOptionText(
-        displayConfig,
-        'showEmail',
-        fallback: appSettings?.customerCareEmail,
+      final emailText = _storeText(
+        activeStoreDetails,
+        ['email', 'store_email', 'storeEmail'],
+        fallback: _getOptionText(
+          displayConfig,
+          'showEmail',
+          fallback: appSettings?.customerCareEmail,
+        ),
       );
 
       if (emailText.isNotEmpty) {
@@ -1455,13 +1479,32 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     List<ReceiptRow> rows,
     ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
-    bool isEnglish,
-    BuildContext context,
-  ) {
+    bool isEnglish, {
+    dynamic appSettings,
+    required PaymentGatewaysProvider paymentGatewaysProvider,
+    Map<String, dynamic>? activeStoreDetails,
+  }) {
     rows.add(SpacingRow(_sectionGap));
 
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+
+    if (displayConfig?['showDeliveryPhone']?.visible == true) {
+      final deliveryPhone = _storeText(
+        activeStoreDetails,
+        ['delivery_phone', 'deliveryPhone', 'phone', 'store_phone', 'storePhone'],
+        fallback: _getOptionText(
+          displayConfig,
+          'showDeliveryPhone',
+          fallback: appSettings?.autoAssignDefaultCustomerPhone,
+        ),
+      );
+
+      if (deliveryPhone.isNotEmpty) {
+        rows.add(TextRow(deliveryPhone, scale: 0.85, isBold: true));
+        rows.add(SpacingRow(_itemGap));
+      }
+    }
 
     // QR Code - Use ZATCA QR if credentials available, otherwise fallback to payment QR
     if (displayConfig?['showQRCode']?.visible == true) {
@@ -1496,8 +1539,6 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         debugPrint('[StandardLayout] No ZATCA credentials, using payment QR');
 
         // Fallback to payment gateway QR
-        final paymentGatewaysProvider =
-            Provider.of<PaymentGatewaysProvider>(context, listen: false);
         final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
             .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
                 orElse: () => PaymentGateway(
@@ -1741,6 +1782,43 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     return defaultValue;
   }
 
+  Future<Map<String, dynamic>?> _loadActiveStoreDetails() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final activeStoreJson = prefs.getString('active_store');
+      if (activeStoreJson == null || activeStoreJson.isEmpty) {
+        return null;
+      }
+
+      final decoded = json.decode(activeStoreJson);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+    } catch (e) {
+      debugPrint('[MultiStoreReceiptLayout] Error loading active store: $e');
+    }
+    return null;
+  }
+
+  String _storeText(
+    Map<String, dynamic>? activeStoreDetails,
+    List<String> keys, {
+    String fallback = '',
+  }) {
+    if (activeStoreDetails != null) {
+      for (final key in keys) {
+        final value = activeStoreDetails[key];
+        if (value != null && value.toString().trim().isNotEmpty) {
+          return value.toString().trim();
+        }
+      }
+    }
+    return fallback.trim();
+  }
+
   /// Get a label with priority: displayConfig value > resolvedLabel > default
   String _getLabel(
     Map<String, DisplayOption>? displayConfig,
@@ -1828,7 +1906,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       }
     } catch (e) {
       debugPrint(
-          "[ArabicAndEnglish3ReceiptLayout] Error fetching image: $e");
+          "[MultiStoreReceiptLayout] Error fetching image: $e");
     }
     return null;
   }
@@ -1842,7 +1920,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       return fi.image;
     } catch (e) {
       debugPrint(
-          "[ArabicAndEnglish3ReceiptLayout] Error loading asset image: $e");
+          "[MultiStoreReceiptLayout] Error loading asset image: $e");
     }
     return null;
   }
