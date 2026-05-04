@@ -1025,11 +1025,14 @@ class ClassicReceiptLayout implements ReceiptLayout {
           _getLabel(displayConfig, 'showNetAmount', null, "Net Total:");
       final taxLabel =
           _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "Tax :");
+      final quantityCountLabel = _getLabel(
+          displayConfig, 'showQuantityCount', null, "$qtyLabel Total:");
 
       // Check visibility settings
       final showItemsCount = displayConfig?['showItemsCount']?.visible ?? true;
       final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
-      final showQty = displayConfig?['showQty']?.visible ?? true;
+      final showQuantityCount =
+          displayConfig?['showQuantityCount']?.visible ?? true;
       final showTax = displayConfig?['showTax']?.visible ?? true;
       final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1064,12 +1067,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
 
       // Total Qty and Tax row
-      if (showQty || showTax) {
-        final totalQtyLabel = "$qtyLabel Total:";
+      if (showQuantityCount || showTax) {
         List<ReceiptTableColumn> qtyTaxRow = [];
 
-        if (showQty) {
-          qtyTaxRow.add(ReceiptTableColumn(totalQtyLabel,
+        if (showQuantityCount) {
+          qtyTaxRow.add(ReceiptTableColumn(quantityCountLabel,
               weight: 0.25, align: TextAlign.left));
           qtyTaxRow.add(ReceiptTableColumn(
               totalQuantity % 1 == 0

@@ -730,6 +730,11 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 '${_cfgVal('showItemsCount', isRtl ? 'العدد' : 'Items')}: ${params.cartItems.length}',
                 style: footerStyle,
               ),
+            if (_cfgVisible('showQuantityCount'))
+              pw.Text(
+                '${_cfgVal('showQuantityCount', isRtl ? 'إجمالي الكمية' : 'Total Qty')}: ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
+                style: footerStyle,
+              ),
 
             // ═══════════════════════════════════════════════════════
             // YOU SAVED
