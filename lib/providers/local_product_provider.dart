@@ -1559,7 +1559,7 @@ class LocalProductProvider extends ChangeNotifier {
   }) async {
     List<GetProduct> allProducts = [];
     int currentPage = 1;
-    const int batchSize = 10; // Fetch 10 pages concurrently
+    const int batchSize = 3; // Fetch 3 pages concurrently
     final prefsProvider = prefs_provider.SharedPreferenceProvider();
     final lastSyncRaw =
         refresh ? null : await prefsProvider.getLastProductSyncIso();
