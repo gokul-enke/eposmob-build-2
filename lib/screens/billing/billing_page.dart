@@ -2142,6 +2142,10 @@ class BillingPageState extends State<BillingPage>
         Provider.of<AppSettingsProvider>(context, listen: true).appSettings;
     final bool isEditingOrder = localProductProvider.currentOrder != null;
     final currentOrder = localProductProvider.currentOrder;
+    final String compactOrderNumber = currentOrder?.orderNumber
+            .replaceFirst(RegExp(r'^ORD-', caseSensitive: false), '')
+            .replaceFirst(RegExp(r'^0+'), '') ??
+        '';
     final selectedHeaderCustomer =
         customerSelectionProvider.selectedCustomer ?? selectedCustomer;
     final fallbackCustomerName = selectedHeaderCustomer?.name ??
@@ -2162,19 +2166,16 @@ class BillingPageState extends State<BillingPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isEditingOrder
-                        ? '${'billing.edit_order'.tr} - '
-                        : '${'billing.new_order'.tr} - ',
+                    isEditingOrder ? '${'Edit'.tr} - ' : 'New'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
+                        FontSize.s18, 0.25, ColorManager.textColor),
                   ),
-                  Text(
-                    isEditingOrder
-                        ? '#${localProductProvider.currentOrder!.orderNumber}'
-                        : '#00000',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
-                  ),
+                  if (isEditingOrder)
+                    Text(
+                      '#${compactOrderNumber.isEmpty ? currentOrder!.orderNumber : compactOrderNumber}',
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s18, 0.25, ColorManager.textColor),
+                    ),
                 ],
               ),
               if (fallbackCustomerName != null &&
@@ -2298,72 +2299,89 @@ class BillingPageState extends State<BillingPage>
     final String displayName =
         (name == null || name.trim().isEmpty) ? 'Customer' : name.trim();
     final String displayBalance = (balance ?? 0).toStringAsFixed(2);
+    final Color balanceColor = (balance ?? 0) < 0
+        ? Colors.red.shade600
+        : (balance ?? 0) > 0
+            ? Colors.green.shade700
+            : Colors.grey.shade600;
     final String? displayCustomerType = customerType?.trim().isEmpty == true
         ? null
         : customerType?.trim().toUpperCase();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: ColorManager.kPrimaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: ColorManager.kPrimaryColor.withValues(alpha: 0.25),
+          color: ColorManager.kPrimaryColor.withValues(alpha: 0.18),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.person_outline,
-            size: 16,
-            color: ColorManager.kPrimaryColor,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            displayName,
-            overflow: TextOverflow.ellipsis,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s12,
-              0.18,
-              ColorManager.textColor,
+          Container(
+            height: 18,
+            width: 18,
+            decoration: BoxDecoration(
+              color: ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_outline,
+              size: 12,
+              color: ColorManager.kPrimaryColor,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 150),
+            child: Text(
+              displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.16,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+          Container(
+            height: 14,
+            width: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 7),
+            color: Colors.grey.shade300,
+          ),
           Text(
-            'Balance: $displayBalance',
+            'Bal $displayBalance',
             style: buildCustomStyle(
               FontWeightManager.medium,
-              FontSize.s12,
-              0.18,
-              Colors.grey.shade700,
+              FontSize.s11,
+              0.16,
+              balanceColor,
             ),
           ),
           if (displayCustomerType != null) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
                 color: displayCustomerType == 'B2B'
-                    ? Colors.green.shade50
-                    : Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: displayCustomerType == 'B2B'
-                      ? Colors.green.shade300
-                      : Colors.blue.shade300,
-                ),
+                    ? Colors.green.shade100
+                    : ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 displayCustomerType,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
-                  FontSize.s10,
-                  0.15,
+                  FontSize.s9,
+                  0.12,
                   displayCustomerType == 'B2B'
                       ? Colors.green.shade700
-                      : Colors.blue.shade700,
+                      : ColorManager.kPrimaryColor,
                 ),
               ),
             ),

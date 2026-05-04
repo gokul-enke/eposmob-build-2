@@ -2818,6 +2818,16 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final customerBalanceColor = customerBalance >= 0
         ? const Color(0xFF059669)
         : const Color(0xFFDC2626);
+    final customerNameLength = customer?.name?.trim().length ?? subtitle.length;
+    final customerTitleFontSize = customer == null
+        ? 14.0
+        : customerNameLength > 24
+            ? 10.5
+            : customerNameLength > 18
+                ? 11.5
+                : customerNameLength > 12
+                    ? 12.5
+                    : 13.0;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -2858,28 +2868,30 @@ class _CheckoutModalState extends State<CheckoutModal> {
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: isCurrentStep
-                        ? Colors.white.withOpacity(0.15)
-                        : isCompleted
-                            ? const Color(0xFFDCFCE7)
-                            : const Color(0xFFF1F5F9),
-                    shape: BoxShape.circle,
+                if (customer == null) ...[
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: isCurrentStep
+                          ? Colors.white.withOpacity(0.15)
+                          : isCompleted
+                              ? const Color(0xFFDCFCE7)
+                              : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isCompleted ? Icons.check_circle : icon,
+                      color: isCurrentStep
+                          ? Colors.white
+                          : isCompleted
+                              ? const Color(0xFF166534)
+                              : const Color(0xFF64748B),
+                      size: 20,
+                    ),
                   ),
-                  child: Icon(
-                    isCompleted ? Icons.check_circle : icon,
-                    color: isCurrentStep
-                        ? Colors.white
-                        : isCompleted
-                            ? const Color(0xFF166534)
-                            : const Color(0xFF64748B),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 14),
+                  const SizedBox(width: 14),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2888,7 +2900,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         customer != null ? subtitle : title,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          fontSize: 14,
+                          fontSize: customerTitleFontSize,
                           letterSpacing: 0.2,
                           color: isCurrentStep
                               ? Colors.white
@@ -2922,12 +2934,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 customer.customerType,
                                 compact: true,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 2),
                             ],
                             Flexible(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 5, vertical: 1),
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: isCurrentStep
                                       ? Colors.white24
@@ -2938,13 +2950,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   'Bal: ${customerBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w600,
                                     color: isCurrentStep
                                         ? Colors.white
                                         : customerBalanceColor,
                                   ),
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.visible,
+                                  softWrap: false,
                                 ),
                               ),
                             ),
