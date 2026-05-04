@@ -51,6 +51,7 @@ class StockItem {
   String category;
   String product;
   String quantity;
+  String purchaseQty;
   String salePrice;
   String mrp;
   String wholesale;
@@ -68,6 +69,9 @@ class StockItem {
   bool isExpanded; // Add this field for expandable functionality
   bool isEditing; // Add this field to toggle edit mode for already-added rows
   String? selectedUnit; // Add selected unit for dropdown
+  String? selectedPurchaseUnit;
+  String? purchaseUnitName;
+  String? purchaseConversionRate;
   String? selectedRack; // Add selected rack for dropdown
   bool isSuccessfullyAdded; // Add this field to track successful addition
   Map<String, dynamic>? apiResponse; // Add this field to store API response
@@ -83,6 +87,7 @@ class StockItem {
     this.category = '',
     this.product = '',
     this.quantity = '1',
+    this.purchaseQty = '1',
     this.salePrice = '0',
     this.mrp = '0',
     this.wholesale = '',
@@ -99,6 +104,9 @@ class StockItem {
     this.isExpanded = false,
     this.isEditing = false,
     this.selectedUnit,
+    this.selectedPurchaseUnit,
+    this.purchaseUnitName,
+    this.purchaseConversionRate,
     this.selectedRack,
     this.isSuccessfullyAdded = false,
     this.apiResponse,
@@ -135,6 +143,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> productSearchControllers = {};
   final Map<int, TextEditingController> barcodeControllers = {};
   final Map<int, TextEditingController> quantityControllers = {};
+  final Map<int, TextEditingController> purchaseQtyControllers = {};
 
   // Expanded field controllers for each row
   final Map<int, TextEditingController> purchaseRateControllers = {};
@@ -144,6 +153,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> batchNumberControllers = {};
   // Search controllers for expanded dropdowns
   final Map<int, TextEditingController> unitSearchControllers = {};
+  final Map<int, TextEditingController> purchaseUnitSearchControllers = {};
   final Map<int, TextEditingController> rackSearchControllers = {};
 
   // Focus nodes for barcode and quantity fields
@@ -214,6 +224,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       } catch (_) {}
       quantityControllers.remove(index);
     }
+    if (purchaseQtyControllers.containsKey(index)) {
+      try {
+        purchaseQtyControllers[index]!.dispose();
+      } catch (_) {}
+      purchaseQtyControllers.remove(index);
+    }
     if (purchaseRateControllers.containsKey(index)) {
       try {
         purchaseRateControllers[index]!.dispose();
@@ -249,6 +265,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         unitSearchControllers[index]!.dispose();
       } catch (_) {}
       unitSearchControllers.remove(index);
+    }
+    if (purchaseUnitSearchControllers.containsKey(index)) {
+      try {
+        purchaseUnitSearchControllers[index]!.dispose();
+      } catch (_) {}
+      purchaseUnitSearchControllers.remove(index);
     }
     if (rackSearchControllers.containsKey(index)) {
       try {
@@ -439,6 +461,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'category': item.category,
       'product': item.product,
       'quantity': item.quantity,
+      'purchaseQty': item.purchaseQty,
       'salePrice': item.salePrice,
       'mrp': item.mrp,
       'wholesale': item.wholesale,
@@ -448,6 +471,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'expDate': item.expDate.toIso8601String(),
       'batchNumber': item.batchNumber,
       'selectedUnit': item.selectedUnit,
+      'selectedPurchaseUnit': item.selectedPurchaseUnit,
+      'purchaseUnitName': item.purchaseUnitName,
+      'purchaseConversionRate': item.purchaseConversionRate,
       'selectedRack': item.selectedRack,
       'taxInclude': item.taxInclude,
       'productId': item.productData?.productId,
@@ -462,6 +488,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       category: map['category'] ?? '',
       product: map['product'] ?? '',
       quantity: map['quantity'] ?? '1',
+      purchaseQty: map['purchaseQty'] ?? '1',
       salePrice: map['salePrice'] ?? '0',
       mrp: map['mrp'] ?? '0',
       wholesale: map['wholesale'] ?? '',
@@ -474,6 +501,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           : DateTime.now().add(const Duration(days: 365)),
       batchNumber: map['batchNumber'] ?? '',
       selectedUnit: map['selectedUnit'],
+      selectedPurchaseUnit: map['selectedPurchaseUnit'],
+      purchaseUnitName: map['purchaseUnitName'],
+      purchaseConversionRate: map['purchaseConversionRate'],
       selectedRack: map['selectedRack'],
       taxInclude: map['taxInclude'] ?? true,
     );
@@ -602,6 +632,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('⚠️ Error disposing quantity controller: $e');
       }
     }
+    for (var controller in purchaseQtyControllers.values) {
+      try {
+        controller.dispose();
+      } catch (e) {
+        debugPrint('Error disposing purchase qty controller: $e');
+      }
+    }
 
     // Dispose expanded field controllers safely
     for (var controller in purchaseRateControllers.values) {
@@ -637,6 +674,27 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         controller.dispose();
       } catch (e) {
         debugPrint('⚠️ Error disposing batch number controller: $e');
+      }
+    }
+    for (var controller in unitSearchControllers.values) {
+      try {
+        controller.dispose();
+      } catch (e) {
+        debugPrint('Error disposing unit search controller: $e');
+      }
+    }
+    for (var controller in purchaseUnitSearchControllers.values) {
+      try {
+        controller.dispose();
+      } catch (e) {
+        debugPrint('Error disposing purchase unit search controller: $e');
+      }
+    }
+    for (var controller in rackSearchControllers.values) {
+      try {
+        controller.dispose();
+      } catch (e) {
+        debugPrint('Error disposing rack search controller: $e');
       }
     }
 
@@ -708,11 +766,207 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return quantityControllers[index]!;
   }
 
+  TextEditingController _getPurchaseQtyController(int index) {
+    if (!purchaseQtyControllers.containsKey(index)) {
+      String initialValue = '1';
+      if (index < stockItems.length) {
+        initialValue = stockItems[index].purchaseQty;
+      }
+      purchaseQtyControllers[index] = TextEditingController(text: initialValue);
+    }
+    return purchaseQtyControllers[index]!;
+  }
+
   FocusNode _getQuantityFocusNode(int index) {
     if (!quantityFocusNodes.containsKey(index)) {
       quantityFocusNodes[index] = FocusNode();
     }
     return quantityFocusNodes[index]!;
+  }
+
+  TextEditingController _getPurchaseUnitSearchController(int index) {
+    if (!purchaseUnitSearchControllers.containsKey(index)) {
+      purchaseUnitSearchControllers[index] = TextEditingController();
+    }
+    return purchaseUnitSearchControllers[index]!;
+  }
+
+  String? _findUnitKeyByUnitName(String? unitName) {
+    final normalizedUnit = unitName?.trim().toLowerCase();
+    if (normalizedUnit == null || normalizedUnit.isEmpty) {
+      return null;
+    }
+
+    final purchaseProvider =
+        Provider.of<PurchaseProvider>(context, listen: false);
+    final unitList = purchaseProvider.getUnitList;
+    if (unitList == null || unitList.isEmpty) {
+      return null;
+    }
+
+    for (final entry in unitList.entries) {
+      if (entry.value.trim().toLowerCase() == normalizedUnit) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  SaleUnit? _findMatchingSaleUnit(GetProduct product, String barcode) {
+    final normalizedBarcode = barcode.trim();
+    if (normalizedBarcode.isEmpty) {
+      return null;
+    }
+
+    for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+      final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+      if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == normalizedBarcode) {
+        return saleUnit;
+      }
+    }
+
+    return null;
+  }
+
+  SaleUnit? _getSelectedPurchaseSaleUnit(StockItem item) {
+    final selectedPurchaseUnit = item.selectedPurchaseUnit;
+    if (selectedPurchaseUnit == null || selectedPurchaseUnit.isEmpty) {
+      return null;
+    }
+
+    for (final saleUnit in item.productData?.saleUnits ?? const <SaleUnit>[]) {
+      if (saleUnit.id?.toString() == selectedPurchaseUnit) {
+        return saleUnit;
+      }
+    }
+
+    return null;
+  }
+
+  List<SaleUnit> _getAvailablePurchaseUnits(StockItem item) {
+    return item.productData?.saleUnits ?? const <SaleUnit>[];
+  }
+
+  bool _hasPurchaseUnits(StockItem item) {
+    return _getAvailablePurchaseUnits(item).isNotEmpty;
+  }
+
+  double _parsePositiveDouble(String? value, {double fallback = 0.0}) {
+    final parsed = double.tryParse(value?.trim() ?? '');
+    if (parsed == null || parsed <= 0) {
+      return fallback;
+    }
+    return parsed;
+  }
+
+  String _formatNumber(num value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  void _applyBaseUnitFromProduct(int index, GetProduct product) {
+    final unitKey = _findUnitKeyByUnitName(product.unit);
+    if (unitKey != null && unitKey.isNotEmpty) {
+      stockItems[index].selectedUnit = unitKey;
+      stockItems[index].unit = product.unit ?? '';
+    } else {
+      stockItems[index].selectedUnit = null;
+      stockItems[index].unit = product.unit ?? '';
+    }
+  }
+
+  void _syncStockQuantityFromPurchaseQty(int index) {
+    if (index < 0 || index >= stockItems.length) {
+      return;
+    }
+
+    final item = stockItems[index];
+    final selectedSaleUnit = _getSelectedPurchaseSaleUnit(item);
+    final purchaseQty = _parsePositiveDouble(item.purchaseQty, fallback: 1.0);
+
+    if (selectedSaleUnit == null) {
+      return;
+    }
+
+    final conversionRate =
+        _parsePositiveDouble(selectedSaleUnit.conversionRate, fallback: 1.0);
+    final baseQuantity = purchaseQty * conversionRate;
+
+    item.purchaseConversionRate = selectedSaleUnit.conversionRate?.toString();
+    item.quantity = _formatNumber(baseQuantity);
+    _getQuantityController(index).text = item.quantity;
+  }
+
+  void _selectPurchaseUnit(int index, SaleUnit? saleUnit) {
+    final item = stockItems[index];
+    if (saleUnit == null) {
+      item.selectedPurchaseUnit = null;
+      item.purchaseUnitName = null;
+      item.purchaseConversionRate = null;
+      return;
+    }
+
+    item.selectedPurchaseUnit = saleUnit.id?.toString();
+    item.purchaseUnitName = saleUnit.unitName?.trim();
+    item.purchaseConversionRate = saleUnit.conversionRate?.toString();
+
+    if ((item.purchaseQty).trim().isEmpty) {
+      item.purchaseQty = '1';
+      _getPurchaseQtyController(index).text = item.purchaseQty;
+    }
+
+    _syncStockQuantityFromPurchaseQty(index);
+  }
+
+  double _getPricingQuantity(StockItem item) {
+    if (item.selectedPurchaseUnit != null &&
+        item.selectedPurchaseUnit!.isNotEmpty) {
+      return _parsePositiveDouble(item.purchaseQty, fallback: 0.0);
+    }
+    return _parsePositiveDouble(item.quantity, fallback: 0.0);
+  }
+
+  void _configurePurchaseUnitForProductSelection(
+    int index,
+    GetProduct product, {
+    String? scannedBarcode,
+  }) {
+    final item = stockItems[index];
+    final matchedSaleUnit = scannedBarcode == null
+        ? null
+        : _findMatchingSaleUnit(product, scannedBarcode);
+
+    if (_hasPurchaseUnits(item)) {
+      if ((item.purchaseQty).trim().isEmpty) {
+        item.purchaseQty = '1';
+        _getPurchaseQtyController(index).text = item.purchaseQty;
+      }
+
+      if (matchedSaleUnit != null) {
+        _selectPurchaseUnit(index, matchedSaleUnit);
+      } else {
+        final currentSelection = _getSelectedPurchaseSaleUnit(item);
+        if (currentSelection != null) {
+          item.purchaseUnitName = currentSelection.unitName?.trim();
+          item.purchaseConversionRate =
+              currentSelection.conversionRate?.toString();
+          _syncStockQuantityFromPurchaseQty(index);
+        } else {
+          item.selectedPurchaseUnit = null;
+          item.purchaseUnitName = null;
+          item.purchaseConversionRate = null;
+        }
+      }
+      return;
+    }
+
+    item.purchaseQty = '1';
+    item.selectedPurchaseUnit = null;
+    item.purchaseUnitName = null;
+    item.purchaseConversionRate = null;
+    _getPurchaseQtyController(index).text = item.purchaseQty;
   }
 
   // Get or create expanded field controllers
@@ -1010,12 +1264,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       category: (pendingData['categoryName'] ?? '').toString(),
       product: (pendingData['productName'] ?? '').toString(),
       quantity: (pendingData['quantity'] ?? '1').toString(),
+      purchaseQty: (pendingData['purchaseQty'] ?? '1').toString(),
       salePrice: (pendingData['retailPrice'] ?? '0').toString(),
       mrp: (pendingData['mrp'] ?? '0').toString(),
       wholesale: (pendingData['wholesalePrice'] ?? '0').toString(),
       purchaseRate: (pendingData['purchaseRate'] ?? '0').toString(),
       unit: '', // Will be set from unit list lookup below
       selectedUnit: unitId, // Restore the unit ID for dropdown selection
+      selectedPurchaseUnit: pendingData['purchaseUnitId']?.toString(),
+      purchaseUnitName: pendingData['purchaseUnitName']?.toString(),
+      purchaseConversionRate: pendingData['purchaseConversionRate']?.toString(),
       rack: rackValue,
       selectedRack: rackValue.isNotEmpty
           ? rackValue
@@ -1047,6 +1305,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     // Try to find and set the product data
     _setProductDataFromPending(stockItem, pendingData);
+    final selectedPurchaseUnit = _getSelectedPurchaseSaleUnit(stockItem);
+    if (selectedPurchaseUnit != null) {
+      stockItem.purchaseUnitName =
+          selectedPurchaseUnit.unitName ?? stockItem.purchaseUnitName;
+      stockItem.purchaseConversionRate =
+          selectedPurchaseUnit.conversionRate?.toString() ??
+              stockItem.purchaseConversionRate;
+    }
 
     // Try to find and set the category data
     _setCategoryDataFromPending(stockItem, pendingData);
@@ -1223,6 +1489,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       // Update quantity controller
       _getQuantityController(i).text = item.quantity;
+      _getPurchaseQtyController(i).text = item.purchaseQty;
 
       // Update expanded field controllers
       _getPurchaseRateController(i).text = item.purchaseRate;
@@ -1352,6 +1619,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'productId': item.productData?.productId,
         'categoryId': item.categoryData?.categoryId,
         'quantity': item.quantity,
+        // Only include purchaseQty for multi-unit products
+        if (_hasPurchaseUnits(item))
+          ...{
+            'purchaseQty': item.purchaseQty,
+            'purchaseUnitId': item.selectedPurchaseUnit,
+            'purchaseUnitName': item.purchaseUnitName,
+            'purchaseConversionRate': item.purchaseConversionRate,
+          },
         'retailPrice': item.salePrice,
         'purchaseRate': item.purchaseRate,
         'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
@@ -1384,7 +1659,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'wholesalePriceTax':
             item.calculatedTaxData?['price_including_tax_wholesale'],
         'purchasePriceTax':
-          item.calculatedTaxData?['price_including_tax_purchase'],
+            item.calculatedTaxData?['price_including_tax_purchase'],
         // Additional data for UI reference
         'productName': item.product,
         'categoryName': item.category,
@@ -1556,6 +1831,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         category: item.category,
         product: item.product,
         quantity: item.quantity,
+        purchaseQty: item.purchaseQty,
         salePrice: item.salePrice,
         mrp: item.mrp,
         wholesale: item.wholesale,
@@ -1567,6 +1843,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         productData: item.productData,
         categoryData: item.categoryData,
         selectedUnit: item.selectedUnit,
+        selectedPurchaseUnit: item.selectedPurchaseUnit,
+        purchaseUnitName: item.purchaseUnitName,
+        purchaseConversionRate: item.purchaseConversionRate,
         selectedRack: item.selectedRack,
         taxInclude: item.taxInclude,
         retailPriceTax: item.retailPriceTax,
@@ -1578,6 +1857,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       // Update controllers
       _getBarcodeController(inputIndex).text = item.barcode;
       _getQuantityController(inputIndex).text = item.quantity;
+      _getPurchaseQtyController(inputIndex).text = item.purchaseQty;
       _getPurchaseRateController(inputIndex).text = item.purchaseRate;
       _getRetailPriceController(inputIndex).text = item.salePrice;
       _getMrpController(inputIndex).text = item.mrp;
@@ -1606,6 +1886,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       _getProductSearchController(index).clear();
       _getBarcodeController(index).clear();
       _getQuantityController(index).text = '1';
+      _getPurchaseQtyController(index).text = '1';
 
       // Clear expanded field controllers
       _getPurchaseRateController(index).clear();
@@ -1684,6 +1965,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           'productId': item.productData?.productId,
           'categoryId': item.categoryData?.categoryId,
           'quantity': item.quantity,
+          'purchaseQty': item.purchaseQty,
+          'purchaseUnitId': item.selectedPurchaseUnit,
+          'purchaseUnitName': item.purchaseUnitName,
+          'purchaseConversionRate': item.purchaseConversionRate,
           'retailPrice': item.salePrice,
           'purchaseRate': item.purchaseRate,
           'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
@@ -1712,7 +1997,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               item.calculatedTaxData?['price_including_tax_retail'],
           'wholesalePriceTax':
               item.calculatedTaxData?['price_including_tax_wholesale'],
-            'purchasePriceTax':
+          'purchasePriceTax':
               item.calculatedTaxData?['price_including_tax_purchase'],
           'productName': item.product,
           'categoryName': item.category,
@@ -1908,6 +2193,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'productId': item.productData?.productId,
       'categoryId': item.categoryData?.categoryId,
       'quantity': item.quantity,
+      'purchaseQty': item.purchaseQty,
+      'purchaseUnitId': item.selectedPurchaseUnit,
+      'purchaseUnitName': item.purchaseUnitName,
+      'purchaseConversionRate': item.purchaseConversionRate,
       'retailPrice': item.salePrice,
       'purchaseRate': item.purchaseRate,
       'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
@@ -1937,7 +2226,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'retailPriceTax': item.calculatedTaxData?['price_including_tax_retail'],
       'wholesalePriceTax':
           item.calculatedTaxData?['price_including_tax_wholesale'],
-        'purchasePriceTax':
+      'purchasePriceTax':
           item.calculatedTaxData?['price_including_tax_purchase'],
       // Additional data for UI reference
       'productName': item.product,
@@ -2076,8 +2365,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     for (StockItem item in _cachedVisibleItems) {
       if (item.isSuccessfullyAdded && item.purchaseRate.isNotEmpty) {
         double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
-        double quantity = double.tryParse(item.quantity) ?? 0.0;
-        total += (purchaseRate * quantity);
+        total += (purchaseRate * _getPricingQuantity(item));
       }
     }
     // Only update if changed (with small epsilon for floating point comparison)
@@ -2095,7 +2383,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       if (!item.isSuccessfullyAdded || item.isHidden) continue;
 
       if (!item.taxInclude) {
-        final quantity = double.tryParse(item.quantity) ?? 0.0;
+        final quantity = _getPricingQuantity(item);
         final taxPerUnit =
             (item.calculatedTaxData?['purchaseTaxAmount'] as num?)
                     ?.toDouble() ??
@@ -3035,13 +3323,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: Builder(
                           builder: (context) {
                             // Show effective (tax-inclusive) purchase rate when tax is excluded
-                            if (!item.taxInclude && item.calculatedTaxData != null) {
-                              final effective = (item.calculatedTaxData!['price_including_tax_purchase'] as num?)?.toDouble();
+                            if (!item.taxInclude &&
+                                item.calculatedTaxData != null) {
+                              final effective = (item.calculatedTaxData![
+                                      'price_including_tax_purchase'] as num?)
+                                  ?.toDouble();
                               if (effective != null && effective > 0) {
                                 return Text(
                                   effective.toStringAsFixed(2),
                                   style: buildCustomStyle(
-                                    FontWeightManager.regular, 11, 0.21, Colors.green.shade700,
+                                    FontWeightManager.regular,
+                                    11,
+                                    0.21,
+                                    Colors.green.shade700,
                                   ),
                                 );
                               }
@@ -3060,13 +3354,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: Builder(
                           builder: (context) {
                             // Show effective (tax-inclusive) retail price when tax is excluded
-                            if (!item.taxInclude && item.calculatedTaxData != null) {
-                              final effective = (item.calculatedTaxData!['price_including_tax_retail'] as num?)?.toDouble();
+                            if (!item.taxInclude &&
+                                item.calculatedTaxData != null) {
+                              final effective = (item.calculatedTaxData![
+                                      'price_including_tax_retail'] as num?)
+                                  ?.toDouble();
                               if (effective != null && effective > 0) {
                                 return Text(
                                   effective.toStringAsFixed(2),
                                   style: buildCustomStyle(
-                                    FontWeightManager.regular, 11, 0.21, Colors.blue.shade700,
+                                    FontWeightManager.regular,
+                                    11,
+                                    0.21,
+                                    Colors.blue.shade700,
                                   ),
                                 );
                               }
@@ -3272,13 +3572,17 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     for (StockItem item in stockItems) {
       if (item.isSuccessfullyAdded && !item.isHidden) {
         double quantity = double.tryParse(item.quantity) ?? 0.0;
+        double pricingQuantity = _getPricingQuantity(item);
         double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
 
         // Calculate item total including tax if tax is not included in the price
-        double itemTotal = purchaseRate * quantity;
+        double itemTotal = purchaseRate * pricingQuantity;
         if (!item.taxInclude) {
-          final taxPerUnit = (item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble() ?? 0.0;
-          itemTotal += quantity * taxPerUnit;
+          final taxPerUnit =
+              (item.calculatedTaxData?['purchaseTaxAmount'] as num?)
+                      ?.toDouble() ??
+                  0.0;
+          itemTotal += pricingQuantity * taxPerUnit;
         }
 
         totalPurchaseAmount += itemTotal;
@@ -3292,8 +3596,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     String supplierName = selectedSupplier?.name ?? 'No Supplier';
     double supplierBalance =
         _getSupplierBalance(); // Helper method to get balance
-    double totalPayable =
-        totalPurchaseAmount + supplierBalance;
+    double totalPayable = totalPurchaseAmount + supplierBalance;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -3827,60 +4130,79 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                   const SizedBox(width: 4),
                 ],
-                // Quantity Text Field (smaller and right-aligned)
-                SizedBox(
-                  width: 80, // Fixed width instead of flex
-                  child: BuildBoxShadowContainer(
-                    circleRadius: 5,
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: TextFormField(
-                      controller: _getQuantityController(index),
-                      focusNode: _getQuantityFocusNode(index),
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.right, // Right-aligned text
-                      decoration: const InputDecoration(
-                        hintText: 'Qty',
-                        border: InputBorder.none,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      ),
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s11,
-                        0.27,
-                        ColorManager.textColor,
-                      ),
-                      onTap: () {
-                        // Select all text when field is tapped
-                        _getQuantityController(index).selection = TextSelection(
-                          baseOffset: 0,
-                          extentOffset:
-                              _getQuantityController(index).text.length,
-                        );
-                      },
-                      onChanged: (value) {
-                        // Update the value immediately for responsive UI
-                        stockItems[index].quantity = value;
-
-                        // Debounce the heavy operations
-                        _quantityDebounceTimer?.cancel();
-                        _quantityDebounceTimer =
-                            Timer(const Duration(milliseconds: 300), () {
-                          if (mounted) {
-                            setState(() {
-                              // Update pending item if already added
-                              _updatePendingStockItem(index);
-                              // Mark for recalculation
-                              _markForRecalculation();
-                            });
+                // Quantity Text Field (smaller and right-aligned) - Hidden for multi-unit products
+                if (!_hasPurchaseUnits(item)) ...[
+                  SizedBox(
+                    width: 80, // Fixed width instead of flex
+                    child: BuildBoxShadowContainer(
+                      circleRadius: 5,
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: TextFormField(
+                        controller: _getQuantityController(index),
+                        focusNode: _getQuantityFocusNode(index),
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.right, // Right-aligned text
+                        decoration: const InputDecoration(
+                          hintText: 'Qty',
+                          border: InputBorder.none,
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        ),
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s11,
+                          0.27,
+                          ColorManager.textColor,
+                        ),
+                        onTap: () {
+                          // Select all text when field is tapped
+                          _getQuantityController(index).selection =
+                              TextSelection(
+                            baseOffset: 0,
+                            extentOffset:
+                                _getQuantityController(index).text.length,
+                          );
+                        },
+                        onChanged: (value) {
+                          // Update the value immediately for responsive UI
+                          stockItems[index].quantity = value;
+                          final selectedSaleUnit =
+                              _getSelectedPurchaseSaleUnit(stockItems[index]);
+                          if (selectedSaleUnit != null) {
+                            final baseQuantity =
+                                _parsePositiveDouble(value, fallback: 0.0);
+                            final conversionRate = _parsePositiveDouble(
+                              selectedSaleUnit.conversionRate,
+                              fallback: 1.0,
+                            );
+                            if (baseQuantity > 0 && conversionRate > 0) {
+                              stockItems[index].purchaseQty = _formatNumber(
+                                  baseQuantity / conversionRate);
+                              _getPurchaseQtyController(index).text =
+                                  stockItems[index].purchaseQty;
+                            }
                           }
-                        });
-                      },
+
+                          // Debounce the heavy operations
+                          _quantityDebounceTimer?.cancel();
+                          _quantityDebounceTimer = Timer(
+                              const Duration(milliseconds: 300), () {
+                            if (mounted) {
+                              setState(() {
+                                // Update pending item if already added
+                                _updatePendingStockItem(index);
+                                // Mark for recalculation
+                                _markForRecalculation();
+                              });
+                            }
+                          });
+                        },
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
                 // Actions - Add Stock Button + Clear/Delete Button + Expand Button
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -3892,8 +4214,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         message: isEditingInputRow
                             ? "Cancel edit"
                             : item.isSuccessfullyAdded
-                            ? "Delete stock item"
-                            : "Clear product selection",
+                                ? "Delete stock item"
+                                : "Clear product selection",
                         child: Container(
                           height: 40,
                           width: 40,
@@ -3913,10 +4235,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           child: IconButton(
                             icon: Icon(
                               isEditingInputRow
-                                ? Icons.close
-                                : item.isSuccessfullyAdded
-                                  ? Icons.delete
-                                  : Icons.clear,
+                                  ? Icons.close
+                                  : item.isSuccessfullyAdded
+                                      ? Icons.delete
+                                      : Icons.clear,
                               size: 18,
                               color: Colors.red,
                             ),
@@ -4079,16 +4401,28 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           _buildDetailChip(
                               "Retail",
                               !item.taxInclude && item.calculatedTaxData != null
-                                  ? ((item.calculatedTaxData!['price_including_tax_retail'] as num?)?.toDouble()?.toStringAsFixed(2) ?? item.salePrice)
+                                  ? ((item.calculatedTaxData![
+                                                  'price_including_tax_retail']
+                                              as num?)
+                                          ?.toDouble()
+                                          ?.toStringAsFixed(2) ??
+                                      item.salePrice)
                                   : item.salePrice,
-                              Icons.sell, Colors.blue.shade600),
+                              Icons.sell,
+                              Colors.blue.shade600),
                         if (item.purchaseRate.isNotEmpty)
                           _buildDetailChip(
                               "Purchase",
                               !item.taxInclude && item.calculatedTaxData != null
-                                  ? ((item.calculatedTaxData!['price_including_tax_purchase'] as num?)?.toDouble()?.toStringAsFixed(2) ?? item.purchaseRate)
+                                  ? ((item.calculatedTaxData![
+                                                  'price_including_tax_purchase']
+                                              as num?)
+                                          ?.toDouble()
+                                          ?.toStringAsFixed(2) ??
+                                      item.purchaseRate)
                                   : item.purchaseRate,
-                              Icons.shopping_cart, Colors.green.shade600),
+                              Icons.shopping_cart,
+                              Colors.green.shade600),
                         if (item.mrp.isNotEmpty)
                           _buildDetailChip("MRP", "${item.mrp}",
                               Icons.local_offer, Colors.orange.shade600),
@@ -4098,6 +4432,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         if (item.unit.isNotEmpty)
                           _buildDetailChip("Unit", item.unit, Icons.straighten,
                               Colors.indigo.shade600),
+                        if (item.purchaseUnitName != null &&
+                            item.purchaseUnitName!.isNotEmpty)
+                          _buildDetailChip(
+                              "Purchase Unit",
+                              '${item.purchaseUnitName} x ${item.purchaseQty}',
+                              Icons.inventory_2_outlined,
+                              Colors.deepOrange.shade600),
                         if (item.rack.isNotEmpty)
                           _buildDetailChip("Rack", item.rack, Icons.shelves,
                               Colors.teal.shade600),
@@ -4110,12 +4451,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   // Purchase Total (Quantity × Purchase Price)
                   Builder(
                     builder: (context) {
-                      final qty = double.tryParse(item.quantity) ?? 0;
+                      final qty = _getPricingQuantity(item);
                       double purchasePrice =
                           double.tryParse(item.purchaseRate) ?? 0;
                       // Use effective (tax-inclusive) purchase rate when tax is excluded
                       if (!item.taxInclude && item.calculatedTaxData != null) {
-                        final effective = (item.calculatedTaxData!['price_including_tax_purchase'] as num?)?.toDouble();
+                        final effective = (item.calculatedTaxData![
+                                'price_including_tax_purchase'] as num?)
+                            ?.toDouble();
                         if (effective != null && effective > 0) {
                           purchasePrice = effective;
                         }
@@ -4281,13 +4624,18 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           }
         }
 
-        // Auto-fill expanded fields
+// Auto-fill expanded fields
         stockItems[index].salePrice =
             localProduct.price?.price?.toString() ?? '0';
         stockItems[index].mrp = localProduct.mrp?.toString() ??
             localProduct.price?.price?.toString() ??
             '0';
-        stockItems[index].unit = localProduct.unit ?? '';
+        _applyBaseUnitFromProduct(index, localProduct);
+        _configurePurchaseUnitForProductSelection(
+          index,
+          localProduct,
+          scannedBarcode: barcode,
+        );
         debugPrint('   - Sale Price: ${stockItems[index].salePrice}');
         debugPrint('   - MRP: ${stockItems[index].mrp}');
         debugPrint('   - Unit: ${stockItems[index].unit}');
@@ -4295,30 +4643,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // Update controllers with new values
         _getRetailPriceController(index).text = stockItems[index].salePrice;
         _getMrpController(index).text = stockItems[index].mrp;
-
-        // Auto-fill unit dropdown - find the matching unit key
-        if (localProduct.unit != null && localProduct.unit!.isNotEmpty) {
-          debugPrint('🔍 SEARCHING FOR UNIT KEY: ${localProduct.unit}');
-          final purchaseProvider =
-              Provider.of<PurchaseProvider>(context, listen: false);
-          final unitList = purchaseProvider.getUnitList;
-          if (unitList != null) {
-            // Find the key that matches the unit value
-            String? matchingUnitKey = unitList.entries
-                .firstWhere(
-                  (entry) => entry.value == localProduct.unit,
-                  orElse: () => const MapEntry('', ''),
-                )
-                .key;
-            if (matchingUnitKey.isNotEmpty) {
-              stockItems[index].selectedUnit = matchingUnitKey; // Store unit ID
-              stockItems[index].unit =
-                  localProduct.unit!; // Store unit name for display
-              debugPrint('   - Unit Key (ID): $matchingUnitKey');
-              debugPrint('   - Unit Name: ${localProduct.unit}');
-            }
-          }
-        }
 
         // Auto-fill purchase rate: use only product-level purchasePrice; do not fall back to stock entries
         final String? computedPurchasePrice = localProduct.purchasePrice;
@@ -4526,6 +4850,37 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          if (_hasPurchaseUnits(item)) ...[
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: _buildExpandedPurchaseUnitDropdown(index),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildExpandedPurchaseQtyField(index),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildReadOnlyInfoField(
+                    "Conversion Rate",
+                    item.purchaseConversionRate?.isNotEmpty == true
+                        ? item.purchaseConversionRate!
+                        : '-',
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildReadOnlyInfoField(
+                    "Base Quantity",
+                    item.quantity.isNotEmpty ? item.quantity : '-',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           // Second row - Expiry Date, Wholesale Price, Minimum Units for Wholesale, Rack
           Row(
             children: [
@@ -4932,13 +5287,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   }
                 }
 
-                // Auto-fill expanded fields
+// Auto-fill expanded fields
                 stockItems[index].salePrice =
                     product.price?.price?.toString() ?? '0';
                 stockItems[index].mrp = product.mrp?.toString() ??
                     product.price?.price?.toString() ??
                     '0';
-                stockItems[index].unit = product.unit ?? '';
+                _applyBaseUnitFromProduct(index, product);
+                _configurePurchaseUnitForProductSelection(index, product);
                 debugPrint('   - Sale Price: ${stockItems[index].salePrice}');
                 debugPrint('   - MRP: ${stockItems[index].mrp}');
                 debugPrint('   - Unit: ${stockItems[index].unit}');
@@ -4948,49 +5304,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     stockItems[index].salePrice;
                 _getMrpController(index).text = stockItems[index].mrp;
 
-                // Auto-fill unit dropdown
-                if (product.unit != null && product.unit!.isNotEmpty) {
-                  final purchaseProvider =
-                      Provider.of<PurchaseProvider>(context, listen: false);
-                  final unitList = purchaseProvider.getUnitList;
-                  if (unitList != null) {
-                    // 1) Try to match by ID (Key) - The log showed "3310"
-                    String? matchingUnitKey;
-                    if (unitList.containsKey(product.unit)) {
-                      matchingUnitKey = product.unit;
-                    }
-
-                    // 2) Try to match by Name (Value) if ID matching fails
-                    if (matchingUnitKey == null) {
-                      final targetUnit = product.unit!.toLowerCase().trim();
-                      try {
-                        matchingUnitKey = unitList.entries
-                            .firstWhere(
-                              (entry) =>
-                                  entry.value.toLowerCase().trim() ==
-                                  targetUnit,
-                            )
-                            .key;
-                      } catch (_) {}
-                    }
-
-                    if (matchingUnitKey != null && matchingUnitKey.isNotEmpty) {
-                      stockItems[index].selectedUnit = matchingUnitKey;
-                      stockItems[index].unit =
-                          unitList[matchingUnitKey] ?? product.unit!;
-                      debugPrint(
-                          '   - ✅ UNIT AUTO-FILL: ${stockItems[index].unit} ($matchingUnitKey)');
-                    }
-                  }
-                }
-
                 // Auto-fill Prices (MRP and Sale Price)
                 stockItems[index].salePrice =
                     product.price?.price?.toString() ?? '0';
                 stockItems[index].mrp = product.mrp?.toString() ??
                     product.price?.price?.toString() ??
                     '0';
-                stockItems[index].unit = product.unit ?? '';
 
                 // Purchase Rate Fallback: Try product.purchasePrice, then fallback to latest stock purchase_price
                 String? purchaseRate = (product.purchasePrice != null &&
@@ -5124,6 +5443,113 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildExpandedPurchaseUnitDropdown(int index) {
+    final item = stockItems[index];
+    final purchaseUnits = _getAvailablePurchaseUnits(item);
+    final selectedSaleUnit = _getSelectedPurchaseSaleUnit(item);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              "Purchase Unit",
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        BuildDropDownWithSearch<SaleUnit>(
+          title: null,
+          hintText: "Select Purchase Unit",
+          value: selectedSaleUnit,
+          items: purchaseUnits,
+          onChanged: (SaleUnit? newValue) {
+            setState(() {
+              _selectPurchaseUnit(index, newValue);
+              _markForRecalculation();
+            });
+            _updatePendingStockItem(index);
+          },
+          displayText: (saleUnit) {
+            final unitName = saleUnit.unitName?.trim();
+            final conversionRate = saleUnit.conversionRate?.trim();
+            if (unitName == null || unitName.isEmpty) {
+              return 'Unknown Unit';
+            }
+            if (conversionRate == null || conversionRate.isEmpty) {
+              return unitName;
+            }
+            return '$unitName (${conversionRate}x)';
+          },
+          searchController: _getPurchaseUnitSearchController(index),
+          isRequired: false,
+          height: 40,
+          searchHintText: "Search purchase unit...",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExpandedPurchaseQtyField(int index) {
+    final item = stockItems[index];
+    return _buildExpandedTextField(
+      "Purchase Qty",
+      item.purchaseQty,
+      (value) {
+        setState(() {
+          stockItems[index].purchaseQty = value;
+          _syncStockQuantityFromPurchaseQty(index);
+          _markForRecalculation();
+        });
+        _updatePendingStockItem(index);
+      },
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      controller: _getPurchaseQtyController(index),
+    );
+  }
+
+  Widget _buildReadOnlyInfoField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s11,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 2),
+        BuildBoxShadowContainer(
+          circleRadius: 5,
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -5305,9 +5731,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-    Widget _buildTaxCard(String title, String badgeText, String priceText,
-      String taxText,
-      Color color, bool isIncluding) {
+  Widget _buildTaxCard(String title, String badgeText, String priceText,
+      String taxText, Color color, bool isIncluding) {
     return Container(
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -5404,9 +5829,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
 
     final item = stockItems[index];
-    final String calculationType = isPurchase
-        ? 'Purchase'
-        : (isRetail ? 'Retail' : 'Wholesale');
+    final String calculationType =
+        isPurchase ? 'Purchase' : (isRetail ? 'Retail' : 'Wholesale');
 
     debugPrint(
         '🧮 [StockTax] Starting tax calculation | item=$index | type=$calculationType');
@@ -5443,19 +5867,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       return;
     }
 
-      final double priceToCalculate = isPurchase
+    final double priceToCalculate = isPurchase
         ? (double.tryParse(item.purchaseRate) ?? 0.0)
         : (isRetail
-          ? (double.tryParse(item.salePrice) ?? 0.0)
-          : (double.tryParse(item.wholesale) ?? 0.0));
+            ? (double.tryParse(item.salePrice) ?? 0.0)
+            : (double.tryParse(item.wholesale) ?? 0.0));
 
-      debugPrint(
+    debugPrint(
         '🧮 [StockTax] Payload | item=$index | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=${item.taxInclude}');
 
     final String? accessToken =
         Provider.of<AuthModel>(context, listen: false).token;
     if (accessToken == null) {
-        debugPrint(
+      debugPrint(
           '❌ [StockTax] Cannot calculate tax: access token not found | item=$index | type=$calculationType');
       return;
     }
@@ -5633,13 +6057,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       // Calculate total stock value for confirmation dialog
                       final int itemCount =
                           stockProvider.pendingStockItemsCount;
-                        final double additionalPurchaseTax =
+                      final double additionalPurchaseTax =
                           _getAdditionalPurchaseTaxTotal();
-                        // Match purchase summary: Total Due Amount = total purchase
-                        // amount for this stock batch + additional excluded tax + current supplier balance.
+                      // Match purchase summary: Total Due Amount = total purchase
+                      // amount for this stock batch + additional excluded tax + current supplier balance.
                       final double supplierBalance = _getSupplierBalance();
-                      final double totalDueAmount =
-                          totalStockValue +
+                      final double totalDueAmount = totalStockValue +
                           additionalPurchaseTax +
                           supplierBalance;
 
@@ -5742,7 +6165,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         debugPrint('📡 BATCH PROCESSING RESULT: $batchResult');
                         debugPrint('📡 BATCH PROCESSING RESULT (PRETTY):');
                         debugPrint(const JsonEncoder.withIndent('  ')
-                          .convert(batchResult));
+                            .convert(batchResult));
 
                         if (batchResult['success'] == true) {
                           final summary =

@@ -119,6 +119,15 @@ class _HomeWidgetState extends State<HomeWidget> {
           GetProduct product = filteredProducts.first;
 
           num? quantity;
+          SaleUnit? matchedSaleUnit;
+
+          for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+            final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+            if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == query.trim()) {
+              matchedSaleUnit = saleUnit;
+              break;
+            }
+          }
           if ((product.unit == 'KGS' || product.unit == 'KG') &&
               prefix == '000' &&
               query.length == 14) {
@@ -130,6 +139,9 @@ class _HomeWidgetState extends State<HomeWidget> {
               prefix == '000' &&
               query.length == 14) {
             quantity = int.parse(lastFive!);
+          } else if (matchedSaleUnit != null) {
+            quantity =
+                num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
           }
 
           await ProductCartHelper.handleProductSelection(
@@ -139,6 +151,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             addToCartDirectly: true,
             customerId: billingProvider.selectedCustomerID,
             customerName: billingProvider.selectedCustomer?.name,
+            selectedSaleUnit: matchedSaleUnit,
           );
 
           // Clear fields using billing provider
@@ -185,14 +198,17 @@ class _HomeWidgetState extends State<HomeWidget> {
       if (selectedProduct != null) {
         debugPrint("Adding product: ${selectedProduct.productName}");
 
-        final customPrice = double.tryParse(billingProvider.unitPriceController.text);
-        final customQuantity = num.tryParse(billingProvider.quantityController.text);
+        final customPrice =
+            double.tryParse(billingProvider.unitPriceController.text);
+        final customQuantity =
+            num.tryParse(billingProvider.quantityController.text);
 
         await ProductCartHelper.handleProductSelection(
           context: context,
           product: selectedProduct,
           quantity: customQuantity,
-          customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+          customPrice:
+              customPrice != null && customPrice > 0 ? customPrice : null,
         );
 
         // Clear fields using billing provider
@@ -466,8 +482,10 @@ class _HomeWidgetState extends State<HomeWidget> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${item.quantity} ${item.product.unit ?? ''}'),
-                      Text('${item.price?.toStringAsFixed(2) ?? '0.00'}'),
+                      Text('${item.displayQuantity} ${item.displayUnitName}'),
+                      Text(
+                        '${item.displayPrice?.toStringAsFixed(2) ?? '0.00'}',
+                      ),
                     ],
                   ),
                   trailing: SizedBox(
@@ -494,6 +512,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                             provider.removeFromCart(
                               item.product.productId!,
                               item.selectedStock,
+                              saleUnitId: item.saleUnitId,
                             );
                           },
                         ),

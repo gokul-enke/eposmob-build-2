@@ -41,8 +41,7 @@ class CheckoutService {
 
       // Check if any payment method is selected (provider-level helper)
       List<String> selectedPaymentMethods =
-          Provider.of<BillingProvider>(context, listen: false)
-              .getSelectedPaymentMethodsExcludingEmpty();
+          billingProvider.getSelectedPaymentMethodsForApi();
 
       debugPrint('🔍 [CheckoutService] Validating payment methods...');
       debugPrint(
@@ -178,6 +177,9 @@ class CheckoutService {
             localProductProvider.priceSummary!.percentageDiscount,
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+        address: billingProvider.orderAddress.isNotEmpty
+            ? billingProvider.orderAddress
+            : null,
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -193,7 +195,7 @@ class CheckoutService {
             localProductProvider
                 .deleteSavedOrder(localProductProvider.currentOrder!.id);
           }
-          localProductProvider.clearCart();
+          localProductProvider.clearCartAfterOrder();
 
           // Clear the mobile number after successful save
           billingProvider.setMobileNumberText("");
@@ -261,7 +263,7 @@ class CheckoutService {
 
       // Guard: require at least one payment method (provider-level helper)
       final selectedPaymentMethods =
-          billingProvider.getSelectedPaymentMethodsExcludingEmpty();
+          billingProvider.getSelectedPaymentMethodsForApi();
 
       debugPrint('🔍 [CreateOrderAndPrint] Validating payment methods...');
       debugPrint(
@@ -362,6 +364,9 @@ class CheckoutService {
         percentageDiscount: priceSummary.percentageDiscount,
         discountAmount: priceSummary.discount,
         toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+        address: billingProvider.orderAddress.isNotEmpty
+            ? billingProvider.orderAddress
+            : null,
       )
           .then((response) async {
         debugPrint(
@@ -376,7 +381,7 @@ class CheckoutService {
             localProductProvider
                 .deleteSavedOrder(localProductProvider.currentOrder!.id);
           }
-          localProductProvider.clearCart();
+          localProductProvider.clearCartAfterOrder();
 
           try {
             createdOrderNumber = response["order_number"]?.toString();
@@ -440,46 +445,9 @@ class CheckoutService {
         return false;
       }
 
-      // Determine paymentMethod string and paidAmount using multi-payment logic
-      final methods = billingProvider.getSelectedPaymentMethodsExcludingEmpty();
-      String paymentMethod = "";
-      String paidAmount = "0";
-      if (methods.length > 1) {
-        final multiPaymentData = {
-          "methods": methods,
-          "amounts": {
-            "CASH": billingProvider.cashAmountController.text.isNotEmpty
-                ? billingProvider.cashAmountController.text
-                : "0",
-            "CARD": billingProvider.cardAmountController.text.isNotEmpty
-                ? billingProvider.cardAmountController.text
-                : "0",
-            "UPI": billingProvider.upiAmountController.text.isNotEmpty
-                ? billingProvider.upiAmountController.text
-                : "0",
-            "DEBIT": billingProvider.debitAmountController.text.isNotEmpty
-                ? billingProvider.debitAmountController.text
-                : "0",
-          },
-          "isMultiPayment": true
-        };
-        paymentMethod = json.encode(multiPaymentData);
-        paidAmount = billingProvider.getTotalPaidAmount().toString();
-      } else if (methods.isNotEmpty) {
-        final m = methods.first;
-        paymentMethod = m;
-        if (m == "CASH") {
-          paidAmount = billingProvider.cashAmountController.text;
-        } else if (m == "CARD") {
-          paidAmount = billingProvider.cardAmountController.text;
-        } else if (m == "UPI") {
-          paidAmount = billingProvider.upiAmountController.text;
-        } else if (m == "DEBIT") {
-          paidAmount = billingProvider.debitAmountController.text;
-        } else {
-          paidAmount = "0";
-        }
-      }
+      final orderData = billingProvider.createOrderData();
+      final paymentMethod = orderData['paymentMethod']?.toString() ?? "";
+      final paidAmount = orderData['paidAmount']?.toString() ?? "0";
 
       final currentOrder = localProductProvider.currentOrder;
       final customerNameToSave = billingProvider.selectedCustomer?.name;
@@ -509,6 +477,9 @@ class CheckoutService {
           deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
           deliveryTime: billingProvider.deliveryTime,
           toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+          address: billingProvider.orderAddress.isNotEmpty
+              ? billingProvider.orderAddress
+              : null,
         );
         showScaffold(context: context, message: "Order Updated Successfully");
         return true; // updated
@@ -534,6 +505,9 @@ class CheckoutService {
           deliveryTime: billingProvider.deliveryTime,
           context: context,
           toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+          address: billingProvider.orderAddress.isNotEmpty
+              ? billingProvider.orderAddress
+              : null,
         );
         showScaffold(context: context, message: "Order Saved Successfully");
         return false; // new save
@@ -575,46 +549,9 @@ class CheckoutService {
         return null;
       }
 
-      // Determine paymentMethod string and paidAmount using multi-payment logic
-      final methods = billingProvider.getSelectedPaymentMethodsExcludingEmpty();
-      String paymentMethod = "";
-      String paidAmount = "0";
-      if (methods.length > 1) {
-        final multiPaymentData = {
-          "methods": methods,
-          "amounts": {
-            "CASH": billingProvider.cashAmountController.text.isNotEmpty
-                ? billingProvider.cashAmountController.text
-                : "0",
-            "CARD": billingProvider.cardAmountController.text.isNotEmpty
-                ? billingProvider.cardAmountController.text
-                : "0",
-            "UPI": billingProvider.upiAmountController.text.isNotEmpty
-                ? billingProvider.upiAmountController.text
-                : "0",
-            "DEBIT": billingProvider.debitAmountController.text.isNotEmpty
-                ? billingProvider.debitAmountController.text
-                : "0",
-          },
-          "isMultiPayment": true
-        };
-        paymentMethod = json.encode(multiPaymentData);
-        paidAmount = billingProvider.getTotalPaidAmount().toString();
-      } else if (methods.isNotEmpty) {
-        final m = methods.first;
-        paymentMethod = m;
-        if (m == "CASH") {
-          paidAmount = billingProvider.cashAmountController.text;
-        } else if (m == "CARD") {
-          paidAmount = billingProvider.cardAmountController.text;
-        } else if (m == "UPI") {
-          paidAmount = billingProvider.upiAmountController.text;
-        } else if (m == "DEBIT") {
-          paidAmount = billingProvider.debitAmountController.text;
-        } else {
-          paidAmount = "0";
-        }
-      }
+      final orderData = billingProvider.createOrderData();
+      final paymentMethod = orderData['paymentMethod']?.toString() ?? "";
+      final paidAmount = orderData['paidAmount']?.toString() ?? "0";
 
       SavedOrder? result;
       final currentOrder = localProductProvider.currentOrder;
@@ -645,6 +582,9 @@ class CheckoutService {
           deliveryTime: billingProvider.deliveryTime,
           toCustomerCredit: billingProvider.toCustomerCreditEnabled,
           context: context,
+          address: billingProvider.orderAddress.isNotEmpty
+              ? billingProvider.orderAddress
+              : null,
         );
         result = localProductProvider.moveToConfirmedOrders(currentOrderId);
         if (result != null) {
@@ -674,6 +614,9 @@ class CheckoutService {
             deliveryTime: billingProvider.deliveryTime,
             toCustomerCredit: billingProvider.toCustomerCreditEnabled,
             context: context,
+            address: billingProvider.orderAddress.isNotEmpty
+                ? billingProvider.orderAddress
+                : null,
           );
           showScaffold(
             context: context,
@@ -701,11 +644,18 @@ class CheckoutService {
           deliveryTime: billingProvider.deliveryTime,
           toCustomerCredit: billingProvider.toCustomerCreditEnabled,
           context: context,
+          address: billingProvider.orderAddress.isNotEmpty
+              ? billingProvider.orderAddress
+              : null,
         );
         showScaffold(
           context: context,
           message: "Order saved to confirmed orders",
         );
+      }
+
+      if (result != null) {
+        localProductProvider.clearCartAfterOrder();
       }
 
       return result;

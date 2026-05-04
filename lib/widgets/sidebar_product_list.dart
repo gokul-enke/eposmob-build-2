@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
@@ -34,6 +35,8 @@ class SideBarProductList extends StatefulWidget {
   final bool showSectionTitles;
   final int? visibleRows;
   final int crossAxisCount;
+  final bool autofocus;
+  final int focusRequestId;
 
   const SideBarProductList({
     Key? key,
@@ -45,6 +48,8 @@ class SideBarProductList extends StatefulWidget {
     this.showSectionTitles = true,
     this.visibleRows,
     this.crossAxisCount = 3,
+    this.autofocus = false,
+    this.focusRequestId = 0,
   }) : super(key: key);
 
   @override
@@ -57,12 +62,15 @@ class _SideBarProductListState extends State<SideBarProductList> {
   final TextEditingController _searchProductController =
       TextEditingController();
   final ScrollController _categoryScrollController = ScrollController();
+  final ScrollController _productScrollController = ScrollController();
 
   // Add focus nodes for proper keyboard handling
   final FocusNode _categoryFocusNode = FocusNode();
   final FocusNode _productFocusNode = FocusNode();
+  final FocusNode _productGridFocusNode = FocusNode();
   // Track selection for sidebar UI including the injected 'ALL' at index 0
   int _selectedUiCategoryIndex = 0;
+  int _focusedProductIndex = 0;
 
   @override
   void initState() {
@@ -77,6 +85,12 @@ class _SideBarProductListState extends State<SideBarProductList> {
       debugPrint("Product focus: ${_productFocusNode.hasFocus}");
     });
 
+    _productGridFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Ensure categories are loaded for the sidebar
       final categoryProvider =
@@ -87,6 +101,25 @@ class _SideBarProductListState extends State<SideBarProductList> {
 
       Provider.of<LocalProductProvider>(context, listen: false)
           .refreshProducts();
+      _requestGridFocusIfNeeded();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant SideBarProductList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autofocus &&
+        widget.focusRequestId != oldWidget.focusRequestId) {
+      _requestGridFocusIfNeeded();
+    }
+  }
+
+  void _requestGridFocusIfNeeded() {
+    if (!widget.autofocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _productGridFocusNode.requestFocus();
+      }
     });
   }
 
@@ -95,8 +128,10 @@ class _SideBarProductListState extends State<SideBarProductList> {
     _searchCategoryController.dispose();
     _searchProductController.dispose();
     _categoryScrollController.dispose();
+    _productScrollController.dispose();
     _categoryFocusNode.dispose();
     _productFocusNode.dispose();
+    _productGridFocusNode.dispose();
     super.dispose();
   }
 
@@ -127,6 +162,44 @@ class _SideBarProductListState extends State<SideBarProductList> {
         // Customer info will be fetched from global provider in the helper
       );
     }
+  }
+
+  KeyEventResult _handleProductGridKey(
+      KeyEvent event, List<GetProduct> products, int columns) {
+    if (event is! KeyDownEvent || products.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      final index = _focusedProductIndex.clamp(0, products.length - 1).toInt();
+      _handleProductSelection(products[index]);
+      return KeyEventResult.handled;
+    }
+
+    int? delta;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      delta = 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      delta = -1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      delta = columns;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      delta = -columns;
+    }
+
+    if (delta == null) {
+      return KeyEventResult.ignored;
+    }
+
+    setState(() {
+      _focusedProductIndex = (_focusedProductIndex + delta!)
+          .clamp(0, products.length - 1)
+          .toInt();
+    });
+    return KeyEventResult.handled;
   }
 
   @override
@@ -545,6 +618,9 @@ class _SideBarProductListState extends State<SideBarProductList> {
             builder: (context, productProvider, child) {
               // Use sellableFilteredProducts to only show products that are marked as sellable
               final products = productProvider.sellableFilteredProducts;
+              final focusedIndex = products.isEmpty
+                  ? null
+                  : _focusedProductIndex.clamp(0, products.length - 1).toInt();
 
               return products.isEmpty
                   ? Center(
@@ -616,17 +692,27 @@ class _SideBarProductListState extends State<SideBarProductList> {
                               }
                             }
 
-                            return GridView.count(
-                              padding: gridPadding,
-                              crossAxisCount: columns,
-                              childAspectRatio: childAspectRatio,
-                              crossAxisSpacing: crossAxisSpacing,
-                              mainAxisSpacing: mainAxisSpacing,
-                              physics: const BouncingScrollPhysics(),
-                              children: List.generate(products.length, (index) {
+                            return Focus(
+                              focusNode: _productGridFocusNode,
+                              autofocus: widget.autofocus,
+                              onKeyEvent: (node, event) =>
+                                  _handleProductGridKey(
+                                      event, products, columns),
+                              child: GridView.count(
+                                controller: _productScrollController,
+                                padding: gridPadding,
+                                crossAxisCount: columns,
+                                childAspectRatio: childAspectRatio,
+                                crossAxisSpacing: crossAxisSpacing,
+                                mainAxisSpacing: mainAxisSpacing,
+                                physics: const BouncingScrollPhysics(),
+                                children: List.generate(products.length, (index) {
                                 final product = products[index];
                                 final isSelected =
                                     product == productProvider.selectedProduct;
+                                final isKeyboardFocused =
+                                    _productGridFocusNode.hasFocus &&
+                                        index == focusedIndex;
 
                                 String? primaryImage;
                                 if (product.attachment != null &&
@@ -649,7 +735,11 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(8),
-                                      border: isSelected
+                                      border: isKeyboardFocused
+                                          ? Border.all(
+                                              color: ColorManager.kPrimaryColor,
+                                              width: 2)
+                                          : isSelected
                                           ? Border.all(
                                               color: ColorManager.kPrimaryColor,
                                               width: 1)
@@ -796,6 +886,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                   ),
                                 );
                               }),
+                              ),
                             );
                           },
                         ),

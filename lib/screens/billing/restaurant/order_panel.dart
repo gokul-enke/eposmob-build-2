@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -51,8 +50,10 @@ class OrderPanel extends StatefulWidget {
   final int? refreshCounter; // Add refresh counter
   final bool isLoadingSendToKitchen; // Loading state for Send to Kitchen button
   final bool isLoadingPrint; // Loading state for Print button
-  final String? preselectedDeliveryMethodId; // Delivery method chosen from tables panel
-  final String? preselectedDeliveryMethodName; // Name of preselected delivery method
+  final String?
+      preselectedDeliveryMethodId; // Delivery method chosen from tables panel
+  final String?
+      preselectedDeliveryMethodName; // Name of preselected delivery method
 
   const OrderPanel({
     super.key, // Add key parameter
@@ -85,13 +86,15 @@ class OrderPanelState extends State<OrderPanel> {
   final Set<String> _loadingCartItems =
       {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
-  bool _isLoadingPrintKot = false; // Loading state for edit-order Print KOT button
+  bool _isLoadingPrintKot =
+      false; // Loading state for edit-order Print KOT button
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
-  int? _highlightedCartItemProductId; // product ID to briefly highlight after add
+  int?
+      _highlightedCartItemProductId; // product ID to briefly highlight after add
 
   // Payment Method Variables
   bool _isCashSelected = false;
@@ -275,7 +278,8 @@ class OrderPanelState extends State<OrderPanel> {
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
-        deliveryMethodId: widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
+        deliveryMethodId:
+            widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
       debugPrint('✅ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
@@ -601,7 +605,8 @@ class OrderPanelState extends State<OrderPanel> {
     ]);
   }
 
-  String? _resolveCustomerAlternatePhone({OrderDetailsModelData? orderDetails}) {
+  String? _resolveCustomerAlternatePhone(
+      {OrderDetailsModelData? orderDetails}) {
     return _firstNonEmptyString([
       orderDetails?.customerDetails?.alternatePhone,
     ]);
@@ -1721,7 +1726,8 @@ class OrderPanelState extends State<OrderPanel> {
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
-        deliveryMethodId: widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
+        deliveryMethodId:
+            widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
       debugPrint('✅ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
@@ -1792,7 +1798,8 @@ class OrderPanelState extends State<OrderPanel> {
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
-        deliveryMethodId: widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
+        deliveryMethodId:
+            widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
       debugPrint('✅ listSavedOrders Response (silent): $response');
       if (response['status'] == 'success') {
@@ -2098,8 +2105,8 @@ class OrderPanelState extends State<OrderPanel> {
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
         final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
           (m) => m.id == loadedDeliveryMethodId,
-          orElse: () =>
-              DeliveryMethod(id: loadedDeliveryMethodId, name: 'Store Takeaway'),
+          orElse: () => DeliveryMethod(
+              id: loadedDeliveryMethodId, name: 'Store Takeaway'),
         );
         loadedDeliveryMethodName = match.name;
         debugPrint(
@@ -2175,8 +2182,8 @@ class OrderPanelState extends State<OrderPanel> {
   // Comment editor dialog
   void _showCommentDialog() {
     final String initialComment = _orderComment.isNotEmpty
-      ? _orderComment
-      : (_extractOrderLevelComment(_selectedOrder) ?? '');
+        ? _orderComment
+        : (_extractOrderLevelComment(_selectedOrder) ?? '');
     final controller = TextEditingController(text: initialComment);
     showDialog(
       context: context,
@@ -2311,18 +2318,20 @@ class OrderPanelState extends State<OrderPanel> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.chat_bubble_outline, color: Color(0xFF2563EB), size: 22),
+            const Icon(Icons.chat_bubble_outline,
+                color: Color(0xFF2563EB), size: 22),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Item Note',
-                style: buildCustomStyle(
-                    FontWeightManager.bold, FontSize.s16, 0.21, const Color(0xFF1E293B)),
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.21, const Color(0xFF1E293B)),
               ),
             ),
             if (currentComment.isNotEmpty)
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626), size: 20),
+                icon: const Icon(Icons.delete_outline,
+                    color: Color(0xFFDC2626), size: 20),
                 onPressed: () {
                   Navigator.of(dialogContext).pop('');
                 },
@@ -2337,12 +2346,13 @@ class OrderPanelState extends State<OrderPanel> {
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
             hintText: 'e.g., No ice, Extra spicy, Less sugar...',
-            hintStyle: buildCustomStyle(
-                FontWeightManager.regular, FontSize.s13, 0.21, const Color(0xFF94A3B8)),
+            hintStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s13,
+                0.21, const Color(0xFF94A3B8)),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+              borderSide:
+                  const BorderSide(color: Color(0xFF2563EB), width: 1.5),
             ),
             contentPadding: const EdgeInsets.all(12),
           ),
@@ -2351,18 +2361,20 @@ class OrderPanelState extends State<OrderPanel> {
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(null),
             child: Text('Cancel',
-                style: buildCustomStyle(
-                    FontWeightManager.medium, FontSize.s14, 0.21, const Color(0xFF64748B))),
+                style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                    0.21, const Color(0xFF64748B))),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2563EB),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: Text('Save',
-                style: buildCustomStyle(
-                    FontWeightManager.semiBold, FontSize.s14, 0.21, Colors.white)),
+                style: buildCustomStyle(FontWeightManager.semiBold,
+                    FontSize.s14, 0.21, Colors.white)),
           ),
         ],
       ),
@@ -2379,12 +2391,14 @@ class OrderPanelState extends State<OrderPanel> {
           cartItem.selectedStock,
           comment,
           stockGroupIds: cartItem.stockGroupIds,
+          saleUnitId: cartItem.saleUnitId,
         );
       } else {
         // For saved order items, persist comment via addToCartAPI with same payload + comment
         try {
           final authModel = Provider.of<AuthModel>(context, listen: false);
-          final cartProvider = Provider.of<CartProvider>(context, listen: false);
+          final cartProvider =
+              Provider.of<CartProvider>(context, listen: false);
 
           final customerId = _selectedOrder['cart']?['customer_id'] ??
               _selectedOrder['customer_id'] ??
@@ -2406,7 +2420,8 @@ class OrderPanelState extends State<OrderPanel> {
             return;
           }
 
-          debugPrint('➡️ Calling CartProvider.addToCartAPI for item comment update');
+          debugPrint(
+              '➡️ Calling CartProvider.addToCartAPI for item comment update');
           debugPrint(
               '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
 
@@ -2465,8 +2480,7 @@ class OrderPanelState extends State<OrderPanel> {
       }
 
       final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
-      return defaultMethod?.id ??
-          kFallbackDeliveryMethodId;
+      return defaultMethod?.id ?? kFallbackDeliveryMethodId;
     } catch (e) {
       return kFallbackDeliveryMethodId;
     }
@@ -3421,10 +3435,12 @@ class OrderPanelState extends State<OrderPanel> {
       return false;
     }).toList();
 
-    final pendingCancelQueue = await _fetchPendingCancelKotItems(_selectedOrder);
+    final pendingCancelQueue =
+        await _fetchPendingCancelKotItems(_selectedOrder);
 
     debugPrint('🆕 _printNewKOT: New items (status=null): ${newItems.length}');
-    debugPrint('🚫 _printNewKOT: Pending cancel items: ${pendingCancelQueue.length}');
+    debugPrint(
+        '🚫 _printNewKOT: Pending cancel items: ${pendingCancelQueue.length}');
 
     if (newItems.isEmpty && pendingCancelQueue.isEmpty) {
       debugPrint('⚠️ _printNewKOT: No pending add-on or cancel KOT items');
@@ -3454,7 +3470,8 @@ class OrderPanelState extends State<OrderPanel> {
             '📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
         final orderId = int.tryParse(orderIdValue.toString());
         final accessToken = authModel.token ?? '';
-        debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
+        debugPrint(
+            '📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
         debugPrint(
             '📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
 
@@ -3726,8 +3743,8 @@ class OrderPanelState extends State<OrderPanel> {
       final comment = item['comment']?.toString() ?? '';
       final variantKey = json.encode(item['variant_attributes']);
       final unitPrice = item['unit_price']?.toString() ?? '';
-      final key = [productId, productName, comment, variantKey, unitPrice]
-          .join('|');
+      final key =
+          [productId, productName, comment, variantKey, unitPrice].join('|');
 
       final quantity =
           _parseKotQuantity(item['cancel_qty'] ?? item['quantity'] ?? 1);
@@ -3738,9 +3755,8 @@ class OrderPanelState extends State<OrderPanel> {
           ...item,
           'quantity': quantity,
           'product_name': 'CANCEL - $productName',
-          'event_ids': eventId != null && eventId.isNotEmpty
-              ? [eventId]
-              : <String>[],
+          'event_ids':
+              eventId != null && eventId.isNotEmpty ? [eventId] : <String>[],
         };
         continue;
       }
@@ -3750,7 +3766,8 @@ class OrderPanelState extends State<OrderPanel> {
 
       final existingEventIds =
           List<String>.from(existing['event_ids'] ?? const <String>[]);
-      if (eventId != null && eventId.isNotEmpty &&
+      if (eventId != null &&
+          eventId.isNotEmpty &&
           !existingEventIds.contains(eventId)) {
         existingEventIds.add(eventId);
       }
@@ -3827,7 +3844,8 @@ class OrderPanelState extends State<OrderPanel> {
         final code =
             (prop['props_code'] ?? prop['code'])?.toString().toUpperCase();
         if (code != 'KOT_CANCEL_QUEUE') continue;
-        final valueKey = prop.containsKey('props_value') ? 'props_value' : 'value';
+        final valueKey =
+            prop.containsKey('props_value') ? 'props_value' : 'value';
         if (prop[valueKey] is List) {
           prop[valueKey] = filterQueue(prop[valueKey]);
         }
@@ -3961,8 +3979,7 @@ class OrderPanelState extends State<OrderPanel> {
         }
 
         // Get quantity
-        quantity =
-          (item['quantity'] ?? item['cancel_qty'] ?? item['qty'] ?? 1)
+        quantity = (item['quantity'] ?? item['cancel_qty'] ?? item['qty'] ?? 1)
             .toString();
 
         // Get Price and MRP
@@ -4466,7 +4483,8 @@ class OrderPanelState extends State<OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: _isLoadingPrintKot ? null : _printNewKOTWithLoading,
+                      onTap:
+                          _isLoadingPrintKot ? null : _printNewKOTWithLoading,
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -4667,8 +4685,8 @@ class OrderPanelState extends State<OrderPanel> {
                 ),
                 Text(
                   finalOrderTotal.toStringAsFixed(2),
-                  style: buildCustomStyle(FontWeightManager.bold, 16, 0.2,
-                      const Color(0xFF2563EB)),
+                  style: buildCustomStyle(
+                      FontWeightManager.bold, 16, 0.2, const Color(0xFF2563EB)),
                 ),
               ],
             ),
@@ -4726,14 +4744,13 @@ class OrderPanelState extends State<OrderPanel> {
           final match = propsList.firstWhere(
             (e) =>
                 (e is Map) &&
-                (((e['code'] ?? e['props_code'])
-                            ?.toString()
-                            .toUpperCase() ??
+                (((e['code'] ?? e['props_code'])?.toString().toUpperCase() ??
                         '') ==
                     'COMMENT'),
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             comment = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -5237,7 +5254,7 @@ class OrderPanelState extends State<OrderPanel> {
 
         debugPrint('➡️ Calling CartProvider.addToCartAPI for increment');
         debugPrint(
-          '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
+            '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
         debugPrint('🔍 Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.addToCartAPI(
@@ -5325,7 +5342,8 @@ class OrderPanelState extends State<OrderPanel> {
         // Backend creates a NEW cart entry (status=null) whenever the existing
         // item already has ANY status — not just 'PREPARING' / 'COOKING' etc.
         // 'STARTED' also triggers this behaviour, so check for any non-null status.
-        final itemAlreadyHasStatus = itemStatus != null && itemStatus.isNotEmpty;
+        final itemAlreadyHasStatus =
+            itemStatus != null && itemStatus.isNotEmpty;
 
         Future.delayed(const Duration(milliseconds: 1000), () async {
           if (mounted) {
@@ -5472,7 +5490,8 @@ class OrderPanelState extends State<OrderPanel> {
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
-        deliveryMethodId: widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
+        deliveryMethodId:
+            widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
 
       if (response['status'] == 'success') {
@@ -5871,7 +5890,8 @@ class OrderPanelState extends State<OrderPanel> {
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
-        deliveryMethodId: widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
+        deliveryMethodId:
+            widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
 
       if (response['status'] == 'success') {
@@ -5951,7 +5971,7 @@ class OrderPanelState extends State<OrderPanel> {
           _selectedOrder['customer_id'] ??
           authModel.userId ??
           1;
-        final customerPhone = _resolveCustomerPhone(order: _selectedOrder) ?? '';
+      final customerPhone = _resolveCustomerPhone(order: _selectedOrder) ?? '';
       // Get order items to calculate subtotal
       final List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
 
@@ -5985,10 +6005,10 @@ class OrderPanelState extends State<OrderPanel> {
       final transactionId = _transactionNumber.isNotEmpty
           ? _transactionNumber
           : (_selectedOrder['transaction_number'] ?? '');
-        final currentComment = _orderComment.trim();
-        final selectedOrderComment =
+      final currentComment = _orderComment.trim();
+      final selectedOrderComment =
           (_selectedOrder['comment']?.toString() ?? '').trim();
-        final comment = currentComment.isNotEmpty
+      final comment = currentComment.isNotEmpty
           ? currentComment
           : (selectedOrderComment.isNotEmpty ? selectedOrderComment : null);
 
@@ -6046,15 +6066,9 @@ class OrderPanelState extends State<OrderPanel> {
               cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
           paidAmount = totalPaid.toString();
 
-          // Prepare paidMethods array with IDs (only include methods with amount > 0)
+          // Prepare raw paid methods, then normalize balance/change once.
           if (_isCashSelected && cashAmountVal > 0) {
-            // Adjust cash amount by deducting balance (change returned to customer)
-            final orderAmount = double.tryParse(totalPrice) ?? 0.0;
-            final balanceAmountVal = totalPaid - orderAmount;
-            final netCashAmount = cashAmountVal - balanceAmountVal;
-            if (netCashAmount > 0) {
-              paidMethods.add({"method": cashId, "amount": netCashAmount});
-            }
+            paidMethods.add({"method": cashId, "amount": cashAmountVal});
           }
           if (_isCardSelected && cardAmountVal > 0) {
             paidMethods.add({"method": cardId, "amount": cardAmountVal});
@@ -6065,6 +6079,15 @@ class OrderPanelState extends State<OrderPanel> {
           if (_isCodSelected && codAmountVal > 0) {
             paidMethods.add({"method": codId, "amount": codAmountVal});
           }
+
+          final orderAmount = double.tryParse(totalPrice) ?? 0.0;
+          final balanceAmountVal = totalPaid - orderAmount;
+          paidMethods = PaymentHelper.normalizePaidMethodsForApi(
+            paidMethods: paidMethods,
+            balanceAmount: balanceAmountVal > 0 ? balanceAmountVal : 0.0,
+            cashMethodId: cashId,
+            codMethodId: codId,
+          );
 
           // Keep for logs only; API will use paymentMethods/paidMethods format
           paymentMethod =
@@ -6422,22 +6445,26 @@ class OrderPanelState extends State<OrderPanel> {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _showItemCommentDialog(cartItem, isLocal: true),
+                      onTap: () =>
+                          _showItemCommentDialog(cartItem, isLocal: true),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: cartItem.comment != null && cartItem.comment!.isNotEmpty
+                          color: cartItem.comment != null &&
+                                  cartItem.comment!.isNotEmpty
                               ? const Color(0xFF2563EB).withOpacity(0.1)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          cartItem.comment != null && cartItem.comment!.isNotEmpty
+                          cartItem.comment != null &&
+                                  cartItem.comment!.isNotEmpty
                               ? Icons.chat
                               : Icons.chat_bubble_outline,
                           size: widget.isCompact ? 16 : 18,
-                          color: cartItem.comment != null && cartItem.comment!.isNotEmpty
+                          color: cartItem.comment != null &&
+                                  cartItem.comment!.isNotEmpty
                               ? const Color(0xFF2563EB)
                               : const Color(0xFF64748B),
                         ),
@@ -6758,6 +6785,7 @@ class OrderPanelState extends State<OrderPanel> {
         cartItem.product.productId!,
         cartItem.selectedStock,
         stockGroupIds: cartItem.stockGroupIds,
+        saleUnitId: cartItem.saleUnitId,
       );
 
       showScaffold(
@@ -6806,8 +6834,7 @@ class OrderPanelState extends State<OrderPanel> {
         (widget.preselectedDeliveryMethodId == null ||
             widget.preselectedDeliveryMethodId!.isEmpty)) {
       showScaffoldError(
-          context: context,
-          message: 'Select a table or delivery method first');
+          context: context, message: 'Select a table or delivery method first');
       return;
     }
 
@@ -7203,6 +7230,7 @@ class OrderPanelState extends State<OrderPanel> {
             localItem.selectedStock,
             newPrice,
             stockGroupIds: localItem.stockGroupIds,
+            saleUnitId: localItem.saleUnitId,
           );
         } else {
           // Update Saved Item
@@ -7631,22 +7659,26 @@ class OrderPanelState extends State<OrderPanel> {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _showItemCommentDialog(cartItem, isLocal: false),
+                      onTap: () =>
+                          _showItemCommentDialog(cartItem, isLocal: false),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: (cartItem['comment'] != null && cartItem['comment'].toString().isNotEmpty)
+                          color: (cartItem['comment'] != null &&
+                                  cartItem['comment'].toString().isNotEmpty)
                               ? const Color(0xFF2563EB).withOpacity(0.1)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          (cartItem['comment'] != null && cartItem['comment'].toString().isNotEmpty)
+                          (cartItem['comment'] != null &&
+                                  cartItem['comment'].toString().isNotEmpty)
                               ? Icons.chat
                               : Icons.chat_bubble_outline,
                           size: widget.isCompact ? 16 : 18,
-                          color: (cartItem['comment'] != null && cartItem['comment'].toString().isNotEmpty)
+                          color: (cartItem['comment'] != null &&
+                                  cartItem['comment'].toString().isNotEmpty)
                               ? const Color(0xFF2563EB)
                               : const Color(0xFF64748B),
                         ),
@@ -7659,10 +7691,10 @@ class OrderPanelState extends State<OrderPanel> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap:
-                            _loadingCartItems.contains('${cartItem['id']}_remove')
-                                ? null
-                                : () => _removeCartItemWithLoading(cartItem),
+                        onTap: _loadingCartItems
+                                .contains('${cartItem['id']}_remove')
+                            ? null
+                            : () => _removeCartItemWithLoading(cartItem),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -7670,23 +7702,23 @@ class OrderPanelState extends State<OrderPanel> {
                             color: const Color(0xFFDC2626).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child:
-                              _loadingCartItems.contains('${cartItem['id']}_remove')
-                                  ? SizedBox(
-                                      width: widget.isCompact ? 16 : 18,
-                                      height: widget.isCompact ? 16 : 18,
-                                      child: const CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          Color(0xFFDC2626),
-                                        ),
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.delete_outline,
-                                      size: widget.isCompact ? 16 : 18,
-                                      color: const Color(0xFFDC2626),
+                          child: _loadingCartItems
+                                  .contains('${cartItem['id']}_remove')
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 18,
+                                  height: widget.isCompact ? 16 : 18,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFFDC2626),
                                     ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.delete_outline,
+                                  size: widget.isCompact ? 16 : 18,
+                                  color: const Color(0xFFDC2626),
+                                ),
                         ),
                       ),
                     ),

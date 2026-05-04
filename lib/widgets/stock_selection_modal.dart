@@ -17,6 +17,8 @@ class CombinedStock {
   final String? purchasePrice;
   final String? unit;
   final String? hsnCode;
+  final String? wholesalePrice;
+  final int? wholesaleMinUnit;
   final num totalQuantity;
   final List<Stock> originalStocks;
 
@@ -26,6 +28,8 @@ class CombinedStock {
     required this.purchasePrice,
     required this.unit,
     required this.hsnCode,
+    required this.wholesalePrice,
+    required this.wholesaleMinUnit,
     required this.totalQuantity,
     required this.originalStocks,
   });
@@ -91,7 +95,7 @@ List<CombinedStock> groupStocksByPricing(List<Stock> stocks) {
 
   for (final stock in stocks) {
     final key =
-        '${stock.price}_${stock.mrp}_${stock.purchasePrice}_${stock.unit}_${stock.hsnCode}_${stock.taxRate}';
+        '${stock.price}_${stock.mrp}_${stock.purchasePrice}_${stock.unit}_${stock.hsnCode}_${stock.taxRate}_${stock.wholesalePrice}_${stock.wholesaleMinUnit}';
     grouped.putIfAbsent(key, () => []).add(stock);
   }
 
@@ -105,6 +109,8 @@ List<CombinedStock> groupStocksByPricing(List<Stock> stocks) {
       purchasePrice: stockList.first.purchasePrice,
       unit: stockList.first.unit,
       hsnCode: stockList.first.hsnCode,
+      wholesalePrice: stockList.first.wholesalePrice,
+      wholesaleMinUnit: stockList.first.wholesaleMinUnit,
       totalQuantity: totalQuantity,
       originalStocks: stockList,
     );
@@ -316,6 +322,10 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                       purchasePrice:
                                           combinedStock.purchasePrice,
                                       hsnCode: combinedStock.hsnCode,
+                                      wholesalePrice:
+                                          combinedStock.wholesalePrice,
+                                      wholesaleMinUnit:
+                                          combinedStock.wholesaleMinUnit,
                                     );
 
                                     Navigator.pop(context, {

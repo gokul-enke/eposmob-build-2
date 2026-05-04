@@ -1034,6 +1034,15 @@ class BillingPageState extends State<BillingPageRestaurant>
             "🔴 [BillingPageRestaurant.processBarcode] First product: ${filteredProducts.first.productName}");
         // Get the first product
         GetProduct product = filteredProducts.first;
+        SaleUnit? matchedSaleUnit;
+
+        for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+          final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+          if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == query.trim()) {
+            matchedSaleUnit = saleUnit;
+            break;
+          }
+        }
 
         num? quantity;
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
@@ -1050,6 +1059,9 @@ class BillingPageState extends State<BillingPageRestaurant>
             query.length == 14) {
           // Count-based product
           quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        } else if (matchedSaleUnit != null) {
+          quantity =
+              num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
         }
 
         // Use centralized helper for stock handling
@@ -1071,6 +1083,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           addToCartDirectly: true,
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
+          selectedSaleUnit: matchedSaleUnit,
         );
 
         debugPrint(
@@ -2301,14 +2314,20 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       localProductProvider.selectedProduct;
 
                                   if (selectedProduct != null) {
-                                    final customPrice = double.tryParse(unitPriceController.text);
-                                    final customQuantity = num.tryParse(quantityController.text);
+                                    final customPrice = double.tryParse(
+                                        unitPriceController.text);
+                                    final customQuantity =
+                                        num.tryParse(quantityController.text);
 
-                                    await ProductCartHelper.handleProductSelection(
+                                    await ProductCartHelper
+                                        .handleProductSelection(
                                       context: context,
                                       product: selectedProduct,
                                       quantity: customQuantity,
-                                      customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+                                      customPrice:
+                                          customPrice != null && customPrice > 0
+                                              ? customPrice
+                                              : null,
                                     );
 
                                     // Clear input fields
@@ -2741,6 +2760,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             item.product.productId!,
                                             item.selectedStock,
                                             stockGroupIds: item.stockGroupIds,
+                                            saleUnitId: item.saleUnitId,
                                           );
                                         },
                                       ),
@@ -5342,57 +5362,54 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   List<Map<String, dynamic>> _getPaidMethods() {
-    List<Map<String, dynamic>> paidMethods = [];
+    final paidMethods = <Map<String, dynamic>>[];
 
     // Get payment method IDs from BillingProvider
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
+    final cashId = billingProvider.cashPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('CASH')?.toString() ??
+        "CASH";
+    final cardId = billingProvider.cardPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('CARD')?.toString() ??
+        "CARD";
+    final upiId = billingProvider.upiPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('UPI')?.toString() ??
+        "UPI";
+    final codId = billingProvider.codPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('COD')?.toString() ??
+        "COD";
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.cashPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('CASH')?.toString();
-      // Adjust cash amount by deducting balance (change returned to customer)
-      double rawCashAmount = double.tryParse(_cashAmountController.text) ?? 0;
-      double netCashAmount = rawCashAmount - _balanceAmount;
-      // Only add if net cash is positive (skip if balance equals or exceeds cash)
-      if (netCashAmount > 0) {
-        paidMethods.add({
-          // Use payment method ID if available, otherwise fallback to string
-          "method": id ?? "CASH",
-          "amount": netCashAmount, // Net cash kept in drawer
-        });
-      }
+      paidMethods.add({
+        "method": cashId,
+        "amount": double.tryParse(_cashAmountController.text) ?? 0,
+      });
     }
 
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.cardPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('CARD')?.toString();
       paidMethods.add({
-        "method": id ?? "CARD",
+        "method": cardId,
         "amount": double.tryParse(_cardAmountController.text) ?? 0,
       });
     }
 
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.upiPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('UPI')?.toString();
       paidMethods.add({
-        "method": id ?? "UPI",
+        "method": upiId,
         "amount": double.tryParse(_upiAmountController.text) ?? 0,
       });
     }
 
     if (_isCodSelected &&
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.codPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('COD')?.toString();
       paidMethods.add({
-        "method": id ?? "COD",
+        "method": codId,
         "amount": double.tryParse(_codAmountController.text) ?? 0,
       });
     }
@@ -5404,7 +5421,12 @@ class BillingPageState extends State<BillingPageRestaurant>
     //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
     //   });
     // }
-    return paidMethods;
+    return PaymentHelper.normalizePaidMethodsForApi(
+      paidMethods: paidMethods,
+      balanceAmount: _balanceAmount,
+      cashMethodId: cashId,
+      codMethodId: codId,
+    );
   }
 
   Widget _buildQuickAccessIcons() {
@@ -6980,8 +7002,11 @@ class BillingPageState extends State<BillingPageRestaurant>
                     product: item.product,
                     quantity: diff,
                     selectedStock: item.selectedStock,
-                      stockGroupIds: item.stockGroupIds,
+                    stockGroupIds: item.stockGroupIds,
                     isIncreamentUsingCompactQuantityControl: true,
+                    saleUnitId: item.saleUnitId,
+                    saleUnitName: item.saleUnitName,
+                    saleUnitConversionRate: item.saleUnitConversionRate,
                   );
                 } else if (diff < 0) {
                   for (int i = 0; i < diff.abs(); i++) {
@@ -6989,6 +7014,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       item.product.productId!,
                       item.selectedStock,
                       stockGroupIds: item.stockGroupIds,
+                      saleUnitId: item.saleUnitId,
                     );
                   }
                 }
@@ -7213,8 +7239,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                                     GestureDetector(
                                       onTap: () {
                                         localProductProvider.removeFromCart(
-                                            item.product.productId!,
-                                            item.selectedStock);
+                                          item.product.productId!,
+                                          item.selectedStock,
+                                          saleUnitId: item.saleUnitId,
+                                        );
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
@@ -7280,8 +7308,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                             item.product
                                                                 .productId!,
                                                             item.selectedStock,
-                                                            stockGroupIds:
-                                                                item.stockGroupIds,
+                                                            stockGroupIds: item
+                                                                .stockGroupIds,
+                                                            saleUnitId:
+                                                                item.saleUnitId,
                                                           );
                                                         },
                                                         child: const Icon(
@@ -7325,6 +7355,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                                 .selectedStock,
                                                             isIncreamentUsingCompactQuantityControl:
                                                                 true,
+                                                            stockGroupIds: item
+                                                                .stockGroupIds,
+                                                            saleUnitId:
+                                                                item.saleUnitId,
+                                                            saleUnitName: item
+                                                                .saleUnitName,
+                                                            saleUnitConversionRate:
+                                                                item.saleUnitConversionRate,
                                                           );
                                                         },
                                                         child: const Icon(

@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
@@ -43,6 +44,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   GetStoreModelData? storeSelected;
   GetSuppliersModelData? supplier;
   final TextEditingController supplierIdController = TextEditingController();
+  final TextEditingController itemCodeController = TextEditingController();
   GetProduct? selectedProduct;
 
   // Variables for selected filters
@@ -100,6 +102,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterProperties: selectedProperty,
         filterStore: storeController.text,
         filterSupplier: supplierIdController.text,
+        filterItemCode: itemCodeController.text,
         page: page,
       );
     } catch (error) {
@@ -133,6 +136,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterSupplier: supplierIdController.text.isNotEmpty
             ? supplierIdController.text
             : null,
+        filterItemCode: itemCodeController.text.isNotEmpty
+            ? itemCodeController.text
+            : null,
         page: page,
       );
     } catch (error) {
@@ -153,6 +159,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       hsnCodeController.clear();
       createdByController.clear();
       supplierIdController.clear();
+      itemCodeController.clear();
 
       // Reset dropdown selections
       selectedCategoryId = null;
@@ -534,7 +541,34 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ),
                         ),
                         */
-                        const Expanded(flex: 1, child: SizedBox()),
+                        // Item Code filter
+                        Consumer<AppSettingsProvider>(
+                          builder: (context, appSettingsProvider, child) {
+                            final itemCodeEnabled = appSettingsProvider
+                                    .appSettings?.itemCodeEnabled ??
+                                false;
+                            if (!itemCodeEnabled) {
+                              return const Expanded(flex: 1, child: SizedBox());
+                            }
+                            return Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  buildColumnWidgetForTextFields(
+                                    height: 45,
+                                    onchanged: (value) {
+                                      searchProducts(1);
+                                    },
+                                    controller: itemCodeController,
+                                    size: size,
+                                    hintText: 'Item Code',
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                         const SizedBox(width: 15),
 
                         // Supplier
@@ -633,6 +667,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           builder: (context, productProvider, child) {
                             List<GetProduct> productList =
                                 productProvider.paginatedProducts;
+                            final itemCodeEnabled = Provider.of<
+                                        AppSettingsProvider>(context,
+                                    listen: false)
+                                .appSettings
+                                ?.itemCodeEnabled ?? false;
 
                             if (initLoading) {
                               return const Center(
@@ -689,16 +728,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       columnWidths: const {
                                         0: FractionColumnWidth(0.05), // No
                                         1: FractionColumnWidth(
-                                            0.26), // Product Name
+                                            0.24), // Product Name
                                         2: FractionColumnWidth(
-                                            0.12), // Category Name
-                                        3: FractionColumnWidth(0.08), // Price
-                                        4: FractionColumnWidth(0.08), // MRP
-                                        5: FractionColumnWidth(
-                                            0.08), // Purchase Price
-                                        6: FractionColumnWidth(0.08), // Unit
-                                        7: FractionColumnWidth(0.13), // Barcode
-                                        8: FractionColumnWidth(0.12), // Action
+                                            0.08), // Item Code
+                                        3: FractionColumnWidth(
+                                            0.11), // Category Name
+                                        4: FractionColumnWidth(0.07), // Price
+                                        5: FractionColumnWidth(0.07), // MRP
+                                        6: FractionColumnWidth(
+                                            0.07), // Purchase Price
+                                        7: FractionColumnWidth(0.07), // Unit
+                                        8: FractionColumnWidth(0.12), // Barcode
+                                        9: FractionColumnWidth(0.12), // Action
                                       },
                                       border: null,
                                       defaultVerticalAlignment:
@@ -708,6 +749,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                           children: [
                                             _buildTableHeader("No"),
                                             _buildTableHeader("Product Name"),
+                                            _buildTableHeader(
+                                                itemCodeEnabled
+                                                    ? "Item Code"
+                                                    : ""),
                                             _buildTableHeader("Category Name"),
                                             _buildTableHeader("Price"),
                                             _buildTableHeader("MRP"),
@@ -744,20 +789,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                               0: FractionColumnWidth(
                                                   0.05), // No
                                               1: FractionColumnWidth(
-                                                  0.26), // Product Name
+                                                  0.24), // Product Name
                                               2: FractionColumnWidth(
-                                                  0.12), // Category Name
+                                                  0.08), // Item Code
                                               3: FractionColumnWidth(
-                                                  0.08), // Price
+                                                  0.11), // Category Name
                                               4: FractionColumnWidth(
-                                                  0.08), // MRP
+                                                  0.07), // Price
                                               5: FractionColumnWidth(
-                                                  0.08), // Purchase Price
+                                                  0.07), // MRP
                                               6: FractionColumnWidth(
-                                                  0.08), // Unit
+                                                  0.07), // Purchase Price
                                               7: FractionColumnWidth(
-                                                  0.13), // Barcode
+                                                  0.07), // Unit
                                               8: FractionColumnWidth(
+                                                  0.12), // Barcode
+                                              9: FractionColumnWidth(
                                                   0.12), // Action
                                             },
                                             border: null,
@@ -796,6 +843,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         "$serialNumber"),
                                                     _buildTableCell(
                                                         "${product.productName}"),
+                                                    _buildTableCell(
+                                                        itemCodeEnabled
+                                                            ? (product.itemCode ??
+                                                                '')
+                                                            : ''),
                                                     _buildTableCell(
                                                         categoryName),
                                                     _buildTableCell(

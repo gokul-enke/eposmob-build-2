@@ -157,6 +157,19 @@ class StockProvider extends ChangeNotifier {
       }
     }
 
+    if (stockItem['purchaseUnitId'] != null &&
+        stockItem['purchaseUnitId'].toString().trim().isNotEmpty &&
+        (stockItem['purchaseQty'] == null ||
+            stockItem['purchaseQty'].toString().trim().isEmpty)) {
+      errors['purchaseQty'] = 'Purchase qty is required';
+    } else if (stockItem['purchaseQty'] != null &&
+        stockItem['purchaseQty'].toString().trim().isNotEmpty) {
+      final qty = double.tryParse(stockItem['purchaseQty'].toString());
+      if (qty == null || qty <= 0) {
+        errors['purchaseQty'] = 'Purchase qty must be a positive number';
+      }
+    }
+
     if (stockItem['retailPrice'] == null ||
         stockItem['retailPrice'].toString().isEmpty) {
       errors['retailPrice'] = 'Retail price is required';
@@ -461,8 +474,7 @@ class StockProvider extends ChangeNotifier {
       List<Map<String, dynamic>> products = [];
       for (int i = 0; i < _pendingStockItems.length; i++) {
         final stockItem = _pendingStockItems[i];
-
-        products.add({
+        final productData = <String, dynamic>{
           'product_id': int.parse(stockItem['productId'].toString()),
           'category_id': int.parse(stockItem['categoryId'].toString()),
           'quantity': double.parse(stockItem['quantity'].toString()),
@@ -503,7 +515,19 @@ class StockProvider extends ChangeNotifier {
           'retail_price_tax': _parseNullableDouble(stockItem['retailPriceTax']),
           'wholesale_price_tax':
               _parseNullableDouble(stockItem['wholesalePriceTax']),
-        });
+        };
+
+        final purchaseQty = stockItem['purchaseQty']?.toString().trim();
+        if (purchaseQty != null && purchaseQty.isNotEmpty) {
+          productData['purchase_qty'] = double.parse(purchaseQty);
+        }
+
+        final purchaseUnitId = stockItem['purchaseUnitId']?.toString().trim();
+        if (purchaseUnitId != null && purchaseUnitId.isNotEmpty) {
+          productData['purchase_unit_id'] = int.parse(purchaseUnitId);
+        }
+
+        products.add(productData);
       }
 
       debugPrint('📦 CALLING BULK STOCK API WITH ${products.length} PRODUCTS');

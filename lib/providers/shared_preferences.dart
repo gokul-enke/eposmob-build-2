@@ -197,14 +197,36 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.setInt('active_store_id', storeId);
   }
 
+  Future<void> saveActiveStoreDetails(Map<String, dynamic> storeJson) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('active_store', json.encode(storeJson));
+  }
+
   Future<int?> getActiveStoreId() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getInt('active_store_id');
   }
 
+  Future<Map<String, dynamic>?> getActiveStoreDetails() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final activeStoreJson = prefs.getString('active_store');
+    if (activeStoreJson == null || activeStoreJson.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = json.decode(activeStoreJson);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (e) {
+      debugPrint('Error decoding active store: $e');
+      return null;
+    }
+  }
+
   Future<void> removeActiveStoreId() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('active_store_id');
+    await prefs.remove('active_store');
   }
 
   // Printer settings management

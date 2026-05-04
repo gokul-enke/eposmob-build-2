@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:pos_machine/screens/print/layouts/arabic_and_english_3_receipt_layout.dart';
 import 'package:pos_machine/screens/print/layouts/arabic_and_english_recipt_layput.dart';
 import 'package:pos_machine/screens/print/layouts/arabic_english_table_headers_receipt_layout.dart';
+import 'package:pos_machine/screens/print/layouts/multi_store_receipt_layout.dart';
 import 'receipt_layout.dart';
 import 'classic_receipt_layout.dart';
 import 'premium_receipt_layout.dart';
@@ -39,6 +40,7 @@ class ReceiptLayoutFactory {
     'supermarket': () => SupermarketReceiptLayout(),
     'supermarket2': () => Supermarket2ReceiptLayout(),
     'bilingual': () => BilingualReceiptLayout(),
+    'multi_store': () => MultiStoreReceiptLayout(),
   };
 
   /// Get a layout instance based on the theme identifier.

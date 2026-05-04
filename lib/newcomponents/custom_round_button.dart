@@ -117,6 +117,7 @@ class CustomRoundButtonWithIconAdvanced extends StatelessWidget {
   final Color? borderColor;
   final Color? textColor;
   final bool isLoading;
+  final String? shortcutLabel;
   const CustomRoundButtonWithIconAdvanced(
       {Key? key,
       required this.title,
@@ -130,7 +131,8 @@ class CustomRoundButtonWithIconAdvanced extends StatelessWidget {
       this.boxColor,
       this.borderColor,
       this.textColor,
-      this.isLoading = false})
+      this.isLoading = false,
+      this.shortcutLabel})
       : super(key: key);
 
   @override
@@ -177,6 +179,26 @@ class CustomRoundButtonWithIconAdvanced extends StatelessWidget {
                         fontWeight: FontWeightManager.medium,
                         color: textColor ?? Colors.white),
                   ),
+                  if (shortcutLabel != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: (textColor ?? Colors.white).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Text(
+                        shortcutLabel!,
+                        style: TextStyle(
+                          fontFamily: FontConstants.fontFamily,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: (textColor ?? Colors.white).withOpacity(0.85),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
       ),

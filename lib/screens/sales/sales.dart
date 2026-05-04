@@ -1422,11 +1422,21 @@ Powered by CloudPOS''',
                   }
                 }
 
+                // Debug: Verify cart items before printing
+                final cartItemsForPrint = orderDetails.data?.cart?.cartItems ?? [];
+                debugPrint("===== SALES PRINT DEBUG =====");
+                debugPrint("Cart items count: ${cartItemsForPrint.length}");
+                for (int i = 0; i < cartItemsForPrint.length; i++) {
+                  final item = cartItemsForPrint[i];
+                  debugPrint("Item $i: name=${item.productName}, qty=${item.quantity}, price=${item.totalPrice}, tax=${item.taxAmount}");
+                }
+                debugPrint("=============================");
+
                 // Try auto-print with default printer first
                 final autoPrintSuccess = await PrintPage.autoPrint(
                   context,
                   storeName: storeName,
-                  cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                  cartItems: cartItemsForPrint,
                   formattedTotal: formattedTotal,
                   savedTotal: savedTotal,
                   discountAmount: discountAmount,

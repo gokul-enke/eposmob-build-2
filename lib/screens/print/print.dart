@@ -191,6 +191,11 @@ class PrintPage extends StatefulWidget {
       final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
       // Create params
+      debugPrint('[PrintPage.autoPrint] Creating ReceiptLayoutParams with ${cartItems.length} cart items');
+      for (int i = 0; i < cartItems.length; i++) {
+        final item = cartItems[i];
+        debugPrint('[PrintPage.autoPrint] Cart item $i: ${item.productName}, qty=${item.quantity}, total=${item.totalPrice}');
+      }
       final params = ReceiptLayoutParams(
         context: context,
         selectedPrinter: selectedPrinter,
@@ -661,6 +666,11 @@ class _PrintPageState extends State<PrintPage> {
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
     // Create params object for the layout
+    debugPrint('[PrintPage._printThermalReceipt] Cart items count: ${widget.cartItems.length}');
+    for (int i = 0; i < widget.cartItems.length; i++) {
+      final item = widget.cartItems[i];
+      debugPrint('[PrintPage._printThermalReceipt] Item $i: name=${item.productName}, qty=${item.quantity}, total=${item.totalPrice}');
+    }
     final params = ReceiptLayoutParams(
       context: context,
       selectedPrinter: selectedPrinter!,

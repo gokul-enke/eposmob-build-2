@@ -19,6 +19,8 @@ class CompactQuantityControlLocal extends StatefulWidget {
   final Function()? onQuantityChanged;
   final Stock? selectedStock;
   final LocalCartItem cartItem;
+  final int editRequestId;
+  final String? editRequestKey;
 
   const CompactQuantityControlLocal({
     Key? key,
@@ -32,6 +34,8 @@ class CompactQuantityControlLocal extends StatefulWidget {
     this.cartItemId,
     this.onQuantityChanged,
     this.selectedStock,
+    this.editRequestId = 0,
+    this.editRequestKey,
   }) : super(key: key);
 
   @override
@@ -61,8 +65,9 @@ class _CompactQuantityControlLocalState
   @override
   void initState() {
     super.initState();
-    _currentQuantity = widget.quantity;
-    _controller = TextEditingController(text: _currentQuantity.toString());
+    _currentQuantity = _displayQuantityForBase(widget.quantity);
+    _controller =
+        TextEditingController(text: _formatQuantity(_currentQuantity));
     _focusNode = FocusNode();
 
     // Listen to controller changes so virtual-keyboard input is captured
@@ -79,18 +84,43 @@ class _CompactQuantityControlLocalState
     });
   }
 
+  void _beginEditing() {
+    _focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_controller.text.isNotEmpty && _focusNode.hasFocus) {
+        _controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _controller.text.length,
+        );
+      }
+    });
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      _controller,
+      replaceOnFirstInput: true,
+    );
+  }
+
+  bool _shouldHandleEditRequest(CompactQuantityControlLocal oldWidget) {
+    return widget.editRequestId != oldWidget.editRequestId &&
+        widget.editRequestKey != null &&
+        widget.editRequestKey == _cartIdentityKey(widget.cartItem);
+  }
+
   @override
   void didUpdateWidget(CompactQuantityControlLocal oldWidget) {
     super.didUpdateWidget(oldWidget);
     final bool itemChanged = widget.productId != oldWidget.productId ||
-        _cartIdentityKey(widget.cartItem) != _cartIdentityKey(oldWidget.cartItem);
+        _cartIdentityKey(widget.cartItem) !=
+            _cartIdentityKey(oldWidget.cartItem);
 
     if (itemChanged) {
       _debounceTimer?.cancel();
       _pendingQuantity = null;
       _isUpdating = false;
-      _currentQuantity = widget.quantity;
-      _controller.text = _currentQuantity.toString();
+      _currentQuantity = _displayQuantityForBase(widget.quantity);
+      _controller.text = _formatQuantity(_currentQuantity);
 
       final keyboardProvider =
           Provider.of<KeyboardProvider>(context, listen: false);
@@ -105,6 +135,14 @@ class _CompactQuantityControlLocalState
       return;
     }
 
+    if (_shouldHandleEditRequest(oldWidget)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _beginEditing();
+        }
+      });
+    }
+
     // Check if the quantity prop has changed
     if (widget.quantity != oldWidget.quantity &&
         widget.quantity != _currentQuantity) {
@@ -116,12 +154,12 @@ class _CompactQuantityControlLocalState
 
       if (!isEditing) {
         setState(() {
-          _currentQuantity = widget.quantity;
-          _controller.text = _currentQuantity.toString();
+          _currentQuantity = _displayQuantityForBase(widget.quantity);
+          _controller.text = _formatQuantity(_currentQuantity);
         });
       } else {
         // Just update the internal current value to stay in sync without touching text
-        _currentQuantity = widget.quantity;
+        _currentQuantity = _displayQuantityForBase(widget.quantity);
       }
     }
   }
@@ -148,7 +186,7 @@ class _CompactQuantityControlLocalState
       // reset on every key-stroke (which caused the previously typed digit to
       // be replaced). It now behaves the same way as PriceTextField.
       if (!_focusNode.hasFocus) {
-        _controller.text = _currentQuantity.toString();
+        _controller.text = _formatQuantity(_currentQuantity);
       }
     });
 
@@ -156,7 +194,7 @@ class _CompactQuantityControlLocalState
     _debounceTimer?.cancel();
 
     // Store the latest pending quantity
-    _pendingQuantity = newQuantity;
+    _pendingQuantity = _toBaseQuantity(newQuantity);
 
     // Debounce API call
     _debounceTimer = Timer(const Duration(milliseconds: 0), () {
@@ -196,16 +234,35 @@ class _CompactQuantityControlLocalState
     }
 
     setState(() {
-      _currentQuantity = quantity;
+      _currentQuantity = _displayQuantityForBase(quantity);
       if (!_focusNode.hasFocus) {
-        _controller.text = _currentQuantity.toString();
+        _controller.text = _formatQuantity(_currentQuantity);
       }
     });
   }
 
   String _cartIdentityKey(LocalCartItem item) {
     final groupKey = item.stockGroupIds.join('_');
-    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey';
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+  }
+
+  num _displayQuantityForBase(num baseQuantity) {
+    return widget.cartItem.toDisplayQuantity(baseQuantity);
+  }
+
+  num _toBaseQuantity(num displayQuantity) {
+    return widget.cartItem.toBaseQuantity(displayQuantity);
+  }
+
+  String _formatQuantity(num value) {
+    if (value is int) {
+      return value.toString();
+    }
+    final roundedValue = value.roundToDouble();
+    if ((value.toDouble() - roundedValue).abs() < 0.0001) {
+      return roundedValue.toInt().toString();
+    }
+    return value.toString();
   }
 
   @override
@@ -249,22 +306,7 @@ class _CompactQuantityControlLocalState
               contentPadding: EdgeInsets.symmetric(vertical: 3),
             ),
             onTap: () {
-              // Use a post-frame callback to ensure text selection happens after the tap is processed
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (_controller.text.isNotEmpty && _focusNode.hasFocus) {
-                  _controller.selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: _controller.text.length,
-                  );
-                }
-              });
-
-              // Show custom numeric virtual keyboard
-              Provider.of<KeyboardProvider>(context, listen: false).show(
-                'number',
-                _controller,
-                replaceOnFirstInput: true,
-              );
+              _beginEditing();
             },
             onSubmitted: (value) {
               num? newQuantity = num.tryParse(value);

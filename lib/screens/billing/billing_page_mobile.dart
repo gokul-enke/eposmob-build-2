@@ -299,6 +299,45 @@ class BillingPageMobileState extends State<BillingPageMobile>
               billingProvider.debitAmountController.text =
                   (amounts['DEBIT'] ?? '0').toString();
             }
+            if (!methods.contains('CASH') &&
+                (methods.contains(billingProvider.cashPaymentMethodId) ||
+                    amounts.containsKey(billingProvider.cashPaymentMethodId))) {
+              billingProvider.setPaymentMethod('CASH', true);
+              billingProvider.cashAmountController.text =
+                  (amounts[billingProvider.cashPaymentMethodId] ?? '0')
+                      .toString();
+            }
+            if (!methods.contains('CARD') &&
+                (methods.contains(billingProvider.cardPaymentMethodId) ||
+                    amounts.containsKey(billingProvider.cardPaymentMethodId))) {
+              billingProvider.setPaymentMethod('CARD', true);
+              billingProvider.cardAmountController.text =
+                  (amounts[billingProvider.cardPaymentMethodId] ?? '0')
+                      .toString();
+            }
+            if (!methods.contains('UPI') &&
+                (methods.contains(billingProvider.upiPaymentMethodId) ||
+                    amounts.containsKey(billingProvider.upiPaymentMethodId))) {
+              billingProvider.setPaymentMethod('UPI', true);
+              billingProvider.upiAmountController.text =
+                  (amounts[billingProvider.upiPaymentMethodId] ?? '0')
+                      .toString();
+            }
+            if (methods.contains('COD') ||
+                methods.contains(billingProvider.codPaymentMethodId) ||
+                amounts.containsKey('COD') ||
+                amounts.containsKey(billingProvider.codPaymentMethodId)) {
+              billingProvider.setPaymentMethod('COD', true);
+              billingProvider.codAmountController.text =
+                  (amounts['COD'] ??
+                          amounts[billingProvider.codPaymentMethodId] ??
+                          '0')
+                      .toString();
+            }
+            if (methods.contains('ONLINE') || amounts.containsKey('ONLINE')) {
+              billingProvider.setPaymentMethod('ONLINE', true);
+              billingProvider.setPineLabsPaymentSuccess(true);
+            }
           }
         } catch (e) {
           debugPrint("Error parsing payment JSON on rehydration: $e");
@@ -320,6 +359,24 @@ class BillingPageMobileState extends State<BillingPageMobile>
           case 'DEBIT':
             billingProvider.debitAmountController.text = paid;
             break;
+        }
+
+        if (pm == billingProvider.cashPaymentMethodId) {
+          billingProvider.setPaymentMethod('CASH', true);
+          billingProvider.cashAmountController.text = paid;
+        } else if (pm == billingProvider.cardPaymentMethodId) {
+          billingProvider.setPaymentMethod('CARD', true);
+          billingProvider.cardAmountController.text = paid;
+        } else if (pm == billingProvider.upiPaymentMethodId) {
+          billingProvider.setPaymentMethod('UPI', true);
+          billingProvider.upiAmountController.text = paid;
+        } else if (pm == billingProvider.codPaymentMethodId ||
+            pm.toUpperCase() == 'COD') {
+          billingProvider.setPaymentMethod('COD', true);
+          billingProvider.codAmountController.text = paid;
+        } else if (pm.toUpperCase() == 'ONLINE') {
+          billingProvider.setPaymentMethod('ONLINE', true);
+          billingProvider.setPineLabsPaymentSuccess(true);
         }
       }
     }
@@ -419,6 +476,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
       if (filteredProducts.isNotEmpty) {
         GetProduct product = filteredProducts.first;
         num? quantity;
+        SaleUnit? matchedSaleUnit;
+
+        for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+          final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+          if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == query.trim()) {
+            matchedSaleUnit = saleUnit;
+            break;
+          }
+        }
 
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
             prefix == '000' &&
@@ -431,6 +497,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
             prefix == '000' &&
             query.length == 14) {
           quantity = int.parse(lastFive!);
+        } else if (matchedSaleUnit != null) {
+          quantity =
+              num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
         }
 
         await ProductCartHelper.handleProductSelection(
@@ -440,6 +509,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
           addToCartDirectly: true,
           customerId: billingProvider.selectedCustomerID,
           customerName: billingProvider.selectedCustomer?.name,
+          selectedSaleUnit: matchedSaleUnit,
         );
 
         setState(() {
@@ -563,16 +633,22 @@ class BillingPageMobileState extends State<BillingPageMobile>
   }
 
   void createOrderAndPrint() async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-    final selectedMethods = billingProvider.getSelectedPaymentMethodsExcludingEmpty();
-    
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final selectedMethods =
+        billingProvider.getSelectedPaymentMethodsExcludingEmpty();
+
     debugPrint('🖨️ [Print Order] Starting print order...');
     debugPrint('🖨️ [Print Order] Selected payment methods: $selectedMethods');
-    debugPrint('🖨️ [Print Order] isOnlineSelected: ${billingProvider.isOnlineSelected}');
-    debugPrint('🖨️ [Print Order] isCashSelected: ${billingProvider.isCashSelected}');
-    debugPrint('🖨️ [Print Order] isCardSelected: ${billingProvider.isCardSelected}');
-    debugPrint('🖨️ [Print Order] isUpiSelected: ${billingProvider.isUpiSelected}');
-    
+    debugPrint(
+        '🖨️ [Print Order] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+    debugPrint(
+        '🖨️ [Print Order] isCashSelected: ${billingProvider.isCashSelected}');
+    debugPrint(
+        '🖨️ [Print Order] isCardSelected: ${billingProvider.isCardSelected}');
+    debugPrint(
+        '🖨️ [Print Order] isUpiSelected: ${billingProvider.isUpiSelected}');
+
     final createdOrderNumber =
         await CheckoutService(context).createOrderAndPrint();
     if (createdOrderNumber != null && createdOrderNumber.isNotEmpty) {

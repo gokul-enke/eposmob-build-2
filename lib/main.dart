@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/restaurant/menu_provider.dart';
 import 'package:pos_machine/providers/restaurant/order_provider.dart';
@@ -48,6 +49,7 @@ import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'controllers/sidebar_controller.dart';
@@ -339,6 +341,7 @@ class MyApp extends StatelessWidget {
           create: (_) => TransactionProvider(),
         ),
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
+        ChangeNotifierProvider(create: (_) => KeyboardFocusHighlightProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
@@ -356,10 +359,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppFontProvider()),
       ],
       child: KeyboardDispatcher(
-        child: GetMaterialApp(
+        child: Consumer<KeyboardFocusHighlightProvider>(
+          builder: (context, focusHighlightProvider, child) {
+            return GetMaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'CLOUDPOS',
-          theme: ThemeData(),
+          theme: _buildAppTheme(focusHighlightProvider.enabled),
           translations: AppTranslations(LocalizationService.translations),
           locale: LocalizationService.locale,
           fallbackLocale: LocalizationService.fallbackLocale,
@@ -394,8 +399,78 @@ class MyApp extends StatelessWidget {
             '/login': (context) => const SignInScreen(),
             '/api-key': (context) => const ApiKeyScreen(),
           },
+        );
+          },
         ),
       ),
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// App-wide theme with strong, visible focus indicators.
+//
+// Every Tab-stop on the billing flow needs a clearly-visible focus ring so
+// keyboard users can always tell where the cursor is. We do this at the
+// theme level so standard widgets (TextField, ElevatedButton, OutlinedButton,
+// TextButton, IconButton, FilledButton, InkWell-based ListTile, etc.) all
+// pick it up automatically — no per-widget wiring required.
+// ---------------------------------------------------------------------------
+ThemeData _buildAppTheme(bool focusHighlightEnabled) {
+  // Resolves the overlay colour for the four interactive states a Material
+  // button can be in. Focus uses the primary halo; press/hover stay light.
+  WidgetStateProperty<Color?> overlayForButtons() {
+    return WidgetStateProperty.resolveWith<Color?>((states) {
+      if (focusHighlightEnabled && states.contains(WidgetState.focused)) {
+        return Colors.transparent;
+      }
+      if (states.contains(WidgetState.hovered)) {
+        return ColorManager.kPrimaryColor.withOpacity(0.08);
+      }
+      if (states.contains(WidgetState.pressed)) {
+        return ColorManager.kPrimaryColor.withOpacity(0.16);
+      }
+      return null;
+    });
+  }
+
+  return ThemeData(
+    // `focusColor` is what InkWell / InkResponse splash uses when its host
+    // FocusNode has primary focus.
+    focusColor: Colors.transparent,
+    // Standard Material splashes pick up the primary tint as well.
+    splashColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+    highlightColor: ColorManager.kPrimaryColor.withOpacity(0.08),
+
+    // ---- Buttons ----
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ButtonStyle(overlayColor: overlayForButtons()),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: ButtonStyle(overlayColor: overlayForButtons()),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: ButtonStyle(overlayColor: overlayForButtons()),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: ButtonStyle(overlayColor: overlayForButtons()),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: ButtonStyle(overlayColor: overlayForButtons()),
+    ),
+
+    // ---- Text fields ----
+    // Bold the focused border so the active TextField is unmistakable.
+    inputDecorationTheme: focusHighlightEnabled
+        ? InputDecorationTheme(
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(
+          color: ColorManager.kPrimaryColor,
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    )
+        : null,
+  );
 }

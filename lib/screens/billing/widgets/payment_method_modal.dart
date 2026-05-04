@@ -54,7 +54,8 @@ class PaymentMethodModal extends StatefulWidget {
       onAfterApply; // Optional callback to execute after applying payment methods
   final String? customButtonTitle; // Optional custom button title
   final bool closeOnApply; // Optional flag to control modal closing behavior
-  final bool isDefaultCustomer; // Flag to hide previous balance for default customer
+  final bool
+      isDefaultCustomer; // Flag to hide previous balance for default customer
   final bool showConfirmButton; // Flag to show/hide the confirm button
   final bool showAsDialog;
   final bool showShadow;
@@ -86,7 +87,6 @@ class PaymentMethodModal extends StatefulWidget {
     this.fullWidth = false,
   }) : super(key: key);
 
-
   @override
   State<PaymentMethodModal> createState() => _PaymentMethodModalState();
 }
@@ -96,6 +96,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late bool isCardSelected;
   late bool isUpiSelected;
   late bool isCodSelected;
+
+  /// Identifier of the payment-method tile that currently has keyboard
+  /// focus (`'cash' | 'card' | 'upi' | 'cod' | 'credit'`), or null when
+  /// no payment tile is focused. Drives the visible orange focus ring
+  /// rendered around the focused tile in [_buildModalPaymentRow].
+  String? _focusedPaymentKey;
   late TextEditingController cashAmountController;
   late TextEditingController cardAmountController;
   late TextEditingController upiAmountController;
@@ -226,15 +232,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     // Listen for text changes to capture virtual keyboard input
     _cashAmountListener =
-      () => _handleAmountControllerChange('cash', cashAmountController);
+        () => _handleAmountControllerChange('cash', cashAmountController);
     _cardAmountListener =
-      () => _handleAmountControllerChange('card', cardAmountController);
+        () => _handleAmountControllerChange('card', cardAmountController);
     _upiAmountListener =
-      () => _handleAmountControllerChange('upi', upiAmountController);
+        () => _handleAmountControllerChange('upi', upiAmountController);
     _codAmountListener =
-      () => _handleAmountControllerChange('cod', codAmountController);
+        () => _handleAmountControllerChange('cod', codAmountController);
     _toCustomerCreditListener = () => _handleAmountControllerChange(
-      'toCustomerCredit', toCustomerCreditController);
+        'toCustomerCredit', toCustomerCreditController);
 
     cashAmountController.addListener(_cashAmountListener);
     cardAmountController.addListener(_cardAmountListener);
@@ -253,23 +259,57 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _calculateBalance());
     }
 
-    // Auto-focus cash field if it was auto-filled and cash is selected
-    if (widget.initialIsCashSelected && cashAmountController.text.isNotEmpty) {
-      // Check if this looks like an auto-filled amount (cart total)
-      final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-      if (cashAmount > 0 && cashAmount == widget.cartTotal) {
-        // This appears to be auto-filled, focus and select the text
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            cashAmountFocusNode.requestFocus();
-            cashAmountController.selection = TextSelection(
-              baseOffset: 0,
-              extentOffset: cashAmountController.text.length,
-            );
-          }
-        });
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusInitialSelectedPaymentAmount();
+    });
+  }
+
+  void _focusInitialSelectedPaymentAmount() {
+    if (!mounted) return;
+
+    TextEditingController? controller;
+    FocusNode? focusNode;
+
+    if (isCashSelected && cashAmountController.text.isNotEmpty) {
+      controller = cashAmountController;
+      focusNode = cashAmountFocusNode;
+    } else if (isCardSelected && cardAmountController.text.isNotEmpty) {
+      controller = cardAmountController;
+      focusNode = cardAmountFocusNode;
+    } else if (isUpiSelected && upiAmountController.text.isNotEmpty) {
+      controller = upiAmountController;
+      focusNode = upiAmountFocusNode;
+    } else if (isCodSelected && codAmountController.text.isNotEmpty) {
+      controller = codAmountController;
+      focusNode = codAmountFocusNode;
+    } else if (isCashSelected) {
+      controller = cashAmountController;
+      focusNode = cashAmountFocusNode;
+    } else if (isCardSelected) {
+      controller = cardAmountController;
+      focusNode = cardAmountFocusNode;
+    } else if (isUpiSelected) {
+      controller = upiAmountController;
+      focusNode = upiAmountFocusNode;
+    } else if (isCodSelected) {
+      controller = codAmountController;
+      focusNode = codAmountFocusNode;
     }
+
+    if (controller == null || focusNode == null) return;
+
+    focusNode.requestFocus();
+    if (controller.text.isNotEmpty) {
+      controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: controller.text.length,
+      );
+    }
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      controller,
+      replaceOnFirstInput: true,
+    );
   }
 
   void _notifyChanges() {
@@ -278,16 +318,16 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
     _debounceTimer?.cancel();
     final double creditAmount =
-      double.tryParse(creditAmountController.text) ?? 0.0;
+        double.tryParse(creditAmountController.text) ?? 0.0;
     final double mappedCredit =
         double.tryParse(toCustomerCreditController.text) ?? 0.0;
     final bool mappedIsDebitSelected =
-      (toCustomerCreditEnabled && mappedCredit > 0) ||
-        (isCreditSelected && creditAmount > 0);
+        (toCustomerCreditEnabled && mappedCredit > 0) ||
+            (isCreditSelected && creditAmount > 0);
     final String mappedDebitAmount = mappedIsDebitSelected
-      ? (isCreditSelected && creditAmount > 0
-        ? creditAmount.toStringAsFixed(2)
-        : mappedCredit.toStringAsFixed(2))
+        ? (isCreditSelected && creditAmount > 0
+            ? creditAmount.toStringAsFixed(2)
+            : mappedCredit.toStringAsFixed(2))
         : '';
 
     widget.onPaymentMethodSelected(
@@ -843,7 +883,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       }
     });
 
-    if (label == 'cash' || label == 'card' || label == 'upi' || label == 'cod') {
+    if (label == 'cash' ||
+        label == 'card' ||
+        label == 'upi' ||
+        label == 'cod') {
       _syncCreditAmountWithRemaining();
     }
 
@@ -904,137 +947,166 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               children: [
                 // --- LEFT COLUMN: Inputs ---
                 Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_isLoadingPaymentMethods)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 20),
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      else if (_paymentMethods.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: Text(
-                              'No payment methods available',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s14,
-                                0.20,
-                                ColorManager.textColorRed,
+                  child: FocusTraversalGroup(
+                    policy: OrderedTraversalPolicy(),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_isLoadingPaymentMethods)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else if (_paymentMethods.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Text(
+                                'No payment methods available',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s14,
+                                  0.20,
+                                  ColorManager.textColorRed,
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      else ...[
-                        // Cash Payment
-                        if (_cashPaymentMethodId != null) ...[
-                          _buildModalPaymentRow(
-                            isSelected: isCashSelected,
-                            type: 'cash',
-                            icon: ImageAssets.cashIcon,
-                            label: 'billing.cash'.tr,
-                            controller: cashAmountController,
-                            focusNode: cashAmountFocusNode,
-                            size: size,
-                            onToggle: () => _togglePaymentMethod('cash'),
+                          )
+                        else ...[
+                          // Cash Payment
+                          if (_cashPaymentMethodId != null) ...[
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(10),
+                              child: _buildModalPaymentRow(
+                                isSelected: isCashSelected,
+                                type: 'cash',
+                                icon: ImageAssets.cashIcon,
+                                label: 'billing.cash'.tr,
+                                controller: cashAmountController,
+                                focusNode: cashAmountFocusNode,
+                                size: size,
+                                onToggle: () => _togglePaymentMethod('cash'),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                          ],
+
+                          // Card Payment
+                          if (_cardPaymentMethodId != null) ...[
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(20),
+                              child: _buildModalPaymentRow(
+                                isSelected: isCardSelected,
+                                type: 'card',
+                                icon: ImageAssets.creditCardIcon,
+                                label: 'billing.card'.tr,
+                                controller: cardAmountController,
+                                focusNode: cardAmountFocusNode,
+                                size: size,
+                                onToggle: () => _togglePaymentMethod('card'),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                          ],
+
+                          // UPI Payment
+                          if (_upiPaymentMethodId != null) ...[
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(30),
+                              child: _buildModalPaymentRow(
+                                isSelected: isUpiSelected,
+                                type: 'upi',
+                                icon: ImageAssets.creditCardIcon,
+                                label: 'billing.upi'.tr,
+                                controller: upiAmountController,
+                                focusNode: upiAmountFocusNode,
+                                size: size,
+                                onToggle: () => _togglePaymentMethod('upi'),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                          ],
+
+                          // COD Payment
+                          if (_codPaymentMethodId != null) ...[
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(40),
+                              child: _buildModalPaymentRow(
+                                isSelected: isCodSelected,
+                                type: 'cod',
+                                icon: ImageAssets.cashIcon,
+                                label: 'COD',
+                                controller: codAmountController,
+                                focusNode: codAmountFocusNode,
+                                size: size,
+                                onToggle: () => _togglePaymentMethod('cod'),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                          ],
+
+                          // Credit Payment (visual only)
+                          FocusTraversalOrder(
+                            order: const NumericFocusOrder(50),
+                            child: _buildModalPaymentRow(
+                              isSelected: isCreditSelected,
+                              type: 'credit',
+                              icon: ImageAssets.creditCardIcon,
+                              label: 'Credit',
+                              controller: creditAmountController,
+                              focusNode: null,
+                              size: size,
+                              onToggle: () => _togglePaymentMethod('credit'),
+                            ),
                           ),
                           const SizedBox(height: 15),
                         ],
 
-                        // Card Payment
-                        if (_cardPaymentMethodId != null) ...[
-                          _buildModalPaymentRow(
-                            isSelected: isCardSelected,
-                            type: 'card',
-                            icon: ImageAssets.creditCardIcon,
-                            label: 'billing.card'.tr,
-                            controller: cardAmountController,
-                            focusNode: cardAmountFocusNode,
-                            size: size,
-                            onToggle: () => _togglePaymentMethod('card'),
+                        // Transaction Reference Field
+                        if (isCardSelected || isUpiSelected) ...[
+                          const SizedBox(height: 10),
+                          FocusTraversalOrder(
+                            order: const NumericFocusOrder(60),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'billing.transaction_reference'.tr,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s13,
+                                    0.16,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                buildColumnWidgetForTextFields(
+                                  controller: transactionNumberController,
+                                  size: size,
+                                  width: double.infinity,
+                                  height: size.height * .06,
+                                  hintText:
+                                      'Enter transaction reference number',
+                                  onTap: () {
+                                    Provider.of<KeyboardProvider>(context,
+                                            listen: false)
+                                        .show(
+                                      'number',
+                                      transactionNumberController,
+                                      replaceOnFirstInput: true,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 15),
                         ],
-
-                        // UPI Payment
-                        if (_upiPaymentMethodId != null) ...[
-                          _buildModalPaymentRow(
-                            isSelected: isUpiSelected,
-                            type: 'upi',
-                            icon: ImageAssets.creditCardIcon,
-                            label: 'billing.upi'.tr,
-                            controller: upiAmountController,
-                            focusNode: upiAmountFocusNode,
-                            size: size,
-                            onToggle: () => _togglePaymentMethod('upi'),
-                          ),
-                          const SizedBox(height: 15),
-                        ],
-
-                        // COD Payment
-                        if (_codPaymentMethodId != null) ...[
-                          _buildModalPaymentRow(
-                            isSelected: isCodSelected,
-                            type: 'cod',
-                            icon: ImageAssets.cashIcon,
-                            label: 'COD',
-                            controller: codAmountController,
-                            focusNode: codAmountFocusNode,
-                            size: size,
-                            onToggle: () => _togglePaymentMethod('cod'),
-                          ),
-                          const SizedBox(height: 15),
-                        ],
-
-                        // Credit Payment (visual only)
-                        _buildModalPaymentRow(
-                          isSelected: isCreditSelected,
-                          type: 'credit',
-                          icon: ImageAssets.creditCardIcon,
-                          label: 'Credit',
-                          controller: creditAmountController,
-                          focusNode: null,
-                          size: size,
-                          onToggle: () => _togglePaymentMethod('credit'),
-                        ),
-                        const SizedBox(height: 15),
                       ],
-
-                      // Transaction Reference Field
-                      if (isCardSelected || isUpiSelected) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          'billing.transaction_reference'.tr,
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s13,
-                            0.16,
-                            ColorManager.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        buildColumnWidgetForTextFields(
-                          controller: transactionNumberController,
-                          size: size,
-                          width: double.infinity,
-                          height: size.height * .06,
-                          hintText: 'Enter transaction reference number',
-                          onTap: () {
-                            Provider.of<KeyboardProvider>(context, listen: false).show(
-                              'number',
-                              transactionNumberController,
-                              replaceOnFirstInput: true,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 15),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
 
@@ -1048,7 +1120,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     children: [
                       // Extended Summary
                       BuildPaymentRow(
-                        amount: '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
+                        amount:
+                            '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
                         title: 'billing.total_paid'.tr,
                         secondRowTextStyle: buildCustomStyle(
                           FontWeightManager.semiBold,
@@ -1066,7 +1139,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       ),
 
                       BuildPaymentRow(
-                        amount: '$currency ${widget.cartTotal.toStringAsFixed(2)}',
+                        amount:
+                            '$currency ${widget.cartTotal.toStringAsFixed(2)}',
                         title: 'billing.purchase_total'.tr,
                         secondRowTextStyle: buildCustomStyle(
                           FontWeightManager.medium,
@@ -1086,7 +1160,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       // Only show customer previous balance if NOT default customer
                       if (!widget.isDefaultCustomer)
                         BuildPaymentRow(
-                          amount: _formatSignedWithCurrency(widget.customerPrevBalance),
+                          amount: _formatSignedWithCurrency(
+                              widget.customerPrevBalance),
                           title: 'billing.customer_prev_balance'.tr,
                           secondRowTextStyle: buildCustomStyle(
                             FontWeightManager.medium,
@@ -1114,104 +1189,121 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       const SizedBox(height: 8),
 
                       // To Customer Credit
-                      Row(
-                        children: [
-                          Text(
-                            'billing.to_customer_credit'.tr,
-                            style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              FontSize.s14,
-                              0.20,
-                              ColorManager.kPrimaryColor,
+                      FocusTraversalOrder(
+                        order: const NumericFocusOrder(70),
+                        child: Row(
+                          children: [
+                            Text(
+                              'billing.to_customer_credit'.tr,
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s14,
+                                0.20,
+                                ColorManager.kPrimaryColor,
+                              ),
                             ),
-                          ),
-                          const Spacer(),
-                          Switch(
-                            value: toCustomerCreditEnabled,
-                            activeColor: ColorManager.kPrimaryColor,
-                            onChanged: (value) {
-                              setState(() {
-                                debugPrint('=== TOGGLE TO CUSTOMER CREDIT ===');
-                                debugPrint('Toggle value changed to: $value');
-
-                                toCustomerCreditEnabled = value;
-                                if (toCustomerCreditEnabled) {
+                            const Spacer(),
+                            Switch(
+                              value: toCustomerCreditEnabled,
+                              activeColor: ColorManager.kPrimaryColor,
+                              onChanged: (value) {
+                                setState(() {
                                   debugPrint(
-                                      '📈 TOGGLE ON - Enabling customer credit functionality');
+                                      '=== TOGGLE TO CUSTOMER CREDIT ===');
+                                  debugPrint('Toggle value changed to: $value');
 
-                                  // Calculate current state
-                                  final currentBaseBalance = _computeBaseBalance();
-                                  final cashAmount =
-                                      double.tryParse(cashAmountController.text) ?? 0.0;
-                                  final cardAmount =
-                                      double.tryParse(cardAmountController.text) ?? 0.0;
-                                  final upiAmount =
-                                      double.tryParse(upiAmountController.text) ?? 0.0;
-                                  final codAmount =
-                                      double.tryParse(codAmountController.text) ?? 0.0;
-                                  final totalCollected =
-                                      cashAmount + cardAmount + upiAmount + codAmount;
+                                  toCustomerCreditEnabled = value;
+                                  if (toCustomerCreditEnabled) {
+                                    debugPrint(
+                                        '📈 TOGGLE ON - Enabling customer credit functionality');
 
-                                  // Auto-fill logic with debt settlement priority
-                                  final transactionExcess =
-                                      totalCollected - widget.cartTotal;
+                                    // Calculate current state
+                                    final currentBaseBalance =
+                                        _computeBaseBalance();
+                                    final cashAmount = double.tryParse(
+                                            cashAmountController.text) ??
+                                        0.0;
+                                    final cardAmount = double.tryParse(
+                                            cardAmountController.text) ??
+                                        0.0;
+                                    final upiAmount = double.tryParse(
+                                            upiAmountController.text) ??
+                                        0.0;
+                                    final codAmount = double.tryParse(
+                                            codAmountController.text) ??
+                                        0.0;
+                                    final totalCollected = cashAmount +
+                                        cardAmount +
+                                        upiAmount +
+                                        codAmount;
 
-                                  if (transactionExcess > 0) {
-                                    double prefillAmount;
+                                    // Auto-fill logic with debt settlement priority
+                                    final transactionExcess =
+                                        totalCollected - widget.cartTotal;
 
-                                    if (widget.customerPrevBalance < 0) {
-                                      // Customer owes money - prioritize debt settlement
-                                      final customerDebt = widget.customerPrevBalance.abs();
-                                      if (customerDebt <= transactionExcess) {
-                                        prefillAmount = customerDebt;
+                                    if (transactionExcess > 0) {
+                                      double prefillAmount;
+
+                                      if (widget.customerPrevBalance < 0) {
+                                        // Customer owes money - prioritize debt settlement
+                                        final customerDebt =
+                                            widget.customerPrevBalance.abs();
+                                        if (customerDebt <= transactionExcess) {
+                                          prefillAmount = customerDebt;
+                                        } else {
+                                          prefillAmount = transactionExcess;
+                                        }
                                       } else {
-                                        prefillAmount = transactionExcess;
+                                        prefillAmount = currentBaseBalance;
                                       }
-                                    } else {
-                                      prefillAmount = currentBaseBalance;
-                                    }
 
-                                    toCustomerCreditController.text =
-                                        prefillAmount.toStringAsFixed(2);
-                                    toCustomerCredit = prefillAmount;
+                                      toCustomerCreditController.text =
+                                          prefillAmount.toStringAsFixed(2);
+                                      toCustomerCredit = prefillAmount;
+                                    } else {
+                                      toCustomerCreditController.clear();
+                                      toCustomerCredit = 0.0;
+                                    }
                                   } else {
+                                    debugPrint(
+                                        '📉 TOGGLE OFF - Disabling customer credit functionality');
                                     toCustomerCreditController.clear();
                                     toCustomerCredit = 0.0;
                                   }
-                                } else {
-                                  debugPrint(
-                                      '📉 TOGGLE OFF - Disabling customer credit functionality');
-                                  toCustomerCreditController.clear();
-                                  toCustomerCredit = 0.0;
-                                }
 
-                                debugPrint('');
-                                _calculateBalance();
-                                _notifyChanges();
-                                debugPrint('=== END TOGGLE OPERATION ===\n');
-                              });
-                            },
-                          ),
-                        ],
+                                  debugPrint('');
+                                  _calculateBalance();
+                                  _notifyChanges();
+                                  debugPrint('=== END TOGGLE OPERATION ===\n');
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                       if (toCustomerCreditEnabled) ...[
                         const SizedBox(height: 8),
-                        buildColumnWidgetForTextFields(
-                          controller: toCustomerCreditController,
-                          size: size,
-                          width: double.infinity,
-                          height: size.height * .06,
-                          hintText: 'Enter amount to add as customer credit',
-                          focusNode: toCustomerCreditFocusNode,
-                          onTap: () {
-                            Provider.of<KeyboardProvider>(context, listen: false).show(
-                              'number',
-                              toCustomerCreditController,
-                              replaceOnFirstInput: true,
-                            );
-                          },
-                          onchanged: (value) => _handleAmountControllerChange(
-                              'toCustomerCredit', toCustomerCreditController),
+                        FocusTraversalOrder(
+                          order: const NumericFocusOrder(80),
+                          child: buildColumnWidgetForTextFields(
+                            controller: toCustomerCreditController,
+                            size: size,
+                            width: double.infinity,
+                            height: size.height * .06,
+                            hintText: 'Enter amount to add as customer credit',
+                            focusNode: toCustomerCreditFocusNode,
+                            onTap: () {
+                              Provider.of<KeyboardProvider>(context,
+                                      listen: false)
+                                  .show(
+                                'number',
+                                toCustomerCreditController,
+                                replaceOnFirstInput: true,
+                              );
+                            },
+                            onchanged: (value) => _handleAmountControllerChange(
+                                'toCustomerCredit', toCustomerCreditController),
+                          ),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -1255,7 +1347,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               Navigator.of(context).pop();
                             } else {
                               if (widget.onAfterApply != null) {
-                                Future.delayed(const Duration(milliseconds: 100), () {
+                                Future.delayed(
+                                    const Duration(milliseconds: 100), () {
                                   widget.onAfterApply!();
                                 });
                               }
@@ -1270,9 +1363,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           height: 45,
                           width: double.infinity,
                           isLoading: _isApplying,
-                            boxColor:
-                              _isApplying ? Colors.grey.shade400 : null,
-                            borderColor:
+                          boxColor: _isApplying ? Colors.grey.shade400 : null,
+                          borderColor:
                               _isApplying ? Colors.grey.shade400 : null,
                         ),
                     ],
@@ -1304,43 +1396,58 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     required Size size,
     required VoidCallback onToggle,
   }) {
+    final bool isFocused = _focusedPaymentKey == type;
     return Row(
       children: [
-        // Payment method icon - Now clickable for selection/deselection
-        GestureDetector(
-          onTap: onToggle,
-          child: BuildBoxShadowContainer(
-            border: isSelected
-                ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-                : Border.all(color: Colors.grey.shade300),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            blurRadius: 4,
-            circleRadius: 5,
-            height: size.height * .06, // Match text field height
-            width: 100, // Fixed width for alignment
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                WebsafeSvg.asset(
-                  icon,
-                  width: 14,
-                  height: 14,
-                  colorFilter: ColorFilter.mode(
-                      isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                      BlendMode.srcIn),
-                  fit: BoxFit.none,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s11,
-                    0.12,
-                    isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+        // Payment method tile — clickable for selection/deselection.
+        // Uses InkWell (instead of GestureDetector) so Enter/Space toggle the
+        // method when the tile is keyboard-focused via Tab.
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+          child: InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(5),
+            onFocusChange: (focused) {
+              setState(() {
+                _focusedPaymentKey = focused ? type : null;
+              });
+            },
+            child: BuildBoxShadowContainer(
+              border: isFocused
+                  ? Border.all(color: Colors.orange, width: 3)
+                  : isSelected
+                      ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                      : Border.all(color: Colors.grey.shade300),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              blurRadius: isFocused ? 8 : 4,
+              circleRadius: 5,
+              height: size.height * .06, // Match text field height
+              width: 100, // Fixed width for alignment
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  WebsafeSvg.asset(
+                    icon,
+                    width: 14,
+                    height: 14,
+                    colorFilter: ColorFilter.mode(
+                        isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                        BlendMode.srcIn),
+                    fit: BoxFit.none,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11,
+                      0.12,
+                      isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

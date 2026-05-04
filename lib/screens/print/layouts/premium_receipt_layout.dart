@@ -950,7 +950,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
             ? '$slNumber. $productName'
             : productName;
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left),
+          ReceiptTableColumn(itemText,
+              weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
         ]));
       }
       // Price details row
@@ -1002,7 +1003,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
               : '  $productName';
           rows.add(ReceiptTableRow([
             ReceiptTableColumn(englishText,
-                weight: 1.0, align: TextAlign.right),
+                weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
           ]));
         } else {
           // Fallback to single name (English or Arabic)
@@ -1010,7 +1011,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
               ? '$slNumber. $productName'
               : productName;
           rows.add(ReceiptTableRow([
-            ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
+            ReceiptTableColumn(itemText,
+                weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
           ]));
         }
       }

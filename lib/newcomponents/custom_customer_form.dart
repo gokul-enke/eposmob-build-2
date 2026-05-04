@@ -53,6 +53,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
   final dobTextController = TextEditingController();
   final crNumberController = TextEditingController();
   final vatNumberController = TextEditingController();
+  final FocusNode firstNameFocusNode = FocusNode();
 
   PaymentType selectedPaymentType = PaymentType.toReceive;
   String? selectedStateId;
@@ -79,12 +80,21 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
     }
     _prefillCountryFromLogin();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.isModal) {
+        firstNameFocusNode.requestFocus();
+      }
       final locationProvider =
           Provider.of<LocationProvider>(context, listen: false);
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       locationProvider.listAllStates(accessToken!);
     });
+  }
+
+  @override
+  void dispose() {
+    firstNameFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _prefillCountryFromLogin() async {
@@ -126,6 +136,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   firstNameTextController,
                   TextInputType.text,
                   size,
+                  focusNode: firstNameFocusNode,
                 ),
               ),
               const SizedBox(width: 8),
@@ -342,7 +353,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       TextInputType keyboardType, Size size,
       {FormFieldValidator<String>? validator,
       TextInputFormatter? inputFormatter,
-      bool isRequired = false}) {
+      bool isRequired = false,
+      FocusNode? focusNode}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -383,9 +395,12 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           width: size.width,
           child: TextFormField(
             controller: controller,
+            focusNode: focusNode,
             keyboardType: keyboardType,
+            textInputAction: TextInputAction.next,
             inputFormatters: inputFormatter != null ? [inputFormatter] : null,
             cursorColor: ColorManager.kPrimaryColor,
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             decoration: const InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(vertical: 12),
