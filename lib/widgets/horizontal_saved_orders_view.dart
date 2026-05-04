@@ -153,7 +153,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                               maxCrossAxisExtent: 250, // Maximum card width
                               crossAxisSpacing: 10,
                               mainAxisSpacing: 10,
-                              childAspectRatio: 1.5, // Width/height ratio
+                              childAspectRatio: 1.45, // Width/height ratio
                             ),
                             itemCount: provider.savedOrders.length,
                             itemBuilder: (context, index) {
@@ -321,14 +321,13 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
   Widget _buildSavedOrderCard(BuildContext context,
       LocalProductProvider provider, SavedOrder order,
       {bool isKeyboardFocused = false}) {
-    String date = DateHelper.formatToISODateOnlyFromISO(order.createdAt);
     String time = DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
 
     debugPrint(
         "SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
     debugPrint(
-        "SavedOrder ${order.orderNumber} formatted date: $date | formatted time: $time");
+        "SavedOrder ${order.orderNumber} formatted time: $time");
 
     return ConstrainedBox(
       constraints: const BoxConstraints(
@@ -347,70 +346,79 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
           onTap: widget.isBusy ? null : () => widget.onOrderSelected(order.id),
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Text(
-                  order.orderNumber,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: isSelected
-                        ? ColorManager.kPrimaryColor
-                        : Colors.black87,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      date,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                    Expanded(
+                      child: Text(
+                        order.orderNumber,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: isSelected
+                              ? ColorManager.kPrimaryColor
+                              : Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Text(
-                      time,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                    Flexible(
+                      child: Text(
+                        time,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
 
                 // Amount and items count row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Consumer<AppSettingsProvider>(
-                      builder: (context, settings, _) {
-                        final currency =
-                            settings.appSettings?.currency ?? 'INR';
-                        return Text(
-                          "$currency ${order.total.toStringAsFixed(2)}",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.green,
-                          ),
-                        );
-                      },
+                    Expanded(
+                      flex: 3,
+                      child: Consumer<AppSettingsProvider>(
+                        builder: (context, settings, _) {
+                          final currency =
+                              settings.appSettings?.currency ?? 'INR';
+                          return Text(
+                            "$currency ${order.total.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.green,
+                            ),
+                            maxLines: 1,
+                          );
+                        },
+                      ),
                     ),
-                    Text(
-                      "${order.items.length} ${'common.items'.tr}",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                    Flexible(
+                      flex: 2,
+                      child: Text(
+                        "${order.items.length} ${'common.items'.tr}",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
 
                 // Action buttons row
                 Row(
