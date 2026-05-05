@@ -2296,8 +2296,12 @@ class BillingPageState extends State<BillingPage>
     required double? balance,
     required String? customerType,
   }) {
-    final String displayName =
+    const int maxCustomerNameChars = 30;
+    final String rawName =
         (name == null || name.trim().isEmpty) ? 'Customer' : name.trim();
+    final String displayName = rawName.length > maxCustomerNameChars
+        ? '${rawName.substring(0, maxCustomerNameChars)}...'
+        : rawName;
     final String displayBalance = (balance ?? 0).toStringAsFixed(2);
     final Color balanceColor = (balance ?? 0) < 0
         ? Colors.red.shade600
@@ -2308,85 +2312,96 @@ class BillingPageState extends State<BillingPage>
         ? null
         : customerType?.trim().toUpperCase();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: ColorManager.kPrimaryColor.withValues(alpha: 0.18),
+        onTap: () => _showCheckoutModal(
+          actionMode: CheckoutActionMode.confirm,
+          initialStep: 0,
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 18,
-            width: 18,
-            decoration: BoxDecoration(
-              color: ColorManager.kPrimaryColor.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person_outline,
-              size: 12,
-              color: ColorManager.kPrimaryColor,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: ColorManager.kPrimaryColor.withValues(alpha: 0.18),
             ),
           ),
-          const SizedBox(width: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 150),
-            child: Text(
-              displayName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s11,
-                0.16,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-          Container(
-            height: 14,
-            width: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 7),
-            color: Colors.grey.shade300,
-          ),
-          Text(
-            'Bal $displayBalance',
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s11,
-              0.16,
-              balanceColor,
-            ),
-          ),
-          if (displayCustomerType != null) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: displayCustomerType == 'B2B'
-                    ? Colors.green.shade100
-                    : ColorManager.kPrimaryColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                displayCustomerType,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s9,
-                  0.12,
-                  displayCustomerType == 'B2B'
-                      ? Colors.green.shade700
-                      : ColorManager.kPrimaryColor,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 18,
+                width: 18,
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  size: 12,
+                  color: ColorManager.kPrimaryColor,
                 ),
               ),
-            ),
-          ],
-        ],
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.16,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+              Container(
+                height: 14,
+                width: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 7),
+                color: Colors.grey.shade300,
+              ),
+              Text(
+                'Bal $displayBalance',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s11,
+                  0.16,
+                  balanceColor,
+                ),
+              ),
+              if (displayCustomerType != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: displayCustomerType == 'B2B'
+                        ? Colors.green.shade100
+                        : ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    displayCustomerType,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.12,
+                      displayCustomerType == 'B2B'
+                          ? Colors.green.shade700
+                          : ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
