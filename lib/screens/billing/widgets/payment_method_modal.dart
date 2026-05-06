@@ -402,24 +402,21 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     if (!mounted || event is! KeyDownEvent) return false;
     if (!HardwareKeyboard.instance.isControlPressed) return false;
 
-    if (event.logicalKey == LogicalKeyboardKey.digit1 ||
-        event.logicalKey == LogicalKeyboardKey.numpad1) {
-      _focusPaymentFieldByIndex(1);
-      return true;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.digit2 ||
-        event.logicalKey == LogicalKeyboardKey.numpad2) {
-      _focusPaymentFieldByIndex(2);
-      return true;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.digit3 ||
-        event.logicalKey == LogicalKeyboardKey.numpad3) {
-      _focusPaymentFieldByIndex(3);
-      return true;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.digit4 ||
-        event.logicalKey == LogicalKeyboardKey.numpad4) {
-      _focusPaymentFieldByIndex(4);
+    final digitMap = <LogicalKeyboardKey, int>{
+      LogicalKeyboardKey.digit1: 1,
+      LogicalKeyboardKey.numpad1: 1,
+      LogicalKeyboardKey.digit2: 2,
+      LogicalKeyboardKey.numpad2: 2,
+      LogicalKeyboardKey.digit3: 3,
+      LogicalKeyboardKey.numpad3: 3,
+      LogicalKeyboardKey.digit4: 4,
+      LogicalKeyboardKey.numpad4: 4,
+      LogicalKeyboardKey.digit5: 5,
+      LogicalKeyboardKey.numpad5: 5,
+    };
+    final methodIndex = digitMap[event.logicalKey];
+    if (methodIndex != null) {
+      _focusPaymentFieldByIndex(methodIndex);
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.digit6 ||
@@ -521,6 +518,27 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       entry.key,
       replaceOnFirstInput: true,
     );
+  }
+
+  String? _shortcutForPaymentType(String type) {
+    int idx = 0;
+    if (_cashPaymentMethodId != null) {
+      idx++;
+      if (type == 'cash') return 'C+$idx';
+    }
+    if (_cardPaymentMethodId != null) {
+      idx++;
+      if (type == 'card') return 'C+$idx';
+    }
+    if (_upiPaymentMethodId != null) {
+      idx++;
+      if (type == 'upi') return 'C+$idx';
+    }
+    if (_codPaymentMethodId != null) {
+      idx++;
+      if (type == 'cod') return 'C+$idx';
+    }
+    return null;
   }
 
   /// Load payment methods from API and assign IDs
@@ -1129,7 +1147,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: cashAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('cash'),
-                                shortcutLabel: 'C+1',
+                                shortcutLabel: _shortcutForPaymentType('cash'),
                               ),
                             ),
                             const SizedBox(height: 15),
@@ -1148,7 +1166,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: cardAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('card'),
-                                shortcutLabel: 'C+2',
+                                shortcutLabel: _shortcutForPaymentType('card'),
                               ),
                             ),
                             const SizedBox(height: 15),
@@ -1167,7 +1185,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: upiAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('upi'),
-                                shortcutLabel: 'C+3',
+                                shortcutLabel: _shortcutForPaymentType('upi'),
                               ),
                             ),
                             const SizedBox(height: 15),
@@ -1186,7 +1204,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: codAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('cod'),
-                                shortcutLabel: 'C+4',
+                                shortcutLabel: _shortcutForPaymentType('cod'),
                               ),
                             ),
                             const SizedBox(height: 15),
