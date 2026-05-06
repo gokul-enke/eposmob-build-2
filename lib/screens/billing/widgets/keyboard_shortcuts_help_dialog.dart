@@ -46,9 +46,14 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Trigger printer to open the cash drawer',
     ),
     _ShortcutItem(
+      keyLabel: 'Ctrl + B',
+      action: 'Focus Barcode field',
+      description: 'Jump cursor to barcode input when barcode sales is enabled',
+    ),
+    _ShortcutItem(
       keyLabel: 'Ctrl + S',
-      action: 'Sync Data',
-      description: 'Run a full data sync (requires internet)',
+      action: 'Focus Search Product field',
+      description: 'Jump cursor to product search for fast item entry',
     ),
   ];
 
@@ -87,21 +92,6 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       keyLabel: 'Enter',
       action: 'Add Item',
       description: 'Adds product to cart',
-    ),
-    _ShortcutItem(
-      keyLabel: 'F11',
-      action: 'Focus Search Product field',
-      description: 'Jump cursor to product search for fast item entry',
-    ),
-    _ShortcutItem(
-      keyLabel: 'Shift + F11',
-      action: 'Focus Barcode field',
-      description: 'Jump cursor to barcode input when barcode sales is enabled',
-    ),
-    _ShortcutItem(
-      keyLabel: 'Insert',
-      action: 'Focus Search Product field',
-      description: 'Alternative shortcut for product search',
     ),
     _ShortcutItem(
       keyLabel: 'F12',

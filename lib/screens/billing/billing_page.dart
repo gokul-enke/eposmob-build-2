@@ -917,10 +917,11 @@ class BillingPageState extends State<BillingPage>
   }
 
   /// Returns true when the current key event is one of the Ctrl-modified
-  /// shortcuts handled by this page (Ctrl+H/K/D/S).
+  /// shortcuts handled by this page (Ctrl+H/B/K/D/S).
   bool _isBillingControlShortcut(LogicalKeyboardKey key) {
     if (!HardwareKeyboard.instance.isControlPressed) return false;
     return key == LogicalKeyboardKey.keyH ||
+        key == LogicalKeyboardKey.keyB ||
         key == LogicalKeyboardKey.keyK ||
         key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.keyS;
@@ -1007,25 +1008,7 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Always allow F11/Insert/F12 even when text fields are focused
-      if (event.logicalKey == LogicalKeyboardKey.f11) {
-        if (HardwareKeyboard.instance.isShiftPressed) {
-          debugPrint(
-              "⌨️ [BillingPage] Handling Shift+F11 -> focus barcode field");
-          _focusBarcodeField();
-        } else {
-          debugPrint(
-              "⌨️ [BillingPage] Handling F11 -> focus Search Product field");
-          _focusSearchProductField();
-        }
-        return;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.insert) {
-        debugPrint(
-            "⌨️ [BillingPage] Handling Insert -> focus Search Product field");
-        _focusSearchProductField();
-        return;
-      }
+      // Always allow F12 even when text fields are focused
       if (event.logicalKey == LogicalKeyboardKey.f12) {
         debugPrint(
             "⌨️ [BillingPage] Handling F12 -> activate sidebar keyboard mode");
@@ -1042,6 +1025,17 @@ class BillingPageState extends State<BillingPage>
 
       // Ctrl-modified shortcuts (header toolbar replacements).
       if (HardwareKeyboard.instance.isControlPressed) {
+        if (event.logicalKey == LogicalKeyboardKey.keyB) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+B -> focus barcode field");
+          _focusBarcodeField();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyS) {
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+S -> focus Search Product field");
+          _focusSearchProductField();
+          return;
+        }
         if (event.logicalKey == LogicalKeyboardKey.keyH) {
           debugPrint("⌨️ [BillingPage] Handling Ctrl+H -> open shortcuts help");
           _openShortcutsHelpDialog();
@@ -1056,11 +1050,6 @@ class BillingPageState extends State<BillingPage>
         if (event.logicalKey == LogicalKeyboardKey.keyD) {
           debugPrint("⌨️ [BillingPage] Handling Ctrl+D -> open cash drawer");
           unawaited(_openCashDrawerFromShortcut());
-          return;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.keyS) {
-          debugPrint("⌨️ [BillingPage] Handling Ctrl+S -> trigger sync");
-          unawaited(_triggerSyncFromShortcut());
           return;
         }
       }
