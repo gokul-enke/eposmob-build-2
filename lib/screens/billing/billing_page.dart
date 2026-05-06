@@ -3332,8 +3332,7 @@ class BillingPageState extends State<BillingPage>
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.delete ||
-        key == LogicalKeyboardKey.backspace) {
+    if (key == LogicalKeyboardKey.delete) {
       _removeCartItemFromKeyboard(item, localProductProvider, cartItems.length);
       return KeyEventResult.handled;
     }
