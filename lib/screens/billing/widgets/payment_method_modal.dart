@@ -113,6 +113,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late FocusNode upiAmountFocusNode;
   late FocusNode codAmountFocusNode;
   late FocusNode toCustomerCreditFocusNode;
+  late FocusNode transactionNumberFocusNode;
   double balanceAmount = 0;
   Timer? _debounceTimer;
 
@@ -180,6 +181,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     upiAmountFocusNode = FocusNode();
     codAmountFocusNode = FocusNode();
     toCustomerCreditFocusNode = FocusNode();
+    transactionNumberFocusNode = FocusNode();
 
     // Initialize To Customer Credit controller
     toCustomerCreditController = TextEditingController();
@@ -227,6 +229,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         toCustomerCreditController.selection = TextSelection(
           baseOffset: 0,
           extentOffset: toCustomerCreditController.text.length,
+        );
+      }
+    });
+    transactionNumberFocusNode.addListener(() {
+      if (transactionNumberFocusNode.hasFocus &&
+          transactionNumberController.text.isNotEmpty) {
+        transactionNumberController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: transactionNumberController.text.length,
         );
       }
     });
@@ -380,6 +391,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     upiAmountFocusNode.dispose();
     codAmountFocusNode.dispose();
     toCustomerCreditFocusNode.dispose();
+    transactionNumberFocusNode.dispose();
     toCustomerCreditController.removeListener(_toCustomerCreditListener);
     toCustomerCreditController.dispose();
     creditAmountController.dispose();
@@ -410,7 +422,78 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       _focusPaymentFieldByIndex(4);
       return true;
     }
+    if (event.logicalKey == LogicalKeyboardKey.digit5 ||
+        event.logicalKey == LogicalKeyboardKey.numpad5) {
+      _togglePaymentMethod('credit');
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit6 ||
+        event.logicalKey == LogicalKeyboardKey.numpad6) {
+      if (isCardSelected || isUpiSelected) {
+        transactionNumberFocusNode.requestFocus();
+        Provider.of<KeyboardProvider>(context, listen: false).show(
+          'number',
+          transactionNumberController,
+          replaceOnFirstInput: true,
+        );
+      }
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit7 ||
+        event.logicalKey == LogicalKeyboardKey.numpad7) {
+      _setToCustomerCreditEnabled(!toCustomerCreditEnabled);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit8 ||
+        event.logicalKey == LogicalKeyboardKey.numpad8) {
+      if (!toCustomerCreditEnabled) {
+        _setToCustomerCreditEnabled(true);
+      }
+      toCustomerCreditFocusNode.requestFocus();
+      Provider.of<KeyboardProvider>(context, listen: false).show(
+        'number',
+        toCustomerCreditController,
+        replaceOnFirstInput: true,
+      );
+      return true;
+    }
     return false;
+  }
+
+  void _setToCustomerCreditEnabled(bool enabled) {
+    setState(() {
+      toCustomerCreditEnabled = enabled;
+      if (enabled) {
+        final currentBaseBalance = _computeBaseBalance();
+        final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+        final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+        final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+        final codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+        final totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
+        final transactionExcess = totalCollected - widget.cartTotal;
+        if (transactionExcess > 0) {
+          double prefillAmount;
+          if (widget.customerPrevBalance < 0) {
+            final customerDebt = widget.customerPrevBalance.abs();
+            prefillAmount = customerDebt <= transactionExcess
+                ? customerDebt
+                : transactionExcess;
+          } else {
+            prefillAmount = currentBaseBalance;
+          }
+          toCustomerCreditController.text = prefillAmount.toStringAsFixed(2);
+          toCustomerCredit = prefillAmount;
+        } else {
+          toCustomerCreditController.clear();
+          toCustomerCredit = 0.0;
+        }
+      } else {
+        toCustomerCreditController.clear();
+        toCustomerCredit = 0.0;
+      }
+      _calculateBalance();
+      _debounceNotifyChanges();
+    });
   }
 
   void _focusPaymentFieldByIndex(int index) {
@@ -1147,6 +1230,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 const SizedBox(height: 8),
                                 buildColumnWidgetForTextFields(
                                   controller: transactionNumberController,
+                                  focusNode: transactionNumberFocusNode,
                                   size: size,
                                   width: double.infinity,
                                   height: size.height * .06,
