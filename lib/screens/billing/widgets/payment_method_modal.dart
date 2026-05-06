@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -262,6 +263,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusInitialSelectedPaymentAmount();
     });
+    HardwareKeyboard.instance.addHandler(_onPaymentHardwareKey);
   }
 
   void _focusInitialSelectedPaymentAmount() {
@@ -361,6 +363,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onPaymentHardwareKey);
     _debounceTimer?.cancel();
     transactionNumberController.removeListener(_debounceNotifyChanges);
     cashAmountController.removeListener(_cashAmountListener);
@@ -381,6 +384,65 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     toCustomerCreditController.dispose();
     creditAmountController.dispose();
     super.dispose();
+  }
+
+  bool _onPaymentHardwareKey(KeyEvent event) {
+    if (!mounted || event is! KeyDownEvent) return false;
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+
+    if (event.logicalKey == LogicalKeyboardKey.digit1 ||
+        event.logicalKey == LogicalKeyboardKey.numpad1) {
+      _focusPaymentFieldByIndex(1);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit2 ||
+        event.logicalKey == LogicalKeyboardKey.numpad2) {
+      _focusPaymentFieldByIndex(2);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit3 ||
+        event.logicalKey == LogicalKeyboardKey.numpad3) {
+      _focusPaymentFieldByIndex(3);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit4 ||
+        event.logicalKey == LogicalKeyboardKey.numpad4) {
+      _focusPaymentFieldByIndex(4);
+      return true;
+    }
+    return false;
+  }
+
+  void _focusPaymentFieldByIndex(int index) {
+    final List<MapEntry<TextEditingController, FocusNode>> orderedFields = [];
+    if (_cashPaymentMethodId != null) {
+      orderedFields.add(MapEntry(cashAmountController, cashAmountFocusNode));
+    }
+    if (_cardPaymentMethodId != null) {
+      orderedFields.add(MapEntry(cardAmountController, cardAmountFocusNode));
+    }
+    if (_upiPaymentMethodId != null) {
+      orderedFields.add(MapEntry(upiAmountController, upiAmountFocusNode));
+    }
+    if (_codPaymentMethodId != null) {
+      orderedFields.add(MapEntry(codAmountController, codAmountFocusNode));
+    }
+    if (orderedFields.isEmpty) return;
+
+    final int target = index.clamp(1, orderedFields.length) - 1;
+    final entry = orderedFields[target];
+    entry.value.requestFocus();
+    if (entry.key.text.isNotEmpty) {
+      entry.key.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: entry.key.text.length,
+      );
+    }
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      entry.key,
+      replaceOnFirstInput: true,
+    );
   }
 
   /// Load payment methods from API and assign IDs
