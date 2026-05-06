@@ -12,7 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
-class CustomerPurchaseHistoryModal extends StatelessWidget {
+class CustomerPurchaseHistoryModal extends StatefulWidget {
   final GetProduct product;
   final List<CustomerPurchaseItem> purchaseHistory;
   final String customerName;
@@ -25,14 +25,26 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<CustomerPurchaseHistoryModal> createState() =>
+      _CustomerPurchaseHistoryModalState();
+}
+
+class _CustomerPurchaseHistoryModalState
+    extends State<CustomerPurchaseHistoryModal> {
+  int? _focusedRowActionIndex;
+  bool _closeFocused = false;
+  bool _useCurrentFocused = false;
+  bool _cancelFocused = false;
+
+  @override
   Widget build(BuildContext context) {
     debugPrint("🏪 CustomerPurchaseHistoryModal: Building modal");
-    debugPrint("  - Product: ${product.productName}");
-    debugPrint("  - Customer: $customerName");
-    debugPrint("  - History count: ${purchaseHistory.length}");
+    debugPrint("  - Product: ${widget.product.productName}");
+    debugPrint("  - Customer: ${widget.customerName}");
+    debugPrint("  - History count: ${widget.purchaseHistory.length}");
     
-    for (int i = 0; i < purchaseHistory.length; i++) {
-      final item = purchaseHistory[i];
+    for (int i = 0; i < widget.purchaseHistory.length; i++) {
+      final item = widget.purchaseHistory[i];
       debugPrint("  - Record $i: Price=${item.price}, Qty=${item.quantity}, Date=${item.date}");
     }
 
@@ -42,7 +54,9 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
       ),
       elevation: 0,
       backgroundColor: Colors.transparent,
-      child: Container(
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: Container(
         padding: const EdgeInsets.all(20),
         constraints: BoxConstraints(
           maxWidth: 600,
@@ -82,7 +96,7 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Customer: $customerName',
+                        'Customer: ${widget.customerName}',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,
@@ -92,7 +106,7 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Product: ${product.productName}',
+                        'Product: ${widget.product.productName}',
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s14,
@@ -103,12 +117,27 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    debugPrint("🏪 User clicked close (X) button");
-                    Navigator.of(context).pop();
-                  },
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(1),
+                  child: Focus(
+                    onFocusChange: (v) => setState(() => _closeFocused = v),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _closeFocused ? Colors.orange : Colors.transparent,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          debugPrint("🏪 User clicked close (X) button");
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -117,7 +146,7 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
             
             // Purchase history list
             Text(
-              'Last ${purchaseHistory.length} Purchase${purchaseHistory.length != 1 ? 's' : ''}:',
+              'Last ${widget.purchaseHistory.length} Purchase${widget.purchaseHistory.length != 1 ? 's' : ''}:',
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -211,10 +240,10 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
               constraints: const BoxConstraints(maxHeight: 300),
               child: ListView.separated(
                 shrinkWrap: true,
-                itemCount: purchaseHistory.length,
+                itemCount: widget.purchaseHistory.length,
                 separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final item = purchaseHistory[index];
+                  final item = widget.purchaseHistory[index];
                   final isEven = index % 2 == 0;
                   
                   return Container(
@@ -275,7 +304,25 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
                         Expanded(
                           flex: 2,
                           child: Center(
-                            child: ElevatedButton(
+                            child: FocusTraversalOrder(
+                              order: NumericFocusOrder(10 + index.toDouble()),
+                              child: Focus(
+                                onFocusChange: (v) {
+                                  if (v) {
+                                    setState(() => _focusedRowActionIndex = index);
+                                  }
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: _focusedRowActionIndex == index
+                                          ? Colors.orange
+                                          : Colors.transparent,
+                                      width: 2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ElevatedButton(
                               onPressed: () {
                                 debugPrint("🏪 User selected historical purchase:");
                                 debugPrint("  - Price: ${item.price} (string) → ${item.priceValue} (double) - WILL BE USED");
@@ -303,6 +350,9 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
                                   Colors.white,
                                 ),
                               ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -319,7 +369,19 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
+                FocusTraversalOrder(
+                  order: NumericFocusOrder(1000 + widget.purchaseHistory.length.toDouble()),
+                  child: Focus(
+                    onFocusChange: (v) => setState(() => _useCurrentFocused = v),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _useCurrentFocused ? Colors.orange : Colors.transparent,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextButton(
                   onPressed: () {
                     debugPrint("🏪 User clicked 'Use Current Price' button");
                     Navigator.of(context).pop({
@@ -335,11 +397,26 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
                       ColorManager.kPrimaryColor,
                     ),
                   ),
+                      ),
+                    ),
+                  ),
                 ),
                 
                 const SizedBox(width: 12),
                 
-                ElevatedButton(
+                FocusTraversalOrder(
+                  order: NumericFocusOrder(1001 + widget.purchaseHistory.length.toDouble()),
+                  child: Focus(
+                    onFocusChange: (v) => setState(() => _cancelFocused = v),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _cancelFocused ? Colors.orange : Colors.transparent,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ElevatedButton(
                   onPressed: () {
                     debugPrint("🏪 User clicked 'Cancel' button");
                     Navigator.of(context).pop();
@@ -357,12 +434,16 @@ class CustomerPurchaseHistoryModal extends StatelessWidget {
                       Colors.white,
                     ),
                   ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ],
+          ),
         ),
       ),
     );
   }
-} 
+}

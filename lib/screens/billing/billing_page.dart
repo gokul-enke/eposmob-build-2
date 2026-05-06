@@ -6268,6 +6268,7 @@ class BillingPageState extends State<BillingPage>
     int? initialStep,
   }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
+    bool checkoutActionTriggered = false;
     debugPrint(
         "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
     if (_isOrderActionBusy) {
@@ -6597,6 +6598,7 @@ class BillingPageState extends State<BillingPage>
             _updateBalanceAmount();
           },
           onConfirmOrder: () async {
+            checkoutActionTriggered = true;
             setState(() {
               if (isSaveMode) {
                 isLoadingSaveOrder = true;
@@ -6614,6 +6616,7 @@ class BillingPageState extends State<BillingPage>
             }
           },
           onConfirmAndPrint: () async {
+            checkoutActionTriggered = true;
             setState(() {
               if (isSaveMode) {
                 isLoadingSaveOrderAndPrint = true;
@@ -6633,6 +6636,15 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+    if (mounted && !checkoutActionTriggered) {
+      setState(() {
+        // Modal was dismissed (Esc/close) without triggering checkout action.
+        isLoadingSaveOrder = false;
+        isLoadingConfirmOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+        isLoadingCreateOrder = false;
+      });
+    }
     debugPrint(
         "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
     _restoreShortcutFocus('checkout modal closed');
