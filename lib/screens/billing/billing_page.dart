@@ -2784,14 +2784,18 @@ class BillingPageState extends State<BillingPage>
                 context.watch<KeyboardFocusHighlightProvider>().enabled;
             final bool isCartTableFocused =
                 focusHighlightEnabled && _cartTableFocusNode.hasFocus;
+            final bool showCartContainerFocusRing =
+                isCartTableFocused && _cartTableFocusedCellIndex == null;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: constraints.maxWidth,
               decoration: BoxDecoration(
                 border: Border.all(
                   color:
-                      isCartTableFocused ? Colors.orange : Colors.transparent,
-                  width: isCartTableFocused ? 3 : 1,
+                      showCartContainerFocusRing
+                          ? Colors.orange
+                          : Colors.transparent,
+                  width: showCartContainerFocusRing ? 3 : 1,
                 ),
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -3247,7 +3251,7 @@ class BillingPageState extends State<BillingPage>
     debugPrint("⌨️ [BillingPage] Focusing cart table");
     setState(() {
       _cartTableFocusedRowIndex = 0;
-      _cartTableFocusedCellIndex = null;
+      _cartTableFocusedCellIndex = 0;
     });
     _cartTableFocusNode.requestFocus();
   }
