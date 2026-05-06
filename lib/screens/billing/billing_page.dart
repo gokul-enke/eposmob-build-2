@@ -917,13 +917,15 @@ class BillingPageState extends State<BillingPage>
   }
 
   /// Returns true when the current key event is one of the Ctrl-modified
-  /// shortcuts handled by this page (Ctrl+H/A/K/D/S).
+  /// shortcuts handled by this page (Ctrl+H/A/K/D/S/Q/P).
   bool _isBillingControlShortcut(LogicalKeyboardKey key) {
     if (!HardwareKeyboard.instance.isControlPressed) return false;
     return key == LogicalKeyboardKey.keyH ||
         key == LogicalKeyboardKey.keyA ||
         key == LogicalKeyboardKey.keyK ||
         key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.keyQ ||
+        key == LogicalKeyboardKey.keyP ||
         key == LogicalKeyboardKey.keyS;
   }
 
@@ -1050,6 +1052,16 @@ class BillingPageState extends State<BillingPage>
         if (event.logicalKey == LogicalKeyboardKey.keyD) {
           debugPrint("⌨️ [BillingPage] Handling Ctrl+D -> open cash drawer");
           unawaited(_openCashDrawerFromShortcut());
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyQ) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+Q -> edit cart quantity");
+          _requestCartFieldEditFromShortcut(isQuantity: true);
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyP) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+P -> edit cart price");
+          _requestCartFieldEditFromShortcut(isQuantity: false);
           return;
         }
       }
@@ -3238,6 +3250,30 @@ class BillingPageState extends State<BillingPage>
       _cartTableFocusedCellIndex = null;
     });
     _cartTableFocusNode.requestFocus();
+  }
+
+  void _requestCartFieldEditFromShortcut({required bool isQuantity}) {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final cartItems = localProductProvider.getCartItems();
+    if (cartItems.isEmpty) return;
+
+    final focusedIndex =
+        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
+    final item = cartItems[focusedIndex];
+
+    setState(() {
+      _cartTableFocusedRowIndex = focusedIndex;
+      if (isQuantity) {
+        _cartTableFocusedCellIndex = 1;
+        _cartQuantityEditRequestKey = _cartIdentityKey(item);
+        _cartQuantityEditRequestId++;
+      } else {
+        _cartTableFocusedCellIndex = 2;
+        _cartPriceEditRequestKey = _cartIdentityKey(item);
+        _cartPriceEditRequestId++;
+      }
+    });
   }
 
   KeyEventResult _handleCartTableKey(
