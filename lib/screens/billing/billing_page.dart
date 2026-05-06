@@ -917,11 +917,11 @@ class BillingPageState extends State<BillingPage>
   }
 
   /// Returns true when the current key event is one of the Ctrl-modified
-  /// shortcuts handled by this page (Ctrl+H/B/K/D/S).
+  /// shortcuts handled by this page (Ctrl+H/A/K/D/S).
   bool _isBillingControlShortcut(LogicalKeyboardKey key) {
     if (!HardwareKeyboard.instance.isControlPressed) return false;
     return key == LogicalKeyboardKey.keyH ||
-        key == LogicalKeyboardKey.keyB ||
+        key == LogicalKeyboardKey.keyA ||
         key == LogicalKeyboardKey.keyK ||
         key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.keyS;
@@ -1025,8 +1025,8 @@ class BillingPageState extends State<BillingPage>
 
       // Ctrl-modified shortcuts (header toolbar replacements).
       if (HardwareKeyboard.instance.isControlPressed) {
-        if (event.logicalKey == LogicalKeyboardKey.keyB) {
-          debugPrint("⌨️ [BillingPage] Handling Ctrl+B -> focus barcode field");
+        if (event.logicalKey == LogicalKeyboardKey.keyA) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+A -> focus barcode field");
           _focusBarcodeField();
           return;
         }
@@ -2534,8 +2534,7 @@ class BillingPageState extends State<BillingPage>
                             ),
                           ),
                         ),
-                  FocusTraversalOrder(
-                    order: const NumericFocusOrder(BillingFocusOrders.quantity),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 2,
                       child: Padding(
@@ -2561,9 +2560,7 @@ class BillingPageState extends State<BillingPage>
                       ),
                     ),
                   ),
-                  FocusTraversalOrder(
-                    order:
-                        const NumericFocusOrder(BillingFocusOrders.unitPrice),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 2,
                       child: Padding(
@@ -2589,8 +2586,7 @@ class BillingPageState extends State<BillingPage>
                       ),
                     ),
                   ),
-                  FocusTraversalOrder(
-                    order: const NumericFocusOrder(BillingFocusOrders.addItem),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 2,
                       child: Padding(
@@ -2673,9 +2669,7 @@ class BillingPageState extends State<BillingPage>
                       ),
                     ),
                   ),
-                  FocusTraversalOrder(
-                    order:
-                        const NumericFocusOrder(BillingFocusOrders.clearEntry),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 1,
                       child: Column(

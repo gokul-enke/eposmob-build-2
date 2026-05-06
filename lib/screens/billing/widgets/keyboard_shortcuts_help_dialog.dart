@@ -46,7 +46,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Trigger printer to open the cash drawer',
     ),
     _ShortcutItem(
-      keyLabel: 'Ctrl + B',
+      keyLabel: 'Ctrl + A',
       action: 'Focus Barcode field',
       description: 'Jump cursor to barcode input when barcode sales is enabled',
     ),
