@@ -1388,6 +1388,43 @@ class LocalProductProvider extends ChangeNotifier {
         "✅ [Hive] Saved $saved/${_products.length} products (afterLen=${_productsBox.length}) in ${sw.elapsedMilliseconds}ms");
   }
 
+  HiveProduct _buildHiveProduct(GetProduct product) {
+    return HiveProduct(
+      productId: product.productId,
+      categoryId: product.categoryId,
+      productName: product.productName,
+      barcode: product.barcode,
+      serializedData: HiveStringValue(json.encode(product.toJson())),
+    );
+  }
+
+  void _saveProductToHive(GetProduct product) {
+    final productId = product.productId;
+    if (productId == null) {
+      _saveProductsToHive();
+      return;
+    }
+
+    try {
+      final hiveProduct = _buildHiveProduct(product);
+      final dynamic existingKey = _productsBox.keys.firstWhere(
+        (key) => _productsBox.get(key)?.productId == productId,
+        orElse: () => null,
+      );
+
+      if (existingKey == null) {
+        _productsBox.add(hiveProduct);
+      } else {
+        _productsBox.put(existingKey, hiveProduct);
+      }
+      debugPrint("✅ [Hive] Saved single productId=$productId to Hive");
+    } catch (e) {
+      debugPrint(
+          "❌ [Hive] Failed single-product save for productId=$productId: $e");
+      _saveProductsToHive();
+    }
+  }
+
   // Save cart items to Hive
   void _saveCartToHive() {
     debugPrint(
@@ -2707,7 +2744,7 @@ class LocalProductProvider extends ChangeNotifier {
     } else {
       _products.add(product);
     }
-    _saveProductsToHive();
+    _saveProductToHive(product);
     refreshProducts();
   }
 
