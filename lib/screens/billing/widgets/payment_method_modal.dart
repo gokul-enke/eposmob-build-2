@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -112,6 +113,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late FocusNode upiAmountFocusNode;
   late FocusNode codAmountFocusNode;
   late FocusNode toCustomerCreditFocusNode;
+  late FocusNode transactionNumberFocusNode;
   double balanceAmount = 0;
   Timer? _debounceTimer;
 
@@ -179,6 +181,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     upiAmountFocusNode = FocusNode();
     codAmountFocusNode = FocusNode();
     toCustomerCreditFocusNode = FocusNode();
+    transactionNumberFocusNode = FocusNode();
 
     // Initialize To Customer Credit controller
     toCustomerCreditController = TextEditingController();
@@ -229,6 +232,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         );
       }
     });
+    transactionNumberFocusNode.addListener(() {
+      if (transactionNumberFocusNode.hasFocus &&
+          transactionNumberController.text.isNotEmpty) {
+        transactionNumberController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: transactionNumberController.text.length,
+        );
+      }
+    });
 
     // Listen for text changes to capture virtual keyboard input
     _cashAmountListener =
@@ -262,6 +274,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusInitialSelectedPaymentAmount();
     });
+    HardwareKeyboard.instance.addHandler(_onPaymentHardwareKey);
   }
 
   void _focusInitialSelectedPaymentAmount() {
@@ -361,6 +374,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onPaymentHardwareKey);
     _debounceTimer?.cancel();
     transactionNumberController.removeListener(_debounceNotifyChanges);
     cashAmountController.removeListener(_cashAmountListener);
@@ -377,10 +391,154 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     upiAmountFocusNode.dispose();
     codAmountFocusNode.dispose();
     toCustomerCreditFocusNode.dispose();
+    transactionNumberFocusNode.dispose();
     toCustomerCreditController.removeListener(_toCustomerCreditListener);
     toCustomerCreditController.dispose();
     creditAmountController.dispose();
     super.dispose();
+  }
+
+  bool _onPaymentHardwareKey(KeyEvent event) {
+    if (!mounted || event is! KeyDownEvent) return false;
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+
+    final digitMap = <LogicalKeyboardKey, int>{
+      LogicalKeyboardKey.digit1: 1,
+      LogicalKeyboardKey.numpad1: 1,
+      LogicalKeyboardKey.digit2: 2,
+      LogicalKeyboardKey.numpad2: 2,
+      LogicalKeyboardKey.digit3: 3,
+      LogicalKeyboardKey.numpad3: 3,
+      LogicalKeyboardKey.digit4: 4,
+      LogicalKeyboardKey.numpad4: 4,
+      LogicalKeyboardKey.digit5: 5,
+      LogicalKeyboardKey.numpad5: 5,
+    };
+    final methodIndex = digitMap[event.logicalKey];
+    if (methodIndex != null) {
+      _focusPaymentFieldByIndex(methodIndex);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit6 ||
+        event.logicalKey == LogicalKeyboardKey.numpad6) {
+      if (isCardSelected || isUpiSelected) {
+        transactionNumberFocusNode.requestFocus();
+        Provider.of<KeyboardProvider>(context, listen: false).show(
+          'number',
+          transactionNumberController,
+          replaceOnFirstInput: true,
+        );
+      }
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit7 ||
+        event.logicalKey == LogicalKeyboardKey.numpad7) {
+      _setToCustomerCreditEnabled(!toCustomerCreditEnabled);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit8 ||
+        event.logicalKey == LogicalKeyboardKey.numpad8) {
+      if (!toCustomerCreditEnabled) {
+        _setToCustomerCreditEnabled(true);
+      }
+      toCustomerCreditFocusNode.requestFocus();
+      Provider.of<KeyboardProvider>(context, listen: false).show(
+        'number',
+        toCustomerCreditController,
+        replaceOnFirstInput: true,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  void _setToCustomerCreditEnabled(bool enabled) {
+    setState(() {
+      toCustomerCreditEnabled = enabled;
+      if (enabled) {
+        final currentBaseBalance = _computeBaseBalance();
+        final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+        final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+        final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+        final codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+        final totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
+        final transactionExcess = totalCollected - widget.cartTotal;
+        if (transactionExcess > 0) {
+          double prefillAmount;
+          if (widget.customerPrevBalance < 0) {
+            final customerDebt = widget.customerPrevBalance.abs();
+            prefillAmount = customerDebt <= transactionExcess
+                ? customerDebt
+                : transactionExcess;
+          } else {
+            prefillAmount = currentBaseBalance;
+          }
+          toCustomerCreditController.text = prefillAmount.toStringAsFixed(2);
+          toCustomerCredit = prefillAmount;
+        } else {
+          toCustomerCreditController.clear();
+          toCustomerCredit = 0.0;
+        }
+      } else {
+        toCustomerCreditController.clear();
+        toCustomerCredit = 0.0;
+      }
+      _calculateBalance();
+      _debounceNotifyChanges();
+    });
+  }
+
+  void _focusPaymentFieldByIndex(int index) {
+    final List<MapEntry<TextEditingController, FocusNode>> orderedFields = [];
+    if (_cashPaymentMethodId != null) {
+      orderedFields.add(MapEntry(cashAmountController, cashAmountFocusNode));
+    }
+    if (_cardPaymentMethodId != null) {
+      orderedFields.add(MapEntry(cardAmountController, cardAmountFocusNode));
+    }
+    if (_upiPaymentMethodId != null) {
+      orderedFields.add(MapEntry(upiAmountController, upiAmountFocusNode));
+    }
+    if (_codPaymentMethodId != null) {
+      orderedFields.add(MapEntry(codAmountController, codAmountFocusNode));
+    }
+    if (orderedFields.isEmpty) return;
+
+    final int target = index.clamp(1, orderedFields.length) - 1;
+    final entry = orderedFields[target];
+    entry.value.requestFocus();
+    if (entry.key.text.isNotEmpty) {
+      entry.key.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: entry.key.text.length,
+      );
+    }
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      entry.key,
+      replaceOnFirstInput: true,
+    );
+  }
+
+  String? _shortcutForPaymentType(String type) {
+    int idx = 0;
+    if (_cashPaymentMethodId != null) {
+      idx++;
+      if (type == 'cash') return 'C+$idx';
+    }
+    if (_cardPaymentMethodId != null) {
+      idx++;
+      if (type == 'card') return 'C+$idx';
+    }
+    if (_upiPaymentMethodId != null) {
+      idx++;
+      if (type == 'upi') return 'C+$idx';
+    }
+    if (_codPaymentMethodId != null) {
+      idx++;
+      if (type == 'cod') return 'C+$idx';
+    }
+    return null;
   }
 
   /// Load payment methods from API and assign IDs
@@ -989,6 +1147,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: cashAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('cash'),
+                                shortcutLabel: _shortcutForPaymentType('cash'),
                               ),
                             ),
                             const SizedBox(height: 15),
@@ -1007,6 +1166,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: cardAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('card'),
+                                shortcutLabel: _shortcutForPaymentType('card'),
                               ),
                             ),
                             const SizedBox(height: 15),
@@ -1025,6 +1185,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: upiAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('upi'),
+                                shortcutLabel: _shortcutForPaymentType('upi'),
                               ),
                             ),
                             const SizedBox(height: 15),
@@ -1043,6 +1204,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 focusNode: codAmountFocusNode,
                                 size: size,
                                 onToggle: () => _togglePaymentMethod('cod'),
+                                shortcutLabel: _shortcutForPaymentType('cod'),
                               ),
                             ),
                             const SizedBox(height: 15),
@@ -1073,18 +1235,25 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'billing.transaction_reference'.tr,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s13,
-                                    0.16,
-                                    ColorManager.textColor,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'billing.transaction_reference'.tr,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s13,
+                                        0.16,
+                                        ColorManager.textColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildShortcutHint('C+6'),
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
                                 buildColumnWidgetForTextFields(
                                   controller: transactionNumberController,
+                                  focusNode: transactionNumberFocusNode,
                                   size: size,
                                   width: double.infinity,
                                   height: size.height * .06,
@@ -1193,14 +1362,20 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         order: const NumericFocusOrder(70),
                         child: Row(
                           children: [
-                            Text(
-                              'billing.to_customer_credit'.tr,
-                              style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                FontSize.s14,
-                                0.20,
-                                ColorManager.kPrimaryColor,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  'billing.to_customer_credit'.tr,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    FontSize.s14,
+                                    0.20,
+                                    ColorManager.kPrimaryColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildShortcutHint('C+7'),
+                              ],
                             ),
                             const Spacer(),
                             Switch(
@@ -1283,6 +1458,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       ),
                       if (toCustomerCreditEnabled) ...[
                         const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: _buildShortcutHint('C+8'),
+                        ),
+                        const SizedBox(height: 6),
                         FocusTraversalOrder(
                           order: const NumericFocusOrder(80),
                           child: buildColumnWidgetForTextFields(
@@ -1395,6 +1575,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     required FocusNode? focusNode,
     required Size size,
     required VoidCallback onToggle,
+    String? shortcutLabel,
   }) {
     final bool isFocused = _focusedPaymentKey == type;
     return Row(
@@ -1423,7 +1604,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               blurRadius: isFocused ? 8 : 4,
               circleRadius: 5,
               height: size.height * .06, // Match text field height
-              width: 100, // Fixed width for alignment
+              width: 132, // Wider to avoid shortcut badge overflow
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1446,6 +1627,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       isSelected ? ColorManager.kPrimaryColor : Colors.grey,
                     ),
                   ),
+                  if (shortcutLabel != null) ...[
+                    const SizedBox(width: 6),
+                    _buildShortcutHint(shortcutLabel),
+                  ],
                 ],
               ),
             ),
@@ -1507,6 +1692,25 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildShortcutHint(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s10,
+          0.10,
+          Colors.grey.shade600,
+        ),
+      ),
     );
   }
 

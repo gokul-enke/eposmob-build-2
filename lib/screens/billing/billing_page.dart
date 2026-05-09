@@ -917,12 +917,15 @@ class BillingPageState extends State<BillingPage>
   }
 
   /// Returns true when the current key event is one of the Ctrl-modified
-  /// shortcuts handled by this page (Ctrl+H/K/D/S).
+  /// shortcuts handled by this page (Ctrl+H/A/K/D/S/Q/P).
   bool _isBillingControlShortcut(LogicalKeyboardKey key) {
     if (!HardwareKeyboard.instance.isControlPressed) return false;
     return key == LogicalKeyboardKey.keyH ||
+        key == LogicalKeyboardKey.keyA ||
         key == LogicalKeyboardKey.keyK ||
         key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.keyQ ||
+        key == LogicalKeyboardKey.keyP ||
         key == LogicalKeyboardKey.keyS;
   }
 
@@ -1007,25 +1010,7 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Always allow F11/Insert/F12 even when text fields are focused
-      if (event.logicalKey == LogicalKeyboardKey.f11) {
-        if (HardwareKeyboard.instance.isShiftPressed) {
-          debugPrint(
-              "⌨️ [BillingPage] Handling Shift+F11 -> focus barcode field");
-          _focusBarcodeField();
-        } else {
-          debugPrint(
-              "⌨️ [BillingPage] Handling F11 -> focus Search Product field");
-          _focusSearchProductField();
-        }
-        return;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.insert) {
-        debugPrint(
-            "⌨️ [BillingPage] Handling Insert -> focus Search Product field");
-        _focusSearchProductField();
-        return;
-      }
+      // Always allow F12 even when text fields are focused
       if (event.logicalKey == LogicalKeyboardKey.f12) {
         debugPrint(
             "⌨️ [BillingPage] Handling F12 -> activate sidebar keyboard mode");
@@ -1042,6 +1027,17 @@ class BillingPageState extends State<BillingPage>
 
       // Ctrl-modified shortcuts (header toolbar replacements).
       if (HardwareKeyboard.instance.isControlPressed) {
+        if (event.logicalKey == LogicalKeyboardKey.keyA) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+A -> focus barcode field");
+          _focusBarcodeField();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyS) {
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+S -> focus Search Product field");
+          _focusSearchProductField();
+          return;
+        }
         if (event.logicalKey == LogicalKeyboardKey.keyH) {
           debugPrint("⌨️ [BillingPage] Handling Ctrl+H -> open shortcuts help");
           _openShortcutsHelpDialog();
@@ -1058,9 +1054,14 @@ class BillingPageState extends State<BillingPage>
           unawaited(_openCashDrawerFromShortcut());
           return;
         }
-        if (event.logicalKey == LogicalKeyboardKey.keyS) {
-          debugPrint("⌨️ [BillingPage] Handling Ctrl+S -> trigger sync");
-          unawaited(_triggerSyncFromShortcut());
+        if (event.logicalKey == LogicalKeyboardKey.keyQ) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+Q -> edit cart quantity");
+          _requestCartFieldEditFromShortcut(isQuantity: true);
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyP) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+P -> edit cart price");
+          _requestCartFieldEditFromShortcut(isQuantity: false);
           return;
         }
       }
@@ -2142,6 +2143,10 @@ class BillingPageState extends State<BillingPage>
         Provider.of<AppSettingsProvider>(context, listen: true).appSettings;
     final bool isEditingOrder = localProductProvider.currentOrder != null;
     final currentOrder = localProductProvider.currentOrder;
+    final String compactOrderNumber = currentOrder?.orderNumber
+            .replaceFirst(RegExp(r'^ORD-', caseSensitive: false), '')
+            .replaceFirst(RegExp(r'^0+'), '') ??
+        '';
     final selectedHeaderCustomer =
         customerSelectionProvider.selectedCustomer ?? selectedCustomer;
     final fallbackCustomerName = selectedHeaderCustomer?.name ??
@@ -2162,19 +2167,16 @@ class BillingPageState extends State<BillingPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isEditingOrder
-                        ? '${'billing.edit_order'.tr} - '
-                        : '${'billing.new_order'.tr} - ',
+                    isEditingOrder ? '${'Edit'.tr} - ' : 'New'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
+                        FontSize.s18, 0.25, ColorManager.textColor),
                   ),
-                  Text(
-                    isEditingOrder
-                        ? '#${localProductProvider.currentOrder!.orderNumber}'
-                        : '#00000',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
-                  ),
+                  if (isEditingOrder)
+                    Text(
+                      '#${compactOrderNumber.isEmpty ? currentOrder!.orderNumber : compactOrderNumber}',
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s18, 0.25, ColorManager.textColor),
+                    ),
                 ],
               ),
               if (fallbackCustomerName != null &&
@@ -2295,80 +2297,112 @@ class BillingPageState extends State<BillingPage>
     required double? balance,
     required String? customerType,
   }) {
-    final String displayName =
+    const int maxCustomerNameChars = 30;
+    final String rawName =
         (name == null || name.trim().isEmpty) ? 'Customer' : name.trim();
+    final String displayName = rawName.length > maxCustomerNameChars
+        ? '${rawName.substring(0, maxCustomerNameChars)}...'
+        : rawName;
     final String displayBalance = (balance ?? 0).toStringAsFixed(2);
+    final Color balanceColor = (balance ?? 0) < 0
+        ? Colors.red.shade600
+        : (balance ?? 0) > 0
+            ? Colors.green.shade700
+            : Colors.grey.shade600;
     final String? displayCustomerType = customerType?.trim().isEmpty == true
         ? null
         : customerType?.trim().toUpperCase();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: ColorManager.kPrimaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: ColorManager.kPrimaryColor.withValues(alpha: 0.25),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => _showCheckoutModal(
+          actionMode: CheckoutActionMode.confirm,
+          initialStep: 0,
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.person_outline,
-            size: 16,
-            color: ColorManager.kPrimaryColor,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            displayName,
-            overflow: TextOverflow.ellipsis,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s12,
-              0.18,
-              ColorManager.textColor,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: ColorManager.kPrimaryColor.withValues(alpha: 0.18),
             ),
           ),
-          const SizedBox(width: 10),
-          Text(
-            'Balance: $displayBalance',
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s12,
-              0.18,
-              Colors.grey.shade700,
-            ),
-          ),
-          if (displayCustomerType != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: displayCustomerType == 'B2B'
-                    ? Colors.green.shade50
-                    : Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: displayCustomerType == 'B2B'
-                      ? Colors.green.shade300
-                      : Colors.blue.shade300,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 18,
+                width: 18,
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  size: 12,
+                  color: ColorManager.kPrimaryColor,
                 ),
               ),
-              child: Text(
-                displayCustomerType,
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.16,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+              Container(
+                height: 14,
+                width: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 7),
+                color: Colors.grey.shade300,
+              ),
+              Text(
+                'Bal $displayBalance',
                 style: buildCustomStyle(
                   FontWeightManager.medium,
-                  FontSize.s10,
-                  0.15,
-                  displayCustomerType == 'B2B'
-                      ? Colors.green.shade700
-                      : Colors.blue.shade700,
+                  FontSize.s11,
+                  0.16,
+                  balanceColor,
                 ),
               ),
-            ),
-          ],
-        ],
+              if (displayCustomerType != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: displayCustomerType == 'B2B'
+                        ? Colors.green.shade100
+                        : ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    displayCustomerType,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.12,
+                      displayCustomerType == 'B2B'
+                          ? Colors.green.shade700
+                          : ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2512,8 +2546,7 @@ class BillingPageState extends State<BillingPage>
                             ),
                           ),
                         ),
-                  FocusTraversalOrder(
-                    order: const NumericFocusOrder(BillingFocusOrders.quantity),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 2,
                       child: Padding(
@@ -2539,9 +2572,7 @@ class BillingPageState extends State<BillingPage>
                       ),
                     ),
                   ),
-                  FocusTraversalOrder(
-                    order:
-                        const NumericFocusOrder(BillingFocusOrders.unitPrice),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 2,
                       child: Padding(
@@ -2567,8 +2598,7 @@ class BillingPageState extends State<BillingPage>
                       ),
                     ),
                   ),
-                  FocusTraversalOrder(
-                    order: const NumericFocusOrder(BillingFocusOrders.addItem),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 2,
                       child: Padding(
@@ -2651,9 +2681,7 @@ class BillingPageState extends State<BillingPage>
                       ),
                     ),
                   ),
-                  FocusTraversalOrder(
-                    order:
-                        const NumericFocusOrder(BillingFocusOrders.clearEntry),
+                  ExcludeFocus(
                     child: Expanded(
                       flex: 1,
                       child: Column(
@@ -2756,14 +2784,18 @@ class BillingPageState extends State<BillingPage>
                 context.watch<KeyboardFocusHighlightProvider>().enabled;
             final bool isCartTableFocused =
                 focusHighlightEnabled && _cartTableFocusNode.hasFocus;
+            final bool showCartContainerFocusRing =
+                isCartTableFocused && _cartTableFocusedCellIndex == null;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: constraints.maxWidth,
               decoration: BoxDecoration(
                 border: Border.all(
                   color:
-                      isCartTableFocused ? Colors.orange : Colors.transparent,
-                  width: isCartTableFocused ? 3 : 1,
+                      showCartContainerFocusRing
+                          ? Colors.orange
+                          : Colors.transparent,
+                  width: showCartContainerFocusRing ? 3 : 1,
                 ),
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -3219,9 +3251,33 @@ class BillingPageState extends State<BillingPage>
     debugPrint("⌨️ [BillingPage] Focusing cart table");
     setState(() {
       _cartTableFocusedRowIndex = 0;
-      _cartTableFocusedCellIndex = null;
+      _cartTableFocusedCellIndex = 0;
     });
     _cartTableFocusNode.requestFocus();
+  }
+
+  void _requestCartFieldEditFromShortcut({required bool isQuantity}) {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final cartItems = localProductProvider.getCartItems();
+    if (cartItems.isEmpty) return;
+
+    final focusedIndex =
+        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
+    final item = cartItems[focusedIndex];
+
+    setState(() {
+      _cartTableFocusedRowIndex = focusedIndex;
+      if (isQuantity) {
+        _cartTableFocusedCellIndex = 1;
+        _cartQuantityEditRequestKey = _cartIdentityKey(item);
+        _cartQuantityEditRequestId++;
+      } else {
+        _cartTableFocusedCellIndex = 2;
+        _cartPriceEditRequestKey = _cartIdentityKey(item);
+        _cartPriceEditRequestId++;
+      }
+    });
   }
 
   KeyEventResult _handleCartTableKey(
@@ -3299,8 +3355,7 @@ class BillingPageState extends State<BillingPage>
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.delete ||
-        key == LogicalKeyboardKey.backspace) {
+    if (key == LogicalKeyboardKey.delete) {
       _removeCartItemFromKeyboard(item, localProductProvider, cartItems.length);
       return KeyEventResult.handled;
     }
@@ -6213,6 +6268,7 @@ class BillingPageState extends State<BillingPage>
     int? initialStep,
   }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
+    bool checkoutActionTriggered = false;
     debugPrint(
         "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
     if (_isOrderActionBusy) {
@@ -6542,6 +6598,7 @@ class BillingPageState extends State<BillingPage>
             _updateBalanceAmount();
           },
           onConfirmOrder: () async {
+            checkoutActionTriggered = true;
             setState(() {
               if (isSaveMode) {
                 isLoadingSaveOrder = true;
@@ -6559,6 +6616,7 @@ class BillingPageState extends State<BillingPage>
             }
           },
           onConfirmAndPrint: () async {
+            checkoutActionTriggered = true;
             setState(() {
               if (isSaveMode) {
                 isLoadingSaveOrderAndPrint = true;
@@ -6578,6 +6636,15 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+    if (mounted && !checkoutActionTriggered) {
+      setState(() {
+        // Modal was dismissed (Esc/close) without triggering checkout action.
+        isLoadingSaveOrder = false;
+        isLoadingConfirmOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+        isLoadingCreateOrder = false;
+      });
+    }
     debugPrint(
         "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
     _restoreShortcutFocus('checkout modal closed');

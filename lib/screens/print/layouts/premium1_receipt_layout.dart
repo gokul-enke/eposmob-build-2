@@ -740,6 +740,22 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
 
     rows.add(SpacingRow(_itemGap));
+
+    if (displayConfig?['showQuantityCount']?.visible == true) {
+      final quantityCountLabel = _getLabel(
+        displayConfig,
+        'showQuantityCount',
+        null,
+        isEnglish ? "Total Qty" : "إجمالي الكمية",
+      );
+      final totalQuantity = params.totalQuantity;
+      rows.add(TextRow(
+        "$quantityCountLabel: ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}",
+        scale: 0.9,
+        isBold: true,
+      ));
+      rows.add(SpacingRow(_itemGap));
+    }
   }
 
   void _buildTableHeader(

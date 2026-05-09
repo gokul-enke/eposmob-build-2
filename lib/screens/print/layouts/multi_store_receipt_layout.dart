@@ -1376,6 +1376,23 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
       }
     }
 
+    if (displayConfig?['showQuantityCount']?.visible == true) {
+      final quantityCountText = _getOptionText(
+        displayConfig,
+        'showQuantityCount',
+        defaultValue: isEnglish ? 'Total Qty' : 'إجمالي الكمية',
+      );
+
+      if (quantityCountText.isNotEmpty) {
+        final totalQuantity = params.totalQuantity;
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow(
+            '$quantityCountText: ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}',
+            scale: is58mm ? 0.75 : 0.85,
+            isBold: true));
+      }
+    }
+
     // You Saved
     if (displayConfig?['showSaved']?.visible == true && saved > 0) {
         final savedLabel = _getLabel(displayConfig, 'showSaved', null,

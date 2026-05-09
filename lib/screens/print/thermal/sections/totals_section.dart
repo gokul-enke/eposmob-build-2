@@ -60,15 +60,24 @@ class TotalsSectionBuilder implements TotalsSection {
       });
     }
 
-    leftSideItems.add({
-      'label': 'Total Qty',
-      'value': totalQuantity % 1 == 0
-          ? totalQuantity.toInt().toString()
-          : totalQuantity.toStringAsFixed(2),
-      'textSize': 'small',
-      'bold': 'false',
-      'fontType': 'fontA'
-    });
+    if (displayConfig?['showQuantityCount']?.visible == true) {
+      final quantityCountLabel =
+          (displayConfig?['showQuantityCount']?.value as String?)
+                      ?.isNotEmpty ==
+                  true
+              ? displayConfig!['showQuantityCount']!.value as String
+              : 'Total Qty';
+
+      leftSideItems.add({
+        'label': quantityCountLabel,
+        'value': totalQuantity % 1 == 0
+            ? totalQuantity.toInt().toString()
+            : totalQuantity.toStringAsFixed(2),
+        'textSize': 'small',
+        'bold': 'false',
+        'fontType': 'fontA'
+      });
+    }
 
     if (displayConfig?['showMRPTotal']?.visible == true) {
       leftSideItems.add({
@@ -248,6 +257,7 @@ class TotalsSectionBuilder implements TotalsSection {
 
     // Separator
     if ((displayConfig?['showItemsCount']?.visible == true) ||
+        (displayConfig?['showQuantityCount']?.visible == true) ||
         (displayConfig?['showMRPTotal']?.visible == true) ||
         (displayConfig?['showSaved']?.visible == true && saved > 0) ||
         (displayConfig?['showDiscount']?.visible == true) ||
