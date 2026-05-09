@@ -1899,6 +1899,7 @@ class BillingPageState extends State<BillingPage>
           return SideBarProductList(
             autofocus: _isSidebarKeyboardActive && _selectedSidebarTab == 0,
             focusRequestId: _sidebarFocusRequestId,
+            categorySectionInitiallyExpanded: false,
           );
         }
 
