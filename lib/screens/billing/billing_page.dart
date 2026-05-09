@@ -2809,8 +2809,34 @@ class BillingPageState extends State<BillingPage>
     final saleUnits = _validSaleUnitsForCartItem(item);
     final baseUnit = item.product.unit?.trim();
     final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
+    final isBaseSelected = item.saleUnitId == null;
 
-    if (saleUnits.isEmpty) {
+    final List<PopupMenuEntry<String>> unitMenuItems = [];
+    if (!isBaseSelected) {
+      unitMenuItems.add(
+        PopupMenuItem<String>(
+          value: 'base',
+          child: Text('$baseLabel (Base)'),
+        ),
+      );
+    }
+
+    for (final saleUnit in saleUnits) {
+      final saleUnitId = saleUnit.id;
+      if (saleUnitId == null || saleUnitId == item.saleUnitId) {
+        continue;
+      }
+      unitMenuItems.add(
+        PopupMenuItem<String>(
+          value: saleUnitId.toString(),
+          child: Text(saleUnit.unitName?.trim().isNotEmpty == true
+              ? saleUnit.unitName!.trim()
+              : saleUnitId.toString()),
+        ),
+      );
+    }
+
+    if (unitMenuItems.isEmpty) {
       return Text(
         item.displayUnitName,
         style: textStyle,
@@ -2821,6 +2847,12 @@ class BillingPageState extends State<BillingPage>
     return PopupMenuButton<String>(
       tooltip: 'Change unit',
       padding: EdgeInsets.zero,
+      color: Colors.white,
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       onSelected: (value) {
         if (item.product.productId == null) {
           return;
@@ -2860,20 +2892,7 @@ class BillingPageState extends State<BillingPage>
           newSaleUnitConversionRate: selectedRate,
         );
       },
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          value: 'base',
-          child: Text('$baseLabel (Base)'),
-        ),
-        ...saleUnits.map(
-          (saleUnit) => PopupMenuItem<String>(
-            value: saleUnit.id.toString(),
-            child: Text(saleUnit.unitName?.trim().isNotEmpty == true
-                ? saleUnit.unitName!.trim()
-                : saleUnit.id.toString()),
-          ),
-        ),
-      ],
+      itemBuilder: (context) => unitMenuItems,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
