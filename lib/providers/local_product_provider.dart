@@ -2238,6 +2238,87 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("✅ ADD TO CART COMPLETED");
   }
 
+  /// Changes the display sale unit for an existing cart line while preserving
+  /// the canonical base quantity, base price, and stock reservations.
+  bool changeCartItemSaleUnit(
+    int productId,
+    Stock? selectedStock, {
+    List<int>? stockGroupIds,
+    int? currentSaleUnitId,
+    int? newSaleUnitId,
+    String? newSaleUnitName,
+    double? newSaleUnitConversionRate,
+  }) {
+    final currentIndex = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: stockGroupIds,
+      saleUnitId: currentSaleUnitId,
+    );
+
+    if (currentIndex == -1) {
+      debugPrint(
+          "Cart item not found; cannot change sale unit for productId=$productId");
+      return false;
+    }
+
+    final targetHasSaleUnit = newSaleUnitId != null &&
+        newSaleUnitConversionRate != null &&
+        newSaleUnitConversionRate > 0;
+    final targetSaleUnitId = targetHasSaleUnit ? newSaleUnitId : null;
+    final targetSaleUnitName = targetHasSaleUnit ? newSaleUnitName : null;
+    final targetSaleUnitRate =
+        targetHasSaleUnit ? newSaleUnitConversionRate : null;
+
+    final sourceItem = _cartItems[currentIndex];
+    if (sourceItem.saleUnitId == targetSaleUnitId &&
+        sourceItem.saleUnitName == targetSaleUnitName &&
+        sourceItem.saleUnitConversionRate == targetSaleUnitRate) {
+      return false;
+    }
+
+    final targetIndex = _findCartItemIndex(
+      productId,
+      selectedStock: selectedStock,
+      stockGroupIds: sourceItem.stockGroupIds,
+      saleUnitId: targetSaleUnitId,
+    );
+
+    if (targetIndex != -1 && targetIndex != currentIndex) {
+      final targetItem = _cartItems[targetIndex];
+      targetItem.quantity += sourceItem.quantity;
+      targetItem.stockDeducted += sourceItem.stockDeducted;
+      _mergeReservationDeltas(targetItem, sourceItem.stockReservations);
+      targetItem.comment ??= sourceItem.comment;
+      _refreshCartItemPricing(targetItem);
+
+      _cartItems.removeAt(currentIndex);
+    } else {
+      _cartItems[currentIndex] = LocalCartItem(
+        product: sourceItem.product,
+        quantity: sourceItem.quantity,
+        price: sourceItem.price,
+        mrp: sourceItem.mrp,
+        taxRate: sourceItem.taxRate,
+        taxAmount: sourceItem.taxAmount,
+        selectedStock: sourceItem.selectedStock,
+        stockDeducted: sourceItem.stockDeducted,
+        stockGroupIds: List<int>.from(sourceItem.stockGroupIds),
+        stockReservations:
+            _cloneStockReservations(sourceItem.stockReservations),
+        comment: sourceItem.comment,
+        isManualPriceOverride: sourceItem.isManualPriceOverride,
+        saleUnitId: targetSaleUnitId,
+        saleUnitName: targetSaleUnitName,
+        saleUnitConversionRate: targetSaleUnitRate,
+      );
+    }
+
+    _saveCartToHive();
+    notifyListeners();
+    return true;
+  }
+
   /// Removes the product with [productId] from the local cart.
   /// Also restores stock quantity when stock management is enabled.
   List<LocalCartItem> getCartItems() {

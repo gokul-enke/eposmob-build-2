@@ -19,6 +19,7 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -28,6 +29,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -56,6 +58,7 @@ import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:provider/provider.dart';
@@ -2771,6 +2774,121 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
+  double? _parseSaleUnitRate(SaleUnit saleUnit) {
+    final rate = double.tryParse(saleUnit.conversionRate?.trim() ?? '');
+    if (rate == null || rate <= 0) {
+      return null;
+    }
+    return rate;
+  }
+
+  List<SaleUnit> _validSaleUnitsForCartItem(LocalCartItem item) {
+    final uniqueSaleUnits = <int, SaleUnit>{};
+    for (final saleUnit in item.product.saleUnits ?? const <SaleUnit>[]) {
+      final id = saleUnit.id;
+      if (id == null || _parseSaleUnitRate(saleUnit) == null) {
+        continue;
+      }
+      uniqueSaleUnits[id] = saleUnit;
+    }
+    return uniqueSaleUnits.values.toList();
+  }
+
+  Widget _buildCartUnitSelector({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required TextStyle textStyle,
+  }) {
+    final saleUnits = _validSaleUnitsForCartItem(item);
+    final baseUnit = item.product.unit?.trim();
+    final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
+
+    if (saleUnits.isEmpty) {
+      return Text(
+        item.displayUnitName,
+        style: textStyle,
+        textAlign: TextAlign.left,
+      );
+    }
+
+    return PopupMenuButton<String>(
+      tooltip: 'Change unit',
+      padding: EdgeInsets.zero,
+      onSelected: (value) {
+        if (item.product.productId == null) {
+          return;
+        }
+
+        if (value == 'base') {
+          localProductProvider.changeCartItemSaleUnit(
+            item.product.productId!,
+            item.selectedStock,
+            stockGroupIds: item.stockGroupIds,
+            currentSaleUnitId: item.saleUnitId,
+          );
+          return;
+        }
+
+        SaleUnit? selectedSaleUnit;
+        for (final saleUnit in saleUnits) {
+          if (saleUnit.id?.toString() == value) {
+            selectedSaleUnit = saleUnit;
+            break;
+          }
+        }
+        final selectedRate = selectedSaleUnit == null
+            ? null
+            : _parseSaleUnitRate(selectedSaleUnit);
+        if (selectedSaleUnit == null || selectedRate == null) {
+          return;
+        }
+
+        localProductProvider.changeCartItemSaleUnit(
+          item.product.productId!,
+          item.selectedStock,
+          stockGroupIds: item.stockGroupIds,
+          currentSaleUnitId: item.saleUnitId,
+          newSaleUnitId: selectedSaleUnit.id,
+          newSaleUnitName: selectedSaleUnit.unitName,
+          newSaleUnitConversionRate: selectedRate,
+        );
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'base',
+          child: Text('$baseLabel (Base)'),
+        ),
+        ...saleUnits.map(
+          (saleUnit) => PopupMenuItem<String>(
+            value: saleUnit.id.toString(),
+            child: Text(saleUnit.unitName?.trim().isNotEmpty == true
+                ? saleUnit.unitName!.trim()
+                : saleUnit.id.toString()),
+          ),
+        ),
+      ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              item.displayUnitName,
+              style: textStyle,
+              textAlign: TextAlign.left,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 2),
+          const Icon(
+            Icons.keyboard_arrow_down,
+            size: 14,
+            color: ColorManager.kPrimaryColor,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCartItemsTable(Size size) {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
@@ -2778,6 +2896,12 @@ class BillingPageState extends State<BillingPage>
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: true);
         final appSettings = appSettingsProvider.appSettings;
+        final customerSelectionProvider =
+            Provider.of<CustomerSelectionProvider>(context, listen: true);
+        final bool canShowPurchaseHistoryAction =
+            appSettings?.showCustomerLastBuyedPriceList == true &&
+                customerSelectionProvider.hasSelectedCustomer &&
+                !customerSelectionProvider.isDefaultCustomer;
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
 
@@ -2966,6 +3090,31 @@ class BillingPageState extends State<BillingPage>
                                                       ),
                                                     ),
                                                   ),
+                                                  if (canShowPurchaseHistoryAction) ...[
+                                                    const SizedBox(width: 6),
+                                                    Tooltip(
+                                                      message:
+                                                          'Customer purchase history',
+                                                      waitDuration:
+                                                          const Duration(
+                                                              milliseconds:
+                                                                  400),
+                                                      child: InkWell(
+                                                        onTap: () =>
+                                                            _showCustomerPurchaseHistoryForCartItem(
+                                                                item),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(16),
+                                                        child: const Icon(
+                                                          Icons.history,
+                                                          size: 16,
+                                                          color: ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ),
@@ -3004,16 +3153,17 @@ class BillingPageState extends State<BillingPage>
                                           Padding(
                                             padding: const EdgeInsets.symmetric(
                                                 vertical: 2),
-                                            child: Text(
-                                              item.displayUnitName,
-                                              style: buildCustomStyle(
+                                            child: _buildCartUnitSelector(
+                                              item: item,
+                                              localProductProvider:
+                                                  localProductProvider,
+                                              textStyle: buildCustomStyle(
                                                 FontWeightManager.regular,
                                                 fontProvider
                                                     .billingTableItemSize,
                                                 0.21,
                                                 ColorManager.textColor,
                                               ),
-                                              textAlign: TextAlign.left,
                                             ),
                                           ),
                                           flex: 1,
@@ -3584,6 +3734,112 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+  }
+
+  Future<void> _showCustomerPurchaseHistoryForCartItem(
+      LocalCartItem item) async {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (appSettingsProvider.appSettings?.showCustomerLastBuyedPriceList !=
+        true) {
+      showScaffoldError(
+        context: context,
+        message: 'Customer purchase history is disabled',
+      );
+      return;
+    }
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    if (customerSelectionProvider.isDefaultCustomer) {
+      showScaffoldError(
+        context: context,
+        message: 'Purchase history is not shown for the default customer',
+      );
+      return;
+    }
+
+    final int? customerId =
+        customerSelectionProvider.selectedCustomerID ?? selectedCustomerID;
+    final String? customerName =
+        customerSelectionProvider.selectedCustomerName ??
+            selectedCustomer?.name;
+    final int? productId = item.product.productId;
+
+    if (customerId == null || productId == null || customerName == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a customer to view purchase history',
+      );
+      return;
+    }
+
+    final String? token = Provider.of<AuthModel>(context, listen: false).token;
+    if (token == null || token.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Unable to load purchase history',
+      );
+      return;
+    }
+
+    try {
+      final CustomerPurchaseHistory? purchaseHistory =
+          await CustomerPurchaseProvider().getCustomerLastPurchases(
+        accessToken: token,
+        customerId: customerId,
+        productId: productId,
+      );
+
+      if (!mounted) return;
+
+      if (purchaseHistory == null ||
+          !purchaseHistory.success ||
+          purchaseHistory.data.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'No purchase history found for this product',
+        );
+        return;
+      }
+
+      final result = await showDialog<Map<String, dynamic>?>(
+        context: context,
+        builder: (context) => CustomerPurchaseHistoryModal(
+          product: item.product,
+          purchaseHistory: purchaseHistory.data.take(5).toList(),
+          customerName: customerName,
+        ),
+      );
+
+      if (!mounted || result == null || result['useCurrentPrice'] == true) {
+        return;
+      }
+
+      final rawPrice = result['price'];
+      final double? selectedPrice = rawPrice is num
+          ? rawPrice.toDouble()
+          : double.tryParse(rawPrice?.toString() ?? '');
+      if (selectedPrice == null) {
+        return;
+      }
+
+      Provider.of<LocalProductProvider>(context, listen: false).updateItemPrice(
+        productId,
+        item.selectedStock,
+        selectedPrice,
+        stockGroupIds: item.stockGroupIds,
+        saleUnitId: item.saleUnitId,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load customer purchase history: $error');
+      debugPrint('$stackTrace');
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Unable to load purchase history',
+      );
+    }
   }
 
   Widget _buildPaymentSummary({bool compact = false}) {

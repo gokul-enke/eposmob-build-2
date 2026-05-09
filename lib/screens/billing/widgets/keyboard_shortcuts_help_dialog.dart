@@ -89,6 +89,11 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Starts a fresh order',
     ),
     _ShortcutItem(
+      keyLabel: 'F11',
+      action: 'Legacy shortcut',
+      description: 'Reserved for existing keyboard workflows',
+    ),
+    _ShortcutItem(
       keyLabel: 'Enter',
       action: 'Add Item',
       description: 'Adds product to cart',
@@ -212,102 +217,103 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
         return KeyEventResult.ignored;
       },
       child: Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(24),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 780, maxHeight: 580),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 24,
-              spreadRadius: 4,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F7FA),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 780, maxHeight: 580),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 24,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF5F7FA),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.help_outline,
-                    color: ColorManager.kPrimaryColor,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Keyboard Shortcuts',
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s18,
-                      0.30,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Body
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    _buildSectionTitle('GLOBAL ACTIONS'),
-                    const SizedBox(height: 8),
-                    _buildFocusHighlightSetting(context),
-                    const SizedBox(height: 12),
-                    _buildShortcutsGrid(_globalShortcuts),
-                    const SizedBox(height: 16),
-                    _buildSectionTitle('BILLING PAGE (MAIN ORDER SCREEN)'),
-                    const SizedBox(height: 8),
-                    _buildShortcutsGrid(_billingShortcuts),
-                    const SizedBox(height: 16),
-                    _buildSectionTitle('FINALIZE ORDER MODAL'),
-                    const SizedBox(height: 8),
-                    _buildShortcutsGrid(_finalizeModalShortcuts),
-                    const SizedBox(height: 16),
-                    _buildSectionTitle('ADD PRODUCT MODAL'),
-                    const SizedBox(height: 8),
-                    _buildShortcutsGrid(_addProductModalShortcuts),
-                    const SizedBox(height: 4),
+                    const Icon(
+                      Icons.help_outline,
+                      color: ColorManager.kPrimaryColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Keyboard Shortcuts',
+                      style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s18,
+                        0.30,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
+              // Body
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle('GLOBAL ACTIONS'),
+                      const SizedBox(height: 8),
+                      _buildFocusHighlightSetting(context),
+                      const SizedBox(height: 12),
+                      _buildShortcutsGrid(_globalShortcuts),
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('BILLING PAGE (MAIN ORDER SCREEN)'),
+                      const SizedBox(height: 8),
+                      _buildShortcutsGrid(_billingShortcuts),
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('FINALIZE ORDER MODAL'),
+                      const SizedBox(height: 8),
+                      _buildShortcutsGrid(_finalizeModalShortcuts),
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('ADD PRODUCT MODAL'),
+                      const SizedBox(height: 8),
+                      _buildShortcutsGrid(_addProductModalShortcuts),
+                      const SizedBox(height: 4),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
